@@ -53,6 +53,9 @@ export {
   huerfanas,
 } from './grafo';
 
+export { cadenaDeObjetos } from './objetos';
+export type { CadenaDeObjetos, CampoObjeto, ObjetoSimulado, TipoObjeto } from './objetos';
+
 export { decoracionesDe, resolverReferencia } from './referencias';
 export { analizar, tokenizar } from './analizador';
 export { ORDENES_GIT, ORDENES_INTERPRETE } from './ordenes/registro';
