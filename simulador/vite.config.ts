@@ -109,7 +109,12 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/core/**/*.ts', 'src/escenarios/**/*.ts'],
+      include: [
+        'src/core/**/*.ts',
+        'src/escenarios/**/*.ts',
+        'src/grafico/**/*.ts',
+        'src/vista/**/*.ts',
+      ],
       reporter: ['text', 'html'],
       thresholds: {
         lines: 90,
