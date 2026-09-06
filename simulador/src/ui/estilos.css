@@ -1,16 +1,128 @@
 @import 'tailwindcss';
 
 /*
-  Los tipos de letra se declaran con las familias que el sistema ya trae. La
-  restriccion R2 prohibe cargar recursos por red en tiempo de ejecucion, de
-  modo que no hay tipografias externas.
+  Tipografia del sistema. La restriccion R5 prohibe cargar fuentes externas:
+  romperia el funcionamiento sin red y retrasaria el primer dibujado.
 */
 @theme {
-  --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Code', 'Consolas', monospace;
+  --font-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Consolas', 'Courier New', monospace;
+}
+
+/*
+  Paleta. El color codifica significado y no adorna (punto 10.3): uno para la
+  rama principal, otro para las derivadas, otro para la posicion actual y un
+  atenuado para lo huerfano. Los tres colores de consola son aparte: reproducen
+  los que usa Git y el punto 4.5 los exige.
+*/
+:root {
+  --escala: 1;
+
+  --fondo: #12151b;
+  --fondo-panel: #171b23;
+  --fondo-consola: #0b0d12;
+  --borde: #2a3140;
+  --borde-suave: #212734;
+  --texto: #e6e9ef;
+  --texto-apagado: #93a0b4;
+
+  --rama-principal: #4b8bf5;
+  --rama-derivada: #b06cf0;
+  --puntero: #f0a83c;
+  --huerfano: #5d6577;
+
+  --consola-verde: #4ec27a;
+  --consola-rojo: #f2685f;
+  --consola-amarillo: #e3bb4a;
+
+  color-scheme: dark;
 }
 
 html,
 body,
 #raiz {
   height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--font-sans);
+}
+
+/*
+  Escala tipografica. El modo relator la sube de forma proporcional en toda la
+  interfaz (punto 8.1). El escalon mas pequeno son once pixeles en modo normal
+  y catorce con la escala del modo relator, que es el minimo del punto 8.3.
+*/
+.t-min {
+  font-size: calc(var(--escala) * 11px);
+}
+.t-pequeno {
+  font-size: calc(var(--escala) * 12px);
+}
+.t-normal {
+  font-size: calc(var(--escala) * 13px);
+}
+.t-medio {
+  font-size: calc(var(--escala) * 15px);
+}
+.t-grande {
+  font-size: calc(var(--escala) * 18px);
+}
+
+/* Superficies planas: sin degradados ni sombras difusas (punto 10.2). */
+.panel {
+  background: var(--fondo-panel);
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+}
+
+/* El anillo de foco es la unica excepcion decorativa, porque es funcional. */
+:where(button, select, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--puntero);
+  outline-offset: 2px;
+}
+
+.enfocable:focus-visible {
+  outline: 2px solid var(--puntero);
+  outline-offset: 2px;
+}
+
+/*
+  Movimiento. Las transiciones responden a la accion del participante y no hay
+  ninguna que se dispare sola (punto 5.7).
+*/
+.transicion-nodo {
+  transition:
+    transform 220ms ease-out,
+    opacity 220ms ease-out;
+}
+
+.entrada-nodo {
+  animation: aparecer 240ms ease-out;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Se respeta la preferencia del sistema de movimiento reducido (punto 5.7 y CA10). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

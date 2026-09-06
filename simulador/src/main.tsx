@@ -1,13 +1,10 @@
 /**
- * Arranque de la capa visual.
- *
- * Monta el andamiaje minimo del SPEC 001. El SPEC 002 reemplazara el
- * componente sin tocar nada del motor.
+ * Arranque de la aplicacion.
  */
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ComprobacionMotor } from './ui/ComprobacionMotor';
+import { Aplicacion } from './ui/Aplicacion';
 import './ui/estilos.css';
 
 const raiz = document.getElementById('raiz');
@@ -17,6 +14,6 @@ if (raiz === null) {
 
 createRoot(raiz).render(
   <StrictMode>
-    <ComprobacionMotor />
+    <Aplicacion />
   </StrictMode>,
 );
