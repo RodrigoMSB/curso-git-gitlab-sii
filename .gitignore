@@ -1,0 +1,23 @@
+# Dependencias
+node_modules/
+
+# Resultados de construccion
+dist/
+build/
+coverage/
+
+# Registros y temporales
+*.log
+npm-debug.log*
+.cache/
+.tmp/
+*.tmp
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
