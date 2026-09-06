@@ -25,17 +25,17 @@ curso-git-gitlab-sii/
 ├── simulador/          el simulador
 │   ├── src/core/       el motor: confirmaciones, ramas, punteros, ordenes
 │   ├── src/escenarios/ los estados iniciales de cada sesion
-│   ├── src/ui/         la capa visual
-│   └── tests/          las pruebas del motor
+│   ├── src/grafico/    el calculo de posiciones del grafo
+│   ├── src/vista/      el modelo de vista entre el motor y la pantalla
+│   ├── src/ui/         los componentes de la pantalla
+│   └── tests/          las pruebas
 ├── semillas/           repositorios semilla de los laboratorios (pendiente)
 ├── labs/               enunciados de los ejercicios (pendiente)
 └── material/           presentaciones y guias (pendiente)
 ```
 
-Lo que hay hoy corresponde al SPEC 001: el repositorio, el motor del simulador
-y sus pruebas. La interfaz visual completa llega con el SPEC 002, de modo que
-lo que se ve al abrir el simulador hoy es una pantalla de comprobacion, no la
-pantalla que vera el participante.
+Lo que hay hoy corresponde a los SPEC 001 y 002: el repositorio, el motor del
+simulador, la pantalla del participante y sus pruebas.
 
 ## Que hace falta para trabajar aqui
 
@@ -67,7 +67,7 @@ desde la red; es la unica parte del proceso que la necesita.
 simulador/dist/index.html
 ```
 
-Es **un unico archivo**, de alrededor de 235 KB, con el codigo y los estilos
+Es **un unico archivo**, de alrededor de 260 KB, con el codigo y los estilos
 adentro. Para usarlo basta hacer **doble clic** sobre el: se abre en el
 navegador y funciona sin conexion a internet y sin levantar ningun servidor.
 Se puede copiar a un pendrive, mandarlo por correo o dejarlo en una carpeta
@@ -84,11 +84,11 @@ cd simulador
 npm test
 ```
 
-Ejecuta las pruebas del motor y mide la cobertura. La orden falla si la
-cobertura de lineas del motor baja del 90 por ciento, que es el minimo que fija
-el SPEC 001.
+Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
+calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
+lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 148 pruebas, 98 por ciento de cobertura de lineas.
+Estado actual: 214 pruebas, 98 por ciento de cobertura de lineas.
 
 Otras ordenes utiles:
 
@@ -100,6 +100,47 @@ npm run dev             # levanta el simulador con recarga en caliente
 
 `npm run dev` es solo para desarrollar. Lo que se entrega a la sala de clases
 es siempre el archivo de `dist`.
+
+## Que se ve en pantalla
+
+La pantalla tiene cinco zonas:
+
+1. **Barra de estado**, arriba: repositorio, rama actual, cambios sin
+   confirmar, selector de escenario y los interruptores.
+2. **Consola**, a la izquierda: se escribe la orden y se ve la respuesta, con
+   el aspecto y los colores de Git Bash.
+3. **Grafo**, a la derecha: las confirmaciones mas recientes arriba y las ramas
+   desplegandose hacia la derecha.
+4. **Areas**, abajo: directorio de trabajo, area de preparacion, repositorio
+   local y repositorio remoto. Debajo aparecen, solo cuando corresponde, la pila
+   de guardado temporal, las diferencias y los objetos internos.
+5. **Linea de tiempo**, al pie: un segmento por orden ejecutada. Se puede
+   retroceder y toda la pantalla vuelve a como estaba en ese momento.
+
+### Como se usa
+
+| Tecla o gesto | Que hace |
+|---|---|
+| Flechas arriba y abajo | Recorre las ordenes ya escritas |
+| Tabulacion | Completa la orden. Con el campo vacio, saca el foco de la consola |
+| Entrar | Ejecuta la orden |
+| Escape | Descarta lo escrito y la previsualizacion |
+| Clic sobre una confirmacion | Abre sus objetos internos |
+| Flechas izquierda y derecha sobre la linea de tiempo | Retrocede y avanza |
+
+Toda la interfaz se maneja con el teclado.
+
+**Previsualizacion.** Con el interruptor encendido, mientras se escribe una
+orden que crearia confirmaciones, el grafo las dibuja en trazo discontinuo
+antes de ejecutarlas. Entrar ejecuta, Escape descarta.
+
+**Modo relator.** Aumenta el tamano de todo de forma proporcional y esconde los
+paneles secundarios, para proyectar por videoconferencia.
+
+Las confirmaciones que quedan sin ninguna rama ni etiqueta apuntandolas no
+desaparecen: siguen dibujadas en gris. Es lo que permite mostrar que un
+`git reset --hard` o un `git rebase` no destruyen nada, y que `git reflog` las
+recupera.
 
 ## Los cuatro escenarios
 

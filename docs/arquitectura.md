@@ -182,9 +182,128 @@ listado del estado. Existe para verificar que el motor funciona dentro del
 archivo autocontenido. La consola, el grafo dibujado y el diseno son materia del
 SPEC 002.
 
-## 5. Nada se aparto del spec
+## 5. Nada se aparto del SPEC 001
 
 No hubo ningun punto del SPEC 001 que se dejara sin implementar ni que se
 resolviera en contra de lo indicado. Las diecinueve ordenes del cuadro de la
 seccion 7 estan, con las opciones que ese cuadro exige, y los siete
 comportamientos de la seccion 8 tienen una prueba cada uno.
+
+---
+
+# SPEC 002 · Interfaz visual
+
+## 6. Forma de la capa visual
+
+La restriccion R6 prohibe que la interfaz contenga logica de Git. Para que eso
+sea comprobable y no una intencion, la vista se parte en tres capas y una
+prueba revisa las importaciones.
+
+```
+src/grafico/    calculo de posiciones. Logica pura, sin React, con sus pruebas
+src/vista/      modelo de vista: traduce el estado del motor a datos planos
+src/ui/         componentes. Solo pintan
+```
+
+`src/ui` solo puede importar React, sus propios archivos, `src/vista` y los
+tipos de `src/grafico`. No puede alcanzar el motor, los escenarios ni el
+calculo de posiciones. `tests/arquitectura-vista.test.ts` lo verifica leyendo
+los archivos y fallando ante cualquier importacion fuera de esa lista, de modo
+que la regla sobrevive a quien no la tenga presente.
+
+El calculo de posiciones reparte los carriles atendiendo primero las puntas de
+rama en su orden de creacion. Asi la rama principal se queda en la columna de
+la izquierda y el dibujo no cambia segun sobre que rama este parado el
+participante, que es lo que permite que al cambiar de rama solo se mueva la
+etiqueta de posicion.
+
+## 7. Decisiones no especificadas del SPEC 002
+
+**7.1 Las huerfanas se llevan columnas propias.** El reparto de carriles se
+hace en dos pasadas: primero lo que alguna referencia alcanza, y despues lo
+huerfano, en columnas a la derecha de todo lo vivo. Sin esa separacion las
+copias del rebase caerian en la misma columna que sus originales y el dibujo
+sugeriria que las confirmaciones se deslizaron hacia otra base, que es
+exactamente lo que el punto 6.4 prohibe insinuar.
+
+**7.2 La union proyectada se arma desde el estado de la fusion.** Cuando la
+fusion choca, el motor reserva el identificador de la union y guarda de que
+confirmaciones cuelga. El modulo de posiciones lee esos campos para poder
+dibujar el nodo. Es lectura del modelo, no una decision sobre la fusion, y se
+resolvio asi porque la seccion 9 del SPEC 002 no autoriza otro agregado al
+motor.
+
+**7.3 La union comprometida sigue dibujada mientras el conflicto esta
+abierto.** Sobre el escenario cuatro la fusion produce conflicto, de modo que
+al ejecutarla no nace ninguna confirmacion todavia. Si el nodo discontinuo
+desapareciera en ese momento, el criterio CA3 no se cumpliria y, peor, la
+pantalla dejaria de mostrar hacia donde va la operacion justo cuando el
+participante mas lo necesita. Se mantiene dibujado en trazo discontinuo hasta
+que el participante resuelve y confirma, y ahi se solidifica con el mismo
+identificador.
+
+**7.4 El color de la consola se deduce del bloque.** El motor entrega la salida
+larga de `git status` sin marcar linea por linea, y el punto 4.5 pide verde
+para lo preparado y rojo para lo pendiente. El modulo de consola asigna el
+color segun el encabezado bajo el que cae cada linea, igual que hace Git al
+pintarla. Es presentacion de un formato conocido, no logica de dominio, y vive
+fuera de los componentes.
+
+**7.5 La tabulacion cede el paso cuando no hay nada que completar.** El punto
+4.4 pide que la tabulacion complete la orden, pero interceptarla siempre deja
+el foco encerrado en la consola y rompe el criterio CA8. Se completa solo con
+el campo escrito; con el campo vacio, y siempre con mayusculas, la tabulacion
+sigue su curso normal y el foco sale. La consola lo dice en pantalla.
+
+**7.6 La consola lee el campo, no el estado.** Al pulsar entrar se toma el
+valor del elemento y no el del estado de React. Con escritura rapida la
+pulsacion puede llegar antes del redibujado, y el estado todavia no tendria el
+ultimo caracter: la orden se ejecutaria incompleta o no se ejecutaria.
+
+**7.7 Las aristas son curvas simples.** Cada arista es una curva entre la
+confirmacion y su padre. No hay enrutamiento que esquive columnas intermedias.
+Con los escenarios del taller, que no pasan de cuatro ramas, el resultado se
+lee bien y el codigo se mantiene revisable.
+
+**7.8 El grafo escala con un marco fijo.** El SVG conserva su sistema de
+coordenadas y se agranda cambiando su ancho y su alto. Asi el modo relator
+aumenta el dibujo y sus rotulos en la misma proporcion que el resto de la
+interfaz, sin recalcular posiciones.
+
+**7.9 La pantalla arranca en el escenario uno y con la previsualizacion
+encendida.** Es el orden del taller, y la previsualizacion es la funcion que
+conviene que el participante descubra sin buscarla.
+
+**7.10 Debajo de mil doscientos ochenta pixeles las cuatro areas se reparten en
+dos filas.** El punto 10.5 pide apilar en vertical en lugar de comprimir. Las
+zonas se apilan, y dentro de la franja de areas las cuatro columnas pasan a dos
+por dos antes que angostarse hasta ser ilegibles.
+
+**7.11 La franja de areas cede espacio antes que la linea de tiempo.** El
+armazon se ancla a la altura de la ventana. Si algo no cabe, se desplaza la
+franja de areas; la barra, la consola, el grafo y la linea de tiempo quedan
+siempre a la vista, porque la linea de tiempo es un control y no un contenido.
+
+**7.12 Nada se guarda en el navegador.** El punto 7.4 lo pide para la linea de
+tiempo y se extendio a toda la interfaz: recargar la pagina devuelve el
+escenario inicial. Tampoco se guarda el modo relator ni el interruptor de
+previsualizacion.
+
+## 8. Los tres agregados al motor
+
+La seccion 9 del SPEC 002 autoriza tres cambios y ninguno mas.
+
+**9.1** Ya existia. `huerfanas` se expone desde el SPEC 001 y ahora tiene una
+prueba dedicada.
+
+**9.2** Se agrego `cadenaDeObjetos` en `src/core/objetos.ts`. Devuelve la
+confirmacion, su arbol y un elemento por archivo. Como no hay contenido que
+resumir (restriccion R4), los identificadores del arbol y de los elementos se
+derivan de forma determinista del identificador de la confirmacion y de los
+nombres de archivo.
+
+**9.3** Ya ocurria. El identificador reservado vive dentro del estado de la
+fusion, de modo que anularlo al abortar lo libera. Queda cubierto por una
+prueba que compara el estado completo antes de fusionar y despues de abortar.
+
+No se hizo ningun otro cambio al motor.
