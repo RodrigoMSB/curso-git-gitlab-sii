@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+/*
+  Los tipos de letra se declaran con las familias que el sistema ya trae. La
+  restriccion R2 prohibe cargar recursos por red en tiempo de ejecucion, de
+  modo que no hay tipografias externas.
+*/
+@theme {
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Code', 'Consolas', monospace;
+}
+
+html,
+body,
+#raiz {
+  height: 100%;
+}
