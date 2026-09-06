@@ -7,3 +7,4 @@ repositorio muestre contra que se implemento cada cosa.
 | Spec | Alcance |
 |---|---|
 | `spec-001-andamiaje-y-motor.md` | Repositorio, estructura, motor del simulador y pruebas |
+| `spec-002-interfaz-visual.md` | Pantalla del participante: consola, grafo, areas y linea de tiempo |
