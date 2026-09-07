@@ -316,10 +316,48 @@ dos filas.** El punto 10.5 pide apilar en vertical en lugar de comprimir. Las
 zonas se apilan, y dentro de la franja de areas las cuatro columnas pasan a dos
 por dos antes que angostarse hasta ser ilegibles.
 
-**7.11 La franja de areas cede espacio antes que la linea de tiempo.** El
-armazon se ancla a la altura de la ventana. Si algo no cabe, se desplaza la
-franja de areas; la barra, la consola, el grafo y la linea de tiempo quedan
-siempre a la vista, porque la linea de tiempo es un control y no un contenido.
+**7.11 Las zonas miden lo que su contenido pide.** La primera version anclaba
+el armazon a la altura de la ventana y repartia ese alto entre las zonas. El
+resultado se vio recien en las capturas: en el escenario E1 la consola era una
+caja negra de mil pixeles vacios y el grafo un recuadro con una sola frase.
+
+Ahora la altura de la ventana es un minimo y no un reparto. La consola y el
+grafo miden su contenido y crecen desde arriba, con un tope de `100dvh` menos
+veinte unidades, que es lo que ocupan la barra, la franja de areas y la linea
+de tiempo juntas; pasado ese tope se desplazan por dentro y las cuatro zonas
+siguen cabiendo en la ventana. La franja de areas y la linea de tiempo quedan
+apoyadas en el borde inferior, de modo que el hueco sobrante cae entre el grafo
+y las areas, que es justo por donde el grafo va a crecer durante la clase, y no
+debajo de todo. Las dos zonas de abajo no se deslizan a medida que aparecen
+confirmaciones.
+
+**7.13 Las listas de archivos se desplazan por filas enteras.** El tope de las
+listas de la zona D es un multiplo exacto del alto de fila, y ambas medidas se
+escalan con la interfaz. Asi el corte del desplazamiento siempre cae entre dos
+lineas: nunca se ve media linea asomando, que es lo que ocurria cuando el tope
+era una medida suelta. La lista pasa a ser parada de tabulacion solo cuando de
+verdad se desplaza, para no agregar paradas que no llevan a ninguna parte.
+
+**7.14 La ayuda de la consola aparece cuando sirve.** Las dos lineas que
+explican la tabulacion y la previsualizacion se muestran solo con el campo
+enfocado y todavia vacio, y desaparecen al escribir. Permanentes se leen las
+primeras veces y despues son ruido, sobre todo proyectadas.
+
+**7.15 El grupo de huerfanas va rotulado.** El gris atenuado las distingue,
+pero no dice que son. Un rotulo discreto, `sin referencia`, se dibuja a la
+derecha del grupo y a la altura de su centro, para que se lea como del conjunto
+y no de una confirmacion en particular. Ese costado siempre esta libre: una
+huerfana, por definicion, no tiene ninguna etiqueta apuntandola. La posicion la
+calcula el modulo de disposicion, no el componente, como todo lo demas del
+dibujo.
+
+**7.16 La interfaz va acentuada aunque los specs vinieran sin tildes.** Los
+dos specs se escribieron sin acentos y la interfaz los copio. Se corrigio todo
+lo que el participante lee: rotulos, avisos, titulos de escenario y textos de
+ayuda. Los specs quedan como estan, porque son el encargo y no la entrega, y
+los nombres del codigo tampoco se tocan: `onPrevisualizacion` sigue sin tilde.
+La salida de las ordenes tampoco cambia, porque va en el idioma de Git
+(decision 4.2). Una prueba fija los textos acentuados uno por uno.
 
 **7.12 Nada se guarda en el navegador.** El punto 7.4 lo pide para la linea de
 tiempo y se extendio a toda la interfaz: recargar la pagina devuelve el

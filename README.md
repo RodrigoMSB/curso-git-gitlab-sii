@@ -88,7 +88,7 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 214 pruebas, 98 por ciento de cobertura de lineas.
+Estado actual: 230 pruebas, 98 por ciento de cobertura de lineas.
 
 Otras ordenes utiles:
 
@@ -96,6 +96,7 @@ Otras ordenes utiles:
 npm run test:observar   # repite las pruebas cada vez que se guarda un archivo
 npm run tipos           # revisa los tipos sin construir
 npm run lint            # pasa el linter sobre el codigo y las pruebas
+npm run capturas        # rehace las capturas de docs/capturas desde el navegador
 npm run dev             # levanta el simulador con recarga en caliente
 ```
 
@@ -106,7 +107,8 @@ es siempre el archivo de `dist`.
 
 Hay capturas de la pantalla real en [`docs/capturas`](docs/capturas), sobre los
 escenarios E1, E3 y E4, incluyendo la previsualizacion de una fusion y el
-resultado de un rebase.
+resultado de un rebase. Se rehacen con `npm run capturas` despues de construir,
+de modo que se pueden actualizar cada vez que la vista cambie.
 
 La pantalla tiene cinco zonas:
 
