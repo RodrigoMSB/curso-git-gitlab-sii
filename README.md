@@ -29,13 +29,21 @@ curso-git-gitlab-sii/
 │   ├── src/vista/      el modelo de vista entre el motor y la pantalla
 │   ├── src/ui/         los componentes de la pantalla
 │   └── tests/          las pruebas
-├── semillas/           repositorios semilla de los laboratorios (pendiente)
+├── semillas/           repositorios semilla de los laboratorios
 ├── labs/               enunciados de los ejercicios (pendiente)
 └── material/           presentaciones y guias (pendiente)
 ```
 
-Lo que hay hoy corresponde a los SPEC 001 y 002: el repositorio, el motor del
-simulador, la pantalla del participante y sus pruebas.
+Lo que hay hoy corresponde a los SPEC 001, 002 y 003: el repositorio, el motor
+del simulador, la pantalla del participante y los repositorios semilla con los
+que empieza cada laboratorio.
+
+Las semillas se preparan con una orden, y tienen su propia
+[guia](semillas/README.md):
+
+```bash
+semillas/preparar.sh 06
+```
 
 ## Que hace falta para trabajar aqui
 
@@ -88,7 +96,8 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 231 pruebas, 98 por ciento de cobertura de lineas.
+Estado actual: 298 pruebas, 98 por ciento de cobertura de lineas. Las de las
+semillas ejecutan Git de verdad y se llevan unos cuarenta segundos.
 
 Otras ordenes utiles:
 

@@ -392,3 +392,154 @@ fusion, de modo que anularlo al abortar lo libera. Queda cubierto por una
 prueba que compara el estado completo antes de fusionar y despues de abortar.
 
 No se hizo ningun otro cambio al motor.
+
+---
+
+# SPEC 003 · Repositorios semilla
+
+## 9. Forma de las semillas
+
+Los escenarios del SPEC 001 son estados en memoria del simulador. Estos son
+repositorios Git de verdad, que el participante clona en Git Bash y rompe. La
+carpeta se ordena por funcion y no por laboratorio:
+
+```
+semillas/
+├── preparar.sh    clona, prepara y verifica: la unica orden del enunciado
+├── generar.sh     rehace los paquetes y anota el manifiesto
+├── comprobar.sh   revisa que los paquetes esten al dia, y el determinismo
+├── lib/           entorno determinista, contenido del recetario, verificacion
+├── generadores/   un guion por semilla
+├── paquetes/      los paquetes versionados, mas su manifiesto
+├── preparacion/   lo que no viaja en un paquete
+├── verificadores/ comprueban el estado inicial recien preparado
+└── descripciones/ para el relator
+```
+
+El generador construye el repositorio con ordenes de Git reales y lo deja en un
+paquete. `preparar.sh` clona ese paquete, corre el guion de preparacion si lo
+hay y termina llamando al verificador, de modo que una semilla mal armada se
+detiene antes de que el participante escriba nada.
+
+## 10. Decisiones no especificadas del SPEC 003
+
+**10.1 Son diez semillas y once paquetes, no nueve y diez.** El cuadro de la
+seccion 7 marca con «si» diez laboratorios: 02, 03, 04, 05, 06, 07, 08, 09, 10
+y 13. La frase que lo sigue dice «nueve semillas y diez paquetes». Se siguio el
+cuadro, que es la parte especifica, y se dejo constancia aqui. Si la intencion
+era que alguno de los diez no llevara semilla, el candidato mas probable es el
+10, cuyo estado es el recetario terminado; sacarlo es cosa de borrar tres
+archivos y una fila del manifiesto.
+
+**10.2 Las fechas se llevan como epoca y desplazamientos, sin llamar a
+`date`.** BSD y GNU no aceptan los mismos argumentos, y una diferencia ahi
+cambiaria las fechas y con ellas los identificadores, que es justo lo que
+prohibe R7. La biblioteca guarda un instante base —lunes 2 de marzo de 2026 a
+las 09:14, hora de Chile— y avanza sumando segundos y dias. Git acepta la forma
+`@1772453640 -0300` en `GIT_AUTHOR_DATE`, de modo que nunca hace falta
+formatear una fecha.
+
+**10.3 El piso es Bash 3.2.** Es el que trae macOS. Git Bash sobre Windows trae
+uno mas nuevo, pero lo contrario no es cierto, asi que los guiones se escriben
+sin arreglos asociativos, sin `mapfile` y sin las expansiones de Bash 4. Es la
+lectura estricta de R8: un solo lenguaje quiere decir tambien una sola version.
+
+**10.4 La funcion de huella es `git hash-object`.** El manifiesto y las
+comprobaciones necesitan resumir archivos, y `sha256sum` no existe en macOS
+mientras que `shasum` no existe en todas las instalaciones de Git Bash. Git
+esta garantizado en las dos, por definicion del proyecto.
+
+**10.5 El paquete lleva `HEAD` y eso obliga a filtrar al clonar.** Un paquete
+creado con `--all HEAD` deja, al clonarse, una referencia `refs/remotes/origin`
+a secas ademas de las ramas. Recorrer las ramas de seguimiento por su nombre
+abreviado creaba una rama local llamada `origin` en todas las semillas.
+`preparar.sh` recorre el nombre completo de cada referencia y descarta la que
+no sea una rama.
+
+**10.6 Al preparar se crean las ramas locales y se quita el remoto.** Al clonar
+un paquete, las ramas que no son la principal quedan solo como ramas de
+seguimiento y `git branch` no las muestra, que no es lo que el enunciado
+supone. Se crean como locales. Despues se quita el remoto, porque apunta a un
+archivo `.bundle` y en los laboratorios que no hablan de remotos solo genera
+preguntas. El laboratorio 09 lo vuelve a poner en su guion de preparacion,
+porque ahi el remoto es la materia del ejercicio.
+
+**10.7 Los guiones de preparacion viven en `semillas/preparacion/`.** El punto
+5.3 los pide «junto al paquete». Se los dejo en una carpeta hermana en vez de
+mezclarlos con los binarios: `paquetes/` se regenera entero y conviene que solo
+contenga lo generado.
+
+**10.8 La identidad queda puesta al preparar.** `preparar.sh` configura
+`user.name` y `user.email` en el repositorio clonado con los mismos valores del
+simulador. Sin eso, la primera confirmacion de cada laboratorio fallaria en las
+maquinas donde nadie configuro Git, y esa configuracion es materia del
+laboratorio 01, que no lleva semilla.
+
+**10.9 Los verificadores corren dentro de la suite de Vitest.** El punto 6.3
+pide que corran en la suite del proyecto, y la suite del proyecto es la del
+simulador. `simulador/tests/semillas.test.ts` ejecuta los mismos guiones de
+Bash que corre el relator: no hay una segunda implementacion en TypeScript que
+pueda quedar desincronizada. Cuesta unos treinta segundos, que es casi todo el
+tiempo de la suite.
+
+**10.10 El manifiesto guarda dos huellas por paquete.** Una del generador junto
+con las bibliotecas que usa, y otra de las referencias que el paquete
+transporta. La primera detecta que alguien cambio un generador y no regenero;
+la segunda, que el paquete en disco no es el que el manifiesto declara. No se
+compara el paquete byte a byte porque el empaquetado no es reproducible al
+byte: lo que R7 exige, y lo que los enunciados citan, son los identificadores.
+
+**10.11 Reemplazar un directorio existente exige `--rehacer`.** La semilla se
+prepara sobre el trabajo del participante y borrarlo sin preguntar es
+irreversible. La orden falla y dice como insistir.
+
+**10.12 El error del laboratorio 07 se trata como publicado sin traer un
+remoto.** El enunciado necesita que la confirmacion con el error se considere
+ya publicada, para que revertir sea preferible a retroceder. Darle un remoto de
+verdad habria adelantado material del laboratorio 09. La descripcion de la
+semilla lo dice, y el enunciado lo declara.
+
+## 11. Los criterios del SPEC 003
+
+**CA1**, **CA3** a **CA10** quedan cubiertos por pruebas de la suite. El peso
+del arbol de semillas es de 232 KB, de los cuales 52 KB son los once paquetes:
+tres ordenes de magnitud por debajo del limite de veinte megabytes que fija
+CA10, y una prueba lo vigila.
+
+**CA2 esta comprobado a medias, y conviene decirlo.** El determinismo entre dos
+ejecuciones esta comprobado de forma automatizada, y las dos ejecuciones
+corrieron sobre macOS 15 con Git 2.50.1 y Bash 3.2. La comprobacion **entre
+sistemas operativos distintos no se hizo**: este trabajo se desarrollo en una
+sola maquina y no hay una Windows a mano. Lo que si esta hecho es lo que
+depende del codigo: `core.autocrlf` y `core.eol` quedan fijados en el
+repositorio generado, de modo que los finales de linea no cambien el contenido
+confirmado, que es la causa habitual de que los identificadores difieran entre
+Windows y el resto.
+
+Para cerrar el criterio, en una maquina con Git Bash sobre Windows:
+
+```bash
+semillas/comprobar.sh --determinismo
+```
+
+Imprime una huella por semilla. Si coinciden con las de abajo, CA2 queda
+verificado y el resultado se anota aqui. Estas son las obtenidas en macOS 15
+con Git 2.50.1 y Bash 3.2; una prueba de la suite las compara contra lo que el
+repositorio produce hoy, de modo que la tabla no pueda quedar vieja en
+silencio.
+
+| Semilla | Huella de los identificadores |
+|---|---|
+| lab-02 | `e59c2113da7f9a09408c667af0dd348835d933cf` |
+| lab-03 | `f3fdcb5478be9b591dcdf78c89456cfd922eba29` |
+| lab-04 | `6036e8e000d0aaa07aa0ded5e0c13dc668364967` |
+| lab-05 | `260858672ff2ed3b4a0bd295ddc57a9162541e3d` |
+| lab-06 | `294ccda267262533a2df2f9053d1196e8f12d707` |
+| lab-07 | `d8aac40cd2659d938ce6e4f6dd7ffd9e21b3242f` |
+| lab-08 | `4c9f997fc58e6578d0a0ef29e778994060182917` |
+| lab-09 | `4220b08096018acbaf8e626508565e2f883ea019` |
+| lab-10 | `40d34ce3dc930596f70ef080e83cc0837028b50d` |
+| lab-13 | `939d68b1532d88a0a734de0963aa54250f45a17a` |
+
+La huella resume la lista ordenada de todos los identificadores de la semilla.
+Una sola confirmacion que cambie la cambia entera.
