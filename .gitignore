@@ -13,6 +13,11 @@ npm-debug.log*
 .tmp/
 *.tmp
 
+# Repositorios que las semillas dejan preparados. El destino por omision de
+# `semillas/preparar.sh` es ./recetario, y quien lo corra desde la raiz del
+# curso no deberia ver un repositorio ajeno asomando en `git status`.
+recetario/
+
 # Editores
 .vscode/
 .idea/
