@@ -199,9 +199,14 @@ await escenario('E1');
 await capturar('01-e1-inicio.png');
 await comprobar('Recetario recién creado');
 
+console.log('E2 · estado de partida');
+await escenario('E2');
+await capturar('02-e2-inicio.png');
+await comprobar('mensaje mal escrito');
+
 console.log('E3 · estado de partida');
 await escenario('E3');
-await capturar('02-e3-inicio.png');
+await capturar('03-e3-inicio.png');
 await comprobar('tailandesa');
 
 console.log('E3 · secuencia del criterio CA2');
@@ -209,21 +214,21 @@ await ejecutar('git switch -c postres');
 await ejecutar('echo "sopaipillas" >> platos.md');
 await ejecutar('git add platos.md');
 await ejecutar('git commit -m "agrega sopaipillas al listado"');
-await capturar('03-e3-rama-nueva-y-confirmacion.png');
+await capturar('04-e3-rama-nueva-y-confirmacion.png');
 await comprobar('postres');
 
 console.log('E4 · previsualizacion de la fusion, escrita y sin ejecutar');
 await escenario('E4');
 await escribir('git merge tailandesa');
 await esperar(400);
-await capturar('04-e4-previsualizacion-fusion.png');
+await capturar('05-e4-previsualizacion-fusion.png');
 await comprobar('Entrar ejecuta, Escape descarta');
 
 console.log('E3 · despues del rebase');
 await escenario('E3');
 await ejecutar('git switch tailandesa');
 await ejecutar('git rebase main');
-await capturar('05-e3-despues-del-rebase.png');
+await capturar('06-e3-despues-del-rebase.png');
 await comprobar('sin referencia');
 
 socket.close();

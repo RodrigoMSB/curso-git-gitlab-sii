@@ -113,8 +113,13 @@ export function Aplicacion(): React.ReactElement {
         contenido pide. Sin eso, ambos se estiraban a la altura de la fila y en
         los escenarios de la sesion 1 la pantalla mostraba mil pixeles vacios.
         El tope los mantiene dentro de la ventana junto con el resto de zonas.
+
+        El grafo reserva ademas un alto minimo, que es donde va a crecer durante
+        la clase. Esa reserva es lo que mantiene quietas a las areas mientras
+        aparecen confirmaciones, sin necesidad de anclarlas al borde inferior:
+        anclarlas partia la pantalla en dos en los escenarios chicos.
       */}
-      <div className="grid grid-cols-1 items-start gap-3 [--alto-central:calc(100dvh-20rem)] min-[1280px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="grid grid-cols-1 items-start gap-3 [--alto-central:calc(100dvh-20rem)] [--alto-grafo:26rem] min-[1280px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <Consola
           indicador={pantalla.indicador}
           renglones={pantalla.renglones}
@@ -133,7 +138,7 @@ export function Aplicacion(): React.ReactElement {
         />
 
         <section
-          className="panel max-h-[var(--alto-central)] min-h-0 overflow-hidden"
+          className="panel max-h-[var(--alto-central)] min-h-[var(--alto-grafo)] overflow-hidden"
           aria-label="Grafo de confirmaciones"
         >
           <Grafo
@@ -147,13 +152,11 @@ export function Aplicacion(): React.ReactElement {
       </div>
 
       {/*
-        `mt-auto` deja la franja de areas y la linea de tiempo apoyadas en el
-        borde inferior. Asi el hueco que sobra en los escenarios chicos queda
-        entre el grafo y las areas, que es justo donde el grafo va a crecer, y
-        las dos zonas de abajo no se deslizan por la pantalla a medida que
-        aparecen confirmaciones.
+        Las areas fluyen a continuacion del grafo, con la misma separacion que
+        el resto de las zonas. Lo que sobre queda al final de la pagina, no en
+        el medio.
       */}
-      <div className="mt-auto shrink-0 space-y-3">
+      <div className="shrink-0 space-y-3">
         <Areas columnas={pantalla.columnas} />
         <PanelesSecundarios paneles={pantalla.paneles} />
       </div>

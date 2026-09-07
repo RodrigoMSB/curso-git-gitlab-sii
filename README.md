@@ -88,7 +88,7 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 230 pruebas, 98 por ciento de cobertura de lineas.
+Estado actual: 231 pruebas, 98 por ciento de cobertura de lineas.
 
 Otras ordenes utiles:
 

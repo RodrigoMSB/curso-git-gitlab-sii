@@ -325,11 +325,21 @@ Ahora la altura de la ventana es un minimo y no un reparto. La consola y el
 grafo miden su contenido y crecen desde arriba, con un tope de `100dvh` menos
 veinte unidades, que es lo que ocupan la barra, la franja de areas y la linea
 de tiempo juntas; pasado ese tope se desplazan por dentro y las cuatro zonas
-siguen cabiendo en la ventana. La franja de areas y la linea de tiempo quedan
-apoyadas en el borde inferior, de modo que el hueco sobrante cae entre el grafo
-y las areas, que es justo por donde el grafo va a crecer durante la clase, y no
-debajo de todo. Las dos zonas de abajo no se deslizan a medida que aparecen
-confirmaciones.
+siguen cabiendo en la ventana.
+
+La franja de areas y la linea de tiempo fluyen a continuacion del grafo, con la
+misma separacion que hay entre el resto de las zonas. Lo que sobra queda al
+final de la pagina. Un primer intento las anclo al borde inferior para que no
+se deslizaran mientras el grafo crecia, y eso puso el hueco justo al medio: en
+E1 y E2 quedaban casi mil pixeles entre el grafo y las areas, y la pantalla se
+leia partida en dos.
+
+Lo que mantiene quietas a las areas es el alto minimo del grafo, no el anclaje.
+El grafo reserva veintiseis unidades, que dan para unas siete confirmaciones:
+mientras la clase avanza dentro de esa reserva, el dibujo crece hacia adentro
+del panel y nada de lo que esta debajo se mueve. La reserva es ademas la unica
+altura que la pantalla impone, y se nota solo en el panel del grafo, que es
+donde se espera que aparezca contenido.
 
 **7.13 Las listas de archivos se desplazan por filas enteras.** El tope de las
 listas de la zona D es un multiplo exacto del alto de fila, y ambas medidas se

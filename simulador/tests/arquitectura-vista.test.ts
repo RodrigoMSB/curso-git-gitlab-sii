@@ -161,8 +161,8 @@ describe('la pantalla se ajusta al contenido', () => {
     // minimo, de modo que las zonas no se estiran para rellenar la ventana.
     expect(aplicacion).not.toMatch(/(?<![-\w])h-\[100dvh\]/);
     expect(aplicacion).toContain('min-h-[100dvh]');
-    // Lo que sobra queda entre el grafo y las areas, no debajo de todo.
-    expect(aplicacion).toContain('mt-auto');
+    // Las areas fluyen tras el grafo: lo que sobra cae al final de la pagina.
+    expect(aplicacion).not.toContain('mt-auto');
   });
 
   it('la consola y el grafo crecen hasta un tope y ahi se desplazan por dentro', () => {
@@ -170,6 +170,11 @@ describe('la pantalla se ajusta al contenido', () => {
     expect(consola).toContain('min-h-0 overflow-auto');
     expect(grafo).toContain('max-h-full overflow-auto');
     expect(aplicacion).toContain('[--alto-central:calc(100dvh-20rem)]');
+  });
+
+  it('el grafo reserva su espacio de crecimiento para que las areas no se deslicen', () => {
+    expect(aplicacion).toContain('[--alto-grafo:26rem]');
+    expect(aplicacion).toContain('min-h-[var(--alto-grafo)]');
   });
 });
 
