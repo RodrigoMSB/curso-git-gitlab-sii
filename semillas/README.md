@@ -76,6 +76,12 @@ transporta.
 compara los identificadores. Sirve para lo mismo entre maquinas distintas: se
 corre en cada una y se comparan las huellas que imprime.
 
+**Si tienes una maquina con Windows**, esa es justamente la orden que falta
+correr para cerrar el criterio CA2 del SPEC 003. El instructivo completo, con
+la tabla de huellas contra la cual comparar, esta en
+[`docs/arquitectura.md`](../docs/arquitectura.md), seccion «CA2 · PENDIENTE DE
+CIERRE».
+
 ## Peso
 
 El arbol completo pesa **232 KB**, de los cuales **52 KB** son los once

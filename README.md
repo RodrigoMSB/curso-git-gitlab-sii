@@ -96,7 +96,7 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 298 pruebas, 98 por ciento de cobertura de lineas. Las de las
+Estado actual: 318 pruebas, 98 por ciento de cobertura de lineas. Las de las
 semillas ejecutan Git de verdad y se llevan unos cuarenta segundos.
 
 Otras ordenes utiles:

@@ -157,6 +157,59 @@ describe('CA4 · cada verificador falla cuando se altera lo que comprueba', () =
   });
 });
 
+/**
+ * Ninguna semilla debe dejar ramas locales que su verificador no declare.
+ *
+ * Sale de un hallazgo concreto: un paquete creado con `--all HEAD` deja al
+ * clonarse una referencia `refs/remotes/origin` a secas, ademas de las ramas.
+ * Recorrer las ramas de seguimiento por su nombre abreviado la tomaba por una
+ * rama y creaba una rama local llamada «origin» en las diez semillas. Se
+ * corrigio filtrando por el nombre completo de la referencia, y esta prueba
+ * existe para que no vuelva a aparecer por otro camino.
+ */
+describe('las ramas locales son exactamente las declaradas', () => {
+  /** Lo que el verificador de la semilla afirma con `v_ramas`. */
+  function ramasDeclaradas(lab: string): string {
+    const verificador = readFileSync(join(SEMILLAS, 'verificadores', `lab-${lab}.sh`), 'utf8');
+    const declaracion = /^v_ramas '([^']*)'/m.exec(verificador);
+    if (declaracion?.[1] === undefined) {
+      throw new Error(`el verificador del laboratorio ${lab} no declara sus ramas con v_ramas`);
+    }
+    return declaracion[1];
+  }
+
+  it.each(LABORATORIOS)('el laboratorio %s no trae ninguna rama de mas', (lab) => {
+    const repositorio = preparadas.get(lab) ?? '';
+    const ramas = git(repositorio, 'for-each-ref', '--format=%(refname:short)', 'refs/heads')
+      .split('\n')
+      .filter((rama) => rama !== '')
+      .sort();
+
+    expect(ramas.join(' ')).toBe(ramasDeclaradas(lab));
+  });
+
+  it.each(LABORATORIOS)('el laboratorio %s no deja rastros de la clonacion', (lab) => {
+    const repositorio = preparadas.get(lab) ?? '';
+    const ramas = git(repositorio, 'for-each-ref', '--format=%(refname:short)', 'refs/heads')
+      .split('\n')
+      .filter((rama) => rama !== '');
+
+    // La rama fantasma se llamaba «origin»; una rama con barra seria una de
+    // seguimiento convertida en local por el mismo descuido.
+    expect(ramas).not.toContain('origin');
+    for (const rama of ramas) expect(rama).not.toContain('/');
+
+    // Salvo el laboratorio 09, donde el remoto es la materia del ejercicio, no
+    // debe quedar ninguna referencia de seguimiento despues de preparar.
+    const seguimiento = git(repositorio, 'for-each-ref', '--format=%(refname)', 'refs/remotes');
+    if (lab === '09') {
+      expect(seguimiento).toContain('refs/remotes/origin/main');
+    } else {
+      expect(seguimiento).toBe('');
+    }
+  });
+});
+
 describe('CA1 · los generadores son deterministas', () => {
   it.each(LABORATORIOS)(
     'dos ejecuciones del generador %s producen los mismos identificadores',

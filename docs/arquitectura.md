@@ -423,13 +423,16 @@ detiene antes de que el participante escriba nada.
 
 ## 10. Decisiones no especificadas del SPEC 003
 
-**10.1 Son diez semillas y once paquetes, no nueve y diez.** El cuadro de la
-seccion 7 marca con «si» diez laboratorios: 02, 03, 04, 05, 06, 07, 08, 09, 10
-y 13. La frase que lo sigue dice «nueve semillas y diez paquetes». Se siguio el
-cuadro, que es la parte especifica, y se dejo constancia aqui. Si la intencion
-era que alguno de los diez no llevara semilla, el candidato mas probable es el
-10, cuyo estado es el recetario terminado; sacarlo es cosa de borrar tres
-archivos y una fila del manifiesto.
+**10.1 Son diez semillas y once paquetes.** El cuadro de la seccion 7 del
+SPEC 003 marca con «si» diez laboratorios —02, 03, 04, 05, 06, 07, 08, 09, 10
+y 13— mientras que la frase siguiente decia «nueve semillas y diez paquetes».
+Se siguio el cuadro, que es la parte especifica.
+
+El product owner confirmo despues que la frase era el error y el cuadro lo
+correcto: **el laboratorio 10 lleva semilla**, porque parte del recetario
+terminado y listo para publicar. Diez semillas y once paquetes es lo
+definitivo y no hay nada que sacar. Queda escrito aqui para que la
+contradiccion del spec no reabra la pregunta.
 
 **10.2 Las fechas se llevan como epoca y desplazamientos, sin llamar a
 `date`.** BSD y GNU no aceptan los mismos argumentos, y una diferencia ahi
@@ -506,27 +509,57 @@ del arbol de semillas es de 232 KB, de los cuales 52 KB son los once paquetes:
 tres ordenes de magnitud por debajo del limite de veinte megabytes que fija
 CA10, y una prueba lo vigila.
 
-**CA2 esta comprobado a medias, y conviene decirlo.** El determinismo entre dos
-ejecuciones esta comprobado de forma automatizada, y las dos ejecuciones
-corrieron sobre macOS 15 con Git 2.50.1 y Bash 3.2. La comprobacion **entre
-sistemas operativos distintos no se hizo**: este trabajo se desarrollo en una
-sola maquina y no hay una Windows a mano. Lo que si esta hecho es lo que
-depende del codigo: `core.autocrlf` y `core.eol` quedan fijados en el
-repositorio generado, de modo que los finales de linea no cambien el contenido
-confirmado, que es la causa habitual de que los identificadores difieran entre
-Windows y el resto.
+### CA2 · PENDIENTE DE CIERRE
 
-Para cerrar el criterio, en una maquina con Git Bash sobre Windows:
+**Estado: abierto.** Falta correrlo en Windows. Todo lo demas del SPEC 003
+esta cerrado.
+
+Lo que si esta comprobado: dos ejecuciones del mismo generador producen los
+mismos identificadores, de forma automatizada, sobre **macOS 15 con Git 2.50.1
+y Bash 3.2**. Lo que falta es la otra mitad del criterio, que pide dos sistemas
+operativos distintos. No se hizo porque el trabajo se desarrollo en una sola
+maquina.
+
+Lo que depende del codigo ya esta puesto: el repositorio generado fija
+`core.autocrlf` y `core.eol`, de modo que los finales de linea no cambien el
+contenido confirmado, que es la causa habitual de que los identificadores
+difieran entre Windows y el resto.
+
+#### Como cerrarlo
+
+En una maquina con Windows y Git Bash, sobre una copia limpia de este
+repositorio, correr **exactamente esto** desde la raiz del curso:
 
 ```bash
-semillas/comprobar.sh --determinismo
+bash semillas/comprobar.sh --determinismo
 ```
 
-Imprime una huella por semilla. Si coinciden con las de abajo, CA2 queda
-verificado y el resultado se anota aqui. Estas son las obtenidas en macOS 15
-con Git 2.50.1 y Bash 3.2; una prueba de la suite las compara contra lo que el
-repositorio produce hoy, de modo que la tabla no pueda quedar vieja en
-silencio.
+Tarda alrededor de un minuto y no necesita red ni `npm install`. Imprime una
+linea por semilla, con esta forma:
+
+```
+  ok lab-02  e59c2113da7f9a09408c667af0dd348835d933cf
+```
+
+Comparar esas diez huellas contra la **tabla de huellas de referencia** que
+esta mas abajo, en esta misma seccion. Entonces:
+
+- **Si las diez coinciden**, CA2 queda verificado. Reemplazar el encabezado de
+  esta seccion por `### CA2 · cerrado`, anotar la fecha, la version de Windows,
+  la de Git y la de Bash, y borrar este instructivo.
+- **Si alguna difiere**, CA2 queda incumplido y hay un problema real: los
+  enunciados no podran citar identificadores. Anotar aqui cuales difirieron y
+  con que valores. El primer sospechoso son los finales de linea; el segundo,
+  la version de Git, que en Windows suele ir por detras.
+
+No hace falta preguntar nada para hacer esto: la orden es la de arriba y la
+tabla es la de abajo.
+
+#### Tabla de huellas de referencia
+
+Obtenidas en macOS 15, Git 2.50.1, Bash 3.2. Una prueba de la suite las
+compara contra lo que el repositorio produce hoy, de modo que la tabla no pueda
+quedar vieja en silencio.
 
 | Semilla | Huella de los identificadores |
 |---|---|
