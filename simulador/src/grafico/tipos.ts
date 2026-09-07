@@ -58,11 +58,25 @@ export interface EnlacePuntero {
   readonly ancla: 'rama' | 'confirmacion';
 }
 
+/**
+ * Rotulo suelto del dibujo, sin recuadro ni forma.
+ *
+ * Hoy solo se usa para nombrar el grupo de confirmaciones huerfanas: el gris
+ * las distingue, pero no dice que son (punto 5.6).
+ */
+export interface RotuloGrafo {
+  readonly texto: string;
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface Disposicion {
   readonly nodos: readonly NodoGrafo[];
   readonly aristas: readonly AristaGrafo[];
   readonly etiquetas: readonly EtiquetaGrafo[];
   readonly enlacePuntero: EnlacePuntero | null;
+  /** Nombra el grupo de huerfanas. Es nulo cuando no hay ninguna. */
+  readonly rotuloHuerfanas: RotuloGrafo | null;
   /** Origen del marco de dibujo. Puede ser negativo por las etiquetas de version. */
   readonly origenX: number;
   readonly origenY: number;

@@ -15,7 +15,7 @@ export { E1, E2, E3, E4, ESCENARIOS } from './recetario';
 export function escenarioDeSesion(sesion: number): EstadoRepositorio {
   const declaracion = ESCENARIOS.find((candidato) => candidato.sesion === sesion);
   if (declaracion === undefined) {
-    throw new Error(`No hay escenario definido para la sesion ${sesion}.`);
+    throw new Error(`No hay escenario definido para la sesión ${sesion}.`);
   }
   return construirEscenario(declaracion);
 }

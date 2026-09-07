@@ -5,7 +5,13 @@
  * pantalla debe respirar en los escenarios simples de la sesion 1.
  */
 
-import type { ColumnaArea, Paneles, Renglon, TonoElemento } from '../vista';
+import {
+  FILAS_VISIBLES,
+  type ColumnaArea,
+  type Paneles,
+  type Renglon,
+  type TonoElemento,
+} from '../vista';
 
 const COLOR_POR_TONO: Readonly<Record<TonoElemento, string>> = {
   nuevo: 'var(--consola-rojo)',
@@ -29,7 +35,14 @@ export function Areas({
           {columna.elementos.length === 0 ? (
             <p className="t-min text-[var(--texto-apagado)]">{columna.vacio}</p>
           ) : (
-            <ul className="t-min max-h-28 space-y-1 overflow-auto font-mono">
+            <ul
+              className="lista-archivos t-min font-mono"
+              // Cuando la lista se desplaza pasa a ser alcanzable con el
+              // teclado; si cabe entera no agrega una parada de tabulacion que
+              // no lleva a ninguna parte (CA8).
+              tabIndex={columna.elementos.length > FILAS_VISIBLES ? 0 : undefined}
+              style={{ '--filas-visibles': FILAS_VISIBLES } as React.CSSProperties}
+            >
               {columna.elementos.map((elemento) => (
                 <li key={elemento.texto} style={{ color: COLOR_POR_TONO[elemento.tono] }}>
                   {elemento.texto}
@@ -100,12 +113,12 @@ export function PanelesSecundarios({
           <h2 className="t-pequeno mb-2 font-semibold">Objetos internos</h2>
           <div className="t-min space-y-2 font-mono">
             <ObjetoDibujado
-              titulo="confirmacion"
+              titulo="confirmación"
               id={paneles.objetos.confirmacion.id}
               campos={paneles.objetos.confirmacion.campos}
             />
             <ObjetoDibujado
-              titulo="arbol"
+              titulo="árbol"
               id={paneles.objetos.arbol.id}
               campos={paneles.objetos.arbol.campos}
             />

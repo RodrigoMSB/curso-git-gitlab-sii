@@ -205,7 +205,7 @@ export function formatearDiff(archivos: readonly string[]): readonly string[] {
     `diff --git a/${nombre} b/${nombre}`,
     `--- a/${nombre}`,
     `+++ b/${nombre}`,
-    `@@ simulacion @@`,
+    `@@ simulación @@`,
     `+ ${nombre} registra cambios; el simulador no versiona el contenido`,
   ]);
 }

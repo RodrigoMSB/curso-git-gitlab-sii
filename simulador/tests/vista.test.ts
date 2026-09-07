@@ -178,6 +178,16 @@ describe('zona D: areas y paneles', () => {
     expect(despues[1]?.elementos.map((e) => e.texto)).toEqual(['platos.md']);
   });
 
+  it('los rotulos de la zona D van acentuados', () => {
+    const columnas = columnasDeAreas(escenarioPorId('E1'));
+    expect(columnas.map((columna) => columna.titulo)).toEqual([
+      'Directorio de trabajo',
+      'Área de preparación',
+      'Repositorio local',
+      'Repositorio remoto',
+    ]);
+  });
+
   it('las cuatro columnas son fijas y siempre estan', () => {
     const columnas = columnasDeAreas(escenarioPorId('E1'));
     expect(columnas.map((columna) => columna.clave)).toEqual([

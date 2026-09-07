@@ -87,10 +87,12 @@ export function Aplicacion(): React.ReactElement {
   }, []);
 
   return (
+    // La pantalla ocupa al menos el alto de la ventana, pero no lo impone: si
+    // el contenido no llega, las zonas no se estiran para rellenarlo.
     <div
       data-relator={modoRelator}
       style={{ '--escala': escala } as React.CSSProperties}
-      className="flex h-[100dvh] min-h-0 flex-col gap-3 overflow-hidden p-3"
+      className="flex min-h-[100dvh] flex-col gap-3 p-3"
     >
       <BarraEstado
         barra={pantalla.barra}
@@ -106,8 +108,13 @@ export function Aplicacion(): React.ReactElement {
       {/*
         Por debajo de mil doscientos ochenta pixeles las zonas se apilan en
         vertical en lugar de comprimirse (punto 10.5).
+
+        `items-start` es lo que deja que la consola y el grafo midan lo que su
+        contenido pide. Sin eso, ambos se estiraban a la altura de la fila y en
+        los escenarios de la sesion 1 la pantalla mostraba mil pixeles vacios.
+        El tope los mantiene dentro de la ventana junto con el resto de zonas.
       */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto min-[1280px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="grid grid-cols-1 items-start gap-3 [--alto-central:calc(100dvh-20rem)] min-[1280px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <Consola
           indicador={pantalla.indicador}
           renglones={pantalla.renglones}
@@ -125,7 +132,10 @@ export function Aplicacion(): React.ReactElement {
           onDescartar={descartar}
         />
 
-        <section className="panel min-h-0 overflow-hidden" aria-label="Grafo de confirmaciones">
+        <section
+          className="panel max-h-[var(--alto-central)] min-h-0 overflow-hidden"
+          aria-label="Grafo de confirmaciones"
+        >
           <Grafo
             disposicion={pantalla.grafo}
             escala={escala}
@@ -136,7 +146,14 @@ export function Aplicacion(): React.ReactElement {
         </section>
       </div>
 
-      <div className="max-h-[34vh] shrink-0 space-y-3 overflow-y-auto">
+      {/*
+        `mt-auto` deja la franja de areas y la linea de tiempo apoyadas en el
+        borde inferior. Asi el hueco que sobra en los escenarios chicos queda
+        entre el grafo y las areas, que es justo donde el grafo va a crecer, y
+        las dos zonas de abajo no se deslizan por la pantalla a medida que
+        aparecen confirmaciones.
+      */}
+      <div className="mt-auto shrink-0 space-y-3">
         <Areas columnas={pantalla.columnas} />
         <PanelesSecundarios paneles={pantalla.paneles} />
       </div>

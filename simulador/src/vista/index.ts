@@ -35,4 +35,4 @@ export type {
   SegmentoTiempo,
   TonoElemento,
 } from './pantalla';
-export { construirPantalla, ESCALA_RELATOR, TEXTO_MINIMO } from './pantalla';
+export { construirPantalla, ESCALA_RELATOR, FILAS_VISIBLES, TEXTO_MINIMO } from './pantalla';

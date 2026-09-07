@@ -70,7 +70,7 @@ export function cadenaDeObjetos(
     arbol: {
       tipo: 'arbol',
       id: idArbol,
-      nombre: `arbol de ${confirmacion.id}`,
+      nombre: `árbol de ${confirmacion.id}`,
       campos: elementos.map((elemento) => ({
         clave: elemento.nombre,
         valor: elemento.id,

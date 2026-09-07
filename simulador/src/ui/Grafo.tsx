@@ -47,22 +47,23 @@ export function Grafo({
   animar,
   onSeleccionar,
 }: Props): React.ReactElement {
-  const { nodos, aristas, etiquetas, enlacePuntero, origenX, origenY, ancho, alto } = disposicion;
+  const { nodos, aristas, etiquetas, enlacePuntero, rotuloHuerfanas, origenX, origenY, ancho, alto } =
+    disposicion;
 
   if (nodos.length === 0) {
     return (
       <p className="t-normal p-6 text-[var(--texto-apagado)]">
-        Todavia no hay confirmaciones. La primera aparecera aqui en cuanto
+        Todavía no hay confirmaciones. La primera aparecerá aquí en cuanto
         confirmes algo preparado.
       </p>
     );
   }
 
   return (
-    <div className="h-full overflow-auto p-2">
+    <div className="max-h-full overflow-auto p-2">
       {disposicion.ocultas > 0 && (
         <p className="t-min mb-2 text-[var(--texto-apagado)]">
-          Se dibujan las {nodos.length} confirmaciones mas recientes.{' '}
+          Se dibujan las {nodos.length} confirmaciones más recientes.{' '}
           {disposicion.ocultas} quedaron fuera.
         </p>
       )}
@@ -97,6 +98,23 @@ export function Grafo({
           />
         )}
 
+        {/*
+          El gris distingue a las huerfanas, pero no dice que son. El rotulo lo
+          nombra sin competir con las etiquetas de rama (punto 5.6).
+        */}
+        {rotuloHuerfanas !== null && (
+          <text
+            x={rotuloHuerfanas.x}
+            y={rotuloHuerfanas.y + 4}
+            fontSize={11}
+            fontFamily="var(--font-sans)"
+            fontStyle="italic"
+            fill="var(--huerfano)"
+          >
+            {rotuloHuerfanas.texto}
+          </text>
+        )}
+
         <g>
           {nodos.map((nodo) => {
             const color = colorDeNodo(nodo);
@@ -112,7 +130,7 @@ export function Grafo({
                 className={animar ? 'transicion-nodo enfocable' : 'enfocable'}
                 role="button"
                 tabIndex={0}
-                aria-label={`Confirmacion ${nodo.id}: ${nodo.mensaje}`}
+                aria-label={`Confirmación ${nodo.id}: ${nodo.mensaje}`}
                 aria-pressed={elegida}
                 onClick={() => onSeleccionar(nodo.id)}
                 onKeyDown={(evento) => {

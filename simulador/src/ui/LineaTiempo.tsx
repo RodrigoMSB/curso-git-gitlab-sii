@@ -29,9 +29,9 @@ export function LineaTiempo({ segmentos, onIr }: Props): React.ReactElement {
   const actual = segmentos.find((segmento) => segmento.actual);
 
   return (
-    <nav className="panel px-3 py-2" aria-label="Linea de tiempo">
+    <nav className="panel px-3 py-2" aria-label="Línea de tiempo">
       <div className="mb-1 flex items-baseline gap-3">
-        <h2 className="t-pequeno font-semibold">Linea de tiempo</h2>
+        <h2 className="t-pequeno font-semibold">Línea de tiempo</h2>
         <p className="t-min text-[var(--texto-apagado)]">
           paso {(actual?.indice ?? 0) + 1} de {segmentos.length}
           {actual?.etiqueta !== undefined && ` · ${actual.etiqueta}`}

@@ -5,7 +5,7 @@
  * trabajaran (punto 4.1). Este componente no interpreta ordenes: las entrega.
  */
 
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AvisoPrevisualizacion, ColorConsola, Indicador, Renglon } from '../vista';
 
 interface Props {
@@ -47,6 +47,12 @@ export function Consola({
   const campo = useRef<HTMLInputElement>(null);
   const desplazable = useRef<HTMLDivElement>(null);
   const pegadoAlFinal = useRef(true);
+  const [enfocado, setEnfocado] = useState(true);
+
+  // Las dos lineas de ayuda solo tienen sentido en el momento en que sirven:
+  // con el cursor puesto y todavia sin escribir nada. Permanentes se vuelven
+  // ruido, sobre todo en proyeccion.
+  const mostrarAyuda = enfocado && entrada === '';
 
   // El cursor recibe el foco al cargar la pagina (punto 4.3).
   useEffect(() => {
@@ -115,7 +121,7 @@ export function Consola({
     // daria acceso a nada nuevo.
     // biome-ignore lint/a11y/useKeyWithClickEvents: el teclado ya alcanza el campo sin esto
     <section
-      className="panel flex min-h-0 flex-col"
+      className="panel flex max-h-[var(--alto-central)] min-h-0 flex-col"
       style={{ background: 'var(--fondo-consola)' }}
       aria-label="Consola"
       onClick={() => campo.current?.focus()}
@@ -123,7 +129,7 @@ export function Consola({
       <div
         ref={desplazable}
         onScroll={alDesplazar}
-        className="t-normal flex-1 overflow-auto p-3 font-mono leading-relaxed"
+        className="t-normal min-h-0 overflow-auto p-3 font-mono leading-relaxed"
       >
         {renglones.map((renglon) =>
           renglon.color === 'orden' ? (
@@ -156,16 +162,16 @@ export function Consola({
           className="t-min border-t border-[var(--borde-suave)] px-3 py-1 text-[var(--puntero)]"
           role="status"
         >
-          Previsualizacion:{' '}
+          Previsualización:{' '}
           {aviso.confirmacionesNuevas > 0
-            ? `${aviso.confirmacionesNuevas} confirmacion(es) en trazo discontinuo`
+            ? `${aviso.confirmacionesNuevas} confirmación(es) en trazo discontinuo`
             : 'sin confirmaciones nuevas'}
-          {aviso.punteroMovido ? ', el puntero se movera' : ', el puntero no se mueve'}. Entrar
+          {aviso.punteroMovido ? ', el puntero se moverá' : ', el puntero no se mueve'}. Entrar
           ejecuta, Escape descarta.
         </p>
       )}
 
-      <div className="border-t border-[var(--borde-suave)] p-3">
+      <div className="shrink-0 border-t border-[var(--borde-suave)] p-3">
         <LineaIndicador indicador={indicador} />
         <div className="t-normal flex items-baseline gap-2 font-mono">
           <span className="text-[var(--consola-verde)]">$</span>
@@ -174,21 +180,29 @@ export function Consola({
             value={entrada}
             onChange={(evento) => onEntrada(evento.target.value)}
             onKeyDown={alTeclear}
+            onFocus={() => setEnfocado(true)}
+            onBlur={() => setEnfocado(false)}
             className="t-normal min-w-0 flex-1 bg-transparent font-mono text-[var(--texto)] outline-none"
             aria-label="Orden de Git"
-            aria-describedby={previsualizacionActiva ? 'aviso-previsualizacion' : undefined}
+            aria-describedby={
+              mostrarAyuda && previsualizacionActiva ? 'aviso-previsualizacion' : undefined
+            }
             spellCheck={false}
             autoComplete="off"
           />
         </div>
-        <p className="t-min mt-1 text-[var(--texto-apagado)]">
-          Tabulacion completa la orden. Con el campo vacio, tabulacion sale de la consola.
-        </p>
-        {previsualizacionActiva && (
-          <p id="aviso-previsualizacion" className="t-min mt-1 text-[var(--texto-apagado)]">
-            Previsualizacion activa: lo que la orden haria se dibuja discontinuo antes de
-            ejecutarla.
-          </p>
+        {mostrarAyuda && (
+          <>
+            <p className="t-min mt-1 text-[var(--texto-apagado)]">
+              Tabulación completa la orden. Con el campo vacío, tabulación sale de la consola.
+            </p>
+            {previsualizacionActiva && (
+              <p id="aviso-previsualizacion" className="t-min mt-1 text-[var(--texto-apagado)]">
+                Previsualización activa: lo que la orden haría se dibuja discontinuo antes de
+                ejecutarla.
+              </p>
+            )}
+          </>
         )}
       </div>
     </section>

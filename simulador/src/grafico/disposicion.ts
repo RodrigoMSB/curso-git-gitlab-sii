@@ -18,6 +18,7 @@ import {
   type EnlacePuntero,
   type EtiquetaGrafo,
   type NodoGrafo,
+  type RotuloGrafo,
 } from './tipos';
 
 export interface OpcionesDisposicion {
@@ -246,6 +247,7 @@ export function disponer(
   }
 
   const { etiquetas, enlacePuntero } = disponerEtiquetas(estado, posicion);
+  const rotuloHuerfanas = rotularHuerfanas(nodos);
 
   // El marco se deduce de lo dibujado. Las etiquetas de version quedan a la
   // izquierda de la primera columna, de modo que el origen puede ser negativo.
@@ -256,6 +258,9 @@ export function disponer(
   const derechas = [
     ...nodos.map((nodo) => nodo.x + MEDIDAS.radio),
     ...etiquetas.map((etiqueta) => etiqueta.x + etiqueta.ancho),
+    ...(rotuloHuerfanas === null
+      ? []
+      : [rotuloHuerfanas.x + anchoDeTexto(rotuloHuerfanas.texto)]),
   ];
   const abajos = [
     ...nodos.map((nodo) => nodo.y + MEDIDAS.radio),
@@ -271,11 +276,36 @@ export function disponer(
     aristas,
     etiquetas,
     enlacePuntero,
+    rotuloHuerfanas,
     origenX,
     origenY: 0,
     ancho: extremoX - origenX,
     alto: extremoY,
     ocultas: Math.max(todas.length - visibles.length, 0),
+  };
+}
+
+/** Texto que nombra al grupo de confirmaciones sin ninguna referencia. */
+export const TEXTO_HUERFANAS = 'sin referencia';
+
+/**
+ * Ubica el rotulo del grupo de huerfanas.
+ *
+ * El gris atenuado las distingue, pero no dice que son. El rotulo va a la
+ * derecha del grupo, a la altura de su centro, de modo que se lea como
+ * perteneciente al conjunto y no a una confirmacion en particular. Ese costado
+ * siempre esta libre: una huerfana, por definicion, no tiene ninguna etiqueta
+ * apuntandola.
+ */
+function rotularHuerfanas(nodos: readonly NodoGrafo[]): RotuloGrafo | null {
+  const huerfanas = nodos.filter((nodo) => nodo.huerfana);
+  if (huerfanas.length === 0) return null;
+
+  const alturas = huerfanas.map((nodo) => nodo.y);
+  return {
+    texto: TEXTO_HUERFANAS,
+    x: Math.max(...huerfanas.map((nodo) => nodo.x)) + MEDIDAS.radio + MEDIDAS.separacionEtiqueta,
+    y: (Math.min(...alturas) + Math.max(...alturas)) / 2,
   };
 }
 

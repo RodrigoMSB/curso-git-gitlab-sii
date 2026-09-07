@@ -30,7 +30,7 @@ export function construirEscenario(declaracion: EscenarioDeclarado): EstadoRepos
       const id = identificadores.get(clave);
       if (id === undefined) {
         throw new Error(
-          `El escenario ${declaracion.id} nombra el padre '${clave}', que no esta declarado antes.`,
+          `El escenario ${declaracion.id} nombra el padre '${clave}', que no está declarado antes.`,
         );
       }
       return id;

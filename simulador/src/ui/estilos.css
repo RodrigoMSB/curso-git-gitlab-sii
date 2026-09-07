@@ -79,6 +79,30 @@ body {
   border-radius: 6px;
 }
 
+/*
+  Listas de la zona D.
+
+  El tope es un numero entero de filas y cada fila mide exactamente lo mismo,
+  de modo que el corte del desplazamiento siempre cae entre dos lineas y nunca
+  parte una por la mitad. Ambas medidas se escalan con la interfaz, asi que en
+  modo relator se siguen viendo seis filas completas y no cinco y media.
+*/
+.lista-archivos {
+  --alto-fila: calc(var(--escala) * 18px);
+  --filas-visibles: 6;
+  max-height: calc(var(--alto-fila) * var(--filas-visibles));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.lista-archivos > li {
+  height: var(--alto-fila);
+  line-height: var(--alto-fila);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* El anillo de foco es la unica excepcion decorativa, porque es funcional. */
 :where(button, select, input, [tabindex]):focus-visible {
   outline: 2px solid var(--puntero);

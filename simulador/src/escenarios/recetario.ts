@@ -68,9 +68,9 @@ const TRONCO = [
 export const E1: EscenarioDeclarado = {
   id: 'E1',
   sesion: 1,
-  titulo: 'Recetario recien creado',
+  titulo: 'Recetario recién creado',
   proposito:
-    'Configurar la identidad, mirar el estado, preparar archivos y hacer la primera confirmacion.',
+    'Configurar la identidad, mirar el estado, preparar archivos y hacer la primera confirmación.',
   directorio: DIRECTORIO,
   configuracion: {},
   confirmaciones: [],
@@ -93,7 +93,7 @@ export const E2: EscenarioDeclarado = {
   sesion: 2,
   titulo: 'Historia lineal con un mensaje mal escrito',
   proposito:
-    'Leer el historial, comparar cambios, corregir el ultimo mensaje y deshacer con reset y revert.',
+    'Leer el historial, comparar cambios, corregir el último mensaje y deshacer con reset y revert.',
   directorio: DIRECTORIO,
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
@@ -175,7 +175,7 @@ export const E4: EscenarioDeclarado = {
   sesion: 4,
   titulo: 'Ramas divergentes sobre el mismo archivo',
   proposito:
-    'Provocar un conflicto de fusion, resolverlo, abortarlo y rehacer la historia con rebase.',
+    'Provocar un conflicto de fusión, resolverlo, abortarlo y rehacer la historia con rebase.',
   directorio: DIRECTORIO,
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
@@ -183,7 +183,7 @@ export const E4: EscenarioDeclarado = {
     {
       clave: 'c4',
       // Toca platos.md, igual que la rama tailandesa: de ahi sale el conflicto.
-      mensaje: 'Suma el charquican a la lista de platos',
+      mensaje: 'Suma el charquicán a la lista de platos',
       archivos: ['platos.md'],
       padres: ['c3'],
       carril: 0,

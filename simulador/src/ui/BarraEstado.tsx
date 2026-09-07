@@ -39,7 +39,7 @@ function Interruptor({
         color: activo ? 'var(--puntero)' : 'var(--texto-apagado)',
       }}
     >
-      {etiqueta}: {activo ? 'si' : 'no'}
+      {etiqueta}: {activo ? 'sí' : 'no'}
     </button>
   );
 }
@@ -83,7 +83,7 @@ export function BarraEstado({
         >
           {barra.escenarios.map((opcion) => (
             <option key={opcion.id} value={opcion.id}>
-              {opcion.id} · sesion {opcion.sesion} · {opcion.titulo}
+              {opcion.id} · sesión {opcion.sesion} · {opcion.titulo}
             </option>
           ))}
         </select>
@@ -91,7 +91,7 @@ export function BarraEstado({
 
       <div className="flex items-center gap-2">
         <Interruptor
-          etiqueta="previsualizacion"
+          etiqueta="previsualización"
           activo={previsualizacionActiva}
           onCambiar={onPrevisualizacion}
         />
@@ -106,7 +106,7 @@ export function BarraEstado({
       </div>
 
       <p className="t-min ml-auto text-[var(--texto-apagado)]">
-        Funciona en este equipo, sin red. Nada sale de aqui.
+        Funciona en este equipo, sin red. Nada sale de aquí.
       </p>
     </header>
   );

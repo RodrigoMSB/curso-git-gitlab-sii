@@ -55,7 +55,7 @@ describe('escenarios del recetario COMIDA CHILENA', () => {
   });
 
   it('reclama al pedir un escenario que no existe', () => {
-    expect(() => escenarioDeSesion(9)).toThrow('sesion 9');
+    expect(() => escenarioDeSesion(9)).toThrow('sesión 9');
     expect(() => escenarioPorId('E9')).toThrow('E9');
   });
 
@@ -129,7 +129,7 @@ describe('escenarios del recetario COMIDA CHILENA', () => {
         ],
         ramas: [{ nombre: 'main', en: 'x', carril: 0 }],
       }),
-    ).toThrow('no esta declarado');
+    ).toThrow('no está declarado');
 
     expect(() =>
       construirEscenario({

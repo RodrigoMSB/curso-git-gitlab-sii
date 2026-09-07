@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { previsualizar } from '../src/core/motor';
 import { idActual, ramaPorNombre } from '../src/core/estado';
-import { disponer } from '../src/grafico/disposicion';
+import { disponer, TEXTO_HUERFANAS } from '../src/grafico/disposicion';
 import { MEDIDAS } from '../src/grafico/tipos';
 import { escenarioPorId } from '../src/escenarios';
 import { correr } from './ayudas';
@@ -181,6 +181,39 @@ describe('CA4 · el rebase deja las originales dibujadas', () => {
     }
     // Las originales y las copias conviven: no hay deslizamiento, hay copia.
     expect(nodos.length).toBe(partida.confirmaciones.length + 2);
+  });
+});
+
+describe('5.6 · el grupo de huerfanas va rotulado', () => {
+  it('sin huerfanas no hay rotulo', () => {
+    expect(disponer(escenarioPorId('E3')).rotuloHuerfanas).toBeNull();
+  });
+
+  it('tras el rebase el rotulo nombra el grupo y dice que estan sin referencia', () => {
+    const despues = correr(escenarioPorId('E3'), 'git switch tailandesa', 'git rebase main');
+    const { nodos, rotuloHuerfanas } = disponer(despues);
+    const huerfanas = nodos.filter((nodo) => nodo.huerfana);
+
+    expect(rotuloHuerfanas?.texto).toBe(TEXTO_HUERFANAS);
+    expect(TEXTO_HUERFANAS).toBe('sin referencia');
+
+    // A la derecha del grupo, que es el costado que una huerfana siempre tiene
+    // libre, y a la altura de su centro para que se lea como del conjunto.
+    const alturas = huerfanas.map((nodo) => nodo.y);
+    expect(rotuloHuerfanas?.x).toBeGreaterThan(Math.max(...huerfanas.map((nodo) => nodo.x)));
+    expect(rotuloHuerfanas?.y).toBe((Math.min(...alturas) + Math.max(...alturas)) / 2);
+    for (const viva of nodos.filter((nodo) => !nodo.huerfana)) {
+      expect(rotuloHuerfanas?.x).toBeGreaterThan(viva.x);
+    }
+  });
+
+  it('el marco de dibujo alcanza para el rotulo', () => {
+    const despues = correr(escenarioPorId('E2'), 'git reset --hard HEAD~1');
+    const disposicion = disponer(despues);
+    const rotulo = disposicion.rotuloHuerfanas;
+
+    expect(rotulo).not.toBeNull();
+    expect(disposicion.origenX + disposicion.ancho).toBeGreaterThan(rotulo?.x ?? 0);
   });
 });
 

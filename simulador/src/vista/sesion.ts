@@ -43,7 +43,7 @@ export function iniciarSesion(escenario: string): Sesion {
 
 function pasoActual(sesion: Sesion): Paso {
   const paso = sesion.pasos[sesion.indice] ?? sesion.pasos[0];
-  if (paso === undefined) throw new Error('La sesion quedo sin ningun paso.');
+  if (paso === undefined) throw new Error('La sesión quedó sin ningún paso.');
   return paso;
 }
 

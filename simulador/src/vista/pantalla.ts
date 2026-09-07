@@ -24,6 +24,14 @@ import { estadoDe, previsualizarOrden, renglonesDe, type Sesion } from './sesion
 export const TEXTO_MINIMO = 11;
 export const ESCALA_RELATOR = 1.3;
 
+/**
+ * Filas que muestran las listas de la zona D antes de desplazarse.
+ *
+ * Vive aqui, y no solo en la hoja de estilos, porque la interfaz necesita el
+ * mismo numero para saber cuando la lista pasa a ser alcanzable con el teclado.
+ */
+export const FILAS_VISIBLES = 6;
+
 export type TonoElemento = 'nuevo' | 'modificado' | 'preparado' | 'conflicto' | 'neutro';
 
 export interface ElementoArea {
@@ -123,7 +131,7 @@ export function columnasDeAreas(estado: EstadoRepositorio): readonly ColumnaArea
     },
     {
       clave: 'preparacion',
-      titulo: 'Area de preparacion',
+      titulo: 'Área de preparación',
       orden: 'git add',
       elementos: preparados.map((archivo) => ({
         texto: archivo.nombre,
@@ -204,7 +212,7 @@ export function resumenBarra(estado: EstadoRepositorio): ResumenBarra {
   const rama = ramaActual(estado);
   return {
     repositorio: estado.directorio.split('/').filter(Boolean).at(-1) ?? 'repositorio',
-    rama: rama ?? 'posicion desconectada',
+    rama: rama ?? 'posición desconectada',
     desconectado: rama === null,
     cambiosSinConfirmar: estado.archivos.filter((archivo) => archivo.estado !== 'limpio').length,
     escenarios: Object.values(declaraciones).map((declaracion) => ({
