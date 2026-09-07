@@ -176,11 +176,17 @@ para cuando un spec lo pida.
 Salieron gratis del diseno y evitan que el participante choque con un reclamo
 del simulador al escribir algo que en Git funciona.
 
-**4.12 El andamiaje visual es deliberadamente pobre.** `src/ui` contiene una
-sola pantalla de comprobacion: una consola, un selector de escenario y un
-listado del estado. Existe para verificar que el motor funciona dentro del
-archivo autocontenido. La consola, el grafo dibujado y el diseno son materia del
-SPEC 002.
+**4.12 El andamiaje visual fue deliberadamente pobre.** Mientras duro el
+SPEC 001, `src/ui` contuvo una sola pantalla de comprobacion: una consola, un
+selector de escenario y un listado del estado. Existia para verificar que el
+motor funcionaba dentro del archivo autocontenido, y dejaba la consola, el
+grafo dibujado y el diseno para el SPEC 002.
+
+Esa decision ya se agoto: el SPEC 002 reemplazo por completo ese andamiaje. Lo
+que hoy hay en `src/ui` son las cinco zonas de la pantalla del participante,
+descritas en las secciones 6 y 7 de este documento. El parrafo anterior queda
+como registro de lo que se decidio entonces, no como descripcion del estado
+actual.
 
 ## 5. Nada se aparto del SPEC 001
 
