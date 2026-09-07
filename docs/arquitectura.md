@@ -25,6 +25,7 @@ el resultado tiene que ser el mismo en cualquier equipo y en cualquier fecha.
 | `vite-plugin-singlefile` | 2.3.3 | Empaquetado en un archivo |
 | `@types/react` / `@types/react-dom` | 19.2.18 / 19.2.7 | Tipos de React |
 | `@types/node` | 26.4.1 | Tipos del entorno que usa `vite.config.ts` |
+| `@biomejs/biome` | 2.5.12 | Linter, agregado despues del SPEC 002 |
 
 La combinacion se instalo y se verifico antes de escribir el motor: Vite 8
 pide Node 20.19 o superior, Vitest 5 acepta Vite 8 y `vite-plugin-singlefile`
@@ -36,6 +37,36 @@ TypeScript esta en 7.0.2, que es la version estable publicada bajo la etiqueta
 `noImplicitOverride` y `verbatimModuleSyntax`. No hay ningun `any` en el motor.
 Para respetar `exactOptionalPropertyTypes` sin poblar el modelo de propiedades
 opcionales, las ausencias se declaran como `| null` en vez de `?`.
+
+### El linter es Biome, y no typescript-eslint
+
+Durante los dos specs el proyecto no tuvo linter. La razon era concreta:
+TypeScript 7 es el puerto nativo y salio sin API programatica estable, de la
+que typescript-eslint depende para construir su arbol con tipos. Instalarlo
+habria obligado a arrastrar una segunda copia de TypeScript 5 solo para el
+linter, con el riesgo de que el linter y el compilador discrepen sobre el mismo
+codigo.
+
+Biome no tiene ese problema: es un binario propio, analiza el codigo por su
+cuenta y no llama a TypeScript. Se agrego con `preset: recommended`, y con el
+formateador apagado a proposito: el proyecto ya tiene `.editorconfig` y
+reformatear todo el arbol habria enterrado el historial de los dos specs bajo
+un cambio de estilo.
+
+Lo que el linter no puede hacer es razonar sobre tipos, y ahi estan sus cuatro
+desacuerdos con este codigo. Los cuatro quedaron anotados en el lugar donde
+ocurren, con la razon escrita, en vez de apagar la regla para todo el proyecto:
+
+- `formato.ts` tiene un `switch` exhaustivo sobre la union de estados de
+  archivo. El linter pide un `default`; agregarlo convertiria en silencioso lo
+  que hoy es un error de compilacion cuando se agregue un estado nuevo.
+- La consola usa `renglones` como disparador de un efecto que no lo lee.
+  Quitarlo, como propone la regla, congela el desplazamiento automatico.
+- El clic sobre la consola solo devuelve el foco al campo. Con teclado ese
+  campo ya se alcanza con tabulacion, de modo que el manejador de teclas que
+  pide la regla no daria acceso a nada nuevo.
+- Los nodos del grafo llevan `role="button"` porque viven dentro del SVG,
+  donde `<button>` no existe.
 
 ## 2. Empaquetado en un archivo unico
 

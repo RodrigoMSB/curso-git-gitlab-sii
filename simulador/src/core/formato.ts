@@ -103,6 +103,11 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
 
 /** `git status -s`. */
 export function formatearEstadoCorto(estado: EstadoRepositorio): readonly string[] {
+  // El switch cubre la union completa de estados y TypeScript verifica esa
+  // exhaustividad. Agregar un `default` para callar al linter, que no analiza
+  // tipos, convertiria un error de compilacion en un caso silencioso el dia que
+  // se agregue un estado nuevo.
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: el switch es exhaustivo por tipos
   return estado.archivos.flatMap((archivo) => {
     switch (archivo.estado) {
       case 'preparado':

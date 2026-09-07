@@ -102,6 +102,11 @@ export function Grafo({
             const color = colorDeNodo(nodo);
             const elegida = nodo.id === seleccion;
             return (
+              // El nodo vive dentro del SVG, donde `<button>` no es un elemento
+              // valido. El grupo lleva rol, foco, rotulo y manejador de teclas,
+              // que es la forma de dar el mismo comportamiento sin salir del
+              // dibujo.
+              // biome-ignore lint/a11y/useSemanticElements: dentro de un SVG no hay <button>
               <g
                 key={nodo.id}
                 className={animar ? 'transicion-nodo enfocable' : 'enfocable'}

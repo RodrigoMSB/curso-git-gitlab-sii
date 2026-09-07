@@ -55,6 +55,10 @@ export function Consola({
 
   // Se baja solo al agregar contenido, salvo que el participante haya subido
   // a mano, en cuyo caso se respeta su posicion (punto 4.6).
+  // `renglones` no se lee dentro del efecto, se usa como disparador: cada
+  // salida nueva tiene que volver a bajar la caja. Quitarlo de la lista, como
+  // propone el linter, deja el desplazamiento congelado en la primera salida.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: es un disparador, no una lectura
   useLayoutEffect(() => {
     const caja = desplazable.current;
     if (caja === null || !pegadoAlFinal.current) return;
@@ -105,6 +109,11 @@ export function Consola({
   };
 
   return (
+    // El clic solo devuelve el foco al campo (punto 4.3) y es un atajo para el
+    // raton. Con teclado el campo ya se alcanza con tabulacion y ademas recibe
+    // el foco al cargar, de modo que un manejador de teclas en la seccion no
+    // daria acceso a nada nuevo.
+    // biome-ignore lint/a11y/useKeyWithClickEvents: el teclado ya alcanza el campo sin esto
     <section
       className="panel flex min-h-0 flex-col"
       style={{ background: 'var(--fondo-consola)' }}

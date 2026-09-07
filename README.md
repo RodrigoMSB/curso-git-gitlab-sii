@@ -95,6 +95,7 @@ Otras ordenes utiles:
 ```bash
 npm run test:observar   # repite las pruebas cada vez que se guarda un archivo
 npm run tipos           # revisa los tipos sin construir
+npm run lint            # pasa el linter sobre el codigo y las pruebas
 npm run dev             # levanta el simulador con recarga en caliente
 ```
 
@@ -102,6 +103,10 @@ npm run dev             # levanta el simulador con recarga en caliente
 es siempre el archivo de `dist`.
 
 ## Que se ve en pantalla
+
+Hay capturas de la pantalla real en [`docs/capturas`](docs/capturas), sobre los
+escenarios E1, E3 y E4, incluyendo la previsualizacion de una fusion y el
+resultado de un rebase.
 
 La pantalla tiene cinco zonas:
 

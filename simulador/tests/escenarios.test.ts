@@ -13,8 +13,20 @@ import {
   escenarioPorId,
   escenarios,
   ESCENARIOS,
+  type EscenarioDeclarado,
 } from '../src/escenarios';
 import { texto } from './ayudas';
+
+/**
+ * Trae una declaracion por su identificador. Con `noUncheckedIndexedAccess`
+ * el acceso por clave puede venir vacio, y aqui conviene que la prueba falle
+ * diciendo cual falta antes que arrastrar un valor indefinido.
+ */
+function declaracion(id: string): EscenarioDeclarado {
+  const encontrada = declaraciones[id];
+  if (encontrada === undefined) throw new Error(`no hay escenario declarado con id ${id}`);
+  return encontrada;
+}
 
 describe('escenarios del recetario COMIDA CHILENA', () => {
   it('hay uno por cada una de las cuatro primeras sesiones', () => {
@@ -111,7 +123,7 @@ describe('escenarios del recetario COMIDA CHILENA', () => {
   it('un escenario mal declarado se rechaza al construirse', () => {
     expect(() =>
       construirEscenario({
-        ...declaraciones.E2!,
+        ...declaracion('E2'),
         confirmaciones: [
           { clave: 'x', mensaje: 'Suelta', archivos: [], padres: ['inexistente'], carril: 0 },
         ],
@@ -121,7 +133,7 @@ describe('escenarios del recetario COMIDA CHILENA', () => {
 
     expect(() =>
       construirEscenario({
-        ...declaraciones.E1!,
+        ...declaracion('E1'),
         ramas: [{ nombre: 'main', en: 'fantasma', carril: 0 }],
       }),
     ).toThrow('no existe');
