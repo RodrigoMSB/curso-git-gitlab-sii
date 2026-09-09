@@ -765,9 +765,9 @@ repositorio del curso no pasa por ningun enlace simbolico.
 ## 15. Principios de los verificadores de laboratorio
 
 Estas reglas rigen para **todo** verificador de laboratorio, no solo el del 01.
-Los catorce que faltan se escriben contra esta seccion. Las dos primeras
-nacieron de errores reales encontrados al probar el laboratorio 01, no de
-precaucion abstracta.
+Los que faltan se escriben contra esta seccion. Ninguna nacio de precaucion
+abstracta: las dos primeras salieron de errores encontrados al probar el
+laboratorio 01, y la septima de uno encontrado en el 02.
 
 ### Regla 1 · la cima del repositorio se compara, no se pregunta
 
@@ -830,6 +830,27 @@ implementacion de los criterios en TypeScript.
 Esas pruebas arman el laboratorio **dentro de un repositorio de mentira que hace
 de curso**, porque esa es la situacion real del taller y es la unica forma de
 que la regla 1 quede fijada contra una regresion.
+
+### Regla 7 · en Bash 3.2, toda variable pegada a un caracter no ASCII va con llaves
+
+**Se escribe `"«${MENSAJE}»"`, nunca `"«$MENSAJE»"`.**
+
+Bash 3.2 toma los bytes de `»` como parte del nombre de la variable y muere con
+`unbound variable`. Las comillas angulares son de varios bytes y ese Bash no las
+separa del identificador. El sintoma es desconcertante, porque el error nombra
+una variable que nadie escribio:
+
+```
+verificar.sh: line 134: MENSAJE_MALO�: unbound variable
+```
+
+Los mensajes de los verificadores citan contenido entre comillas angulares todo
+el tiempo, asi que esto va a aparecer en los trece laboratorios que faltan. El
+verificador del laboratorio 01 se salvo por casualidad: ahi las comillas
+angulares solo rodean texto literal, sin variables al lado.
+
+La regla vale para cualquier caracter no ASCII pegado a una expansion, no solo
+para `»`.
 
 ## 16. El segundo efecto del repositorio anidado · RESUELTO
 
@@ -1188,14 +1209,10 @@ destruido la historia.
 ### En Bash 3.2, `«$VARIABLE»` no es lo que parece
 
 Escribir `"«$MENSAJE_MALO»"` hacia que Bash 3.2 tomara los bytes de `»` como
-parte del nombre de la variable y muriera con `unbound variable`. Las comillas
-angulares son de varios bytes y ese Bash no las separa del identificador.
+parte del nombre de la variable y muriera con `unbound variable`.
 
-La forma correcta es `"«${MENSAJE_MALO}»"`, con llaves. **Vale para los catorce
-laboratorios que vienen**, porque los mensajes de los verificadores citan
-contenido entre comillas angulares todo el tiempo. El verificador del
-laboratorio 01 no tenia el problema por casualidad: ahi las comillas angulares
-solo rodean texto literal.
+Dejo de ser una nota del laboratorio 02: es la **regla 7 de la seccion 15**, que
+rige para todo verificador de laboratorio.
 
 ## 20. Los criterios del SPEC 005
 
@@ -1210,25 +1227,50 @@ solo rodean texto literal.
 | CA7 · nada invoca `semillas/` | cumplido |
 | CA8 · la suite pasa completa | cumplido, 370 pruebas |
 
-Sobre CA6, la salvedad. Dentro de la seccion de preparacion, la frase «El script
-clona la semilla» quedo como «El script arma el escenario». Es parte de la misma
-seccion que el spec manda reemplazar, y dejarla habria dejado al enunciado
-diciendo algo falso sobre lo que acaba de ocurrir. Se anota aqui porque no es
-uno de los tres cambios enumerados y el product owner puede revertirla.
+### Los cambios autorizados sobre un enunciado del 02 al 13
 
-El subtitulo del enunciado sigue diciendo «repositorio semilla lab-02», que ya no
-es cierto. **No se toco**, porque esta fuera de las secciones que el spec
-autoriza a cambiar.
+Los enunciados los escribio el product owner y no se reescriben. Sobre todos los
+del 02 al 13 se aplican **los mismos cinco cambios**, y ninguno mas:
 
-### El hallazgo del punto 5.4
+1. **La preparacion.** Donde dice `semillas/preparar.sh NN`, va
+   `labs/lab-NN/preparar.sh` de ese laboratorio.
+2. **La ruta de trabajo.** Pasa a `taller-git-trabajo/lab-NN/recetario`, con la
+   frase aclaratoria del punto de partida: «Tu trabajo no va dentro del clon del
+   curso, va al lado. Parate en la raiz del clon...».
+3. **El rescate.** Donde manda preparar la semilla de nuevo, va volver a
+   ejecutar `preparar.sh`.
+4. **Lo que el script hace.** «El script clona la semilla» pasa a «El script
+   arma el escenario». Todos los enunciados del 02 al 13 traen esa frase y
+   dejarla haria que el enunciado dijera algo falso sobre lo que acaba de
+   ocurrir. Autorizado por el product owner sobre los que vienen.
+5. **El subtitulo.** Donde dice «repositorio semilla lab-NN», se saca esa parte
+   y queda solo la sesion y la duracion. Ya no hay semilla que prometer.
 
-**El enunciado, seguido en el orden que el mismo indica, no alcanza su propia
-seccion de Comprobacion.** Esta contado en detalle en el informe de entrega. En
-resumen: el paso 3.1 hace `git commit --amend`, que confirma lo que haya en el
-area de preparacion, o sea el cambio de `cocineros.md` que el paso 3.3 tenia que
-sacar. Cuando el participante llega a 3.3 no queda nada que sacar, y la
-Comprobacion pide que `cocineros.md` aparezca modificado.
+### El hallazgo del punto 5.4 · corregido
 
-Basta hacer 3.3 antes de 3.1 para que el laboratorio termine bien. **El enunciado
-no se toco**, porque el punto 5.4 del spec reserva esa decision al product owner.
-Hay dos pruebas que fijan las dos rutas: la literal no aprueba, la corregida si.
+**El enunciado, seguido en el orden que traia, no alcanzaba su propia seccion de
+Comprobacion.** El paso 3.1 hacia `git commit --amend`, que confirma lo que haya
+en el area de preparacion, o sea el cambio de `cocineros.md` que el paso 3.3
+tenia que sacar. Cuando el participante llegaba a 3.3 ya no quedaba nada, y la
+Comprobacion pide que `cocineros.md` aparezca modificado. Ninguna orden fallaba:
+el participante se enteraba al final, o no se enteraba.
+
+El product owner autorizo el arreglo. La parte 3 quedo en este orden:
+
+| Ahora | Antes | Que hace |
+|---|---|---|
+| 3.1 | 3.2 | descartar el cambio que no servia |
+| 3.2 | 3.3 | sacar el archivo preparado por error |
+| 3.3 | 3.1 | corregir el mensaje con `--amend` |
+| 3.4 | 3.4 | retroceder y volver a confirmar |
+
+Se movio el `--amend` al final en vez de mover el otro paso al principio, que
+era lo mas obvio. El apartado del archivo preparado por error termina diciendo
+«Fijate en la diferencia con el paso anterior», y compara `git restore --staged`
+con el `git restore` a secas del apartado de al lado. Llevandolo al principio,
+esa frase se quedaba sin paso anterior que mirar.
+
+Quedan tres pruebas: una de guardia, que comprueba que con el `--amend` por
+delante el laboratorio no se puede terminar; otra que el orden de hoy aprueba; y
+una tercera sobre el texto del enunciado, para que el orden no se pueda revertir
+en silencio.

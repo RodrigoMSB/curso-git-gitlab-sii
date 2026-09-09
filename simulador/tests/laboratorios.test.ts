@@ -480,18 +480,25 @@ function conEscenario(): Escenario {
   return esc;
 }
 
-/** Hace el laboratorio siguiendo la parte 3 del enunciado. */
-function hacerElLaboratorio(esc: Escenario, opciones: { ordenLiteral?: boolean } = {}): void {
-  const { ordenLiteral = false } = opciones;
+/**
+ * Hace el laboratorio siguiendo la parte 3 del enunciado: 3.1 descartar el
+ * cambio que no servia, 3.2 sacar el archivo preparado por error, 3.3 corregir
+ * el mensaje y 3.4 retroceder y volver a confirmar.
+ *
+ * `amendAntesDeSacar` reproduce el orden que el enunciado tenia antes de
+ * corregirse, con el --amend por delante. No es un orden que el enunciado
+ * proponga hoy: queda de guardia, porque en ese orden el laboratorio no se
+ * puede terminar y la falla no se nota hasta el final.
+ */
+function hacerElLaboratorio(esc: Escenario, opciones: { amendAntesDeSacar?: boolean } = {}): void {
+  const { amendAntesDeSacar = false } = opciones;
   const g = (...argumentos: readonly string[]): string =>
     git(esc.recetario, esc.configGlobal, ...argumentos);
 
-  // El orden literal del enunciado hace 3.1 antes de 3.3. Ver el informe del
-  // SPEC 005: en ese orden el --amend se lleva puesto el archivo preparado.
-  if (!ordenLiteral) g('restore', '--staged', 'cocineros.md');
-  g('commit', '--amend', '-q', '-m', 'se corrige la receta del pastel de choclo');
   g('restore', 'ingredientes.md');
-  if (ordenLiteral) g('restore', '--staged', 'cocineros.md');
+  if (!amendAntesDeSacar) g('restore', '--staged', 'cocineros.md');
+  g('commit', '--amend', '-q', '-m', 'se corrige la receta del pastel de choclo');
+  if (amendAntesDeSacar) g('restore', '--staged', 'cocineros.md');
   g('reset', '--soft', 'HEAD~1');
   g('commit', '-q', '-m', 'se documenta la receta del pastel de choclo');
 }
@@ -749,18 +756,18 @@ describe('CA5 · el verificador aprueba el laboratorio hecho y rechaza cada crit
   });
 });
 
-describe('el orden literal del enunciado no alcanza su propia comprobacion', () => {
-  it('el --amend de 3.1 se lleva el archivo que 3.3 tenia que sacar', () => {
-    // Hallazgo reportado al product owner (punto 5.4 del SPEC 005). El
-    // enunciado hace 3.1 antes de 3.3, y --amend confirma lo que haya en el
-    // area de preparacion, o sea el cambio de cocineros.md. Cuando el
-    // participante llega a 3.3 no queda nada que sacar, y la comprobacion del
-    // propio enunciado pide que cocineros.md aparezca modificado.
+describe('guardia · el --amend no puede ir antes de sacar el archivo preparado', () => {
+  it('con el --amend por delante, el laboratorio no se puede terminar', () => {
+    // El enunciado tenia este orden y por eso no alcanzaba su propia
+    // comprobacion: --amend confirma lo que haya en el area de preparacion, o
+    // sea el cambio de cocineros.md que el paso siguiente tenia que sacar.
+    // Cuando el participante llegaba a sacarlo ya no quedaba nada.
     //
-    // El enunciado NO se toco: la decision es del product owner. Esta prueba
-    // fija el hallazgo para que no se pierda ni cambie en silencio.
+    // El product owner corrigio el enunciado. Esta prueba queda de guardia: si
+    // alguien vuelve a poner el --amend por delante, el laboratorio se rompe
+    // otra vez y sin avisar hasta el final.
     const esc = conEscenario();
-    hacerElLaboratorio(esc, { ordenLiteral: true });
+    hacerElLaboratorio(esc, { amendAntesDeSacar: true });
 
     expect(git(esc.recetario, esc.configGlobal, 'status', '--porcelain')).toBe('');
     const corrida = verificar(esc.carpeta, esc.configGlobal);
@@ -768,14 +775,22 @@ describe('el orden literal del enunciado no alcanza su propia comprobacion', () 
     expect(corrida.codigo).not.toBe(0);
   });
 
-  it('haciendo 3.3 antes de 3.1, el mismo laboratorio aprueba', () => {
+  it('en el orden que hoy trae el enunciado, el mismo laboratorio aprueba', () => {
     const esc = conEscenario();
-    hacerElLaboratorio(esc, { ordenLiteral: false });
+    hacerElLaboratorio(esc);
     expect(verificar(esc.carpeta, esc.configGlobal).codigo).toBe(0);
+  });
+
+  it('el enunciado trae el --amend despues de sacar el archivo preparado', () => {
+    const enunciado = readFileSync(join(LAB02, 'README.md'), 'utf8');
+    const sacar = enunciado.indexOf('### 3.2 El archivo preparado por error');
+    const amend = enunciado.indexOf('### 3.3 El mensaje mal escrito');
+    expect(sacar).toBeGreaterThan(0);
+    expect(amend).toBeGreaterThan(sacar);
   });
 });
 
-describe('CA6 · el enunciado difiere solo en los tres cambios autorizados', () => {
+describe('CA6 · el enunciado difiere solo en los cambios autorizados', () => {
   const enunciado = readFileSync(join(LAB02, 'README.md'), 'utf8');
 
   it('la preparacion apunta al script del laboratorio', () => {
@@ -792,11 +807,23 @@ describe('CA6 · el enunciado difiere solo en los tres cambios autorizados', () 
     expect(enunciado).not.toContain('prepara la semilla de nuevo');
   });
 
+  it('el subtitulo ya no promete un repositorio semilla', () => {
+    expect(enunciado).toContain('**Sesión 2 · 95 minutos**');
+    expect(enunciado).not.toContain('repositorio semilla');
+  });
+
+  it('el enunciado describe lo que el script hace de verdad', () => {
+    // Cuarto cambio autorizado, que heredan los enunciados del 02 al 13: ya no
+    // se clona ninguna semilla, se arma el escenario.
+    expect(enunciado).toContain('El script arma el escenario');
+    expect(enunciado).not.toContain('clona la semilla');
+  });
+
   it('el resto del enunciado sigue intacto', () => {
     // Las partes que el spec prohibe tocar.
-    expect(enunciado).toContain('### 3.1 El mensaje mal escrito');
     expect(enunciado).toContain('git log -S "curanto" --oneline');
     expect(enunciado).toContain('## Lo que te llevas');
+    expect(enunciado).toContain('Fíjate en la diferencia con el paso anterior');
   });
 });
 

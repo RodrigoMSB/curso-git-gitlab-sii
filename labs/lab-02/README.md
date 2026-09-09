@@ -1,6 +1,6 @@
 # Laboratorio 02 · Leer la historia y volver atrás
 
-**Sesión 2 · 95 minutos · repositorio semilla lab-02**
+**Sesión 2 · 95 minutos**
 
 ---
 
@@ -172,7 +172,46 @@ Diferencia entre lo que tienes ahora y el estado de hace dos confirmaciones.
 
 Acá están los tres problemas plantados. Resuélvelos en orden.
 
-### 3.1 El mensaje mal escrito
+### 3.1 El cambio que no querías
+
+Hay un archivo modificado en tu directorio de trabajo con un cambio que no sirve. Míralo primero.
+
+```
+git diff
+```
+
+Confirma que efectivamente no lo quieres, porque lo que viene no tiene vuelta atrás.
+
+**ATENCIÓN. La orden siguiente descarta el cambio de forma permanente. Ese contenido no está en ninguna confirmación, así que no hay manera de recuperarlo. Asegúrate de haber mirado el diff antes de ejecutarla.**
+
+```
+git restore <archivo>
+git status
+```
+
+El archivo volvió al estado de la última confirmación. El cambio se perdió.
+
+### 3.2 El archivo preparado por error
+
+Hay un archivo en el área de preparación que no debería estar ahí.
+
+```
+git status
+git diff --staged
+```
+
+Sácalo de la preparación sin perder el cambio.
+
+```
+git restore --staged <archivo>
+git status
+```
+
+Ahora aparece como modificado y sin preparar. El contenido sigue intacto, solo dejó de estar en la fila para la próxima confirmación.
+
+Fíjate en la diferencia con el paso anterior. La misma orden con `--staged` y sin `--staged` hace cosas muy distintas. Una devuelve el archivo desde el área de preparación al directorio de trabajo. La otra descarta el trabajo.
+
+### 3.3 El mensaje mal escrito
 
 Mira el mensaje de la última confirmación.
 
@@ -196,45 +235,6 @@ git lg
 El mensaje cambió. Pero fíjate en algo más, **el identificador también cambió**. No corregiste la confirmación, la reemplazaste por una nueva. La original quedó ahí, sin nadie apuntándola.
 
 Eso importa y lo vas a ver de nuevo en la sesión 5. Por ahora quédate con la regla. `--amend` sirve para arreglar lo último que hiciste, siempre que todavía no lo hayas compartido con nadie.
-
-### 3.2 El cambio que no querías
-
-Hay un archivo modificado en tu directorio de trabajo con un cambio que no sirve. Míralo primero.
-
-```
-git diff
-```
-
-Confirma que efectivamente no lo quieres, porque lo que viene no tiene vuelta atrás.
-
-**ATENCIÓN. La orden siguiente descarta el cambio de forma permanente. Ese contenido no está en ninguna confirmación, así que no hay manera de recuperarlo. Asegúrate de haber mirado el diff antes de ejecutarla.**
-
-```
-git restore <archivo>
-git status
-```
-
-El archivo volvió al estado de la última confirmación. El cambio se perdió.
-
-### 3.3 El archivo preparado por error
-
-Hay un archivo en el área de preparación que no debería estar ahí.
-
-```
-git status
-git diff --staged
-```
-
-Sácalo de la preparación sin perder el cambio.
-
-```
-git restore --staged <archivo>
-git status
-```
-
-Ahora aparece como modificado y sin preparar. El contenido sigue intacto, solo dejó de estar en la fila para la próxima confirmación.
-
-Fíjate en la diferencia con el paso anterior. La misma orden con `--staged` y sin `--staged` hace cosas muy distintas. Una devuelve el archivo desde el área de preparación al directorio de trabajo. La otra descarta el trabajo.
 
 ### 3.4 Retroceder una confirmación
 
@@ -271,7 +271,7 @@ Cinco confirmaciones, ninguna con el mensaje mal escrito original.
 git status
 ```
 
-Nada en el área de preparación. El archivo del punto 3.3 aparece como modificado.
+Nada en el área de preparación. El archivo del punto 3.2 aparece como modificado.
 
 ```
 git log -S "curanto" --oneline
