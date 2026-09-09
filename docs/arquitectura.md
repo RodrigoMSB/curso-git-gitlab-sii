@@ -576,3 +576,177 @@ quedar vieja en silencio.
 
 La huella resume la lista ordenada de todos los identificadores de la semilla.
 Una sola confirmacion que cambie la cambia entera.
+
+---
+
+# SPEC 004 · Laboratorio 01 armado
+
+## 12. Forma de los laboratorios
+
+El SPEC 004 cambia de raiz como se arma un laboratorio. Hasta el SPEC 003 la
+idea era que cada ejercicio partiera de un repositorio semilla preparado por un
+script. Ya no: **cada laboratorio es una carpeta autocontenida bajo `labs/`**,
+el participante entra en ella y trabaja ahi.
+
+```
+labs/lab-01/
+├── README.md        el enunciado que lee el participante
+└── verificar.sh     comprueba si el laboratorio quedo bien
+```
+
+`semillas/` queda en el repositorio, intacto y sin uso. Ningun laboratorio lo
+invoca. El laboratorio 01 no trae archivos de trabajo porque el ejercicio
+consiste justamente en crear el repositorio desde cero.
+
+El enunciado lo escribio el product owner y llego ya redactado. El SPEC 004
+autoriza **un solo cambio**: que el repositorio se cree dentro de la carpeta del
+laboratorio en vez del directorio personal. Todo lo demas se copio tal cual.
+
+## 13. Decisiones no especificadas del SPEC 004
+
+### El cambio autorizado es una sola linea
+
+El enunciado hacia `cd ~` antes de `mkdir recetario`. Quedo `cd labs/lab-01`.
+Una linea dentro del mismo bloque de ordenes, y el archivo es byte a byte
+identico al entregado en todo lo demas:
+
+```
+84c84
+< cd ~
+---
+> cd labs/lab-01
+```
+
+Se descarto agregar prosa que explicara el cambio, aunque era tentador. El
+punto 2.2 del spec prohibe editar, reescribir y cambiar el tono, y una linea de
+ordenes que ya dice a donde ir no necesita que nadie la glose. La seccion «Si
+algo salio mal» sigue diciendo «borra la carpeta `recetario`», que es correcto
+sin importar donde este.
+
+### El verificador no menciona al verificador
+
+El enunciado no dice en ninguna parte que exista `verificar.sh`. Agregarlo
+habria sido editar el enunciado, que es justo lo prohibido. La forma de correrlo
+esta documentada en `labs/README.md`, que no es el enunciado y si se podia
+tocar.
+
+### El verificador no usa la biblioteca de `semillas/`
+
+Los verificadores del SPEC 003 comparten `semillas/lib/verificar.sh`. Este no la
+usa, y no es por descuido: el criterio CA6 exige que nada en `labs/lab-01/`
+invoque nada de `semillas/`. Un laboratorio autocontenido que dependiera de una
+biblioteca de la carpeta vecina dejaria de serlo.
+
+La duplicacion es menor y ademas los dos verificadores tienen publicos
+distintos. El de las semillas le habla al relator, calla cuando todo esta bien
+y solo grita ante una semilla mal armada. Este le habla al participante, que
+necesita ver los cinco criterios y su marca aunque esten todos aprobados.
+
+### La ruta sale de la ubicacion del script, no del directorio actual
+
+El spec pide que se corra sin argumentos desde la carpeta del laboratorio. El
+script resuelve `recetario` contra su propio `dirname`, asi que funciona igual
+desde la carpeta del laboratorio, desde la raiz del curso o desde cualquier
+otra parte. Un participante que lo corra desde donde no corresponde recibe el
+resultado de su laboratorio y no un error de ruta, que no le enseña nada.
+
+### Que existe el repositorio se comprueba comparando la cima, no preguntando
+
+Esta es la decision que mas costo y la unica que nacio de un error encontrado
+al probar.
+
+La comprobacion natural es preguntarle a Git si responde dentro de `recetario`.
+Esta mal. `labs/lab-01/recetario` vive **dentro** del repositorio del curso, y
+Git, cuando no encuentra un `.git` propio, sigue subiendo por el arbol de
+directorios hasta dar con el de mas arriba. Un participante que creara la
+carpeta y olvidara el `git init` obtenia esto:
+
+```
+  ✓ existe el repositorio en labs/lab-01/recetario
+  ✗ cantidad de confirmaciones
+      esperaba: 4
+      encontro: 28
+```
+
+Veintiocho son las confirmaciones del repositorio del curso. El verificador
+estaba midiendo el laboratorio contra la historia del taller, y el criterio mas
+basico de los cinco daba aprobado sin que hubiera repositorio alguno.
+
+La version que quedo compara `git rev-parse --show-toplevel` contra la ruta
+esperada. Si la cima del repositorio no es `recetario` mismo, el criterio falla
+y dice «falta el git init», que es lo que efectivamente paso.
+
+Vale la pena dejarlo escrito porque el resto de los laboratorios va a heredar la
+misma forma, y todos van a tener el mismo repositorio del curso encima.
+
+### Los cinco criterios se imprimen siempre
+
+Sin repositorio, tres de los cinco criterios no se pueden medir. Aun asi se
+imprime una linea por cada uno, con `no se pudo comprobar, no hay repositorio`
+en lugar del valor encontrado, y todos cuentan como fallidos. El spec pide una
+linea por criterio; una lista que se corta en la primera falla le esconde al
+participante cuanto le falta.
+
+El criterio de los alias es la excepcion util: vive en la configuracion, no en
+el repositorio, asi que se evalua igual y puede aprobar aunque no exista la
+carpeta.
+
+### Los alias se comprueban por existencia y valen locales
+
+El spec pide que `s` y `lg` «esten configurados». Se comprueba que esten
+definidos, no que digan exactamente lo que sugiere el enunciado. Un participante
+que ya tenia sus propios alias, o que los escribio distinto, hizo el ejercicio
+igual; el laboratorio enseña que un alias es un atajo, no una cadena concreta
+que haya que copiar.
+
+La pregunta se hace desde dentro del repositorio, de modo que valen tanto los
+globales, que es lo que el enunciado pide, como los locales, que tambien
+resuelven el ejercicio.
+
+### Bash 3.2
+
+Por la misma razon del SPEC 003: se escribe para el Bash viejo de macOS. Git
+Bash sobre Windows trae uno mas nuevo y acepta lo que funciona en el viejo,
+pero no al reves. Sin arreglos asociativos y sin `mapfile`. El script pasa
+`bash -n` con el 3.2 del sistema y `shellcheck` sin observaciones.
+
+Se uso `set -u` y no `set -eu`. Con `set -e`, un `git` que responde con codigo
+distinto de cero, que aqui es un resultado esperado y no un accidente, cortaba
+el verificador a la mitad de la lista.
+
+### La exclusion se anota aunque ya estuviera cubierta
+
+`.gitignore` ya traia `recetario/` sin anclar, que por ser un patron sin barra
+inicial coincide en cualquier nivel y por lo tanto ya cubria
+`labs/lab-01/recetario`. Se agrego igual `labs/*/recetario/`, explicita y con su
+comentario. La regla vieja existe para el destino por omision de
+`semillas/preparar.sh`; el dia que alguien la ancle a la raiz, que es un cambio
+razonable, se llevaria por delante y en silencio el trabajo de toda la clase.
+
+## 14. Los criterios del SPEC 004
+
+| Criterio | Estado |
+|---|---|
+| CA1 · existe `labs/lab-01/` con enunciado y verificador | cumplido |
+| CA2 · el enunciado es identico salvo el cambio de ruta | cumplido, una linea de diferencia |
+| CA3 · el verificador aprueba el laboratorio bien hecho | cumplido |
+| CA4 · falla ante cada criterio roto por separado | cumplido, nueve casos probados |
+| CA5 · las exclusiones cubren el trabajo del participante | cumplido |
+| CA6 · nada de `labs/lab-01/` invoca `semillas/` | cumplido |
+
+Sobre CA4, se rompio cada uno de los cinco criterios por separado y se
+comprobaron el mensaje y el codigo de salida. Los nueve casos son los cinco del
+spec mas cuatro variantes que valia la pena mirar: la carpeta creada sin
+`git init`, que es la que descubrio el error de la seccion 13; el historial con
+tres confirmaciones ademas del de cinco; y los alias faltando de a uno en vez de
+los dos.
+
+Sobre CA6, la unica aparicion de la palabra «semilla» dentro de `labs/lab-01/`
+esta en el subtitulo del propio enunciado, «sin repositorio semilla», que
+declara que no hay semilla en vez de invocar una. No hay ninguna referencia a
+`semillas/`, `preparar.sh`, `generar.sh` ni `comprobar.sh`.
+
+El estado inicial del laboratorio se armo siguiendo el enunciado paso a paso,
+sin atajos, y sobre ese resultado se corrieron las comprobaciones. La
+configuracion global de la maquina no se toco en ningun momento: las pruebas
+usan un archivo de configuracion aparte via `GIT_CONFIG_GLOBAL`.
