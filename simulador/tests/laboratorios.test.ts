@@ -433,14 +433,19 @@ interface Escenario {
   readonly clon: string;
 }
 
-/** Monta un clon de mentira con el laboratorio 02 dentro, sin preparar nada. */
-function montarLab02(): Escenario {
+/**
+ * Monta un clon de mentira con el laboratorio pedido dentro, sin preparar nada.
+ * Sirve para cualquier laboratorio con escenario: los trece que faltan tienen
+ * esta misma forma.
+ */
+function montarLab(numero: string): Escenario {
+  const origen = fileURLToPath(new URL(`../../labs/lab-${numero}`, import.meta.url));
   const raiz = carpetaTemporal();
   const clon = join(raiz, 'curso-git-gitlab-sii');
-  const carpeta = join(clon, 'labs', 'lab-02');
+  const carpeta = join(clon, 'labs', `lab-${numero}`);
   mkdirSync(carpeta, { recursive: true });
   for (const archivo of ['preparar.sh', 'verificar.sh']) {
-    cpSync(join(LAB02, archivo), join(carpeta, archivo));
+    cpSync(join(origen, archivo), join(carpeta, archivo));
     execFileSync('chmod', ['+x', join(carpeta, archivo)]);
   }
 
@@ -454,8 +459,16 @@ function montarLab02(): Escenario {
   execFileSync('git', ['-C', clon, 'add', '-A'], { env });
   execFileSync('git', ['-C', clon, 'commit', '-q', '-m', 'el curso'], { env });
 
-  return { carpeta, recetario: join(raiz, 'taller-git-trabajo', 'lab-02', 'recetario'), configGlobal, clon };
+  return {
+    carpeta,
+    recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'),
+    configGlobal,
+    clon,
+  };
 }
+
+const montarLab02 = (): Escenario => montarLab('02');
+const montarLab03 = (): Escenario => montarLab('03');
 
 function preparar(esc: Escenario, ...argumentos: readonly string[]): Corrida {
   try {
@@ -473,8 +486,8 @@ function preparar(esc: Escenario, ...argumentos: readonly string[]): Corrida {
 }
 
 /** Arma el escenario y devuelve el laboratorio listo para trabajar. */
-function conEscenario(): Escenario {
-  const esc = montarLab02();
+function conEscenario(numero = '02'): Escenario {
+  const esc = montarLab(numero);
   const corrida = preparar(esc);
   expect(corrida.codigo).toBe(0);
   return esc;
@@ -831,6 +844,268 @@ describe('CA7 · el laboratorio 02 no invoca nada de las semillas', () => {
   it('ninguna linea ejecutable llama a semillas/', () => {
     for (const archivo of ['README.md', 'preparar.sh', 'verificar.sh']) {
       const lineas = readFileSync(join(LAB02, archivo), 'utf8')
+        .split('\n')
+        .filter((linea) => !linea.trim().startsWith('#'));
+      expect(lineas.join('\n')).not.toContain('semillas/');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Laboratorio 03
+//
+// Es un laboratorio de mirar, no de tocar: el participante abre .git y lee lo
+// que hay. El estado final se parece muchisimo al inicial, y de ahi sale la
+// prueba que mas importa aqui, la de que el verificador no apruebe a quien no
+// abrio nunca el laboratorio.
+// ---------------------------------------------------------------------------
+
+const LAB03 = fileURLToPath(new URL('../../labs/lab-03', import.meta.url));
+
+/** Hace la parte 4 del enunciado: crear la rama, cambiarse, volver y borrarla. */
+function hacerLaParte4(esc: Escenario): void {
+  const g = (...argumentos: readonly string[]): string =>
+    git(esc.recetario, esc.configGlobal, ...argumentos);
+  g('branch', 'prueba');
+  g('switch', '-q', 'prueba');
+  g('switch', '-q', 'main');
+  g('branch', '-q', '-d', 'prueba');
+}
+
+describe('CA1 · el laboratorio 03 esta armado', () => {
+  it('tiene el enunciado, la preparacion y el verificador', () => {
+    for (const archivo of ['README.md', 'preparar.sh', 'verificar.sh']) {
+      expect(statSync(join(LAB03, archivo)).isFile()).toBe(true);
+    }
+  });
+
+  it('los dos scripts son ejecutables', () => {
+    for (const archivo of ['preparar.sh', 'verificar.sh']) {
+      expect(statSync(join(LAB03, archivo)).mode & 0o111).not.toBe(0);
+    }
+  });
+});
+
+describe('el escenario del laboratorio 03 es historia corta y limpia', () => {
+  it('cuatro confirmaciones lineales y el directorio limpio', () => {
+    const esc = conEscenario('03');
+    expect(git(esc.recetario, esc.configGlobal, 'rev-list', '--count', 'HEAD')).toBe('4');
+    expect(git(esc.recetario, esc.configGlobal, 'log', '--merges', '--format=%H')).toBe('');
+    expect(git(esc.recetario, esc.configGlobal, 'status', '--porcelain')).toBe('');
+  });
+
+  it('la rama main es un archivo suelto de 41 bytes', () => {
+    // Toda la parte 2.2 del enunciado se sostiene sobre esto. Git 2.45 trajo el
+    // formato `reftable`, que guarda las referencias en una base binaria: con
+    // el, .git/refs/heads no existe y el enunciado se queda sin nada que medir.
+    const esc = conEscenario('03');
+    const referencia = join(esc.recetario, '.git', 'refs', 'heads', 'main');
+    expect(statSync(referencia).isFile()).toBe(true);
+    expect(readFileSync(referencia, 'utf8').length).toBe(41);
+  });
+
+  it('el identificador del archivo de la rama es el de la ultima confirmacion', () => {
+    const esc = conEscenario('03');
+    const referencia = readFileSync(
+      join(esc.recetario, '.git', 'refs', 'heads', 'main'),
+      'utf8',
+    ).trim();
+    expect(referencia).toBe(git(esc.recetario, esc.configGlobal, 'rev-parse', 'HEAD'));
+  });
+
+  it('el arbol de la raiz tiene la carpeta recetas como arbol', () => {
+    // La parte 3.5 entra a una carpeta: sin un arbol dentro del arbol no hay
+    // por donde entrar.
+    const esc = conEscenario('03');
+    const arbol = git(esc.recetario, esc.configGlobal, 'cat-file', '-p', 'HEAD^{tree}');
+    expect(arbol).toMatch(/^040000 tree [0-9a-f]{40}\trecetas$/m);
+    expect(arbol).toMatch(/^100644 blob [0-9a-f]{40}\tplatos\.md$/m);
+  });
+
+  it('la confirmacion tiene arbol, padre, autor, confirmador y mensaje', () => {
+    // Es lo que el participante lee en la parte 3.3.
+    const esc = conEscenario('03');
+    const confirmacion = git(esc.recetario, esc.configGlobal, 'cat-file', '-p', 'HEAD');
+    expect(confirmacion).toMatch(/^tree [0-9a-f]{40}$/m);
+    expect(confirmacion).toMatch(/^parent [0-9a-f]{40}$/m);
+    expect(confirmacion).toMatch(/^author .+ <.+> \d+ [-+]\d{4}$/m);
+    expect(confirmacion).toMatch(/^committer .+ <.+> \d+ [-+]\d{4}$/m);
+  });
+
+  it('hay una unica confirmacion sin padre, al final de la cadena', () => {
+    const esc = conEscenario('03');
+    const raices = git(esc.recetario, esc.configGlobal, 'rev-list', '--max-parents=0', 'HEAD');
+    expect(raices.split('\n').filter(Boolean).length).toBe(1);
+  });
+
+  it('los objetos estan sueltos, no empaquetados', () => {
+    // La parte 3 recorre .git/objects a mano.
+    const esc = conEscenario('03');
+    const sueltos = Number(
+      git(esc.recetario, esc.configGlobal, 'count-objects').split(' ')[0],
+    );
+    expect(sueltos).toBeGreaterThanOrEqual(10);
+  });
+
+  it('el .git/config local trae configuracion que mirar', () => {
+    // La parte 1.2 lee ese archivo. Sin configuracion local no dice nada.
+    const esc = conEscenario('03');
+    const configuracion = readFileSync(join(esc.recetario, '.git', 'config'), 'utf8');
+    expect(configuracion).toContain('[user]');
+    expect(configuracion).toContain('Juana Perez');
+  });
+
+  it('dos ejecuciones producen los mismos identificadores', () => {
+    const esc = montarLab03();
+    preparar(esc);
+    const primera = git(esc.recetario, esc.configGlobal, 'log', '--format=%H');
+    preparar(esc, '--forzar');
+    expect(git(esc.recetario, esc.configGlobal, 'log', '--format=%H')).toBe(primera);
+    expect(primera.split('\n').length).toBe(4);
+  });
+
+  it('dos maquinas distintas producen los mismos identificadores', () => {
+    const uno = montarLab03();
+    const otro = montarLab03();
+    writeFileSync(otro.configGlobal, '[user]\n\tname = Alguien Mas\n\temail = mas@y.cl\n');
+    preparar(uno);
+    preparar(otro);
+    expect(git(otro.recetario, otro.configGlobal, 'log', '--format=%H')).toBe(
+      git(uno.recetario, uno.configGlobal, 'log', '--format=%H'),
+    );
+  });
+
+  it('avisa y se detiene antes de rehacer un escenario existente', () => {
+    const esc = conEscenario('03');
+    git(esc.recetario, esc.configGlobal, 'commit', '-q', '--allow-empty', '-m', 'trabajo del participante');
+    const corrida = preparar(esc);
+    expect(corrida.salida).toContain('ATENCION');
+    expect(corrida.codigo).not.toBe(0);
+    expect(git(esc.recetario, esc.configGlobal, 'log', '-1', '--format=%s')).toBe(
+      'trabajo del participante',
+    );
+  });
+});
+
+describe('el verificador del 03 no aprueba un laboratorio que nadie abrio', () => {
+  it('el escenario recien preparado no aprueba', () => {
+    // La prueba que mas importa en este laboratorio. Como es de solo mirar, el
+    // estado final es igual al inicial en todo salvo en el rastro que deja la
+    // parte 4. Un verificador que solo mirara HEAD, las ramas y el directorio
+    // limpio aprobaria a quien no abrio nunca la carpeta .git.
+    const esc = conEscenario('03');
+    const corrida = verificar(esc.carpeta, esc.configGlobal);
+    expect(corrida.codigo).not.toBe(0);
+    expect(corrida.salida).toContain('falta hacer la parte 4');
+  });
+
+  it('los otros cuatro criterios ya pasaban antes de empezar', () => {
+    // Dicho de otro modo: sin el criterio del registro de referencias, este
+    // laboratorio se aprobaria solo.
+    const esc = conEscenario('03');
+    const corrida = verificar(esc.carpeta, esc.configGlobal);
+    expect(corrida.salida).toContain('✓ HEAD apunta a main');
+    expect(corrida.salida).toContain('✓ solo existe la rama main');
+    expect(corrida.salida).toContain('✓ el directorio de trabajo esta limpio');
+    expect(corrida.salida).toContain('4 de 5 criterios aprobados');
+  });
+
+  it('aprueba despues de hacer la parte 4', () => {
+    const esc = conEscenario('03');
+    hacerLaParte4(esc);
+    const corrida = verificar(esc.carpeta, esc.configGlobal);
+    expect(corrida.salida).toContain('5 de 5 criterios aprobados');
+    expect(corrida.salida).not.toContain('✗');
+    expect(corrida.codigo).toBe(0);
+  });
+
+  it('el rastro sobrevive al borrado de la rama', () => {
+    // `git branch -d` se lleva el registro de la rama, pero el de HEAD es
+    // aparte y ahi queda la huella del cambio.
+    const esc = conEscenario('03');
+    hacerLaParte4(esc);
+    expect(git(esc.recetario, esc.configGlobal, 'reflog', '--format=%gs')).toContain(
+      'checkout: moving from main to prueba',
+    );
+    expect(git(esc.recetario, esc.configGlobal, 'for-each-ref', '--format=%(refname:short)', 'refs/heads')).toBe('main');
+  });
+});
+
+describe('el verificador del 03 rechaza cada criterio roto por separado', () => {
+  function romper(estropicio: (esc: Escenario) => void): Corrida {
+    const esc = conEscenario('03');
+    hacerLaParte4(esc);
+    estropicio(esc);
+    return verificar(esc.carpeta, esc.configGlobal);
+  }
+
+  it('criterio 1 · no existe el repositorio', () => {
+    const corrida = romper((esc) => {
+      execFileSync('rm', ['-rf', esc.recetario]);
+    });
+    expect(corrida.salida).toContain('falta preparar el laboratorio');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 2 · quedo en estado desconectado', () => {
+    const corrida = romper((esc) => {
+      git(esc.recetario, esc.configGlobal, 'switch', '-q', '--detach', 'HEAD');
+    });
+    expect(corrida.salida).toContain('estado desconectado');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 3 · quedo una rama de mas sin borrar', () => {
+    const corrida = romper((esc) => {
+      git(esc.recetario, esc.configGlobal, 'branch', 'prueba');
+    });
+    expect(corrida.salida).toContain('falta borrar la rama de prueba');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 4 · se toco un archivo del proyecto', () => {
+    const corrida = romper((esc) => {
+      writeFileSync(join(esc.recetario, 'platos.md'), '# Platos\n\n- algo distinto\n');
+    });
+    expect(corrida.salida).toContain('hay cambios:');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 5 · no queda rastro de la parte 4', () => {
+    const corrida = romper((esc) => {
+      execFileSync('rm', ['-f', join(esc.recetario, '.git', 'logs', 'HEAD')]);
+    });
+    expect(corrida.salida).toContain('falta hacer la parte 4');
+    expect(corrida.codigo).not.toBe(0);
+  });
+});
+
+describe('el enunciado del 03 difiere solo en los cambios autorizados', () => {
+  const enunciado = readFileSync(join(LAB03, 'README.md'), 'utf8');
+
+  it('la preparacion apunta al script del laboratorio', () => {
+    expect(enunciado).toContain('labs/lab-03/preparar.sh\ncd ../taller-git-trabajo/lab-03/recetario');
+  });
+
+  it('el subtitulo ya no promete un repositorio semilla', () => {
+    expect(enunciado).toContain('**Sesión 2 · 55 minutos**');
+  });
+
+  it('no queda ninguna mencion a las semillas', () => {
+    expect(enunciado.toLowerCase()).not.toContain('semilla');
+  });
+
+  it('el resto del enunciado sigue intacto', () => {
+    expect(enunciado).toContain('Cuarenta y un bytes');
+    expect(enunciado).toContain('### 4.4 La pregunta');
+    expect(enunciado).toContain('rama → confirmación → árbol → árbol → contenido');
+  });
+});
+
+describe('el laboratorio 03 no invoca nada de las semillas', () => {
+  it('ninguna linea ejecutable llama a semillas/', () => {
+    for (const archivo of ['README.md', 'preparar.sh', 'verificar.sh']) {
+      const lineas = readFileSync(join(LAB03, archivo), 'utf8')
         .split('\n')
         .filter((linea) => !linea.trim().startsWith('#'));
       expect(lineas.join('\n')).not.toContain('semillas/');

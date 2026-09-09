@@ -767,7 +767,8 @@ repositorio del curso no pasa por ningun enlace simbolico.
 Estas reglas rigen para **todo** verificador de laboratorio, no solo el del 01.
 Los que faltan se escriben contra esta seccion. Ninguna nacio de precaucion
 abstracta: las dos primeras salieron de errores encontrados al probar el
-laboratorio 01, y la septima de uno encontrado en el 02.
+laboratorio 01, la septima de uno encontrado en el 02 y la octava de una
+comprobacion que el 03 habria aprobado sin que nadie hiciera nada.
 
 ### Regla 1 · la cima del repositorio se compara, no se pregunta
 
@@ -851,6 +852,26 @@ angulares solo rodean texto literal, sin variables al lado.
 
 La regla vale para cualquier caracter no ASCII pegado a una expansion, no solo
 para `»`.
+
+### Regla 8 · cuando el estado final se parece al inicial, el criterio es el rastro
+
+Un verificador tiene que separar al participante que hizo el laboratorio del que
+no lo abrio nunca. En los laboratorios donde se modifica el proyecto eso sale
+solo. **En los de solo mirar, no.**
+
+El laboratorio 03 abre la carpeta `.git` y lee lo que hay: al terminar, HEAD
+apunta a `main`, la unica rama es `main` y el directorio esta limpio. Los tres
+criterios que el enunciado lista en su Comprobacion **ya se cumplian antes de
+empezar**. Un verificador que solo los mirara aprobaria a quien no hizo nada.
+
+Lo que separa los dos estados es la huella que deja el trabajo, aunque el
+trabajo no haya dejado archivos. En el 03 esta en el registro de referencias:
+crear una rama, cambiarse a ella y volver deja dos lineas en `.git/logs/HEAD`
+que sobreviven al borrado de la rama, porque el registro de HEAD es aparte del
+de cada rama.
+
+Antes de dar por bueno un verificador, hay que correrlo contra el escenario
+recien preparado. Si aprueba, falta un criterio.
 
 ## 16. El segundo efecto del repositorio anidado · RESUELTO
 
@@ -1274,3 +1295,88 @@ Quedan tres pruebas: una de guardia, que comprueba que con el `--amend` por
 delante el laboratorio no se puede terminar; otra que el orden de hoy aprueba; y
 una tercera sobre el texto del enunciado, para que el orden no se pueda revertir
 en silencio.
+
+---
+
+# Laboratorio 03 · abrir la caja
+
+## 21. Decisiones del laboratorio 03
+
+Es el primero armado replicando la forma de la seccion 18, y el que muestra que
+esa forma no es mecanica: el escenario que necesita cada laboratorio sale de lo
+que su enunciado hace mirar.
+
+### El escenario no tiene nada sucio, y aun asi hay que cuidarlo
+
+Cuatro confirmaciones, historia lineal, directorio limpio. Ningun error
+plantado, porque el laboratorio no arregla nada. Lo que hay que cuidar es otra
+cosa: **que la carpeta oculta tenga contenido que valga la pena inspeccionar**.
+
+Eso se traduce en cuatro cosas que el escenario garantiza y el modo
+`--escenario` comprueba:
+
+- `.git/refs/heads/main` es un archivo suelto de **41 bytes**. La parte 2.2 del
+  enunciado lo mide con `wc -c` y saca de ahi toda su conclusion.
+- El arbol de la raiz tiene la carpeta `recetas` **como arbol**. Sin un arbol
+  dentro del arbol, la parte 3.5, que entra a una carpeta, no tiene por donde
+  entrar.
+- Los objetos estan **sueltos**, no empaquetados. La parte 3 los recorre uno por
+  uno.
+- `.git/config` trae **configuracion local de verdad**. La parte 1.2 lo lee, y
+  sin `[user]` adentro no dice nada.
+
+### Se pide el formato de referencias `files` explicitamente
+
+Git 2.45 trajo `reftable`, un segundo formato que guarda las referencias en una
+base binaria. Con el, **`.git/refs/heads` no existe**:
+
+```
+$ git init --ref-format=reftable ...
+$ ls .git/refs/heads
+ls: .git/refs/heads/: Not a directory
+```
+
+El laboratorio 03 entero se cae ahi. La parte 2.2 no tiene archivo que leer ni
+que medir, y la conclusion que sostiene el laboratorio, que una rama son
+cuarenta y un bytes de texto, deja de ser cierta.
+
+Por eso `preparar.sh` pide `--ref-format=files` y no deja que lo decida la
+maquina del participante. Si la version de Git no conoce esa opcion, cae en el
+`init` normal, que en esas versiones solo sabe hacer `files`. El modo
+`--escenario` lo comprueba igual, asi que un dia que esto cambie el escenario no
+se entrega roto: se detiene antes.
+
+Tambien se fija `gc.auto 0`, para que nada empaquete los objetos por su cuenta,
+y `core.logAllRefUpdates true`, porque el registro de referencias es la unica
+huella que deja la parte 4 y no puede depender de lo que el participante tenga
+configurado.
+
+### El criterio que impide aprobar un laboratorio sin abrir
+
+Es la **regla 8 de la seccion 15**, que nacio aqui. Los tres criterios que el
+enunciado lista en su Comprobacion se cumplen solos en el escenario recien
+preparado. El cuarto criterio mira el registro de referencias y exige el paso
+por la rama `prueba` que pide la parte 4.
+
+Hay dos pruebas dedicadas: una comprueba que el escenario recien preparado da
+**4 de 5** y no aprueba, y otra deja escrito que los otros cuatro criterios ya
+pasaban antes de empezar, que es la razon de existir del quinto.
+
+### Lo que el enunciado da por sentado y no se cumple
+
+**La parte 1.2 dice que en `.git/config` esta «lo que configuraste sin
+`--global` en el laboratorio 01». No es asi.**
+
+En el laboratorio 01 el participante configura todo **con** `--global`: es lo que
+manda el enunciado del 01, y su seccion 1.4 solo explica la diferencia entre
+global y local, sin hacerle poner nada local. Ademas este repositorio no es el
+que el participante creo en el 01, lo arma `preparar.sh`.
+
+Lo que el participante encuentra al hacer `cat .git/config` es la configuracion
+del recetario: `user.name = Juana Perez`, los finales de linea y poco mas. La
+leccion de fondo de esa seccion sigue en pie, que la configuracion es texto
+plano y se puede leer y editar a mano. Lo que no calza es la frase que se la
+atribuye al participante.
+
+**No se toco**, porque no esta entre los cambios autorizados. Decide el product
+owner.
