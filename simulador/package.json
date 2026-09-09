@@ -6,13 +6,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node herramientas/manifiesto.mjs --escribir",
     "lint": "biome lint",
     "capturas": "node herramientas/capturas.mjs",
     "preview": "vite preview",
     "test": "vitest run --coverage",
     "test:observar": "vitest",
-    "tipos": "tsc --noEmit"
+    "tipos": "tsc --noEmit",
+    "comprobar": "node herramientas/manifiesto.mjs --comprobar"
   },
   "dependencies": {
     "react": "19.2.8",

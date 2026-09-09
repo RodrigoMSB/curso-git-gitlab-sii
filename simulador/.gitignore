@@ -1,3 +1,9 @@
 node_modules/
-dist/
+# El simulador construido va versionado a proposito: el participante clona y
+# abre, sin instalar Node ni construir nada (seccion 22 de
+# docs/arquitectura.md). `dist/manifiesto.txt` es lo que impide que se
+# desincronice del codigo, y la suite lo comprueba.
+dist/*
+!dist/index.html
+!dist/manifiesto.txt
 coverage/

@@ -1380,3 +1380,103 @@ atribuye al participante.
 
 **No se toco**, porque no esta entre los cambios autorizados. Decide el product
 owner.
+
+---
+
+# SPEC 006 · El simulador ejecutable desde el clon
+
+## 22. PRINCIPIO · el repositorio del curso es autosuficiente
+
+Esta regla gobierna el proyecto completo y todo lo que venga despues la hereda.
+
+**Un participante que clona este repositorio obtiene todo lo necesario para las
+treinta y dos horas del taller: sin instalar nada, sin permisos de
+administrador y sin acceso a la red mas alla del clon inicial.**
+
+La razon no es comodidad. La red institucional del SII tiene proxy con filtrado
+y las maquinas tienen permisos restringidos. **Cualquier paso que dependa de
+instalar algo es un punto donde el taller se cae en clase**, y se cae delante de
+treinta personas que no pueden hacer nada al respecto.
+
+Lo que la regla implica en concreto:
+
+- El simulador se abre con doble clic desde el clon. No se construye.
+- Los laboratorios se preparan y se verifican con Bash y Git, que el
+  participante ya tiene porque son la materia del taller.
+- Nada descarga nada. Ningun script sale a la red.
+- Node, `npm`, las pruebas y la construccion son **herramientas de desarrollo**.
+  No hay que eliminarlas; hay que asegurarse de que el participante nunca las
+  necesite.
+
+Al agregar cualquier pieza al repositorio, la pregunta es siempre la misma:
+¿funciona en una maquina del SII recien clonada, sin instalar nada? Si la
+respuesta es no, la pieza no esta terminada.
+
+### El artefacto construido va versionado, y es a proposito
+
+`simulador/dist/index.html` esta confirmado en el repositorio. Va contra la
+costumbre de no versionar resultados de construccion, y aqui corresponde: es la
+unica forma de cumplir el principio de arriba.
+
+Queda escrito aqui, y tambien en los dos archivos de exclusiones, para que nadie
+lo saque mas adelante creyendo que es un descuido. **Si se saca, el taller deja
+de funcionar en las maquinas del SII.**
+
+### Que impide que el artefacto se desincronice
+
+Ese es el riesgo real de la decision anterior: un artefacto versionado a mano se
+queda viejo y nadie lo nota hasta la sala de clases.
+
+Lo cuida `simulador/dist/manifiesto.txt`, con la misma idea que el SPEC 003 uso
+para los paquetes de semilla contra sus generadores. Anota dos huellas:
+
+- **`fuentes`**, sobre todo lo que determina el contenido del artefacto: `src/`,
+  `index.html`, `vite.config.ts`, `tsconfig.json`, `package.json` y
+  `package-lock.json`. Las pruebas quedan fuera a proposito, porque cambiarlas
+  no cambia lo que se construye y exigir una reconstruccion por cada prueba
+  nueva convertiria la comprobacion en ruido.
+- **`artefacto`**, sobre el `dist/index.html` que quedo.
+
+`npm run build` las escribe. La suite las recalcula en cada corrida, y
+`npm run comprobar` hace lo mismo suelto. Si alguien toca el simulador y no
+reconstruye, las pruebas fallan y dicen exactamente que orden correr.
+
+Hay cuatro pruebas que ven fallar la comprobacion de verdad, alterando archivos
+en el disco y restaurandolos despues: codigo cambiado sin reconstruir, artefacto
+editado a mano, copia de la raiz atrasada y manifiesto sin huellas.
+
+### Por donde entra el participante
+
+`SIMULADOR.html`, en la raiz del clon, **copia exacta** de
+`simulador/dist/index.html`. La escribe `npm run build`.
+
+Se eligio una copia y no una pagina de redireccion por dos razones.
+
+La primera es que **la copia no cuesta almacenamiento**. Git guarda el contenido
+por su huella, y dos rutas con bytes identicos comparten el mismo objeto: lo que
+se agrega es una entrada en el arbol, no un segundo archivo de 260 KB.
+
+```
+  hash del original: 03c621932000372125288b6b2817cb4e65ba7901
+  hash de la copia:  03c621932000372125288b6b2817cb4e65ba7901
+```
+
+La segunda es que una redireccion `<meta http-equiv="refresh">` sobre `file://`
+depende de que el navegador la respete, y eso no se pudo comprobar en las
+maquinas del SII. Con una copia no hay nada que respetar: el doble clic abre el
+simulador, sin paginas intermedias y sin un clic de mas.
+
+Que las dos rutas no se separen tambien lo cuida el manifiesto: hay un criterio
+que compara sus huellas.
+
+### El peso
+
+| | |
+|---|---|
+| El artefacto en disco | 260 KB |
+| Lo que ocupa comprimido, que es como lo guarda Git | 79 KB |
+| El repositorio completo, con el artefacto adentro | 5,1 MB |
+
+Cada reconstruccion agrega una version nueva del artefacto a la historia, unos
+79 KB. Cien reconstrucciones son ocho megabytes: el repositorio sigue clonandose
+en segundos. No hay motivo para preocuparse por el peso.

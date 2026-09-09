@@ -6,6 +6,19 @@ dist/
 build/
 coverage/
 
+# El simulador construido es la excepcion, y va versionado a proposito.
+#
+# Va contra la costumbre de no versionar lo que se construye, y aqui
+# corresponde: el participante clona y abre el simulador con doble clic, sin
+# instalar Node ni construir nada. La regla esta en la seccion 22 de
+# docs/arquitectura.md. Si alguien lo saca creyendo que es un descuido, el
+# taller deja de funcionar en las maquinas del SII.
+#
+# Que no se desincronice del codigo lo cuida `simulador/dist/manifiesto.txt`,
+# que la suite comprueba en cada corrida.
+!simulador/dist/
+!SIMULADOR.html
+
 # Registros y temporales
 *.log
 npm-debug.log*

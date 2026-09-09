@@ -15,37 +15,76 @@ el grafo.
 
 ---
 
+## Si vas a participar en el taller, empieza aca
+
+**No hay que instalar nada.** Clonas este repositorio y ya tienes todo.
+
+### Abrir el simulador
+
+En la carpeta que acabas de clonar hay un archivo llamado **`SIMULADOR.html`**.
+
+**Haz doble clic sobre el.** Se abre en tu navegador y funciona sin conexion a
+internet y sin levantar ningun servidor.
+
+Eso es todo. No hay que instalar, ni construir, ni descargar nada mas. El
+archivo lleva el simulador completo adentro, asi que tambien puedes copiarlo a
+un pendrive o mandarlo por correo y sigue funcionando igual.
+
+### Hacer los laboratorios
+
+Los enunciados estan en [`labs/`](labs/README.md), una carpeta por laboratorio.
+Cada uno trae el enunciado que vas a leer y un verificador que te dice si te
+quedo bien. Algunos traen ademas un script que arma el punto de partida.
+
+Tu trabajo **no va dentro de esta carpeta**, va en una carpeta hermana que se
+llama `taller-git-trabajo`. Cada enunciado te dice como llegar ahi.
+
+### Que necesitas tener instalado
+
+Solo **Git**, que es lo que el taller enseña. En Windows viene con Git Bash, que
+es la consola que vas a usar.
+
+Nada mas: ni Node, ni servidor, ni permisos de administrador, ni acceso a la red
+despues de clonar.
+
+---
+
 ## Que hay en este repositorio
 
 ```
 curso-git-gitlab-sii/
+├── SIMULADOR.html      el simulador, listo para doble clic
 ├── docs/
 │   ├── specs/          los encargos, un archivo por etapa del proyecto
 │   └── arquitectura.md versiones, empaquetado y decisiones de diseno
-├── simulador/          el simulador
+├── labs/               los laboratorios, uno por carpeta
+├── simulador/          el codigo fuente del simulador
 │   ├── src/core/       el motor: confirmaciones, ramas, punteros, ordenes
 │   ├── src/escenarios/ los estados iniciales de cada sesion
 │   ├── src/grafico/    el calculo de posiciones del grafo
 │   ├── src/vista/      el modelo de vista entre el motor y la pantalla
 │   ├── src/ui/         los componentes de la pantalla
+│   ├── dist/           el simulador construido, versionado a proposito
 │   └── tests/          las pruebas
-├── semillas/           repositorios semilla de los laboratorios
-├── labs/               enunciados de los ejercicios (pendiente)
+├── semillas/           repositorios semilla, sin uso en el esquema actual
 └── material/           presentaciones y guias (pendiente)
 ```
 
-Lo que hay hoy corresponde a los SPEC 001, 002 y 003: el repositorio, el motor
-del simulador, la pantalla del participante y los repositorios semilla con los
-que empieza cada laboratorio.
+`SIMULADOR.html` es una copia exacta de `simulador/dist/index.html`. Esta en la
+raiz para que el participante no tenga que buscarlo, y Git guarda las dos rutas
+como un mismo objeto, asi que la copia no pesa nada.
 
-Las semillas se preparan con una orden, y tienen su propia
-[guia](semillas/README.md):
+`semillas/` quedo sin uso: los laboratorios arman su propio punto de partida.
+Se conserva porque su contenido puede servir mas adelante.
 
-```bash
-semillas/preparar.sh 06
-```
+---
 
-## Que hace falta para trabajar aqui
+# Para desarrollar el instrumental
+
+Todo lo que sigue es para quien **modifica** el simulador o los laboratorios.
+El participante no necesita nada de esto.
+
+## Que hace falta
 
 Solo **Node.js 22.12 o superior** (sirve tambien Node 20.19 o superior). Nada
 mas: ni base de datos, ni servidor, ni permisos de administrador.
@@ -69,10 +108,31 @@ npm run build
 `npm install` se ejecuta una sola vez, la primera. Descarga las dependencias
 desde la red; es la unica parte del proceso que la necesita.
 
+### Despues de tocar el simulador hay que reconstruir
+
+El artefacto construido va versionado, asi que **cualquier cambio en el codigo
+del simulador obliga a rehacerlo y confirmarlo**:
+
+```bash
+cd simulador
+npm run build
+```
+
+Esa orden hace tres cosas: construye `dist/index.html`, copia el resultado a
+`SIMULADOR.html` en la raiz y anota las huellas en `dist/manifiesto.txt`.
+
+Si se te olvida, la suite falla y te dice que correr. Tambien puedes
+comprobarlo suelto:
+
+```bash
+npm run comprobar
+```
+
 ### Donde queda el archivo resultante
 
 ```
-simulador/dist/index.html
+simulador/dist/index.html    el artefacto, versionado en el repositorio
+SIMULADOR.html               copia exacta en la raiz, por donde entra el participante
 ```
 
 Es **un unico archivo**, de alrededor de 260 KB, con el codigo y los estilos
@@ -80,6 +140,11 @@ adentro. Para usarlo basta hacer **doble clic** sobre el: se abre en el
 navegador y funciona sin conexion a internet y sin levantar ningun servidor.
 Se puede copiar a un pendrive, mandarlo por correo o dejarlo en una carpeta
 compartida, y sigue funcionando igual.
+
+Los dos van confirmados en el repositorio, contra la costumbre de no versionar
+lo que se construye. Es a proposito y la razon esta en la seccion 22 de
+[`docs/arquitectura.md`](docs/arquitectura.md): el participante clona y abre, y
+no hay ninguna maquina del SII donde haya que instalar Node para eso.
 
 La construccion se detiene con un error si el archivo llegara a quedar
 apuntando a algun recurso externo, de modo que si `npm run build` termina bien,
@@ -96,12 +161,14 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 318 pruebas, 98 por ciento de cobertura de lineas. Las de las
-semillas ejecutan Git de verdad y se llevan unos cuarenta segundos.
+Estado actual: 415 pruebas, 98 por ciento de cobertura de lineas. Las de las
+semillas y las de los laboratorios ejecutan Git de verdad y se llevan la mayor
+parte del minuto que tarda la suite.
 
 Otras ordenes utiles:
 
 ```bash
+npm run comprobar       # dice si el simulador construido quedo viejo
 npm run test:observar   # repite las pruebas cada vez que se guarda un archivo
 npm run tipos           # revisa los tipos sin construir
 npm run lint            # pasa el linter sobre el codigo y las pruebas
