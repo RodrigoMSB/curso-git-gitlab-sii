@@ -3,9 +3,14 @@
 #
 # Comprueba el resultado del ejercicio, no un estado inicial: los cinco
 # criterios son los mismos que el enunciado lista en su seccion
-# «Comprobacion». Se corre sin argumentos y trabaja siempre sobre el
-# ./recetario que queda junto a este script, sin importar desde donde se
-# invoque.
+# «Comprobacion». Se corre sin argumentos, desde la carpeta del laboratorio,
+# y no recibe ninguna ruta: la deduce de su propia ubicacion.
+#
+# El repositorio del participante NO vive dentro del clon del curso, vive en
+# una carpeta hermana (seccion 17 de docs/arquitectura.md). Trabajar dentro
+# del clon hace que las ordenes del participante alcancen la configuracion y
+# la historia del repositorio de arriba, y convierte errores que Git atrapaba
+# en el acto en errores silenciosos.
 #
 # Escrito para Bash 3.2, el de macOS. Git Bash sobre Windows trae uno mas
 # nuevo y acepta lo que funciona en el viejo, pero no al reves.
@@ -19,10 +24,14 @@ LABORATORIO='lab-01'
 # macOS, sin esto, cualquier laboratorio bajo /tmp o /var quedaba comparando
 # /var/... contra /private/var/... y no aprobaba nunca.
 RAIZ=$(cd "$(dirname "$0")" && pwd -P)
-REPOSITORIO="$RAIZ/recetario"
+# Este script vive en <clon>/labs/lab-01, asi que el clon esta dos niveles mas
+# arriba y el trabajo del participante es hermano del clon, no parte de el.
+CLON=$(cd "$RAIZ/../.." && pwd -P)
+TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-01"
+REPOSITORIO="$TRABAJO/recetario"
 # Como se nombra el repositorio en los mensajes: la ruta larga de la maquina
 # de cada participante no le dice nada a nadie.
-REPOSITORIO_DICHO='labs/lab-01/recetario'
+REPOSITORIO_DICHO='taller-git-trabajo/lab-01/recetario'
 
 APROBADOS=0
 FALLIDOS=0
@@ -139,17 +148,21 @@ fi
 
 # --- Criterio 5 · los alias s y lg -----------------------------------------
 
-# Se pregunta desde dentro del repositorio para que valgan tanto los alias
+# Con repositorio se pregunta desde dentro, para que valgan tanto los alias
 # globales como los locales: el enunciado los pide globales, pero quien los
-# haya puesto solo en este repositorio tambien hizo el ejercicio.
+# haya puesto solo en su recetario tambien hizo el ejercicio.
+#
+# Sin repositorio se pregunta solo por los globales, que es el unico lugar
+# donde pueden estar legitimamente. Preguntar parado en una carpeta cualquiera
+# hacia que Git subiera buscando un repositorio y respondiera con los alias de
+# otro: el criterio salia aprobado leyendo una configuracion ajena.
 if [ "$HAY_REPOSITORIO" = si ]; then
-  DONDE=$REPOSITORIO
+  ALIAS_S=$(git -C "$REPOSITORIO" config --get alias.s 2>/dev/null) || ALIAS_S=''
+  ALIAS_LG=$(git -C "$REPOSITORIO" config --get alias.lg 2>/dev/null) || ALIAS_LG=''
 else
-  DONDE=$RAIZ
+  ALIAS_S=$(git config --global --get alias.s 2>/dev/null) || ALIAS_S=''
+  ALIAS_LG=$(git config --global --get alias.lg 2>/dev/null) || ALIAS_LG=''
 fi
-
-ALIAS_S=$(git -C "$DONDE" config --get alias.s 2>/dev/null) || ALIAS_S=''
-ALIAS_LG=$(git -C "$DONDE" config --get alias.lg 2>/dev/null) || ALIAS_LG=''
 
 if [ -n "$ALIAS_S" ] && [ -n "$ALIAS_LG" ]; then
   aprobado 'los alias s y lg estan configurados'

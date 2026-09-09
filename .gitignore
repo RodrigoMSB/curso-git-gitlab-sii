@@ -16,14 +16,13 @@ npm-debug.log*
 # Repositorios que las semillas dejan preparados. El destino por omision de
 # `semillas/preparar.sh` es ./recetario, y quien lo corra desde la raiz del
 # curso no deberia ver un repositorio ajeno asomando en `git status`.
+#
+# El trabajo del participante ya no necesita exclusion propia: desde la
+# seccion 17 de docs/arquitectura.md vive fuera del clon, en una carpeta
+# hermana, y por lo tanto no hay nada que excluir. La regla sigue sirviendo de
+# red por ser un patron sin anclar: si alguien se salta el enunciado y crea su
+# recetario dentro del clon, al menos no lo confirma por descuido.
 recetario/
-
-# El trabajo del participante dentro de cada laboratorio. Los laboratorios son
-# carpetas autocontenidas: quien haga el lab 01 crea `labs/lab-01/recetario` y
-# ese repositorio es suyo, no del curso. La regla de arriba ya lo cubre por ser
-# un patron sin anclar, pero esta queda explicita para que anclar aquella no se
-# lleve por delante, en silencio, el trabajo de la clase.
-labs/*/recetario/
 
 # Editores
 .vscode/

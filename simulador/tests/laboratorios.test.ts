@@ -9,6 +9,10 @@
  * que nunca se vio fallar no prueba nada, asi que cada criterio se rompe por
  * separado y se exige el mensaje y el codigo de salida.
  *
+ * La disposicion que se monta es la real: un clon del curso con el enunciado y
+ * el verificador en labs/lab-01, y el trabajo del participante en una carpeta
+ * hermana del clon, nunca dentro (seccion 17 de la arquitectura).
+ *
  * Todo ocurre en carpetas temporales y con una configuracion global de
  * mentira: la configuracion de Git de quien corre las pruebas no se toca, y
  * los criterios que dependen de los alias no quedan a merced de lo que esa
@@ -70,12 +74,41 @@ function verificar(carpetaDelLaboratorio: string, configGlobal: string): Corrida
 }
 
 interface Laboratorio {
-  /** La carpeta que contiene el enunciado y el verificador. */
+  /** La carpeta del laboratorio dentro del clon: <clon>/labs/lab-01. */
   readonly carpeta: string;
-  /** El repositorio del participante. */
+  /** El repositorio del participante, hermano del clon. */
   readonly recetario: string;
   /** La configuracion global de mentira que usa este laboratorio. */
   readonly configGlobal: string;
+  /** La raiz del clon del curso. */
+  readonly clon: string;
+  /** El padre comun del clon y de la carpeta de trabajo. */
+  readonly raiz: string;
+}
+
+/**
+ * Monta un clon del curso de mentira con el laboratorio dentro. `comoRepositorio`
+ * decide si ese clon es de verdad un repositorio Git, que es lo que ocurre en la
+ * sala: el participante clona el curso, asi que hay un .git por encima.
+ */
+function montarClon(comoRepositorio: boolean): { raiz: string; clon: string; configGlobal: string } {
+  const raiz = carpetaTemporal();
+  const clon = join(raiz, 'curso-git-gitlab-sii');
+  mkdirSync(join(clon, 'labs', 'lab-01'), { recursive: true });
+  cpSync(join(LAB01, 'verificar.sh'), join(clon, 'labs', 'lab-01', 'verificar.sh'));
+  execFileSync('chmod', ['+x', join(clon, 'labs', 'lab-01', 'verificar.sh')]);
+
+  const configGlobal = join(raiz, 'gitconfig-de-mentira');
+  writeFileSync(configGlobal, '[user]\n\tname = Relator\n\temail = relator@institucion.cl\n');
+
+  if (comoRepositorio) {
+    const env = entorno(configGlobal);
+    execFileSync('git', ['-C', clon, 'init', '-q'], { env });
+    writeFileSync(join(clon, 'README.md'), 'el repositorio del curso\n');
+    execFileSync('git', ['-C', clon, 'add', '-A'], { env });
+    execFileSync('git', ['-C', clon, 'commit', '-q', '-m', 'el repositorio del curso'], { env });
+  }
+  return { raiz, clon, configGlobal };
 }
 
 /**
@@ -86,16 +119,12 @@ interface Laboratorio {
  * `dentroDe` permite armarlo dentro de otro repositorio, que es la situacion
  * real del taller y la que descubrio el error del repositorio anidado.
  */
-function armarLaboratorio(opciones: { conAlias?: boolean; dentroDe?: string } = {}): Laboratorio {
-  const { conAlias = true, dentroDe } = opciones;
-  const raiz = dentroDe ?? carpetaTemporal();
-  const carpeta = join(raiz, 'lab-01');
-  mkdirSync(carpeta, { recursive: true });
-  cpSync(join(LAB01, 'verificar.sh'), join(carpeta, 'verificar.sh'));
-  execFileSync('chmod', ['+x', join(carpeta, 'verificar.sh')]);
+function armarLaboratorio(opciones: { conAlias?: boolean; clonDeVerdad?: boolean } = {}): Laboratorio {
+  const { conAlias = true, clonDeVerdad = true } = opciones;
+  const { raiz, clon, configGlobal } = montarClon(clonDeVerdad);
+  const carpeta = join(clon, 'labs', 'lab-01');
 
   // Parte 1 · la configuracion, que el enunciado pide global.
-  const configGlobal = join(raiz, 'gitconfig-de-mentira');
   const alias = conAlias
     ? '[alias]\n\ts = status -s\n\tlg = log --oneline --graph --all --decorate\n'
     : '';
@@ -104,8 +133,10 @@ function armarLaboratorio(opciones: { conAlias?: boolean; dentroDe?: string } = 
     `[user]\n\tname = Participante Taller\n\temail = participante@institucion.cl\n${alias}`,
   );
 
-  // Parte 2 · el repositorio nace.
-  const recetario = join(carpeta, 'recetario');
+  // Parte 2 · el repositorio nace, en la carpeta hermana del clon y no dentro.
+  const trabajo = join(raiz, 'taller-git-trabajo', 'lab-01');
+  mkdirSync(trabajo, { recursive: true });
+  const recetario = join(trabajo, 'recetario');
   mkdirSync(recetario);
   git(recetario, configGlobal, 'init', '-q');
 
@@ -145,7 +176,7 @@ function armarLaboratorio(opciones: { conAlias?: boolean; dentroDe?: string } = 
   preparar('platos.md', 'ingredientes.md');
   confirmar('se agregan sopaipillas y zapallo');
 
-  return { carpeta, recetario, configGlobal };
+  return { carpeta, recetario, configGlobal, clon, raiz };
 }
 
 describe('CA1 · el laboratorio 01 esta armado', () => {
@@ -163,12 +194,19 @@ describe('CA1 · el laboratorio 01 esta armado', () => {
 describe('CA2 · el enunciado lleva el cambio de ruta autorizado y solo ese', () => {
   const enunciado = readFileSync(join(LAB01, 'README.md'), 'utf8');
 
-  it('el repositorio se crea dentro de la carpeta del laboratorio', () => {
-    expect(enunciado).toContain('cd labs/lab-01\nmkdir recetario\ncd recetario\ngit init');
+  it('el repositorio se crea en la carpeta hermana del clon', () => {
+    expect(enunciado).toContain(
+      'cd ..\nmkdir -p taller-git-trabajo/lab-01\ncd taller-git-trabajo/lab-01\nmkdir recetario\ncd recetario\ngit init',
+    );
   });
 
   it('ya no manda al participante a su directorio personal', () => {
     expect(enunciado).not.toMatch(/^cd ~$/m);
+  });
+
+  it('no manda a trabajar dentro del clon del curso', () => {
+    // El error que la seccion 17 de la arquitectura prohibe heredar.
+    expect(enunciado).not.toMatch(/^cd labs\/lab-01$/m);
   });
 
   it('conserva las cuatro confirmaciones y el archivo que queda fuera', () => {
@@ -251,33 +289,55 @@ describe('CA4 · el verificador falla ante cada criterio roto por separado', () 
   });
 });
 
-describe('el repositorio anidado no puede hacer pasar un laboratorio por hecho', () => {
+describe('el trabajo del participante vive fuera del clon del curso', () => {
+  it('el recetario no queda en ninguna parte dentro del clon', () => {
+    const lab = armarLaboratorio();
+    expect(lab.recetario.startsWith(`${lab.clon}/`)).toBe(false);
+    expect(lab.recetario).toContain('taller-git-trabajo');
+  });
+
+  it('el verificador lo encuentra ahi y aprueba, con el clon siendo un repositorio de verdad', () => {
+    // La situacion de la sala: el participante clono el curso, hay un .git.
+    const lab = armarLaboratorio({ clonDeVerdad: true });
+    expect(git(lab.clon, lab.configGlobal, 'rev-parse', '--is-inside-work-tree')).toBe('true');
+    const corrida = verificar(lab.carpeta, lab.configGlobal);
+    expect(corrida.salida).toContain('5 de 5 criterios aprobados');
+    expect(corrida.codigo).toBe(0);
+  });
+
+  it('el trabajo del participante no ensucia el estado del clon', () => {
+    const lab = armarLaboratorio({ clonDeVerdad: true });
+    verificar(lab.carpeta, lab.configGlobal);
+    // Ni el recetario ni nada suyo asoma en el git status del curso.
+    expect(git(lab.clon, lab.configGlobal, 'status', '--porcelain')).toBe('');
+  });
+});
+
+describe('el repositorio anidado sigue vigilado, aunque ya no deberia ocurrir', () => {
   /**
-   * La regresion que motivo esta suite. El laboratorio vive dentro del
-   * repositorio del curso, y Git, cuando no encuentra un .git propio, sigue
-   * subiendo hasta dar con el de mas arriba. Preguntar si Git responde daba el
-   * criterio por bueno y medía el laboratorio contra la historia del curso.
+   * Con el trabajo fuera del clon, esta situacion no deberia darse nunca. Se
+   * vigila igual: si alguna vez el trabajo volviera a quedar bajo un
+   * repositorio, Git subiria hasta el de mas arriba y el verificador mediria el
+   * laboratorio contra una historia ajena. Los catorce laboratorios que vienen
+   * heredan esta forma, y el error se veia aprobado.
+   *
+   * Para reproducirlo se convierte en repositorio el padre comun del clon y de
+   * la carpeta de trabajo, que es el unico modo de que quede un .git por encima
+   * del recetario.
    */
-  function cursoDeMentira(): string {
-    const raiz = carpetaTemporal();
-    const config = join(raiz, 'gitconfig-de-mentira');
-    writeFileSync(config, '[user]\n\tname = Relator\n\temail = relator@institucion.cl\n');
-    execFileSync('git', ['-C', raiz, 'init', '-q'], { env: entorno(config) });
-    writeFileSync(join(raiz, 'README.md'), 'el repositorio del curso\n');
-    execFileSync('git', ['-C', raiz, 'add', '-A'], { env: entorno(config) });
-    execFileSync('git', ['-C', raiz, 'commit', '-q', '-m', 'el repositorio del curso'], {
-      env: entorno(config),
-    });
-    return raiz;
+  function conRepositorioPorEncima(lab: Laboratorio): void {
+    const env = entorno(lab.configGlobal);
+    execFileSync('git', ['-C', lab.raiz, 'init', '-q'], { env });
+    writeFileSync(join(lab.raiz, 'ajeno.md'), 'una historia que no es la del participante\n');
+    execFileSync('git', ['-C', lab.raiz, 'add', 'ajeno.md'], { env });
+    execFileSync('git', ['-C', lab.raiz, 'commit', '-q', '-m', 'historia ajena'], { env });
   }
 
-  it('la carpeta creada sin git init falla, aunque haya un repositorio mas arriba', () => {
-    const curso = cursoDeMentira();
-    const lab = armarLaboratorio({ dentroDe: curso });
-    // El participante borra el repositorio y deja solo la carpeta: el caso de
-    // quien hizo el mkdir y se olvido del git init.
+  it('la carpeta creada sin git init falla, aunque haya un repositorio por encima', () => {
+    const lab = armarLaboratorio();
     execFileSync('rm', ['-rf', lab.recetario]);
     mkdirSync(lab.recetario);
+    conRepositorioPorEncima(lab);
 
     const corrida = verificar(lab.carpeta, lab.configGlobal);
     expect(corrida.salida).toContain('falta el git init');
@@ -285,25 +345,34 @@ describe('el repositorio anidado no puede hacer pasar un laboratorio por hecho',
     expect(corrida.codigo).not.toBe(0);
   });
 
-  it('los criterios del repositorio no se miden contra la historia del curso', () => {
-    const curso = cursoDeMentira();
-    const lab = armarLaboratorio({ dentroDe: curso });
+  it('los criterios no se miden contra la historia de ese repositorio', () => {
+    const lab = armarLaboratorio();
     execFileSync('rm', ['-rf', lab.recetario]);
     mkdirSync(lab.recetario);
+    conRepositorioPorEncima(lab);
 
     const corrida = verificar(lab.carpeta, lab.configGlobal);
     expect(corrida.salida).toContain('no se pudo comprobar, no hay repositorio');
-    // La historia del curso tiene una confirmacion: si se colara, el criterio
+    // La historia de arriba tiene una confirmacion: si se colara, el criterio
     // diria «encontro: 1» en vez de decir que no pudo comprobar.
     expect(corrida.salida).not.toContain('encontro: 1\n');
   });
 
-  it('el laboratorio bien hecho sigue aprobando dentro del repositorio del curso', () => {
-    const curso = cursoDeMentira();
-    const lab = armarLaboratorio({ dentroDe: curso });
+  it('sin repositorio, los alias no se leen del config del clon', () => {
+    // El criterio 5 mentia. El participante escribe los alias sin --global
+    // parado en el clon, con lo que quedan en el config DEL CLON y no llegan a
+    // su recetario. El verificador preguntaba parado en labs/lab-01, Git subia
+    // hasta el clon, encontraba esos alias y daba el criterio por aprobado: el
+    // participante no habia hecho el ejercicio y le decian que si.
+    const lab = armarLaboratorio({ conAlias: false, clonDeVerdad: true });
+    execFileSync('rm', ['-rf', lab.recetario]);
+    git(lab.clon, lab.configGlobal, 'config', 'alias.s', 'status -s');
+    git(lab.clon, lab.configGlobal, 'config', 'alias.lg', 'log --oneline');
+
     const corrida = verificar(lab.carpeta, lab.configGlobal);
-    expect(corrida.salida).toContain('5 de 5 criterios aprobados');
-    expect(corrida.codigo).toBe(0);
+    expect(corrida.salida).toContain('falta configurar: s y lg');
+    expect(corrida.salida).not.toContain('✓ los alias');
+    expect(corrida.codigo).not.toBe(0);
   });
 });
 

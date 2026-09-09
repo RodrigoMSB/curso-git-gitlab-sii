@@ -80,8 +80,12 @@ Eso sirve cuando trabajas con un correo institucional en unos proyectos y uno pe
 
 ### 2.1 Crear la carpeta y el repositorio
 
+Tu recetario no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+
 ```
-cd labs/lab-01
+cd ..
+mkdir -p taller-git-trabajo/lab-01
+cd taller-git-trabajo/lab-01
 mkdir recetario
 cd recetario
 git init

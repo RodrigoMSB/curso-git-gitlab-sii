@@ -831,7 +831,11 @@ Esas pruebas arman el laboratorio **dentro de un repositorio de mentira que hace
 de curso**, porque esa es la situacion real del taller y es la unica forma de
 que la regla 1 quede fijada contra una regresion.
 
-## 16. PENDIENTE DE DECISION · el segundo efecto del repositorio anidado
+## 16. El segundo efecto del repositorio anidado · RESUELTO
+
+> **Decision tomada por el product owner: opcion A.** El trabajo del
+> participante vive fuera del clon del curso. Lo que sigue es el hallazgo tal
+> como se investigo; la regla que salio de el esta en la seccion 17.
 
 La seccion 15 resuelve el problema **del verificador**. Queda otro, del lado del
 participante, que el SPEC 004 no previo y que hay que resolver antes de
@@ -911,10 +915,14 @@ criterio por aprobado.
 El veredicto general no miente, porque el criterio 1 ya fallo y el codigo de
 salida es distinto de cero. Pero la linea del criterio 5 si miente.
 
-Es un arreglo de una linea, independiente de la decision de estructura: cuando
-no hay repositorio, preguntar por los alias solo en el config global, que es el
-unico lugar donde pueden estar legitimamente. **No esta aplicado**, a la espera
-de la decision, porque bajo la opcion A el problema desaparece solo.
+El arreglo es de una linea: cuando no hay repositorio, preguntar por los alias
+solo en el config global, que es el unico lugar donde pueden estar
+legitimamente.
+
+**Quedo aplicado, aunque bajo la opcion A el problema desaparezca solo.** Un
+verificador que miente en una linea es un verificador que miente, y los catorce
+que vienen heredan la forma. Hay una prueba que lo fija: escribe los alias en el
+config del clon y exige que el criterio 5 siga diciendo que faltan.
 
 ### Las opciones
 
@@ -954,3 +962,119 @@ no esta leyendo.
 **Recomendacion: la opcion A.** Es la unica que elimina la causa en vez de
 taparla, no cuesta ningun cambio en el verificador y devuelve a Git su mejor
 propiedad para quien esta aprendiendo, que es negarse a tiempo y decir por que.
+
+### La decision
+
+El product owner eligio la **opcion A**, y confirmo el dato que faltaba: **el
+participante clona el repositorio del curso**, asi que hay un `.git` por encima
+y los cinco efectos son reales, no hipoteticos.
+
+La regla que salio de aqui, y la unica que hay que leer para escribir los
+catorce laboratorios que faltan, es la seccion 17.
+
+## 17. REGLA · el trabajo del participante nunca vive dentro del clon
+
+Esta es la regla de estructura de todos los laboratorios, los quince. Va aparte
+de las seis reglas de la seccion 15 porque aquellas gobiernan como se escribe un
+verificador y esta gobierna donde ocurre el ejercicio.
+
+### La regla
+
+**El participante clona el repositorio del curso. Su trabajo va fuera de ese
+clon, en una carpeta hermana.**
+
+```
+<donde el participante clono>/
+├── curso-git-gitlab-sii/        el clon: enunciados y verificadores
+└── taller-git-trabajo/          el trabajo del participante
+    ├── lab-01/
+    │   └── recetario/
+    ├── lab-02/
+    └── ...
+```
+
+Hermana del clon y no dentro del directorio personal: el trabajo del taller
+completo queda en una sola carpeta que se borra de una vez al terminar, sin ir a
+buscar restos a `~`.
+
+Cada laboratorio se lleva su propia subcarpeta bajo `taller-git-trabajo`, de
+modo que los quince conviven sin pisarse y el participante puede volver a
+cualquiera.
+
+### Por que, con los cinco efectos
+
+Trabajar dentro del clon no es incomodo, es **peligroso**, y de una forma
+particularmente mala para quien esta aprendiendo: convierte errores que Git
+atrapaba en el acto en errores silenciosos que se cobran despues y en otra
+parte.
+
+La causa es una sola. Git, cuando no encuentra un `.git` propio, sigue subiendo
+por el arbol de directorios hasta dar con el de mas arriba. Dentro del clon
+siempre hay uno.
+
+Los cinco efectos, todos comprobados sobre un clon de mentira:
+
+1. **`git config` sin `--global` escribe en el clon del curso.** Fuera de un
+   repositorio la misma orden responde `fatal: not in a git directory` y el
+   participante se entera al instante. Dentro del clon funciona y no dice nada.
+   La Parte 1 del laboratorio 01 ocurre antes de que exista el repositorio del
+   participante, asi que este caso no es rebuscado: es el camino por defecto.
+   Peor, la seccion 1.4 del enunciado explica que hace `--global`, o sea invita,
+   con toda razon pedagogica, al experimento que ensucia el clon.
+
+2. **Los alias quedan en el clon y no llegan al repositorio del participante.**
+   El `git lg` que manda usar el enunciado responde
+   `git: 'lg' is not a git command`, y el criterio 5 falla sin que el
+   participante pueda entender por que: el escribio los alias y los vio
+   aceptados.
+
+3. **Las confirmaciones se firman con la identidad equivocada**, la que hubiera
+   en el config global, no la que el participante acaba de escribir. En una
+   maquina sin identidad global, Git directamente se niega a confirmar.
+
+4. **`git status` y `git add .` desde la carpeta equivocada operan sobre el
+   clon.** El enunciado promete «no hay confirmaciones todavia» y el
+   participante ve el estado del curso; y `git add .`, que el enunciado manda en
+   la Parte 3.3, prepara el clon entero.
+
+5. **`git reset --soft HEAD~1` destruye una confirmacion del curso.** Es la
+   orden de la seccion «Si algo salio mal», o sea la que corre justo quien ya
+   esta perdido y menos va a mirar en que carpeta esta. Comprobado: se llevo una
+   confirmacion por delante y dejo todo preparado.
+
+El sexto efecto era del verificador y esta contado en la seccion 16: sin
+repositorio, el criterio 5 leia los alias del clon y daba por aprobado un
+ejercicio que nadie habia hecho.
+
+### Lo que se descarto
+
+**Poner un techo con `GIT_CEILING_DIRECTORIES`** funciona, esta comprobado:
+restituye el `fatal: not in a git directory` y deja el repositorio del
+participante entero. Pero es una variable de entorno con una ruta absoluta
+distinta en cada maquina, que hay que tener puesta en cada terminal. Sostenerla
+pide un script envoltorio o pedirle al participante que la exporte, y eso
+contradice que el laboratorio sea autocontenido y sin preparacion previa.
+Ademas mete en la sesion 1 un concepto que el taller no enseña.
+
+**Advertir en el enunciado** no impide nada. El participante que se equivoca de
+carpeta es precisamente el que no esta leyendo.
+
+### Que cambio al aplicarla
+
+- El enunciado del laboratorio 01 manda crear el recetario en
+  `taller-git-trabajo/lab-01`, partiendo desde la raiz del clon. Sigue siendo el
+  unico cambio autorizado sobre el original que entrego el product owner, ahora
+  con otro destino.
+- `verificar.sh` deduce el clon de su propia ubicacion, sube al padre y busca el
+  trabajo en la carpeta hermana. Sigue corriendose sin argumentos desde
+  `labs/lab-01`, que es lo unico que el participante tiene que saber.
+- La exclusion `labs/*/recetario/` se saco del `.gitignore`, porque ya no hay
+  nada del participante dentro del clon que excluir. Se dejo `recetario/`, que
+  por ser un patron sin anclar sigue haciendo de red por si alguien se salta el
+  enunciado.
+- Las pruebas montan la disposicion real, con un clon de verdad y el trabajo
+  afuera, y **siguen vigilando el anidamiento** aunque ya no deberia ocurrir: si
+  alguna vez el trabajo volviera a quedar bajo un repositorio, la regla 1 de la
+  seccion 15 tiene que seguir atrapandolo. Se comprobo que esas pruebas fallan
+  contra la version vieja del verificador; una prueba que nunca se vio fallar no
+  prueba nada.
