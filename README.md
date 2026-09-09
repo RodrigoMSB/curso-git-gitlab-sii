@@ -161,9 +161,36 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 458 pruebas, 98 por ciento de cobertura de lineas. Las de las
+Estado actual: 470 pruebas de unidad e integracion, mas 29 de punta a punta
+contra el navegador. 98 por ciento de cobertura de lineas. Las de las
 semillas y las de los laboratorios ejecutan Git de verdad y se llevan la mayor
 parte del minuto que tarda la suite.
+
+## Como probar de punta a punta
+
+Las pruebas de arriba miran el modelo. Estas miran otra cosa: **recorren cada
+laboratorio dos veces en paralelo**, una en el simulador escribiendo en su
+consola y otra en un repositorio de Git real, y comparan los dos estados
+despues de cada orden.
+
+```bash
+cd simulador
+npm run e2e
+```
+
+Construye el artefacto y lo prueba en un navegador de verdad. Toma alrededor de
+un minuto. Con `npm run e2e:abrir` se abre la ventana de Cypress, que sirve para
+mirar paso a paso por que algo no calza.
+
+Si el simulador le enseña al participante algo distinto de lo que va a ver en su
+terminal, estas pruebas fallan y dicen en que orden ocurrio, que mostro cada
+lado y en que linea del enunciado esta esa orden.
+
+Las ordenes salen del enunciado de cada laboratorio, no de una lista escrita
+aparte: si alguien corrige un paso del enunciado, la prueba corre el paso
+corregido.
+
+Cypress es herramienta de desarrollo. El participante nunca la necesita.
 
 Otras ordenes utiles:
 

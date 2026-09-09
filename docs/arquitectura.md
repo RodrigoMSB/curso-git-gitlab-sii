@@ -1638,3 +1638,150 @@ seis ordenes de creacion primero.
 Es la unica libertad que se toma un escenario respecto del disco, esta anotada
 en su `sinReflejar`, y no afecta a la comparacion porque el laboratorio 01 no
 tiene `preparar.sh`: su repositorio lo crea el participante.
+
+---
+
+# SPEC 008 · Pruebas de punta a punta, simulador contra Git real
+
+## 25. Cada laboratorio recorrido dos veces en paralelo
+
+Hasta aqui el simulador estaba probado contra su propio modelo. Nadie habia
+comprobado que la pantalla real respondiera, ni que lo que muestra coincida con
+lo que Git hace de verdad.
+
+Ahora cada laboratorio se recorre dos veces: una en el simulador, escribiendo
+en su consola como lo haria el participante, y otra en un repositorio de Git
+real. **Si el simulador le enseña al participante algo distinto de lo que va a
+ver en su terminal, la prueba falla.**
+
+Se corre con una sola orden:
+
+```bash
+cd simulador
+npm run e2e
+```
+
+Lo que se prueba es **el artefacto construido y versionado**, servido por un
+servidor de una sola pieza que vive en la configuracion de Cypress. Cypress y
+ese servidor son herramientas de desarrollo: el participante no los necesita
+nunca y la regla de la seccion 22 sigue intacta.
+
+### Las ordenes salen del enunciado
+
+Este es el punto que decide si la prueba sirve. Las ordenes se extraen de los
+bloques del `README.md` de cada laboratorio, en orden, y **no hay ninguna lista
+escrita aparte**. Una lista aparte se desincroniza del enunciado la primera vez
+que alguien corrige un paso, y desde ahi la prueba valida un laboratorio que ya
+no existe.
+
+Cada linea se clasifica en tres:
+
+| Clase | Simulador | Git real | Cuando |
+|---|---|---|---|
+| `comparada` | si | si | el caso corriente |
+| `solo-git` | no | **si** | el motor no la implementa |
+| `omitida` | no | no | no es ejecutable tal como esta escrita |
+
+Las `solo-git` **se siguen ejecutando en Git**, para que el repositorio no se
+desalinee de ahi en adelante. Ninguna se salta en silencio: cada una lleva su
+motivo y la prueba informa cuantas fueron.
+
+### Al motor se le pregunta que sabe hacer
+
+Que una orden este soportada no se decide con una lista a mano: se consulta la
+tabla de ordenes del propio motor, `ORDENES_GIT` y `ORDENES_INTERPRETE`. El dia
+que el motor aprenda una orden nueva, la prueba la recoge sola y deja de
+saltarla.
+
+La lista a mano queda reducida a los casos donde el verbo si existe pero esa
+forma concreta no, como `git config --list` o `cat .git/HEAD`.
+
+### Los marcadores de posicion
+
+El enunciado escribe `git restore <archivo>` a proposito, para que el
+participante mire su estado y decida. Saltarse esos dos pasos habria dejado sin
+probar el centro del laboratorio 02.
+
+Se resuelven, y el valor **no se escribe a mano**: sale de la declaracion del
+escenario, que ya es la unica fuente de la forma del laboratorio (seccion 23).
+Si el escenario cambia de archivo, la sustitucion cambia con el.
+
+Los marcadores que nombran un identificador de confirmacion se quedan sin
+resolver: los del simulador y los de Git no coinciden por diseño, asi que no
+hay un unico valor que sirva en los dos lados. Todos ellos son ordenes de solo
+mirar, de modo que no desalinean nada.
+
+**No hizo falta modificar ningun enunciado.**
+
+### Que se compara y que no
+
+| Tiene que coincidir | No tiene que coincidir |
+|---|---|
+| La cantidad de confirmaciones y sus mensajes | **Los identificadores** |
+| Las ramas y a que confirmacion apunta cada una | Las fechas exactas |
+| Donde esta parado el puntero de posicion | El contenido de los archivos |
+| Las etiquetas | |
+| El estado de cada archivo | |
+| Las entradas del guardado temporal | |
+
+El estado del simulador **se lee del documento**, no del modelo: lo que se
+compara es lo que el participante ve. Para eso la pantalla lleva atributos
+`data-` que dicen lo que esta dibujando: cada confirmacion con su mensaje, cada
+arista con sus extremos, cada etiqueta con su forma y la confirmacion de la que
+cuelga, cada archivo con su estado.
+
+Cuando algo no calza, el mensaje dice la orden, la linea del enunciado donde
+esta y lo que mostro cada lado:
+
+```
+historia tras «git commit --amend -m "se corrige la receta del pastel de
+choclo"» (enunciado, linea 225)
+- 'se docuemnta la reseta del pastel de choclo se corrige la receta...'   (simulador)
++ 'se corrige la receta del pastel de choclo'                             (Git)
+```
+
+### Lo que no se puede automatizar
+
+Hay pasos de los enunciados que no son ordenes, y quedan fuera por naturaleza:
+
+- **Escribir el contenido de un archivo a mano.** El laboratorio 01 hace crear
+  seis archivos con el editor. En el simulador se generan con `echo`, que marca
+  el archivo pero no escribe contenido; en el disco haria falta un editor.
+- **Seguir la cadena de objetos.** El laboratorio 03 pide copiar un
+  identificador de una salida y pegarlo en la siguiente orden. Los dos lados dan
+  identificadores distintos, asi que no hay un valor unico que pegar.
+- **Responder con tus palabras.** La parte 4.4 del laboratorio 03 pide escribir
+  que es una rama. No hay nada que ejecutar.
+- **Resolver un conflicto en el editor**, elegir acciones en un rebase
+  interactivo y todo lo que ocurre en la plataforma, que son los laboratorios 11
+  en adelante.
+
+En esos tramos una prueba manual sigue siendo necesaria.
+
+## 26. La cobertura, con numeros
+
+Medida sobre los dos laboratorios que hoy tienen `preparar.sh` y por lo tanto se
+recorren de verdad:
+
+| Laboratorio | Ordenes | Comparadas | Solo en Git | Omitidas | Cobertura |
+|---|---|---|---|---|---|
+| lab-02 | 40 | 35 | 3 | 2 | **88 %** |
+| lab-03 | 33 | 9 | 19 | 5 | **27 %** |
+
+El 27 por ciento del laboratorio 03 no es una falla de la prueba: **es lo que
+ese laboratorio enseña**. Abre la carpeta `.git` y lee lo que hay dentro, y el
+simulador no modela esa carpeta a proposito (restriccion R4 del SPEC 001). Las
+diecinueve ordenes que se corren solo en Git son `cat .git/...`, `ls .git/...`,
+`wc -c` y `git cat-file`. Lo que si se compara es lo que cambia el grafo: crear
+la rama, cambiarse a ella, volver y borrarla.
+
+Para los ocho laboratorios que todavia no tienen `preparar.sh`, la clasificacion
+da una estimacion que **no esta verificada**, porque no hay repositorio contra
+el cual correrla. La estimacion del laboratorio 09 en particular es optimista:
+cuenta `git remote` entre lo soportado porque el motor tiene esa orden, cuando
+en realidad solo guarda el nombre y la direccion. Lo que el laboratorio 09
+realmente hace, que es traer y publicar contra dos remotos, incorporar un
+submodulo y colgar un gancho, cae entero del lado de lo no soportado.
+
+Cuando cada laboratorio se arme, su recorrido entra solo y la cifra se vuelve
+real.

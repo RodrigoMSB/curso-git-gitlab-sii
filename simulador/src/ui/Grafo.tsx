@@ -78,6 +78,11 @@ export function Grafo({
           {aristas.map((arista) => (
             <path
               key={arista.clave}
+              // Las aristas van en el orden de los padres, asi que la primera
+              // de cada confirmacion es su primer padre.
+              data-desde={arista.desde}
+              data-hasta={arista.hasta}
+              data-previsualizada={arista.previsualizada ? 'si' : 'no'}
               d={arista.trazado}
               fill="none"
               stroke={arista.atenuada ? 'var(--huerfano)' : 'var(--borde)'}
@@ -127,6 +132,14 @@ export function Grafo({
               // biome-ignore lint/a11y/useSemanticElements: dentro de un SVG no hay <button>
               <g
                 key={nodo.id}
+                // El DOM dice lo que la pantalla esta dibujando, para que las
+                // pruebas de punta a punta lean el estado mostrado y no el
+                // modelo (SPEC 008).
+                data-confirmacion={nodo.id}
+                data-mensaje={nodo.mensaje}
+                data-union={nodo.esUnion ? 'si' : 'no'}
+                data-huerfana={nodo.huerfana ? 'si' : 'no'}
+                data-previsualizada={nodo.previsualizada ? 'si' : 'no'}
                 className={animar ? 'transicion-nodo enfocable' : 'enfocable'}
                 role="button"
                 tabIndex={0}
@@ -187,7 +200,13 @@ export function Grafo({
           {etiquetas.map((etiqueta) => {
             const color = colorDeEtiqueta(etiqueta);
             return (
-              <g key={etiqueta.clave}>
+              <g
+                key={etiqueta.clave}
+                data-etiqueta={etiqueta.texto}
+                data-forma={etiqueta.forma}
+                data-en={etiqueta.idConfirmacion}
+                data-actual={etiqueta.actual ? 'si' : 'no'}
+              >
                 {etiqueta.forma === 'version' ? (
                   <path
                     d={trazadoDeVersion(etiqueta)}

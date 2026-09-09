@@ -42,6 +42,25 @@ export function git(carpeta: string, configGlobal: string, ...argumentos: readon
   }).trim();
 }
 
+/**
+ * Como `git`, pero conservando los espacios del comienzo de cada linea.
+ *
+ * Hace falta para `git status --porcelain`, donde la primera columna es un
+ * espacio cuando el cambio no esta preparado: recortarla convierte
+ * « M archivo» en «M archivo», y con eso el estado se lee al reves y el nombre
+ * pierde su primera letra.
+ */
+export function gitCrudo(
+  carpeta: string,
+  configGlobal: string,
+  ...argumentos: readonly string[]
+): string {
+  return execFileSync('git', ['-C', carpeta, ...argumentos], {
+    encoding: 'utf8',
+    env: entorno(configGlobal),
+  }).replace(/\n+$/, '');
+}
+
 /** Corre el verificador como lo corre el participante y recoge todo. */
 export function verificar(carpetaDelLaboratorio: string, configGlobal: string): Corrida {
   try {

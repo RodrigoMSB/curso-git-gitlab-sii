@@ -29,7 +29,7 @@ export function Areas({
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       {columnas.map((columna) => (
-        <section key={columna.clave} className="panel p-3">
+        <section key={columna.clave} className="panel p-3" data-columna={columna.clave}>
           <h2 className="t-pequeno font-semibold">{columna.titulo}</h2>
           <p className="t-min mb-2 font-mono text-[var(--texto-apagado)]">{columna.orden}</p>
           {columna.elementos.length === 0 ? (
@@ -44,7 +44,12 @@ export function Areas({
               style={{ '--filas-visibles': FILAS_VISIBLES } as React.CSSProperties}
             >
               {columna.elementos.map((elemento) => (
-                <li key={elemento.texto} style={{ color: COLOR_POR_TONO[elemento.tono] }}>
+                <li
+                  key={elemento.texto}
+                  data-archivo={elemento.texto}
+                  data-tono={elemento.tono}
+                  style={{ color: COLOR_POR_TONO[elemento.tono] }}
+                >
                   {elemento.texto}
                 </li>
               ))}
@@ -72,7 +77,7 @@ export function PanelesSecundarios({
           <h2 className="t-pequeno mb-2 font-semibold">Pila de guardado temporal</h2>
           <ol className="t-min space-y-1 font-mono">
             {paneles.guardado.map((entrada) => (
-              <li key={entrada.clave}>
+              <li key={entrada.clave} data-guardado={entrada.texto}>
                 <span className="text-[var(--puntero)]">{entrada.texto}</span>
                 <span className="text-[var(--texto-apagado)]">
                   {' '}

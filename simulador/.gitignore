@@ -7,3 +7,9 @@ dist/*
 !dist/index.html
 !dist/manifiesto.txt
 coverage/
+
+# Lo que dejan las pruebas de punta a punta al correr. Cypress es herramienta
+# de desarrollo: el participante no la necesita nunca (SPEC 006, seccion 22).
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/

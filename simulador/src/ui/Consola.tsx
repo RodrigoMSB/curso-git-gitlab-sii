@@ -184,6 +184,7 @@ export function Consola({
             onBlur={() => setEnfocado(false)}
             className="t-normal min-w-0 flex-1 bg-transparent font-mono text-[var(--texto)] outline-none"
             aria-label="Orden de Git"
+            data-prueba="entrada-consola"
             aria-describedby={
               mostrarAyuda && previsualizacionActiva ? 'aviso-previsualizacion' : undefined
             }

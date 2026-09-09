@@ -24,7 +24,7 @@ import { describe, expect, it } from 'vitest';
 import { construirEscenario, ESCENARIOS } from '../src/escenarios';
 import type { EscenarioDeclarado } from '../src/escenarios';
 import type { EstadoArchivo, EstadoRepositorio } from '../src/core/tipos';
-import { type Escenario, git, montarLab, preparar } from './laboratorios-en-disco';
+import { type Escenario, git, gitCrudo, montarLab, preparar } from './laboratorios-en-disco';
 
 const LABS = fileURLToPath(new URL('../../labs', import.meta.url));
 
@@ -79,7 +79,10 @@ function formaDelDisco(esc: Escenario): Forma {
 
   const seguidos = lineas(g('ls-files'));
   const sucios = new Map<string, EstadoArchivo>();
-  for (const linea of lineas(g('status', '--porcelain'))) {
+  // Sin recortar: la primera columna de `--porcelain` es un espacio cuando el
+  // cambio no esta preparado.
+  const porcelana = gitCrudo(esc.recetario, esc.configGlobal, 'status', '--porcelain');
+  for (const linea of porcelana === '' ? [] : porcelana.split('\n')) {
     sucios.set(linea.slice(3), estadoDe(linea.slice(0, 2)));
   }
   const nombres = new Set([...seguidos, ...sucios.keys()]);
