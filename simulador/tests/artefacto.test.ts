@@ -57,6 +57,34 @@ describe('el artefacto construido esta en el repositorio y al dia', () => {
   });
 });
 
+describe('el artefacto esta versionado en el repositorio', () => {
+  const raiz = fileURLToPath(new URL('../..', import.meta.url));
+  const versionados = execFileSync('git', ['-C', raiz, 'ls-files'], { encoding: 'utf8' }).split('\n');
+
+  it('dist/index.html esta confirmado, no ignorado', () => {
+    // Es lo que hace que el participante pueda clonar y abrir sin construir.
+    // Si alguien restituye la exclusion de dist/ creyendo que es un descuido,
+    // esta prueba lo atrapa.
+    expect(versionados).toContain('simulador/dist/index.html');
+  });
+
+  it('el manifiesto tambien esta confirmado', () => {
+    expect(versionados).toContain('simulador/dist/manifiesto.txt');
+  });
+
+  it('SIMULADOR.html esta confirmado en la raiz', () => {
+    expect(versionados).toContain('SIMULADOR.html');
+  });
+
+  it('no se colo nada mas de dist', () => {
+    const deDist = versionados.filter((ruta) => ruta.startsWith('simulador/dist/'));
+    expect(deDist.sort()).toEqual([
+      'simulador/dist/index.html',
+      'simulador/dist/manifiesto.txt',
+    ]);
+  });
+});
+
 describe('la comprobacion detecta de verdad un artefacto desactualizado', () => {
   // Una comprobacion que nunca se vio fallar no prueba nada. Cada caso altera
   // algo de verdad en el disco y lo deja como estaba al terminar.

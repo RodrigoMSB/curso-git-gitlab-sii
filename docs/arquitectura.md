@@ -1471,12 +1471,19 @@ que compara sus huellas.
 
 ### El peso
 
+Medido sobre un clon de verdad, con `--no-local` para que no use enlaces duros
+y el paquete sea el que viajaria por la red:
+
 | | |
 |---|---|
-| El artefacto en disco | 260 KB |
-| Lo que ocupa comprimido, que es como lo guarda Git | 79 KB |
-| El repositorio completo, con el artefacto adentro | 5,1 MB |
+| El artefacto en disco | 256 KB |
+| Lo que aporta comprimido, que es como lo guarda Git | 79 KB |
+| El paquete completo que baja un clon | 2,9 MB |
+| El clon en disco, con el arbol de trabajo | 5,7 MB |
 
-Cada reconstruccion agrega una version nueva del artefacto a la historia, unos
-79 KB. Cien reconstrucciones son ocho megabytes: el repositorio sigue clonandose
-en segundos. No hay motivo para preocuparse por el peso.
+Las dos rutas del artefacto comparten objeto, asi que la copia de la raiz no
+agrega nada al paquete.
+
+Cada reconstruccion si agrega una version nueva a la historia, unos 79 KB. Cien
+reconstrucciones son ocho megabytes: el repositorio sigue clonandose en
+segundos. No hay motivo para preocuparse por el peso.
