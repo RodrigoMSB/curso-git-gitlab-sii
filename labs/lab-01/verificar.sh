@@ -13,7 +13,12 @@
 set -u
 
 LABORATORIO='lab-01'
-RAIZ=$(cd "$(dirname "$0")" && pwd)
+# `pwd -P` y no `pwd`: hace falta la ruta fisica, con los enlaces
+# simbolicos ya resueltos, porque contra ella se compara mas abajo lo que
+# responde `git rev-parse --show-toplevel`, que siempre viene resuelto. En
+# macOS, sin esto, cualquier laboratorio bajo /tmp o /var quedaba comparando
+# /var/... contra /private/var/... y no aprobaba nunca.
+RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 REPOSITORIO="$RAIZ/recetario"
 # Como se nombra el repositorio en los mensajes: la ruta larga de la maquina
 # de cada participante no le dice nada a nadie.

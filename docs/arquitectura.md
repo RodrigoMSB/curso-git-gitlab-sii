@@ -676,8 +676,8 @@ La version que quedo compara `git rev-parse --show-toplevel` contra la ruta
 esperada. Si la cima del repositorio no es `recetario` mismo, el criterio falla
 y dice «falta el git init», que es lo que efectivamente paso.
 
-Vale la pena dejarlo escrito porque el resto de los laboratorios va a heredar la
-misma forma, y todos van a tener el mismo repositorio del curso encima.
+Esto dejo de ser una nota del laboratorio 01: es la **regla 1 de la seccion
+15**, que rige para todo verificador de laboratorio.
 
 ### Los cinco criterios se imprimen siempre
 
@@ -750,3 +750,207 @@ El estado inicial del laboratorio se armo siguiendo el enunciado paso a paso,
 sin atajos, y sobre ese resultado se corrieron las comprobaciones. La
 configuracion global de la maquina no se toco en ningun momento: las pruebas
 usan un archivo de configuracion aparte via `GIT_CONFIG_GLOBAL`.
+
+Todo eso quedo despues fijado en la suite del proyecto, en
+`simulador/tests/laboratorios.test.ts`, que arma el laboratorio siguiendo el
+enunciado, corre el verificador en Bash y rompe cada criterio por separado. Son
+diecisiete pruebas y corren con `npm test` junto con las del simulador y las
+semillas.
+
+Automatizarlo valio la pena de inmediato: la prueba de que el verificador da el
+mismo resultado desde cualquier carpeta descubrio la regla 2 de la seccion 15,
+un error que las comprobaciones a mano no habian tocado porque la ruta del
+repositorio del curso no pasa por ningun enlace simbolico.
+
+## 15. Principios de los verificadores de laboratorio
+
+Estas reglas rigen para **todo** verificador de laboratorio, no solo el del 01.
+Los catorce que faltan se escriben contra esta seccion. Las dos primeras
+nacieron de errores reales encontrados al probar el laboratorio 01, no de
+precaucion abstracta.
+
+### Regla 1 · la cima del repositorio se compara, no se pregunta
+
+**Un verificador nunca da por existente un repositorio solo porque Git responde
+dentro de la carpeta.** Compara `git rev-parse --show-toplevel` contra la ruta
+que espera, y si no coincide, el criterio falla.
+
+El motivo es estructural y afecta a todos los laboratorios por igual: la carpeta
+del participante vive dentro del repositorio del curso, y Git, cuando no
+encuentra un `.git` propio, sigue subiendo por el arbol de directorios hasta dar
+con el de mas arriba. Un verificador que solo pregunta «¿responde Git aqui?»
+recibe que si, y a continuacion mide el laboratorio contra la historia del
+taller. El criterio mas basico de todos aprueba sin que exista repositorio
+alguno.
+
+Ningun otro criterio salva la situacion, porque todos los demas leen ese mismo
+repositorio equivocado.
+
+### Regla 2 · las rutas se comparan en forma fisica
+
+**El lado del verificador se construye con `pwd -P`, no con `pwd`.**
+
+`git rev-parse --show-toplevel` devuelve siempre la ruta fisica, con los enlaces
+simbolicos ya resueltos. `pwd` a secas devuelve la logica. En macOS `/tmp` y
+`/var` son enlaces a `/private/tmp` y `/private/var`, asi que un laboratorio que
+viviera bajo cualquiera de ellos comparaba `/var/...` contra `/private/var/...`
+y no aprobaba nunca, hiciera el participante lo que hiciera.
+
+Encontro este error la prueba de que el verificador da el mismo resultado desde
+la carpeta del laboratorio y desde cualquier otra parte. Con la ruta relativa
+las dos formas coincidian por casualidad; con la absoluta, no.
+
+### Regla 3 · la ruta sale del script, no del directorio actual
+
+El verificador resuelve la carpeta de trabajo contra su propio `dirname`. Se
+corre sin argumentos y funciona desde donde sea. Un participante que lo corra
+desde donde no corresponde recibe el resultado de su laboratorio, no un error de
+ruta, que no le enseña nada.
+
+### Regla 4 · se imprimen todos los criterios, siempre
+
+Aunque falte el repositorio y la mitad no se pueda medir. Los que no se pueden
+medir dicen `no se pudo comprobar, no hay repositorio` y cuentan como fallidos.
+Una lista que se corta en la primera falla le esconde al participante cuanto le
+falta.
+
+### Regla 5 · el verificador no toca nada
+
+No arregla, no crea, no borra, no configura. Solo mira y dice. El participante
+tiene que poder correrlo cuantas veces quiera sin que cambie su ejercicio.
+
+### Regla 6 · las pruebas rompen cada criterio por separado
+
+Un verificador que nunca se vio fallar no prueba nada. Cada criterio se rompe
+solo, y se exige el mensaje especifico y el codigo de salida distinto de cero.
+Las pruebas viven en `simulador/tests/laboratorios.test.ts` y corren el
+verificador en Bash tal como lo corre el participante: no hay una segunda
+implementacion de los criterios en TypeScript.
+
+Esas pruebas arman el laboratorio **dentro de un repositorio de mentira que hace
+de curso**, porque esa es la situacion real del taller y es la unica forma de
+que la regla 1 quede fijada contra una regresion.
+
+## 16. PENDIENTE DE DECISION · el segundo efecto del repositorio anidado
+
+La seccion 15 resuelve el problema **del verificador**. Queda otro, del lado del
+participante, que el SPEC 004 no previo y que hay que resolver antes de
+replicar la forma a los catorce laboratorios que faltan.
+
+El planteo es simple: si el laboratorio vive en `labs/lab-01/`, el participante
+trabaja **dentro del repositorio del curso**, y sus ordenes de Git alcanzan la
+configuracion y el estado del repositorio de arriba.
+
+Lo que sigue esta comprobado sobre un repositorio de curso de mentira, no
+razonado. La decision es del product owner; aqui quedan los hechos.
+
+### Muerde, y en tres lugares
+
+**Primero, `git config` sin `--global`.** La Parte 1 del enunciado ocurre
+*antes* de que exista `recetario`, asi que el participante esta parado en el
+repositorio del curso. Si escribe `git config user.name "..."` sin `--global`,
+que es un error corriente, la orden **funciona** y escribe en el `.git/config`
+del curso.
+
+Fuera de un repositorio, la misma orden falla fuerte y a tiempo:
+
+```
+$ git config user.name "Participante Taller"
+fatal: not in a git directory
+```
+
+Dentro del repositorio del curso no dice nada. Ese es el fondo del asunto: el
+anidamiento **convierte un error que Git atrapaba en el acto en uno silencioso**.
+
+Y no es un error inocente. La seccion 1.4 del enunciado le explica al
+participante que sin `--global` la configuracion vale solo para el repositorio
+donde esta parado. El enunciado esta invitando, con toda razon pedagogica, al
+experimento que ensucia el repositorio del curso.
+
+Las consecuencias llegan despues y en otra parte, que es lo peor que le puede
+pasar a un error en clase:
+
+- Los alias quedan en el curso y **no llegan a `recetario`**. El `git lg` que
+  manda usar la Parte 3.4 responde `git: 'lg' is not a git command`.
+- Las confirmaciones del participante se firman con la identidad que hubiera
+  en la configuracion global, no con la que el acaba de escribir. En una
+  maquina sin identidad global, Git se niega a confirmar.
+- El verificador falla el criterio 5 y el participante no tiene como saber por
+  que, porque el si escribio los alias y los vio aceptados.
+
+**Segundo, `git status` desde la carpeta equivocada.** Un participante que se
+salte el `cd recetario` y corra lo que pide la Parte 2.3 recibe el estado del
+repositorio del curso. El enunciado le prometio «no hay confirmaciones todavia»
+y ve otra cosa.
+
+Es mas grave de lo que parece, porque el enunciado despues manda `git add .`
+(Parte 3.3), y en el lugar equivocado eso prepara el repositorio del curso
+entero.
+
+**Tercero, y es el peor, la seccion «Si algo salio mal».** Esa seccion indica
+`git reset --soft HEAD~1`. Corrida en el repositorio del curso, comprobado:
+
+```
+--- historia del curso ANTES ---     --- historia del curso DESPUES ---
+e6c301c tercera del curso            d1ed43f segunda del curso
+d1ed43f segunda del curso            a9f591b el repositorio del curso
+a9f591b el repositorio del curso
+```
+
+Se llevo por delante una confirmacion del curso y dejo todo preparado. Es una
+orden de recuperacion, o sea la que corre justo quien ya esta perdido y menos
+va a notar en que carpeta esta.
+
+### Un cuarto efecto, este en el verificador
+
+Cuando `recetario` no existe, el criterio 5 pregunta por los alias parado en
+`labs/lab-01`, que esta dentro del curso. Si el participante los escribio sin
+`--global`, el verificador los encuentra **en el config del curso** y da el
+criterio por aprobado.
+
+El veredicto general no miente, porque el criterio 1 ya fallo y el codigo de
+salida es distinto de cero. Pero la linea del criterio 5 si miente.
+
+Es un arreglo de una linea, independiente de la decision de estructura: cuando
+no hay repositorio, preguntar por los alias solo en el config global, que es el
+unico lugar donde pueden estar legitimamente. **No esta aplicado**, a la espera
+de la decision, porque bajo la opcion A el problema desaparece solo.
+
+### Las opciones
+
+**Opcion A · el laboratorio vive fuera del repositorio del curso.** El
+participante copia la carpeta del laboratorio a un lugar suyo, o la recibe
+suelta, y trabaja ahi. Desaparecen los cuatro efectos de golpe, sin trucos:
+sin un `.git` por encima, Git vuelve a fallar fuerte y a tiempo ante cada uno
+de los errores de arriba.
+
+Comprobado: `verificar.sh` **funciona sin un solo cambio** fuera del
+repositorio del curso, porque resuelve la ruta contra su propia ubicacion
+(regla 3). El unico ajuste seria cosmetico, la etiqueta
+`labs/lab-01/recetario` que sale en los mensajes.
+
+El costo es que `labs/` deja de ser el lugar donde se trabaja y pasa a ser el
+lugar donde se guarda el original, y hay que decir en alguna parte como se
+copia. Tambien conviene saber si el participante recibe el material como
+repositorio clonado o como carpeta suelta: si es lo segundo, el problema nunca
+existio y la opcion A es solo escribirlo.
+
+**Opcion B · se mantiene el anidamiento y se pone un techo.**
+`GIT_CEILING_DIRECTORIES` le prohibe a Git subir mas alla de una carpeta.
+Comprobado: restituye el `fatal: not in a git directory` y deja el repositorio
+del participante funcionando entero.
+
+Pero es una variable de entorno que hay que tener puesta en cada terminal, con
+una ruta absoluta distinta en cada maquina. Sostenerla pide un script
+envoltorio o pedirle al participante que la exporte, y eso contradice que el
+laboratorio sea autocontenido y sin preparacion previa. Ademas introduce en la
+sesion 1 un concepto que el taller no enseña.
+
+**Opcion C · se deja como esta y se advierte en el enunciado.** Se descarta:
+el punto 2.2 del SPEC 004 prohibe editar el enunciado, y una advertencia no
+impide nada. El participante que se equivoca de carpeta es precisamente el que
+no esta leyendo.
+
+**Recomendacion: la opcion A.** Es la unica que elimina la causa en vez de
+taparla, no cuesta ningun cambio en el verificador y devuelve a Git su mejor
+propiedad para quien esta aprendiendo, que es negarse a tiempo y decir por que.
