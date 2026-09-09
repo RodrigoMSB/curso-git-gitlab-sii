@@ -11,7 +11,7 @@
 
 import { ejecutar, previsualizar } from '../core';
 import type { EstadoRepositorio, Previsualizacion } from '../core/tipos';
-import { escenarioPorId } from '../escenarios';
+import { ESCENARIO_INICIAL, escenarioDeLaDireccion, escenarioPorId } from '../escenarios';
 import { colorearSalida, type Renglon } from './consola';
 
 export interface Paso {
@@ -29,6 +29,28 @@ export interface Sesion {
   readonly historial: readonly string[];
   /** Confirmacion que el participante esta inspeccionando. */
   readonly seleccion: string | null;
+}
+
+/**
+ * Escenario con el que arranca la pantalla.
+ *
+ * Si la direccion del archivo trae un laboratorio, se abre ese: asi un
+ * enunciado puede decir «abre SIMULADOR.html?lab=06» y el participante cae
+ * directo en el escenario que esta practicando, sin buscarlo en el selector.
+ *
+ * Vive en la capa de vista y no en la de pantalla porque elegir escenario es
+ * una decision de dominio, y los componentes no importan dominio (CA7 del
+ * SPEC 002).
+ *
+ * Funciona desde el sistema de archivos: la consulta y el fragmento viajan en
+ * la direccion `file://` y no exigen ninguna lectura externa, que es lo que un
+ * navegador bloquea (restriccion R2 del SPEC 001).
+ */
+export function escenarioDeArranque(direccion: {
+  readonly search: string;
+  readonly hash: string;
+}): string {
+  return escenarioDeLaDireccion(direccion.search, direccion.hash) ?? ESCENARIO_INICIAL;
 }
 
 export function iniciarSesion(escenario: string): Sesion {

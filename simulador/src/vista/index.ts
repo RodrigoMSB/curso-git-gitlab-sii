@@ -15,6 +15,7 @@ export {
   cambiarEscenario,
   ejecutarOrden,
   estadoDe,
+  escenarioDeArranque,
   iniciarSesion,
   irAPaso,
   renglonesDe,

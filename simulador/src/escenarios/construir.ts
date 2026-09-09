@@ -8,6 +8,7 @@
 
 import { agregarConfirmacion } from '../core/confirmaciones';
 import { estadoVacio } from '../core/estado';
+import { fechaDeEpoca } from '../core/identificadores';
 import type { EstadoRepositorio } from '../core/tipos';
 import type { EscenarioDeclarado } from './tipos';
 
@@ -16,7 +17,7 @@ export function construirEscenario(declaracion: EscenarioDeclarado): EstadoRepos
 
   let estado: EstadoRepositorio = {
     ...base,
-    iniciado: true,
+    iniciado: declaracion.iniciado ?? true,
     archivos: declaracion.archivos.map((archivo) => ({ ...archivo })),
     remotos: declaracion.remotos.map((remoto) => ({ ...remoto })),
     config: { local: {}, global: { ...declaracion.configuracion } },
@@ -42,6 +43,9 @@ export function construirEscenario(declaracion: EscenarioDeclarado): EstadoRepos
       padres,
       carril: declarada.carril,
       matiz: `${declaracion.id}:${declarada.clave}`,
+      ...(declarada.autor === undefined ? {} : { autor: declarada.autor }),
+      ...(declarada.correo === undefined ? {} : { correo: declarada.correo }),
+      ...(declarada.epoca === undefined ? {} : { fecha: fechaDeEpoca(declarada.epoca) }),
     });
     estado = creado.estado;
     identificadores.set(declarada.clave, creado.confirmacion.id);
@@ -83,6 +87,12 @@ export function construirEscenario(declaracion: EscenarioDeclarado): EstadoRepos
       mensaje: etiqueta.mensaje,
     })),
     puntero: { tipo: 'rama', rama: declaracion.posicion },
+    guardados: (declaracion.guardados ?? []).map((guardado) => ({
+      mensaje: guardado.mensaje,
+      archivos: guardado.archivos.map((archivo) => ({ ...archivo })),
+      rama: guardado.rama,
+      idBase: resolver(guardado.sobre),
+    })),
   };
 
   return estado;

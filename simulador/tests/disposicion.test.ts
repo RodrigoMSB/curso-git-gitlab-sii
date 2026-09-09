@@ -11,43 +11,48 @@ import { previsualizar } from '../src/core/motor';
 import { idActual, ramaPorNombre } from '../src/core/estado';
 import { disponer, TEXTO_HUERFANAS } from '../src/grafico/disposicion';
 import { MEDIDAS } from '../src/grafico/tipos';
-import { escenarioPorId } from '../src/escenarios';
-import { correr } from './ayudas';
+import type { EstadoRepositorio } from '../src/core/tipos';
+import { correr, repoConRamaDeTrabajo, repoConRamas, repoLineal, repoVacio } from './ayudas';
 
 /** Carril asignado a la confirmacion a la que apunta una rama. */
-function carrilDe(estado: ReturnType<typeof escenarioPorId>, rama: string): number {
+function carrilDe(estado: EstadoRepositorio, rama: string): number {
   const punta = ramaPorNombre(estado, rama)?.id ?? '';
   return disponer(estado).nodos.find((nodo) => nodo.id === punta)?.carril ?? -1;
 }
 
 describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
   it('historia lineal: una sola columna, la mas reciente arriba', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     const { nodos } = disponer(estado);
 
-    expect(nodos).toHaveLength(4);
+    expect(nodos).toHaveLength(5);
     expect(nodos.every((nodo) => nodo.carril === 0)).toBe(true);
     expect(nodos[0]?.id).toBe(idActual(estado));
-    expect(nodos[0]?.y).toBeLessThan(nodos[3]?.y ?? 0);
+    expect(nodos[0]?.y).toBeLessThan(nodos[4]?.y ?? 0);
     for (let i = 1; i < nodos.length; i += 1) {
       expect(nodos[i]?.y).toBe((nodos[i - 1]?.y ?? 0) + MEDIDAS.espacioFila);
     }
   });
 
   it('dos ramas divergentes: cada linea ocupa su propia columna', () => {
-    const estado = escenarioPorId('E3');
+    const estado = repoConRamas();
     const { nodos, aristas } = disponer(estado);
 
-    expect(nodos).toHaveLength(6);
+    expect(nodos).toHaveLength(7);
     expect(carrilDe(estado, 'main')).toBe(0);
-    expect(carrilDe(estado, 'tailandesa')).toBe(1);
+    expect(carrilDe(estado, 'peruana')).toBe(2);
     // Las dos lineas vuelven a la misma base.
     const base = estado.confirmaciones[2]?.id ?? '';
     expect(aristas.filter((arista) => arista.hasta === base)).toHaveLength(2);
   });
 
   it('fusion: la union se marca como tal y sale de sus dos padres', () => {
-    const estado = correr(escenarioPorId('E3'), 'git merge tailandesa');
+    const estado = correr(
+      repoConRamas(),
+      'git merge peruana',
+      'git add platos.md',
+      'git commit -m "Fusiona la cocina peruana"',
+    );
     const { nodos, aristas } = disponer(estado);
     const union = nodos[0];
 
@@ -58,13 +63,13 @@ describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
 
   it('tres ramas simultaneas: tres columnas distintas y ningun solapamiento', () => {
     const estado = correr(
-      escenarioPorId('E3'),
-      'git switch -c mexicana',
+      repoConRamas(),
+      'git switch -c chilena',
       'echo "* Tacos" >> platos.md',
       'git add platos.md',
       'git commit -m "Suma los tacos"',
       'git switch main',
-      'git switch -c peruana',
+      'git switch -c boliviana',
       'echo "* Ceviche" >> platos.md',
       'git add platos.md',
       'git commit -m "Suma el ceviche"',
@@ -73,9 +78,9 @@ describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
 
     const carriles = [
       carrilDe(estado, 'main'),
-      carrilDe(estado, 'tailandesa'),
-      carrilDe(estado, 'mexicana'),
       carrilDe(estado, 'peruana'),
+      carrilDe(estado, 'chilena'),
+      carrilDe(estado, 'boliviana'),
     ];
     expect(new Set(carriles).size).toBe(4);
 
@@ -84,10 +89,10 @@ describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
   });
 });
 
-describe('CA3 · previsualizacion de la fusion sobre E4', () => {
+describe('CA3 · previsualizacion de la fusion sobre el laboratorio 06', () => {
   it('dibuja la union proyectada en trazo discontinuo sin haberla creado', () => {
-    const estado = escenarioPorId('E4');
-    const vista = previsualizar(estado, 'git merge tailandesa');
+    const estado = repoConRamas();
+    const vista = previsualizar(estado, 'git merge peruana');
     const anunciada = vista.confirmacionesNuevas[0] ?? '';
 
     const conPrevisualizacion = disponer(vista.estadoResultante, {
@@ -109,19 +114,19 @@ describe('CA3 · previsualizacion de la fusion sobre E4', () => {
   });
 
   it('sin previsualizacion no aparece ninguna confirmacion discontinua', () => {
-    const { nodos } = disponer(escenarioPorId('E4'));
+    const { nodos } = disponer(repoConRamas());
     expect(nodos.some((nodo) => nodo.previsualizada)).toBe(false);
   });
 
   it('al ejecutar la fusion, la union conserva el identificador anunciado', () => {
-    const estado = escenarioPorId('E4');
-    const anunciada = previsualizar(estado, 'git merge tailandesa').confirmacionesNuevas[0];
+    const estado = repoConRamas();
+    const anunciada = previsualizar(estado, 'git merge peruana').confirmacionesNuevas[0];
 
     const final = correr(
       estado,
-      'git merge tailandesa',
+      'git merge peruana',
       'git add platos.md',
-      'git commit -m "Fusiona tailandesa"',
+      'git commit -m "Fusiona peruana"',
     );
     const nodo = disponer(final).nodos.find((candidato) => candidato.id === anunciada);
 
@@ -132,8 +137,8 @@ describe('CA3 · previsualizacion de la fusion sobre E4', () => {
 
 describe('CA4 · el rebase deja las originales dibujadas', () => {
   it('las confirmaciones originales siguen en el dibujo, atenuadas, y las copias tienen otro identificador', () => {
-    const partida = correr(escenarioPorId('E3'), 'git switch tailandesa');
-    const originales = [partida.confirmaciones[4]?.id ?? '', partida.confirmaciones[5]?.id ?? ''];
+    const partida = repoConRamaDeTrabajo();
+    const originales = partida.confirmaciones.slice(4).map((confirmacion) => confirmacion.id);
 
     const despues = correr(partida, 'git rebase main');
     const { nodos } = disponer(despues);
@@ -150,13 +155,13 @@ describe('CA4 · el rebase deja las originales dibujadas', () => {
   });
 
   it('las copias no se superponen con las originales: quedan en columnas distintas', () => {
-    const despues = correr(escenarioPorId('E3'), 'git switch tailandesa', 'git rebase main');
+    const despues = correr(repoConRamaDeTrabajo(), 'git rebase main');
     const { nodos } = disponer(despues);
 
     const huerfanas = nodos.filter((nodo) => nodo.huerfana);
     const vivas = nodos.filter((nodo) => !nodo.huerfana);
 
-    expect(huerfanas).toHaveLength(2);
+    expect(huerfanas).toHaveLength(4);
     for (const huerfana of huerfanas) {
       for (const viva of vivas) {
         expect(`${huerfana.x}:${huerfana.y}`).not.toBe(`${viva.x}:${viva.y}`);
@@ -166,8 +171,8 @@ describe('CA4 · el rebase deja las originales dibujadas', () => {
   });
 
   it('la previsualizacion del rebase muestra a la vez las originales y las copias discontinuas', () => {
-    const partida = correr(escenarioPorId('E3'), 'git switch tailandesa');
-    const originales = [partida.confirmaciones[4]?.id ?? '', partida.confirmaciones[5]?.id ?? ''];
+    const partida = repoConRamaDeTrabajo();
+    const originales = partida.confirmaciones.slice(4).map((confirmacion) => confirmacion.id);
     const vista = previsualizar(partida, 'git rebase main');
 
     const { nodos } = disponer(vista.estadoResultante, {
@@ -175,22 +180,22 @@ describe('CA4 · el rebase deja las originales dibujadas', () => {
     });
 
     const discontinuas = nodos.filter((nodo) => nodo.previsualizada);
-    expect(discontinuas).toHaveLength(2);
+    expect(discontinuas).toHaveLength(4);
     for (const original of originales) {
       expect(nodos.map((nodo) => nodo.id)).toContain(original);
     }
     // Las originales y las copias conviven: no hay deslizamiento, hay copia.
-    expect(nodos.length).toBe(partida.confirmaciones.length + 2);
+    expect(nodos.length).toBe(partida.confirmaciones.length + 4);
   });
 });
 
 describe('5.6 · el grupo de huerfanas va rotulado', () => {
   it('sin huerfanas no hay rotulo', () => {
-    expect(disponer(escenarioPorId('E3')).rotuloHuerfanas).toBeNull();
+    expect(disponer(repoConRamas()).rotuloHuerfanas).toBeNull();
   });
 
   it('tras el rebase el rotulo nombra el grupo y dice que estan sin referencia', () => {
-    const despues = correr(escenarioPorId('E3'), 'git switch tailandesa', 'git rebase main');
+    const despues = correr(repoConRamaDeTrabajo(), 'git rebase main');
     const { nodos, rotuloHuerfanas } = disponer(despues);
     const huerfanas = nodos.filter((nodo) => nodo.huerfana);
 
@@ -208,7 +213,7 @@ describe('5.6 · el grupo de huerfanas va rotulado', () => {
   });
 
   it('el marco de dibujo alcanza para el rotulo', () => {
-    const despues = correr(escenarioPorId('E2'), 'git reset --hard HEAD~1');
+    const despues = correr(repoLineal(), 'git reset --hard HEAD~1');
     const disposicion = disponer(despues);
     const rotulo = disposicion.rotuloHuerfanas;
 
@@ -219,7 +224,7 @@ describe('5.6 · el grupo de huerfanas va rotulado', () => {
 
 describe('CA5 · el retroceso destructivo deja la confirmacion abandonada en pantalla', () => {
   it('la confirmacion abandonada permanece dibujada y atenuada', () => {
-    const partida = escenarioPorId('E2');
+    const partida = repoLineal();
     const abandonada = idActual(partida) ?? '';
 
     const despues = correr(partida, 'git reset --hard HEAD~1');
@@ -234,7 +239,7 @@ describe('CA5 · el retroceso destructivo deja la confirmacion abandonada en pan
 
 describe('punteros y etiquetas', () => {
   it('5.4 la posicion actual es una etiqueta aparte que cuelga de la rama que sigue', () => {
-    const estado = escenarioPorId('E3');
+    const estado = repoConRamas();
     const { etiquetas, enlacePuntero } = disponer(estado);
 
     const puntero = etiquetas.find((etiqueta) => etiqueta.forma === 'puntero');
@@ -243,15 +248,15 @@ describe('punteros y etiquetas', () => {
     expect(puntero?.texto).toBe('HEAD');
     expect(enlacePuntero?.ancla).toBe('rama');
     expect(main?.actual).toBe(true);
-    expect(etiquetas.find((etiqueta) => etiqueta.clave === 'rama:tailandesa')?.actual).toBe(false);
+    expect(etiquetas.find((etiqueta) => etiqueta.clave === 'rama:peruana')?.actual).toBe(false);
     // Cuelga de la etiqueta de rama: misma columna, mas abajo.
     expect(puntero?.x).toBe(main?.x);
     expect(puntero?.y).toBeGreaterThan(main?.y ?? 0);
   });
 
   it('5.4 al cambiar de rama solo se mueve la etiqueta de posicion', () => {
-    const antes = disponer(escenarioPorId('E3'));
-    const despues = disponer(correr(escenarioPorId('E3'), 'git switch tailandesa'));
+    const antes = disponer(repoConRamas());
+    const despues = disponer(correr(repoConRamas(), 'git switch mexicana'));
 
     expect(despues.nodos).toEqual(antes.nodos);
     const ramasAntes = antes.etiquetas.filter((etiqueta) => etiqueta.forma === 'rama');
@@ -266,7 +271,7 @@ describe('punteros y etiquetas', () => {
   });
 
   it('5.4 con la posicion desconectada, la etiqueta cuelga de la confirmacion', () => {
-    const estado = correr(escenarioPorId('E2'), 'git checkout HEAD~1');
+    const estado = correr(repoLineal(), 'git checkout HEAD~1');
     const { etiquetas, enlacePuntero } = disponer(estado);
     const puntero = etiquetas.find((etiqueta) => etiqueta.forma === 'puntero');
 
@@ -277,7 +282,7 @@ describe('punteros y etiquetas', () => {
 
   it('5.5 las etiquetas de version van al otro lado y distinguen la anotada', () => {
     const estado = correr(
-      escenarioPorId('E2'),
+      repoLineal(),
       'git tag v1.0',
       'git tag -a v2.0 -m "Segunda entrega"',
     );
@@ -300,18 +305,18 @@ describe('punteros y etiquetas', () => {
 
 describe('marco y limites del dibujo', () => {
   it('5.8 sobre el limite se dibujan las mas recientes y se informa cuantas quedaron fuera', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     const recortado = disponer(estado, { limite: 2 });
 
     expect(recortado.nodos).toHaveLength(2);
-    expect(recortado.ocultas).toBe(2);
+    expect(recortado.ocultas).toBe(3);
     expect(recortado.nodos[0]?.id).toBe(idActual(estado));
     expect(recortado.nodos[1]?.padresOcultos).toBe(true);
     expect(disponer(estado).ocultas).toBe(0);
   });
 
   it('el marco abarca todo lo dibujado, incluidas las etiquetas de la izquierda', () => {
-    const estado = correr(escenarioPorId('E2'), 'git tag version-inicial-del-recetario');
+    const estado = correr(repoLineal(), 'git tag version-inicial-del-recetario');
     const disposicion = disponer(estado);
 
     const minimoX = Math.min(...disposicion.etiquetas.map((etiqueta) => etiqueta.x));
@@ -325,7 +330,7 @@ describe('marco y limites del dibujo', () => {
   });
 
   it('un repositorio sin confirmaciones produce un dibujo vacio pero valido', () => {
-    const disposicion = disponer(escenarioPorId('E1'));
+    const disposicion = disponer(repoVacio());
 
     expect(disposicion.nodos).toHaveLength(0);
     expect(disposicion.aristas).toHaveLength(0);

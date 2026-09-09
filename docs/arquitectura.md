@@ -1487,3 +1487,154 @@ agrega nada al paquete.
 Cada reconstruccion si agrega una version nueva a la historia, unos 79 KB. Cien
 reconstrucciones son ocho megabytes: el repositorio sigue clonandose en
 segundos. No hay motivo para preocuparse por el peso.
+
+---
+
+# SPEC 007 · Un escenario de simulador por laboratorio
+
+## 23. El escenario se declara una vez y lo usan los dos lados
+
+Antes el simulador traia cuatro escenarios llamados E1 a E4, pensados por
+sesion, que no correspondian a ningun laboratorio. El participante abria el
+simulador durante un laboratorio y veia **un repositorio distinto** del que
+tenia en su terminal: otras confirmaciones, otras ramas, otros identificadores.
+
+**Un laboratorio tiene un escenario, y ese escenario se declara una sola vez**,
+en `simulador/src/escenarios/laboratorios.ts`. De esa declaracion salen dos
+cosas:
+
+- El estado inicial que carga el simulador.
+- El repositorio que `preparar.sh` arma en el disco del participante.
+
+### Como se conectan los dos lados
+
+El SPEC 007 ofrecia dos caminos: generar `preparar.sh` desde la declaracion, o
+escribirlo a mano y comparar. **Se eligio comparar**, y no por comodidad.
+
+Generar los scripts obligaba a meter el contenido de los archivos en la
+declaracion, a emitir Bash desde TypeScript en tiempo de construccion y a
+versionar esos `.sh` generados con su propio problema de sincronia, que es
+exactamente el que el SPEC 006 acaba de resolver para el artefacto. Ademas
+habria que reproducir en el generador todo lo que los scripts ya hacen bien: el
+aviso antes de borrar, la confirmacion interactiva, `--forzar`, la comprobacion
+del escenario antes de entregarlo.
+
+Los scripts se escriben a mano, y `tests/escenarios-contra-disco.test.ts` corre
+`preparar.sh` de verdad y compara su resultado contra la declaracion:
+
+| Se compara | No se compara |
+|---|---|
+| Los mensajes, en orden | **Los identificadores** |
+| El autor de cada confirmacion | |
+| La fecha de cada confirmacion | |
+| Los archivos que cada una registro | |
+| Las ramas y a que confirmacion apuntan | |
+| El puntero de posicion | |
+| Las etiquetas | |
+| El estado de cada archivo del directorio | |
+
+Los identificadores no coinciden y no tienen por que: el simulador genera los
+suyos con una huella FNV sobre una semilla textual, porque no versiona
+contenido. Lo que tiene que coincidir es la forma.
+
+Seis pruebas mas alteran la declaracion a proposito y exigen que la comparacion
+lo note: un mensaje cambiado, una confirmacion de mas, un autor distinto, una
+fecha distinta, un archivo con otro estado y una rama que apunta a otro lado.
+
+### Donde vive el contenido de los archivos
+
+**En `preparar.sh`, no en la declaracion.**
+
+El simulador no modela contenido (restriccion R4 del SPEC 001): un archivo es un
+nombre y un estado declarado. Meter los bytes en la declaracion los cargaria en
+el artefacto que el participante abre, para no mostrarlos nunca.
+
+La declaracion es duena de **la forma**; el script es dueno de **los bytes**; la
+prueba obliga a que la forma calce. El contenido no entra en la comparacion
+porque el simulador no tiene con que compararlo.
+
+### Que se le agrego al formato declarativo
+
+El formato ya existia y se extendio en vez de armar uno nuevo:
+
+- **Autor, correo y epoca por confirmacion.** Antes todas las confirmaciones de
+  un escenario las firmaba el participante con una fecha derivada de un
+  contador. Los laboratorios necesitan historias escritas por varias personas en
+  fechas concretas, que es lo que el laboratorio 02 hace filtrar.
+- **`epoca` en segundos**, la misma unidad que `preparar.sh` le pasa a Git. Una
+  sola unidad es lo que permite comparar las fechas de los dos lados.
+- **`iniciado`**, para que el laboratorio 01 arranque sin repositorio.
+- **`guardados`**, entradas del guardado temporal, que el estado ya soportaba y
+  la declaracion no podia expresar.
+- **`sinReflejar`**, la lista de lo que un escenario no puede mostrar con el
+  motor de hoy.
+
+### El selector y la preseleccion
+
+El selector ofrece los diez laboratorios con escenario, con su numero y su
+nombre: `Lab 02 · Leer la historia y volver atras`.
+
+Al abrir el simulador se puede pedir un laboratorio en la direccion del archivo,
+con `?lab=06` o con `#lab-06`, y ambos aceptan `6`, `06` o `lab-06`. Sin
+parametro se abre el laboratorio 01. El participante puede cambiar de escenario
+con el selector igual que antes.
+
+**Funciona desde el sistema de archivos.** La parte de consulta y el fragmento
+viajan en la propia direccion `file://` y no exigen ninguna lectura externa, que
+es lo que un navegador bloquea (restriccion R2 del SPEC 001). Comprobado sobre
+el artefacto construido, abierto en Chrome por `file://`: sin parametro dibuja
+cero nodos, que es el laboratorio 01 sin repositorio, y con `?lab=06` dibuja
+siete, que son las confirmaciones de ese escenario.
+
+Elegir escenario es una decision de dominio, asi que vive en la capa de vista y
+no en los componentes. La prueba de arquitectura del SPEC 002 lo atrapo cuando
+se habia puesto en `Aplicacion.tsx`.
+
+## 24. Que laboratorios llevan escenario, y que no se puede mostrar
+
+Llevan escenario **los laboratorios 01 al 10**, que son los que ocurren en disco
+y tienen grafo que mirar. No llevan el 11, 12, 14 y 15, porque ocurren en la
+plataforma, ni el 13, que es integracion continua.
+
+De los diez, **solo el 02 y el 03 tienen `preparar.sh` en el repositorio**, que
+son los laboratorios armados hasta hoy. Los otros ocho estan declarados y a la
+espera: cuando cada laboratorio se arme, su script entra solo a la comparacion y
+tiene que calzar con lo declarado. Una prueba enumera cuales faltan, de modo que
+la lista no pueda quedar vieja en silencio.
+
+Los escenarios del 04 al 10 se derivaron de los verificadores de las semillas
+del SPEC 003, que son la descripcion mas precisa que existe del estado inicial
+que cada enunciado supone.
+
+### El laboratorio 09 · lo que el motor no alcanza a mostrar
+
+Es el unico escenario que no se refleja entero. Lo que se muestra es la historia
+local de cuatro confirmaciones y que hay un remoto declarado. Lo que **no** se
+puede mostrar, con el motor de hoy:
+
+- **Las ramas de seguimiento remoto**, como `origin/main`. El estado guarda los
+  remotos como nombre y direccion, y no tiene donde poner sus ramas. El
+  enunciado compara `main` con `origin/main` y eso no se puede dibujar.
+- **El segundo remoto y las ordenes de red.** No hay `fetch`, `pull`, `push` ni
+  `clone` en el motor: la carta de ordenes del SPEC 001 no las incluye.
+- **El submodulo de condimentos.** El motor no modela submodulos, ni el archivo
+  `.gitmodules`, ni un repositorio dentro de otro.
+- **El gancho de pre-confirmacion.** El motor no ejecuta ganchos.
+
+Esas cuatro cosas estan anotadas en el propio escenario, en su campo
+`sinReflejar`, para que queden a la vista de quien lo lea y no solo aqui.
+
+**No se invento soporte nuevo**, como el spec pidio. Si el product owner quiere
+que el laboratorio 09 se pueda seguir en el simulador, lo que hace falta es al
+menos ramas de seguimiento remoto y las ordenes de red, y eso es un spec propio.
+
+### El laboratorio 01 · la unica licencia
+
+En el disco, el participante crea los archivos del recetario uno a uno a medida
+que avanza. En el simulador aparecen los seis desde el principio, sin
+seguimiento, para que haya algo que preparar y confirmar sin tener que teclear
+seis ordenes de creacion primero.
+
+Es la unica libertad que se toma un escenario respecto del disco, esta anotada
+en su `sinReflejar`, y no afecta a la comparacion porque el laboratorio 01 no
+tiene `preparar.sh`: su repositorio lo crea el participante.

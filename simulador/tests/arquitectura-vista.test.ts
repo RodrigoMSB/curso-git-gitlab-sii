@@ -197,7 +197,7 @@ const TEXTOS_ACENTUADOS: Readonly<Record<string, readonly string[]>> = {
   'BarraEstado.tsx': [
     'etiqueta="previsualización"',
     'Nada sale de aquí.',
-    '· sesión {opcion.sesion} ·',
+    '· {opcion.titulo}',
   ],
   'Areas.tsx': ['titulo="confirmación"', 'titulo="árbol"'],
 };

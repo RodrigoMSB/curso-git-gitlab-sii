@@ -6,12 +6,11 @@ import { describe, expect, it } from 'vitest';
 import { cadenaDeObjetos } from '../src/core/objetos';
 import { huerfanas } from '../src/core/grafo';
 import { ejecutar } from '../src/core/motor';
-import { escenarioPorId } from '../src/escenarios';
-import { correr } from './ayudas';
+import { correr, repoConRamas, repoLineal } from './ayudas';
 
 describe('9.1 · confirmaciones huerfanas del estado actual', () => {
   it('el motor las expone para que la vista las atenue sin calcularlo', () => {
-    const partida = escenarioPorId('E2');
+    const partida = repoLineal();
     const abandonada = partida.confirmaciones.at(-1)?.id;
 
     expect(huerfanas(partida)).toHaveLength(0);
@@ -23,7 +22,7 @@ describe('9.1 · confirmaciones huerfanas del estado actual', () => {
 
 describe('9.2 · cadena de objetos de una confirmacion', () => {
   it('devuelve la confirmacion, su arbol y un elemento por archivo', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     const id = estado.confirmaciones[3]?.id ?? '';
     const cadena = cadenaDeObjetos(estado, id);
 
@@ -35,7 +34,7 @@ describe('9.2 · cadena de objetos de una confirmacion', () => {
   });
 
   it('la confirmacion apunta a su arbol y el arbol a sus elementos', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     const cadena = cadenaDeObjetos(estado, estado.confirmaciones[3]?.id ?? '');
 
     const enlaceArbol = cadena?.confirmacion.campos.find((campo) => campo.clave === 'tree');
@@ -44,7 +43,12 @@ describe('9.2 · cadena de objetos de una confirmacion', () => {
   });
 
   it('registra los padres de una confirmacion de union', () => {
-    const estado = correr(escenarioPorId('E3'), 'git merge tailandesa');
+    const estado = correr(
+      repoConRamas(),
+      'git merge peruana',
+      'git add platos.md',
+      'git commit -m "Fusiona la cocina peruana"',
+    );
     const cadena = cadenaDeObjetos(estado, estado.confirmaciones.at(-1)?.id ?? '');
     const padres = cadena?.confirmacion.campos.filter((campo) => campo.clave === 'parent');
 
@@ -52,10 +56,10 @@ describe('9.2 · cadena de objetos de una confirmacion', () => {
   });
 
   it('los identificadores son deterministas y distintos entre objetos', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     const id = estado.confirmaciones[1]?.id ?? '';
     const primera = cadenaDeObjetos(estado, id);
-    const segunda = cadenaDeObjetos(escenarioPorId('E2'), id);
+    const segunda = cadenaDeObjetos(repoLineal(), id);
 
     expect(primera).toEqual(segunda);
     expect(primera?.arbol.id).not.toBe(primera?.confirmacion.id);
@@ -64,14 +68,14 @@ describe('9.2 · cadena de objetos de una confirmacion', () => {
   });
 
   it('devuelve nulo si el identificador no corresponde a ninguna confirmacion', () => {
-    expect(cadenaDeObjetos(escenarioPorId('E2'), 'fantasma')).toBeNull();
+    expect(cadenaDeObjetos(repoLineal(), 'fantasma')).toBeNull();
   });
 });
 
 describe('9.3 · abortar la fusion libera el identificador reservado', () => {
   it('el estado vuelve a ser exactamente el de antes de la fusion', () => {
-    const partida = escenarioPorId('E4');
-    const despues = correr(partida, 'git merge tailandesa', 'git merge --abort');
+    const partida = repoConRamas();
+    const despues = correr(partida, 'git merge peruana', 'git merge --abort');
 
     // Igualdad completa: si el identificador siguiera reservado, la fusion
     // quedaria en el estado y esta comparacion fallaria.
@@ -80,18 +84,18 @@ describe('9.3 · abortar la fusion libera el identificador reservado', () => {
   });
 
   it('tras abortar, volver a fusionar reserva otra vez el mismo identificador', () => {
-    const partida = escenarioPorId('E4');
-    const primera = ejecutar(partida, 'git merge tailandesa');
+    const partida = repoConRamas();
+    const primera = ejecutar(partida, 'git merge peruana');
     const reservadoAntes = primera.estado.fusion?.idPrevisto;
 
-    const segunda = ejecutar(ejecutar(primera.estado, 'git merge --abort').estado, 'git merge tailandesa');
+    const segunda = ejecutar(ejecutar(primera.estado, 'git merge --abort').estado, 'git merge peruana');
 
     expect(segunda.estado.fusion?.idPrevisto).toBe(reservadoAntes);
     expect(segunda.proyectadas).toEqual([reservadoAntes]);
   });
 
   it('abortar sin fusion en curso reclama y no cambia nada', () => {
-    const partida = escenarioPorId('E4');
+    const partida = repoConRamas();
     const resultado = ejecutar(partida, 'git merge --abort');
 
     expect(resultado.error).toBe(true);

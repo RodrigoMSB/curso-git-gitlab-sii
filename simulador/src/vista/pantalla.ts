@@ -12,7 +12,7 @@ import type { CadenaDeObjetos } from '../core';
 import type { EstadoRepositorio } from '../core/tipos';
 import { disponer } from '../grafico/disposicion';
 import type { Disposicion } from '../grafico/tipos';
-import { declaraciones } from '../escenarios';
+import { ESCENARIOS } from '../escenarios';
 import { indicadorDe, type Indicador, type Renglon } from './consola';
 import { estadoDe, previsualizarOrden, renglonesDe, type Sesion } from './sesion';
 
@@ -50,6 +50,7 @@ export interface ColumnaArea {
 export interface OpcionEscenario {
   readonly id: string;
   readonly titulo: string;
+  readonly laboratorio: number;
   readonly sesion: number;
   readonly proposito: string;
 }
@@ -215,9 +216,10 @@ export function resumenBarra(estado: EstadoRepositorio): ResumenBarra {
     rama: rama ?? 'posición desconectada',
     desconectado: rama === null,
     cambiosSinConfirmar: estado.archivos.filter((archivo) => archivo.estado !== 'limpio').length,
-    escenarios: Object.values(declaraciones).map((declaracion) => ({
+    escenarios: ESCENARIOS.map((declaracion) => ({
       id: declaracion.id,
       titulo: declaracion.titulo,
+      laboratorio: declaracion.laboratorio,
       sesion: declaracion.sesion,
       proposito: declaracion.proposito,
     })),

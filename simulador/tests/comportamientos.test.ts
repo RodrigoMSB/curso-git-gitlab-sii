@@ -9,36 +9,35 @@ import { describe, expect, it } from 'vitest';
 import { ejecutar } from '../src/core/motor';
 import { idActual, ramaActual, ramaPorNombre, confirmacionPorId } from '../src/core/estado';
 import { antepasados, huerfanas } from '../src/core/grafo';
-import { escenarioPorId } from '../src/escenarios';
-import { correr, correrHasta, ids, texto } from './ayudas';
+import { correr, correrHasta, ids, repoConRamaDeTrabajo, repoConRamas, repoLineal, texto } from './ayudas';
 
 describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', () => {
   it('8.1 crear una rama no mueve nada: solo agrega un nombre sobre la confirmacion actual', () => {
-    const antes = escenarioPorId('E3');
-    const resultado = ejecutar(antes, 'git branch mexicana');
+    const antes = repoConRamas();
+    const resultado = ejecutar(antes, 'git branch tailandesa');
     const despues = resultado.estado;
 
     expect(despues.puntero).toEqual(antes.puntero);
     expect(idActual(despues)).toBe(idActual(antes));
     expect(despues.confirmaciones).toEqual(antes.confirmaciones);
-    expect(ramaPorNombre(despues, 'mexicana')?.id).toBe(idActual(antes));
+    expect(ramaPorNombre(despues, 'tailandesa')?.id).toBe(idActual(antes));
     expect(ramaPorNombre(despues, 'main')?.id).toBe(ramaPorNombre(antes, 'main')?.id);
   });
 
   it('8.2 cambiar de rama mueve unicamente el puntero de posicion: ninguna confirmacion cambia', () => {
-    const antes = escenarioPorId('E3');
-    const despues = ejecutar(antes, 'git switch tailandesa').estado;
+    const antes = repoConRamas();
+    const despues = ejecutar(antes, 'git switch peruana').estado;
 
     expect(ramaActual(antes)).toBe('main');
-    expect(ramaActual(despues)).toBe('tailandesa');
+    expect(ramaActual(despues)).toBe('peruana');
     expect(despues.confirmaciones).toEqual(antes.confirmaciones);
     expect(despues.ramas).toEqual(antes.ramas);
-    expect(idActual(despues)).toBe(ramaPorNombre(antes, 'tailandesa')?.id);
+    expect(idActual(despues)).toBe(ramaPorNombre(antes, 'peruana')?.id);
   });
 
   it('8.3 la fusion informa que no hay nada que hacer cuando la otra rama ya esta contenida', () => {
-    const partida = correr(escenarioPorId('E3'), 'git branch mexicana');
-    const resultado = ejecutar(partida, 'git merge mexicana');
+    const partida = correr(repoConRamas(), 'git branch tailandesa');
+    const resultado = ejecutar(partida, 'git merge tailandesa');
 
     expect(texto(resultado)).toContain('Already up to date.');
     expect(resultado.estado.confirmaciones).toHaveLength(partida.confirmaciones.length);
@@ -47,45 +46,52 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
 
   it('8.3 la fusion avanza el puntero sin crear confirmacion cuando la actual esta contenida en la otra', () => {
     const partida = correr(
-      escenarioPorId('E3'),
-      'git switch -c mexicana',
+      repoConRamas(),
+      'git switch -c tailandesa',
       'echo "* Tacos" >> platos.md',
       'git add platos.md',
       'git commit -m "Suma los tacos"',
       'git switch main',
     );
-    const resultado = ejecutar(partida, 'git merge mexicana');
+    const resultado = ejecutar(partida, 'git merge tailandesa');
 
     expect(texto(resultado)).toContain('Fast-forward');
     expect(resultado.estado.confirmaciones).toHaveLength(partida.confirmaciones.length);
     expect(ramaPorNombre(resultado.estado, 'main')?.id).toBe(
-      ramaPorNombre(partida, 'mexicana')?.id,
+      ramaPorNombre(partida, 'tailandesa')?.id,
     );
   });
 
   it('8.3 la fusion crea una confirmacion con dos padres cuando las historias divergen', () => {
-    const partida = escenarioPorId('E3');
-    const resultado = ejecutar(partida, 'git merge tailandesa');
+    // peruana toca la misma linea que main, asi que hay que resolver antes de
+    // que la union exista.
+    const partida = repoConRamas();
+    const resultado = correrHasta(
+      partida,
+      'git merge peruana',
+      'git add platos.md',
+      'git commit -m "Fusiona la cocina peruana"',
+    );
     const union = confirmacionPorId(resultado.estado, idActual(resultado.estado) ?? '');
 
     expect(resultado.estado.confirmaciones).toHaveLength(partida.confirmaciones.length + 1);
     expect(union?.padres).toHaveLength(2);
     expect(union?.padres[0]).toBe(idActual(partida));
-    expect(union?.padres[1]).toBe(ramaPorNombre(partida, 'tailandesa')?.id);
+    expect(union?.padres[1]).toBe(ramaPorNombre(partida, 'peruana')?.id);
   });
 
   it('8.4 el rebase produce confirmaciones nuevas y deja las originales en el modelo', () => {
-    const partida = correr(escenarioPorId('E3'), 'git switch tailandesa');
-    const originales = (ramaPorNombre(partida, 'tailandesa')?.id ?? '') === ''
-      ? []
-      : [...antepasados(partida, ramaPorNombre(partida, 'tailandesa')?.id ?? '')];
+    // El laboratorio 08 es el que tiene una rama de trabajo con varias
+    // confirmaciones propias, que es lo que el rebase reescribe.
+    const partida = repoConRamaDeTrabajo();
+    const originales = [...antepasados(partida, ramaPorNombre(partida, 'tailandesa')?.id ?? '')];
     const antesDeLaBase = new Set(antepasados(partida, ramaPorNombre(partida, 'main')?.id ?? ''));
     const reescritas = originales.filter((id) => !antesDeLaBase.has(id));
 
     const despues = ejecutar(partida, 'git rebase main').estado;
     const resultantes = antepasados(despues, ramaPorNombre(despues, 'tailandesa')?.id ?? '');
 
-    expect(reescritas).toHaveLength(2);
+    expect(reescritas).toHaveLength(4);
     for (const original of reescritas) {
       expect(resultantes.has(original)).toBe(false);
       expect(confirmacionPorId(despues, original)).toBeDefined();
@@ -95,7 +101,7 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
   });
 
   it('8.5 el retroceso destructivo mueve el puntero pero no destruye confirmaciones', () => {
-    const partida = escenarioPorId('E2');
+    const partida = repoLineal();
     const descartadas = partida.confirmaciones.slice(-2).map((confirmacion) => confirmacion.id);
 
     const despues = ejecutar(partida, 'git reset --hard HEAD~2').estado;
@@ -115,7 +121,7 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
 
   it('8.6 el guardado temporal se comporta como pila: lo mas reciente va al indice cero', () => {
     const partida = correr(
-      escenarioPorId('E2'),
+      repoLineal(),
       'git stash push -m "primero"',
       'echo "* Curanto" >> ingredientes.md',
       'git stash push -m "segundo"',
@@ -131,7 +137,7 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
   });
 
   it('8.7 la reversion no reescribe historia: crea una confirmacion nueva y conserva la original', () => {
-    const partida = escenarioPorId('E2');
+    const partida = repoLineal();
     const revertida = idActual(partida) ?? '';
 
     const resultado = ejecutar(partida, 'git revert HEAD');
@@ -141,23 +147,23 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
     expect(despues.confirmaciones).toHaveLength(partida.confirmaciones.length + 1);
     expect(confirmacionPorId(despues, revertida)).toBeDefined();
     expect(nueva?.padres).toEqual([revertida]);
-    expect(nueva?.mensaje).toBe('Revert "Agrega la lsita de cocinerps"');
+    expect(nueva?.mensaje).toBe('Revert "se docuemnta la reseta del pastel de choclo"');
     expect(huerfanas(despues)).toHaveLength(0);
   });
 });
 
 describe('secuencias completas exigidas por los criterios de aceptacion', () => {
-  it('CA5 sobre E3: rama nueva, confirmacion y fusion terminan en avance de puntero sin union', () => {
-    const partida = escenarioPorId('E3');
+  it('CA5: rama nueva, confirmacion y fusion terminan en avance de puntero sin union', () => {
+    const partida = repoConRamas();
     const resultado = correrHasta(
       partida,
-      'git branch mexicana',
-      'git switch mexicana',
+      'git branch tailandesa',
+      'git switch tailandesa',
       'echo "* Tacos al pastor" >> platos.md',
       'git add platos.md',
       'git commit -m "Suma los tacos al recetario"',
       'git switch main',
-      'git merge mexicana',
+      'git merge tailandesa',
     );
     const final = resultado.estado;
 
@@ -165,7 +171,7 @@ describe('secuencias completas exigidas por los criterios de aceptacion', () => 
     // Una sola confirmacion nueva, la del participante: la fusion no creo union.
     expect(final.confirmaciones).toHaveLength(partida.confirmaciones.length + 1);
     const puntaMain = ramaPorNombre(final, 'main')?.id ?? '';
-    expect(puntaMain).toBe(ramaPorNombre(final, 'mexicana')?.id);
+    expect(puntaMain).toBe(ramaPorNombre(final, 'tailandesa')?.id);
     expect(confirmacionPorId(final, puntaMain)?.padres).toHaveLength(1);
     expect(ramaActual(final)).toBe('main');
     expect(final.archivos.find((archivo) => archivo.nombre === 'platos.md')?.estado).toBe(
@@ -173,8 +179,8 @@ describe('secuencias completas exigidas por los criterios de aceptacion', () => 
     );
   });
 
-  it('CA6 sobre E3: el rebase no reutiliza ningun identificador original y los conserva', () => {
-    const partida = correr(escenarioPorId('E3'), 'git switch tailandesa');
+  it('CA6: el rebase no reutiliza ningun identificador original y los conserva', () => {
+    const partida = repoConRamaDeTrabajo();
     const idsOriginales = ids(partida);
     const puntaOriginal = ramaPorNombre(partida, 'tailandesa')?.id ?? '';
     const base = ramaPorNombre(partida, 'main')?.id ?? '';

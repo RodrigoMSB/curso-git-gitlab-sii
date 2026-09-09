@@ -56,7 +56,20 @@ const MESES = [
  * reloj del sistema para que el motor siga siendo puro y las pruebas estables.
  */
 export function fechaDeterminista(contador: number): string {
-  const instante = new Date(EPOCA + contador * MILISEGUNDOS_POR_HORA);
+  return fechaDeInstante(new Date(EPOCA + contador * MILISEGUNDOS_POR_HORA));
+}
+
+/**
+ * Fecha de una epoca en segundos, que es la unidad en que los escenarios de
+ * laboratorio declaran sus confirmaciones y la misma que usa `preparar.sh`
+ * para fijarlas en el disco. Tener una sola unidad es lo que permite que las
+ * dos caras del escenario se comparen (SPEC 007).
+ */
+export function fechaDeEpoca(epoca: number): string {
+  return fechaDeInstante(new Date(epoca * 1000));
+}
+
+function fechaDeInstante(instante: Date): string {
   const dia = DIAS[instante.getUTCDay()] ?? 'Mon';
   const mes = MESES[instante.getUTCMonth()] ?? 'Jan';
   const numero = String(instante.getUTCDate()).padStart(2, ' ');

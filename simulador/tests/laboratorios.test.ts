@@ -20,58 +20,28 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import {
+  type Corrida,
+  type Escenario,
+  carpetaTemporal,
+  entorno,
+  git,
+  montarLab,
+  montarLab02,
+  montarLab03,
+  preparar,
+  verificar,
+} from './laboratorios-en-disco';
 
 const LAB01 = fileURLToPath(new URL('../../labs/lab-01', import.meta.url));
 
-interface Corrida {
-  readonly codigo: number;
-  readonly salida: string;
-}
-
-function carpetaTemporal(): string {
-  return mkdtempSync(join(tmpdir(), 'laboratorios-'));
-}
-
-/**
- * Un entorno con configuracion global y de sistema propias. Sin esto, los
- * alias del taller que ya tenga la maquina harian pasar el criterio 5 aunque
- * el verificador estuviera roto.
- */
-function entorno(configGlobal: string): NodeJS.ProcessEnv {
-  return {
-    ...process.env,
-    GIT_CONFIG_GLOBAL: configGlobal,
-    GIT_CONFIG_SYSTEM: '/dev/null',
-  };
-}
-
-function git(carpeta: string, configGlobal: string, ...argumentos: readonly string[]): string {
-  return execFileSync('git', ['-C', carpeta, ...argumentos], {
-    encoding: 'utf8',
-    env: entorno(configGlobal),
-  }).trim();
-}
-
-/** Corre el verificador como lo corre el participante y recoge todo. */
-function verificar(carpetaDelLaboratorio: string, configGlobal: string): Corrida {
-  try {
-    const salida = execFileSync('bash', ['./verificar.sh'], {
-      cwd: carpetaDelLaboratorio,
-      encoding: 'utf8',
-      env: entorno(configGlobal),
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return { codigo: 0, salida };
-  } catch (error) {
-    const fallo = error as { status?: number; stdout?: string; stderr?: string };
-    return { codigo: fallo.status ?? -1, salida: `${fallo.stdout ?? ''}${fallo.stderr ?? ''}` };
-  }
-}
+/** El mensaje mal escrito que planta la preparacion del 02 y que el participante corrige. */
+const MENSAJE_MALO = 'se docuemnta la reseta del pastel de choclo';
 
 interface Laboratorio {
   /** La carpeta del laboratorio dentro del clon: <clon>/labs/lab-01. */
@@ -420,70 +390,6 @@ describe('el verificador no depende de donde se lo corra', () => {
 // ---------------------------------------------------------------------------
 
 const LAB02 = fileURLToPath(new URL('../../labs/lab-02', import.meta.url));
-
-/** El mensaje mal escrito que planta la preparacion y que el participante corrige. */
-const MENSAJE_MALO = 'se docuemnta la reseta del pastel de choclo';
-
-interface Escenario {
-  /** <clon>/labs/lab-02, desde donde se corren los dos scripts. */
-  readonly carpeta: string;
-  /** El repositorio del participante, hermano del clon. */
-  readonly recetario: string;
-  readonly configGlobal: string;
-  readonly clon: string;
-}
-
-/**
- * Monta un clon de mentira con el laboratorio pedido dentro, sin preparar nada.
- * Sirve para cualquier laboratorio con escenario: los trece que faltan tienen
- * esta misma forma.
- */
-function montarLab(numero: string): Escenario {
-  const origen = fileURLToPath(new URL(`../../labs/lab-${numero}`, import.meta.url));
-  const raiz = carpetaTemporal();
-  const clon = join(raiz, 'curso-git-gitlab-sii');
-  const carpeta = join(clon, 'labs', `lab-${numero}`);
-  mkdirSync(carpeta, { recursive: true });
-  for (const archivo of ['preparar.sh', 'verificar.sh']) {
-    cpSync(join(origen, archivo), join(carpeta, archivo));
-    execFileSync('chmod', ['+x', join(carpeta, archivo)]);
-  }
-
-  const configGlobal = join(raiz, 'gitconfig-de-mentira');
-  writeFileSync(configGlobal, '[user]\n\tname = Otro Cualquiera\n\temail = otro@x.cl\n');
-
-  // El clon es un repositorio de verdad, como en la sala.
-  const env = entorno(configGlobal);
-  execFileSync('git', ['-C', clon, 'init', '-q'], { env });
-  writeFileSync(join(clon, 'README.md'), 'el repositorio del curso\n');
-  execFileSync('git', ['-C', clon, 'add', '-A'], { env });
-  execFileSync('git', ['-C', clon, 'commit', '-q', '-m', 'el curso'], { env });
-
-  return {
-    carpeta,
-    recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'),
-    configGlobal,
-    clon,
-  };
-}
-
-const montarLab02 = (): Escenario => montarLab('02');
-const montarLab03 = (): Escenario => montarLab('03');
-
-function preparar(esc: Escenario, ...argumentos: readonly string[]): Corrida {
-  try {
-    const salida = execFileSync('bash', ['./preparar.sh', ...argumentos], {
-      cwd: esc.carpeta,
-      encoding: 'utf8',
-      env: entorno(esc.configGlobal),
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return { codigo: 0, salida };
-  } catch (error) {
-    const fallo = error as { status?: number; stdout?: string; stderr?: string };
-    return { codigo: fallo.status ?? -1, salida: `${fallo.stdout ?? ''}${fallo.stderr ?? ''}` };
-  }
-}
 
 /** Arma el escenario y devuelve el laboratorio listo para trabajar. */
 function conEscenario(numero = '02'): Escenario {

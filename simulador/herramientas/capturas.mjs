@@ -194,41 +194,40 @@ async function comprobar(fragmento) {
   if (!presente) process.exitCode = 1;
 }
 
-console.log('E1 · estado de partida');
-await escenario('E1');
-await capturar('01-e1-inicio.png');
-await comprobar('Recetario recién creado');
+console.log('lab-01 · el recetario nace');
+await escenario('lab-01');
+await capturar('01-lab-01-inicio.png');
+await comprobar('El recetario nace');
 
-console.log('E2 · estado de partida');
-await escenario('E2');
-await capturar('02-e2-inicio.png');
-await comprobar('mensaje mal escrito');
+console.log('lab-02 · leer la historia y volver atras');
+await escenario('lab-02');
+await capturar('02-lab-02-inicio.png');
+await comprobar('Leer la historia y volver atras');
 
-console.log('E3 · estado de partida');
-await escenario('E3');
-await capturar('03-e3-inicio.png');
-await comprobar('tailandesa');
+console.log('lab-06 · dos ramas con destinos distintos');
+await escenario('lab-06');
+await capturar('03-lab-06-inicio.png');
+await comprobar('peruana');
 
-console.log('E3 · secuencia del criterio CA2');
+console.log('lab-06 · rama nueva y confirmacion');
 await ejecutar('git switch -c postres');
 await ejecutar('echo "sopaipillas" >> platos.md');
 await ejecutar('git add platos.md');
 await ejecutar('git commit -m "agrega sopaipillas al listado"');
-await capturar('04-e3-rama-nueva-y-confirmacion.png');
+await capturar('04-lab-06-rama-nueva-y-confirmacion.png');
 await comprobar('postres');
 
-console.log('E4 · previsualizacion de la fusion, escrita y sin ejecutar');
-await escenario('E4');
-await escribir('git merge tailandesa');
+console.log('lab-06 · previsualizacion de la fusion, escrita y sin ejecutar');
+await escenario('lab-06');
+await escribir('git merge peruana');
 await esperar(400);
-await capturar('05-e4-previsualizacion-fusion.png');
+await capturar('05-lab-06-previsualizacion-fusion.png');
 await comprobar('Entrar ejecuta, Escape descarta');
 
-console.log('E3 · despues del rebase');
-await escenario('E3');
-await ejecutar('git switch tailandesa');
+console.log('lab-08 · despues del rebase');
+await escenario('lab-08');
 await ejecutar('git rebase main');
-await capturar('06-e3-despues-del-rebase.png');
+await capturar('06-lab-08-despues-del-rebase.png');
 await comprobar('sin referencia');
 
 socket.close();

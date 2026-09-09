@@ -83,7 +83,7 @@ export function BarraEstado({
         >
           {barra.escenarios.map((opcion) => (
             <option key={opcion.id} value={opcion.id}>
-              {opcion.id} · sesión {opcion.sesion} · {opcion.titulo}
+              {`Lab ${String(opcion.laboratorio).padStart(2, '0')}`} · {opcion.titulo}
             </option>
           ))}
         </select>

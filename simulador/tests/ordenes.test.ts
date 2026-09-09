@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { ejecutar } from '../src/core/motor';
+import type { EstadoRepositorio } from '../src/core/tipos';
 import {
   archivoPorNombre,
   estadoVacio,
@@ -14,8 +15,27 @@ import {
   ramaPorNombre,
   valorConfig,
 } from '../src/core/estado';
-import { escenarioPorId } from '../src/escenarios';
-import { correr, correrHasta, texto } from './ayudas';
+import {
+  correr,
+  correrHasta,
+  repoConRamaDesdeMain,
+  repoConRamas,
+  repoLineal,
+  repoVacio,
+  texto,
+} from './ayudas';
+
+/**
+ * Agrega al escenario los archivos que sobran, sin seguimiento. Varias ordenes
+ * necesitan algo que preparar que todavia no este seguido.
+ */
+const conEstorbos = (estado: EstadoRepositorio): EstadoRepositorio =>
+  correr(
+    estado,
+    'echo "x" >> notas.tmp',
+    'echo "x" >> respaldo.bak',
+    'echo "x" >> credenciales.txt',
+  );
 
 describe('git init', () => {
   it('crea el repositorio y lo informa', () => {
@@ -78,7 +98,7 @@ describe('git config', () => {
 
   it('el autor configurado queda registrado en la confirmacion', () => {
     const estado = correr(
-      escenarioPorId('E1'),
+      repoVacio(),
       'git config user.name "Rodrigo Silva"',
       'git config user.email rodrigo@sii.cl',
       'git add README.md',
@@ -91,7 +111,7 @@ describe('git config', () => {
 
 describe('git status', () => {
   it('en la forma larga distingue preparados, modificados y sin seguimiento', () => {
-    const estado = correr(escenarioPorId('E3'), 'git add notas.tmp', 'echo "x" >> platos.md');
+    const estado = correr(conEstorbos(repoConRamaDesdeMain()), 'git add notas.tmp', 'echo "x" >> platos.md');
     const salida = texto(ejecutar(estado, 'git status'));
 
     expect(salida).toContain('On branch main');
@@ -103,23 +123,29 @@ describe('git status', () => {
   });
 
   it('anuncia que no hay confirmaciones en un repositorio recien creado', () => {
-    const salida = texto(ejecutar(escenarioPorId('E1'), 'git status'));
+    const salida = texto(ejecutar(repoVacio(), 'git status'));
     expect(salida).toContain('No commits yet');
     expect(salida).toContain('nothing added to commit but untracked files present');
   });
 
   it('informa el arbol limpio cuando no hay nada pendiente', () => {
-    const estado = correr(escenarioPorId('E2'), 'git restore platos.md');
+    const estado = correr(
+      repoLineal(),
+      'git restore ingredientes.md',
+      'git restore --staged cocineros.md',
+      'git restore cocineros.md',
+    );
     expect(texto(ejecutar(estado, 'git status'))).toContain('nothing to commit, working tree clean');
   });
 
   it('informa cuando hay cambios sin preparar y nada preparado', () => {
-    const salida = texto(ejecutar(escenarioPorId('E2'), 'git status'));
+    const limpio = correr(repoLineal(), 'git restore --staged cocineros.md');
+    const salida = texto(ejecutar(limpio, 'git status'));
     expect(salida).toContain('no changes added to commit');
   });
 
   it('con -s usa los codigos de dos columnas', () => {
-    const estado = correr(escenarioPorId('E3'), 'git add notas.tmp');
+    const estado = correr(conEstorbos(repoConRamaDesdeMain()), 'git add notas.tmp');
     const salida = texto(ejecutar(estado, 'git status -s'));
 
     expect(salida).toContain('A  notas.tmp');
@@ -127,26 +153,26 @@ describe('git status', () => {
   });
 
   it('marca con UU los archivos en conflicto', () => {
-    const estado = correr(escenarioPorId('E4'), 'git merge tailandesa');
+    const estado = correr(repoConRamas(), 'git merge peruana');
     expect(texto(ejecutar(estado, 'git status -s'))).toContain('UU platos.md');
     expect(texto(ejecutar(estado, 'git status'))).toContain('Unmerged paths:');
   });
 
   it('describe la posicion desconectada', () => {
-    const estado = correr(escenarioPorId('E2'), 'git checkout HEAD~1');
+    const estado = correr(repoLineal(), 'git checkout HEAD~1');
     expect(texto(ejecutar(estado, 'git status'))).toContain('HEAD detached at');
   });
 });
 
 describe('git add y git restore', () => {
   it('prepara un archivo puntual', () => {
-    const estado = correr(escenarioPorId('E2'), 'git add platos.md');
-    expect(archivoPorNombre(estado, 'platos.md')?.estado).toBe('preparado');
+    const estado = correr(repoLineal(), 'git add ingredientes.md');
+    expect(archivoPorNombre(estado, 'ingredientes.md')?.estado).toBe('preparado');
   });
 
   it('prepara todo con . y con -A', () => {
-    const conPunto = correr(escenarioPorId('E3'), 'git add .');
-    const conTodo = correr(escenarioPorId('E3'), 'git add -A');
+    const conPunto = correr(conEstorbos(repoConRamaDesdeMain()), 'git add .');
+    const conTodo = correr(conEstorbos(repoConRamaDesdeMain()), 'git add -A');
     for (const estado of [conPunto, conTodo]) {
       expect(archivoPorNombre(estado, 'notas.tmp')?.estado).toBe('preparado');
       expect(archivoPorNombre(estado, 'credenciales.txt')?.estado).toBe('preparado');
@@ -154,32 +180,32 @@ describe('git add y git restore', () => {
   });
 
   it('prepara el contenido de una carpeta', () => {
-    const estado = correr(escenarioPorId('E1'), 'git add recetas');
+    const estado = correr(repoVacio(), 'git add recetas');
     expect(archivoPorNombre(estado, 'recetas/empanadas.md')?.estado).toBe('preparado');
     expect(archivoPorNombre(estado, 'platos.md')?.estado).toBe('sin-seguimiento');
   });
 
   it('reclama ante una ruta que no existe y ante la invocacion sin argumentos', () => {
-    const estado = escenarioPorId('E3');
+    const estado = repoConRamaDesdeMain();
     expect(texto(ejecutar(estado, 'git add inexistente.md'))).toContain('did not match any files');
     expect(texto(ejecutar(estado, 'git add'))).toContain('Nothing specified, nothing added.');
   });
 
   it('git restore --staged devuelve el archivo al estado anterior segun estuviera seguido', () => {
-    const seguido = correr(escenarioPorId('E2'), 'git add platos.md', 'git restore --staged platos.md');
-    expect(archivoPorNombre(seguido, 'platos.md')?.estado).toBe('modificado');
+    const seguido = correr(repoLineal(), 'git add ingredientes.md', 'git restore --staged ingredientes.md');
+    expect(archivoPorNombre(seguido, 'ingredientes.md')?.estado).toBe('modificado');
 
-    const nuevo = correr(escenarioPorId('E3'), 'git add notas.tmp', 'git restore --staged notas.tmp');
+    const nuevo = correr(conEstorbos(repoConRamaDesdeMain()), 'git add notas.tmp', 'git restore --staged notas.tmp');
     expect(archivoPorNombre(nuevo, 'notas.tmp')?.estado).toBe('sin-seguimiento');
   });
 
   it('git restore descarta los cambios del directorio de trabajo', () => {
-    const estado = correr(escenarioPorId('E2'), 'git restore platos.md');
+    const estado = correr(repoLineal(), 'git restore ingredientes.md');
     expect(archivoPorNombre(estado, 'platos.md')?.estado).toBe('limpio');
   });
 
   it('git restore reclama sin rutas o con una ruta desconocida', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     expect(texto(ejecutar(estado, 'git restore'))).toContain('you must specify path');
     expect(texto(ejecutar(estado, 'git restore fantasma.md'))).toContain('did not match');
   });
@@ -188,7 +214,7 @@ describe('git add y git restore', () => {
 describe('git commit', () => {
   it('crea la primera confirmacion sin padres', () => {
     const resultado = correrHasta(
-      escenarioPorId('E1'),
+      repoVacio(),
       'git add README.md',
       'git commit -m "Agrega el README"',
     );
@@ -204,18 +230,20 @@ describe('git commit', () => {
   });
 
   it('no confirma si no hay nada preparado', () => {
-    const resultado = ejecutar(escenarioPorId('E2'), 'git commit -m "Sin nada"');
-    expect(resultado.estado.confirmaciones).toHaveLength(4);
+    // El escenario trae algo preparado: hay que sacarlo para que no quede nada.
+    const sinPreparar = correr(repoLineal(), 'git restore --staged cocineros.md');
+    const resultado = ejecutar(sinPreparar, 'git commit -m "Sin nada"');
+    expect(resultado.estado.confirmaciones).toHaveLength(5);
     expect(texto(resultado)).toContain('no changes added to commit');
   });
 
   it('reclama si falta el mensaje', () => {
-    const estado = correr(escenarioPorId('E2'), 'git add platos.md');
+    const estado = correr(repoLineal(), 'git add platos.md');
     expect(texto(ejecutar(estado, 'git commit'))).toContain('empty commit message');
   });
 
   it('--amend reemplaza la ultima confirmacion por una nueva y deja huerfana la anterior', () => {
-    const partida = escenarioPorId('E2');
+    const partida = repoLineal();
     const anterior = idActual(partida) ?? '';
     const despues = ejecutar(partida, 'git commit --amend -m "Agrega la lista de cocineros"').estado;
     const nueva = idActual(despues) ?? '';
@@ -229,23 +257,23 @@ describe('git commit', () => {
   });
 
   it('--amend incorpora lo que estuviera preparado y conserva el mensaje si no se da otro', () => {
-    const partida = correr(escenarioPorId('E2'), 'git add platos.md');
+    const partida = correr(repoLineal(), 'git add ingredientes.md');
     const despues = ejecutar(partida, 'git commit --amend').estado;
     const nueva = despues.confirmaciones.at(-1);
 
-    expect(nueva?.mensaje).toBe('Agrega la lsita de cocinerps');
-    expect(nueva?.archivos).toContain('platos.md');
-    expect(nueva?.archivos).toContain('cocineros.md');
+    expect(nueva?.mensaje).toBe('se docuemnta la reseta del pastel de choclo');
+    expect(nueva?.archivos).toContain('ingredientes.md');
+    expect(nueva?.archivos).toContain('recetas/pastel-de-choclo.md');
   });
 
   it('--amend reclama cuando no hay nada que enmendar', () => {
-    expect(texto(ejecutar(escenarioPorId('E1'), 'git commit --amend'))).toContain(
+    expect(texto(ejecutar(repoVacio(), 'git commit --amend'))).toContain(
       'nothing to amend',
     );
   });
 
   it('confirma sobre una posicion desconectada sin mover ninguna rama', () => {
-    const partida = correr(escenarioPorId('E2'), 'git checkout HEAD~1');
+    const partida = correr(repoLineal(), 'git checkout HEAD~1');
     const puntaMain = ramaPorNombre(partida, 'main')?.id;
     const resultado = correrHasta(
       partida,
@@ -262,33 +290,34 @@ describe('git commit', () => {
 
 describe('git log', () => {
   it('muestra la historia completa en forma larga', () => {
-    const salida = texto(ejecutar(escenarioPorId('E2'), 'git log'));
+    const salida = texto(ejecutar(repoLineal(), 'git log'));
     expect(salida).toContain('commit ');
-    expect(salida).toContain('Author: Participante del taller <participante@sii.cl>');
-    expect(salida).toContain('Agrega el README del recetario');
+    // La historia del laboratorio 02 la firman tres personas distintas.
+    expect(salida).toContain('Author: Juana Perez <juana.perez@recetario.cl>');
+    expect(salida).toContain('se inicia el recetario');
   });
 
   it('--oneline resume cada confirmacion en una linea y decora la posicion', () => {
-    const salida = texto(ejecutar(escenarioPorId('E2'), 'git log --oneline'));
-    expect(salida.split('\n')).toHaveLength(4);
+    const salida = texto(ejecutar(repoLineal(), 'git log --oneline'));
+    expect(salida.split('\n')).toHaveLength(5);
     expect(salida).toContain('(HEAD -> main)');
   });
 
   it('-n y -3 limitan la cantidad', () => {
-    expect(texto(ejecutar(escenarioPorId('E2'), 'git log --oneline -n 2')).split('\n')).toHaveLength(2);
-    expect(texto(ejecutar(escenarioPorId('E2'), 'git log --oneline -3')).split('\n')).toHaveLength(3);
+    expect(texto(ejecutar(repoLineal(), 'git log --oneline -n 2')).split('\n')).toHaveLength(2);
+    expect(texto(ejecutar(repoLineal(), 'git log --oneline -3')).split('\n')).toHaveLength(3);
   });
 
   it('--all incluye las ramas que no estan en la posicion actual', () => {
-    const soloMain = texto(ejecutar(escenarioPorId('E3'), 'git log --oneline'));
-    const todas = texto(ejecutar(escenarioPorId('E3'), 'git log --oneline --all'));
+    const soloMain = texto(ejecutar(repoConRamaDesdeMain(), 'git log --oneline'));
+    const todas = texto(ejecutar(repoConRamaDesdeMain(), 'git log --oneline --all'));
 
-    expect(soloMain).not.toContain('pad thai');
-    expect(todas).toContain('pad thai');
+    expect(soloMain).not.toContain('arreglos');
+    expect(todas).toContain('arreglos');
   });
 
   it('--graph marca las confirmaciones y abre la union', () => {
-    const estado = correr(escenarioPorId('E3'), 'git merge tailandesa');
+    const estado = correr(repoConRamaDesdeMain(), 'git merge tailandesa');
     const salida = texto(ejecutar(estado, 'git log --oneline --graph'));
 
     expect(salida).toContain('* ');
@@ -296,114 +325,114 @@ describe('git log', () => {
   });
 
   it('la forma larga de una union muestra la linea Merge', () => {
-    const estado = correr(escenarioPorId('E3'), 'git merge tailandesa');
+    const estado = correr(repoConRamaDesdeMain(), 'git merge tailandesa');
     expect(texto(ejecutar(estado, 'git log'))).toContain('Merge: ');
   });
 
   it('acepta una referencia explicita y reclama si no existe', () => {
-    const estado = escenarioPorId('E3');
-    expect(texto(ejecutar(estado, 'git log --oneline tailandesa'))).toContain('pad thai');
+    const estado = repoConRamaDesdeMain();
+    expect(texto(ejecutar(estado, 'git log --oneline tailandesa'))).toContain('arreglos');
     expect(ejecutar(estado, 'git log fantasma').error).toBe(true);
   });
 
   it('reclama cuando la rama todavia no tiene confirmaciones', () => {
-    expect(texto(ejecutar(escenarioPorId('E1'), 'git log'))).toContain('does not have any commits yet');
+    expect(texto(ejecutar(repoVacio(), 'git log'))).toContain('does not have any commits yet');
   });
 
   it('muestra las etiquetas entre las decoraciones', () => {
-    const estado = correr(escenarioPorId('E2'), 'git tag v1.0');
+    const estado = correr(repoLineal(), 'git tag v1.0');
     expect(texto(ejecutar(estado, 'git log --oneline'))).toContain('tag: v1.0');
   });
 });
 
 describe('git diff', () => {
   it('sin opciones describe los archivos modificados', () => {
-    const salida = texto(ejecutar(escenarioPorId('E2'), 'git diff'));
-    expect(salida).toContain('diff --git a/platos.md b/platos.md');
+    const salida = texto(ejecutar(repoLineal(), 'git diff'));
+    expect(salida).toContain('diff --git a/ingredientes.md b/ingredientes.md');
   });
 
   it('--staged describe los archivos preparados', () => {
-    const estado = correr(escenarioPorId('E2'), 'git add platos.md');
+    const estado = correr(repoLineal(), 'git add ingredientes.md');
     expect(texto(ejecutar(estado, 'git diff'))).toBe('');
-    expect(texto(ejecutar(estado, 'git diff --staged'))).toContain('diff --git a/platos.md');
+    expect(texto(ejecutar(estado, 'git diff --staged'))).toContain('diff --git a/ingredientes.md');
   });
 });
 
 describe('git branch', () => {
   it('lista las ramas y marca la actual', () => {
-    const salida = texto(ejecutar(escenarioPorId('E3'), 'git branch'));
+    const salida = texto(ejecutar(repoConRamaDesdeMain(), 'git branch'));
     expect(salida).toContain('* main');
     expect(salida).toContain('  tailandesa');
   });
 
   it('crea una rama sobre una referencia dada', () => {
-    const estado = correr(escenarioPorId('E2'), 'git branch peruana HEAD~2');
-    expect(ramaPorNombre(estado, 'peruana')?.id).toBe(estado.confirmaciones[1]?.id);
+    const estado = correr(repoLineal(), 'git branch peruana HEAD~2');
+    expect(ramaPorNombre(estado, 'peruana')?.id).toBe(estado.confirmaciones[2]?.id);
   });
 
   it('reclama si la rama ya existe o si el repositorio no tiene confirmaciones', () => {
-    expect(texto(ejecutar(escenarioPorId('E3'), 'git branch tailandesa'))).toContain(
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch tailandesa'))).toContain(
       'already exists',
     );
-    expect(texto(ejecutar(escenarioPorId('E1'), 'git branch mexicana'))).toContain(
+    expect(texto(ejecutar(repoVacio(), 'git branch tailandesa'))).toContain(
       'not a valid object name',
     );
-    expect(texto(ejecutar(escenarioPorId('E2'), 'git branch nueva fantasma'))).toContain(
+    expect(texto(ejecutar(repoLineal(), 'git branch nueva fantasma'))).toContain(
       'not a valid object name',
     );
   });
 
   it('-d borra una rama ya integrada y se niega con una que no lo esta', () => {
-    const conIntegrada = correr(escenarioPorId('E3'), 'git branch mexicana');
-    expect(texto(ejecutar(conIntegrada, 'git branch -d mexicana'))).toContain('Deleted branch');
+    const conIntegrada = correr(repoConRamaDesdeMain(), 'git branch chilena');
+    expect(texto(ejecutar(conIntegrada, 'git branch -d chilena'))).toContain('Deleted branch');
 
-    const resultado = ejecutar(escenarioPorId('E3'), 'git branch -d tailandesa');
+    const resultado = ejecutar(repoConRamaDesdeMain(), 'git branch -d tailandesa');
     expect(resultado.error).toBe(true);
     expect(texto(resultado)).toContain('not fully merged');
   });
 
   it('-D borra a la fuerza, pero nunca la rama actual', () => {
-    const estado = ejecutar(escenarioPorId('E3'), 'git branch -D tailandesa').estado;
+    const estado = ejecutar(repoConRamaDesdeMain(), 'git branch -D tailandesa').estado;
     expect(ramaPorNombre(estado, 'tailandesa')).toBeUndefined();
-    expect(texto(ejecutar(escenarioPorId('E3'), 'git branch -D main'))).toContain('Cannot delete');
-    expect(texto(ejecutar(escenarioPorId('E3'), 'git branch -d fantasma'))).toContain('not found');
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -D main'))).toContain('Cannot delete');
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -d fantasma'))).toContain('not found');
   });
 
   it('-m renombra la rama actual y una rama nombrada', () => {
-    const actual = ejecutar(escenarioPorId('E3'), 'git branch -m principal').estado;
+    const actual = ejecutar(repoConRamaDesdeMain(), 'git branch -m principal').estado;
     expect(ramaActual(actual)).toBe('principal');
 
-    const otra = ejecutar(escenarioPorId('E3'), 'git branch -m tailandesa thai').estado;
+    const otra = ejecutar(repoConRamaDesdeMain(), 'git branch -m tailandesa thai').estado;
     expect(ramaPorNombre(otra, 'thai')).toBeDefined();
     expect(ramaActual(otra)).toBe('main');
   });
 
   it('-m reclama ante nombres inexistentes o repetidos', () => {
-    expect(texto(ejecutar(escenarioPorId('E3'), 'git branch -m fantasma otra'))).toContain(
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -m fantasma otra'))).toContain(
       'not found',
     );
-    expect(texto(ejecutar(escenarioPorId('E3'), 'git branch -m tailandesa main'))).toContain(
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -m tailandesa main'))).toContain(
       'already exists',
     );
-    expect(texto(ejecutar(escenarioPorId('E3'), 'git branch -d'))).toContain('branch name required');
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -d'))).toContain('branch name required');
   });
 });
 
 describe('git switch y git checkout', () => {
   it('git switch cambia de rama', () => {
-    const resultado = ejecutar(escenarioPorId('E3'), 'git switch tailandesa');
+    const resultado = ejecutar(repoConRamaDesdeMain(), 'git switch tailandesa');
     expect(texto(resultado)).toBe("Switched to branch 'tailandesa'");
     expect(ramaActual(resultado.estado)).toBe('tailandesa');
   });
 
   it('git switch -c crea y cambia en un paso', () => {
-    const resultado = ejecutar(escenarioPorId('E3'), 'git switch -c mexicana');
-    expect(texto(resultado)).toBe("Switched to a new branch 'mexicana'");
-    expect(ramaActual(resultado.estado)).toBe('mexicana');
+    const resultado = ejecutar(repoConRamaDesdeMain(), 'git switch -c chilena');
+    expect(texto(resultado)).toBe("Switched to a new branch 'chilena'");
+    expect(ramaActual(resultado.estado)).toBe('chilena');
   });
 
   it('git switch reclama ante una rama inexistente, un identificador o sin argumentos', () => {
-    const estado = escenarioPorId('E3');
+    const estado = repoConRamaDesdeMain();
     expect(texto(ejecutar(estado, 'git switch fantasma'))).toContain('invalid reference');
     expect(texto(ejecutar(estado, `git switch ${estado.confirmaciones[0]?.id ?? ''}`))).toContain(
       'invalid reference',
@@ -413,16 +442,16 @@ describe('git switch y git checkout', () => {
   });
 
   it('git checkout cambia de rama y -b crea', () => {
-    expect(ramaActual(ejecutar(escenarioPorId('E3'), 'git checkout tailandesa').estado)).toBe(
+    expect(ramaActual(ejecutar(repoConRamaDesdeMain(), 'git checkout tailandesa').estado)).toBe(
       'tailandesa',
     );
-    expect(ramaActual(ejecutar(escenarioPorId('E3'), 'git checkout -b mexicana').estado)).toBe(
-      'mexicana',
+    expect(ramaActual(ejecutar(repoConRamaDesdeMain(), 'git checkout -b chilena').estado)).toBe(
+      'chilena',
     );
   });
 
   it('git checkout sobre un identificador deja la posicion desconectada', () => {
-    const partida = escenarioPorId('E2');
+    const partida = repoLineal();
     const objetivo = partida.confirmaciones[1]?.id ?? '';
     const resultado = ejecutar(partida, `git checkout ${objetivo}`);
 
@@ -431,12 +460,12 @@ describe('git switch y git checkout', () => {
   });
 
   it('git checkout -- descarta los cambios de un archivo', () => {
-    const estado = ejecutar(escenarioPorId('E2'), 'git checkout -- platos.md').estado;
+    const estado = ejecutar(repoLineal(), 'git checkout -- platos.md').estado;
     expect(archivoPorNombre(estado, 'platos.md')?.estado).toBe('limpio');
   });
 
   it('git checkout reclama ante rutas y referencias que no existen', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     expect(texto(ejecutar(estado, 'git checkout -- fantasma.md'))).toContain('did not match');
     expect(texto(ejecutar(estado, 'git checkout --'))).toContain('you must specify path');
     expect(texto(ejecutar(estado, 'git checkout fantasma'))).toContain('did not match');
@@ -446,7 +475,7 @@ describe('git switch y git checkout', () => {
 
 describe('git merge', () => {
   it('la fusion limpia registra los archivos que trae la otra rama', () => {
-    const resultado = ejecutar(escenarioPorId('E3'), 'git merge tailandesa');
+    const resultado = ejecutar(repoConRamaDesdeMain(), 'git merge tailandesa');
     const union = resultado.estado.confirmaciones.at(-1);
 
     expect(texto(resultado)).toContain("Merge made by the 'ort' strategy.");
@@ -455,17 +484,17 @@ describe('git merge', () => {
   });
 
   it('la fusion con conflicto deja la fusion en curso y el archivo en conflicto', () => {
-    const resultado = ejecutar(escenarioPorId('E4'), 'git merge tailandesa');
+    const resultado = ejecutar(repoConRamas(), 'git merge peruana');
 
     expect(texto(resultado)).toContain('CONFLICT (content): Merge conflict in platos.md');
     expect(resultado.estado.fusion?.conflictos).toEqual(['platos.md']);
     expect(archivoPorNombre(resultado.estado, 'platos.md')?.estado).toBe('en-conflicto');
-    expect(archivoPorNombre(resultado.estado, 'recetas/pad-thai.md')?.estado).toBe('preparado');
-    expect(resultado.estado.confirmaciones).toHaveLength(6);
+    expect(archivoPorNombre(resultado.estado, 'recetas/lomo-saltado.md')?.estado).toBe('preparado');
+    expect(resultado.estado.confirmaciones).toHaveLength(7);
   });
 
   it('no deja confirmar mientras queden archivos en conflicto', () => {
-    const estado = correr(escenarioPorId('E4'), 'git merge tailandesa');
+    const estado = correr(repoConRamas(), 'git merge peruana');
     const resultado = ejecutar(estado, 'git commit -m "A medias"');
 
     expect(resultado.error).toBe(true);
@@ -474,10 +503,10 @@ describe('git merge', () => {
 
   it('resolver y confirmar cierra la fusion con una union de dos padres', () => {
     const estado = correr(
-      escenarioPorId('E4'),
-      'git merge tailandesa',
+      repoConRamas(),
+      'git merge peruana',
       'git add platos.md',
-      'git commit -m "Fusiona tailandesa"',
+      'git commit -m "Fusiona la cocina peruana"',
     );
     const union = estado.confirmaciones.at(-1);
 
@@ -487,7 +516,7 @@ describe('git merge', () => {
   });
 
   it('--abort devuelve los archivos al estado previo', () => {
-    const partida = escenarioPorId('E4');
+    const partida = repoConRamaDesdeMain();
     const despues = correr(partida, 'git merge tailandesa', 'git merge --abort');
 
     expect(despues.fusion).toBeNull();
@@ -495,22 +524,22 @@ describe('git merge', () => {
   });
 
   it('--abort reclama si no hay fusion en curso', () => {
-    expect(texto(ejecutar(escenarioPorId('E4'), 'git merge --abort'))).toContain(
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git merge --abort'))).toContain(
       'no merge to abort',
     );
   });
 
   it('rechaza una fusion nueva mientras haya otra sin resolver', () => {
-    const estado = correr(escenarioPorId('E4'), 'git merge tailandesa');
+    const estado = correr(repoConRamas(), 'git merge peruana');
     expect(ejecutar(estado, 'git merge main').error).toBe(true);
   });
 
   it('reclama sin argumento o ante una referencia desconocida', () => {
-    const estado = escenarioPorId('E3');
+    const estado = repoConRamaDesdeMain();
     expect(texto(ejecutar(estado, 'git merge'))).toContain('No commit specified');
     expect(texto(ejecutar(estado, 'git merge fantasma'))).toContain('not something we can merge');
     // En un repositorio sin confirmaciones, main todavia no existe como rama.
-    expect(texto(ejecutar(escenarioPorId('E1'), 'git merge main'))).toContain(
+    expect(texto(ejecutar(repoVacio(), 'git merge main'))).toContain(
       'not something we can merge',
     );
   });
@@ -518,14 +547,14 @@ describe('git merge', () => {
 
 describe('git tag', () => {
   it('crea una etiqueta simple sobre la posicion actual y la lista', () => {
-    const estado = correr(escenarioPorId('E2'), 'git tag v1.0');
+    const estado = correr(repoLineal(), 'git tag v1.0');
     expect(etiquetaPorNombre(estado, 'v1.0')?.tipo).toBe('simple');
     expect(etiquetaPorNombre(estado, 'v1.0')?.id).toBe(idActual(estado));
     expect(texto(ejecutar(estado, 'git tag'))).toBe('v1.0');
   });
 
   it('-a con -m crea una etiqueta anotada', () => {
-    const estado = correr(escenarioPorId('E2'), 'git tag -a v2.0 -m "Segunda entrega"');
+    const estado = correr(repoLineal(), 'git tag -a v2.0 -m "Segunda entrega"');
     const etiqueta = etiquetaPorNombre(estado, 'v2.0');
 
     expect(etiqueta?.tipo).toBe('anotada');
@@ -533,12 +562,12 @@ describe('git tag', () => {
   });
 
   it('crea una etiqueta sobre una referencia anterior', () => {
-    const estado = correr(escenarioPorId('E2'), 'git tag v0.1 HEAD~3');
-    expect(etiquetaPorNombre(estado, 'v0.1')?.id).toBe(estado.confirmaciones[0]?.id);
+    const estado = correr(repoLineal(), 'git tag v0.1 HEAD~3');
+    expect(etiquetaPorNombre(estado, 'v0.1')?.id).toBe(estado.confirmaciones[1]?.id);
   });
 
   it('-d borra la etiqueta', () => {
-    const estado = correr(escenarioPorId('E2'), 'git tag v1.0');
+    const estado = correr(repoLineal(), 'git tag v1.0');
     const resultado = ejecutar(estado, 'git tag -d v1.0');
 
     expect(texto(resultado)).toContain("Deleted tag 'v1.0'");
@@ -546,7 +575,7 @@ describe('git tag', () => {
   });
 
   it('reclama ante duplicados, borrados imposibles, anotadas sin mensaje y referencias malas', () => {
-    const estado = correr(escenarioPorId('E2'), 'git tag v1.0');
+    const estado = correr(repoLineal(), 'git tag v1.0');
     expect(texto(ejecutar(estado, 'git tag v1.0'))).toContain('already exists');
     expect(texto(ejecutar(estado, 'git tag -d fantasma'))).toContain('not found');
     expect(texto(ejecutar(estado, 'git tag -a v3.0'))).toContain('no tag message');
@@ -556,22 +585,22 @@ describe('git tag', () => {
 
 describe('git reset', () => {
   it('--soft mueve el puntero y deja preparados los archivos descartados', () => {
-    const partida = escenarioPorId('E2');
+    const partida = repoLineal();
     const despues = ejecutar(partida, 'git reset --soft HEAD~1').estado;
 
-    expect(idActual(despues)).toBe(partida.confirmaciones[2]?.id);
-    expect(archivoPorNombre(despues, 'cocineros.md')?.estado).toBe('preparado');
+    expect(idActual(despues)).toBe(partida.confirmaciones[3]?.id);
+    expect(archivoPorNombre(despues, 'recetas/pastel-de-choclo.md')?.estado).toBe('preparado');
   });
 
   it('--mixed deja los archivos modificados y lo informa', () => {
-    const resultado = ejecutar(escenarioPorId('E2'), 'git reset HEAD~1');
+    const resultado = ejecutar(repoLineal(), 'git reset HEAD~1');
 
     expect(archivoPorNombre(resultado.estado, 'cocineros.md')?.estado).toBe('modificado');
     expect(texto(resultado)).toContain('Unstaged changes after reset:');
   });
 
   it('--hard deja el directorio de trabajo limpio', () => {
-    const resultado = ejecutar(escenarioPorId('E2'), 'git reset --hard HEAD~1');
+    const resultado = ejecutar(repoLineal(), 'git reset --hard HEAD~1');
 
     expect(archivoPorNombre(resultado.estado, 'cocineros.md')?.estado).toBe('limpio');
     expect(archivoPorNombre(resultado.estado, 'platos.md')?.estado).toBe('limpio');
@@ -579,17 +608,17 @@ describe('git reset', () => {
   });
 
   it('sin argumentos deja de preparar lo que estuviera preparado', () => {
-    const estado = correr(escenarioPorId('E2'), 'git add platos.md', 'git reset');
-    expect(archivoPorNombre(estado, 'platos.md')?.estado).toBe('modificado');
+    const estado = correr(repoLineal(), 'git add ingredientes.md', 'git reset');
+    expect(archivoPorNombre(estado, 'ingredientes.md')?.estado).toBe('modificado');
   });
 
   it('acepta el nombre de un archivo para dejar de prepararlo', () => {
-    const estado = correr(escenarioPorId('E2'), 'git add platos.md', 'git reset platos.md');
-    expect(archivoPorNombre(estado, 'platos.md')?.estado).toBe('modificado');
+    const estado = correr(repoLineal(), 'git add ingredientes.md', 'git reset ingredientes.md');
+    expect(archivoPorNombre(estado, 'ingredientes.md')?.estado).toBe('modificado');
   });
 
   it('reclama ante una referencia que no existe', () => {
-    expect(texto(ejecutar(escenarioPorId('E2'), 'git reset fantasma'))).toContain(
+    expect(texto(ejecutar(repoLineal(), 'git reset fantasma'))).toContain(
       'unknown revision or path',
     );
   });
@@ -597,21 +626,21 @@ describe('git reset', () => {
 
 describe('git revert', () => {
   it('reclama sin argumentos o ante una referencia mala', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     expect(texto(ejecutar(estado, 'git revert'))).toContain('empty commit set');
     expect(texto(ejecutar(estado, 'git revert fantasma'))).toContain('bad revision');
   });
 
   it('registra los mismos archivos que la confirmacion revertida', () => {
-    const resultado = ejecutar(escenarioPorId('E2'), 'git revert HEAD');
-    expect(resultado.estado.confirmaciones.at(-1)?.archivos).toEqual(['cocineros.md']);
+    const resultado = ejecutar(repoLineal(), 'git revert HEAD');
+    expect(resultado.estado.confirmaciones.at(-1)?.archivos).toEqual(['recetas/pastel-de-choclo.md']);
     expect(texto(resultado)).toContain('1 file changed');
   });
 });
 
 describe('git stash', () => {
   it('guarda los cambios y deja limpio el directorio de trabajo', () => {
-    const resultado = ejecutar(escenarioPorId('E2'), 'git stash push -m "a medio hacer"');
+    const resultado = ejecutar(repoLineal(), 'git stash push -m "a medio hacer"');
 
     expect(texto(resultado)).toContain('Saved working directory');
     expect(archivoPorNombre(resultado.estado, 'platos.md')?.estado).toBe('limpio');
@@ -619,49 +648,54 @@ describe('git stash', () => {
   });
 
   it('sin mensaje describe la entrada con WIP', () => {
-    const estado = correr(escenarioPorId('E2'), 'git stash');
+    const estado = correr(repoLineal(), 'git stash');
     expect(estado.guardados[0]?.mensaje).toContain('WIP on main:');
   });
 
   it('save acepta el mensaje como argumento suelto', () => {
-    const estado = correr(escenarioPorId('E2'), 'git stash save "pendiente"');
+    const estado = correr(repoLineal(), 'git stash save "pendiente"');
     expect(estado.guardados[0]?.mensaje).toBe('On main: pendiente');
   });
 
   it('avisa cuando no hay nada que guardar', () => {
-    const estado = correr(escenarioPorId('E2'), 'git restore platos.md');
+    const estado = correr(
+      repoLineal(),
+      'git restore ingredientes.md',
+      'git restore --staged cocineros.md',
+      'git restore cocineros.md',
+    );
     expect(texto(ejecutar(estado, 'git stash'))).toBe('No local changes to save');
   });
 
   it('list y list --stat describen la pila', () => {
-    const estado = correr(escenarioPorId('E2'), 'git stash push -m "uno"');
+    const estado = correr(repoLineal(), 'git stash push -m "uno"');
     expect(texto(ejecutar(estado, 'git stash list'))).toBe('stash@{0}: On main: uno');
-    expect(texto(ejecutar(estado, 'git stash list --stat'))).toContain('platos.md | 1 +');
+    expect(texto(ejecutar(estado, 'git stash list --stat'))).toContain('ingredientes.md | 1 +');
   });
 
   it('show describe los archivos de una entrada', () => {
-    const estado = correr(escenarioPorId('E2'), 'git stash push -m "uno"');
-    expect(texto(ejecutar(estado, 'git stash show'))).toContain('1 file changed');
+    const estado = correr(repoLineal(), 'git stash push -m "uno"');
+    expect(texto(ejecutar(estado, 'git stash show'))).toContain('2 files changed');
   });
 
   it('apply devuelve los archivos como modificados y conserva la entrada', () => {
-    const partida = correr(escenarioPorId('E2'), 'git add platos.md', 'git stash push -m "uno"');
+    const partida = correr(repoLineal(), 'git add ingredientes.md', 'git stash push -m "uno"');
     const despues = ejecutar(partida, 'git stash apply').estado;
 
-    expect(archivoPorNombre(despues, 'platos.md')?.estado).toBe('modificado');
+    expect(archivoPorNombre(despues, 'ingredientes.md')?.estado).toBe('modificado');
     expect(despues.guardados).toHaveLength(1);
   });
 
   it('apply --index restituye tambien lo que estaba preparado', () => {
-    const partida = correr(escenarioPorId('E2'), 'git add platos.md', 'git stash push -m "uno"');
+    const partida = correr(repoLineal(), 'git add ingredientes.md', 'git stash push -m "uno"');
     const despues = ejecutar(partida, 'git stash apply --index').estado;
 
-    expect(archivoPorNombre(despues, 'platos.md')?.estado).toBe('preparado');
+    expect(archivoPorNombre(despues, 'ingredientes.md')?.estado).toBe('preparado');
   });
 
   it('drop y clear vacian la pila', () => {
     const partida = correr(
-      escenarioPorId('E2'),
+      repoLineal(),
       'git stash push -m "uno"',
       'echo "x" >> ingredientes.md',
       'git stash push -m "dos"',
@@ -675,7 +709,7 @@ describe('git stash', () => {
   });
 
   it('reclama al operar sobre una pila vacia o con una suborden inventada', () => {
-    const estado = correr(escenarioPorId('E2'), 'git restore platos.md');
+    const estado = correr(repoLineal(), 'git restore ingredientes.md');
     expect(texto(ejecutar(estado, 'git stash pop'))).toContain('No stash entries found.');
     expect(texto(ejecutar(estado, 'git stash show'))).toContain('No stash entries found.');
     expect(texto(ejecutar(estado, 'git stash drop'))).toContain('No stash entries found.');
@@ -685,7 +719,7 @@ describe('git stash', () => {
 
 describe('git reflog', () => {
   it('registra los movimientos de HEAD en orden, del mas reciente al mas antiguo', () => {
-    const estado = correr(escenarioPorId('E3'), 'git switch tailandesa', 'git switch main');
+    const estado = correr(repoConRamaDesdeMain(), 'git switch tailandesa', 'git switch main');
     const salida = texto(ejecutar(estado, 'git reflog'));
     const filas = salida.split('\n');
 
@@ -695,56 +729,57 @@ describe('git reflog', () => {
   });
 
   it('permite consultar el registro de una rama', () => {
-    const estado = correr(escenarioPorId('E3'), 'git branch mexicana');
-    expect(texto(ejecutar(estado, 'git reflog mexicana'))).toContain('mexicana@{0}: branch:');
+    const estado = correr(repoConRamaDesdeMain(), 'git branch chilena');
+    expect(texto(ejecutar(estado, 'git reflog chilena'))).toContain('chilena@{0}: branch:');
   });
 });
 
 describe('git rebase', () => {
   it('avisa cuando la rama ya esta al dia', () => {
-    const estado = correr(escenarioPorId('E3'), 'git switch tailandesa');
+    const estado = correr(repoConRamaDesdeMain(), 'git switch tailandesa');
     expect(texto(ejecutar(estado, 'git rebase HEAD~1'))).toContain('is up to date');
   });
 
   it('avanza el puntero cuando la rama esta contenida en la base', () => {
-    const partida = correr(escenarioPorId('E3'), 'git branch mexicana', 'git switch mexicana');
+    const partida = correr(repoConRamaDesdeMain(), 'git branch chilena', 'git switch chilena');
     const conAvance = correr(
       partida,
       'git switch main',
       'echo "x" >> cocineros.md',
       'git add cocineros.md',
       'git commit -m "Avanza main"',
-      'git switch mexicana',
+      'git switch chilena',
     );
     const resultado = ejecutar(conAvance, 'git rebase main');
 
-    expect(texto(resultado)).toContain('Fast-forwarded mexicana to main');
-    expect(ramaPorNombre(resultado.estado, 'mexicana')?.id).toBe(
+    expect(texto(resultado)).toContain('Fast-forwarded chilena to main');
+    expect(ramaPorNombre(resultado.estado, 'chilena')?.id).toBe(
       ramaPorNombre(resultado.estado, 'main')?.id,
     );
   });
 
   it('reclama sin argumentos o ante una base desconocida', () => {
-    const estado = escenarioPorId('E3');
+    const estado = repoConRamaDesdeMain();
     expect(texto(ejecutar(estado, 'git rebase'))).toContain('No rebase in progress');
     expect(texto(ejecutar(estado, 'git rebase fantasma'))).toContain('invalid upstream');
   });
 
   it('conserva el mensaje y los archivos de cada confirmacion reescrita', () => {
-    const partida = correr(escenarioPorId('E3'), 'git switch tailandesa');
+    const partida = correr(repoConRamaDesdeMain(), 'git switch tailandesa');
     const despues = ejecutar(partida, 'git rebase main').estado;
     const salida = texto(ejecutar(despues, 'git log --oneline'));
 
-    expect(salida).toContain('Agrega la receta del pad thai');
-    expect(salida).toContain('Agrega los ingredientes tailandeses');
-    expect(salida).toContain('Agrega la lista de cocineros');
+    // Los mensajes que el laboratorio 08 manda arreglar sobreviven al rebase.
+    expect(salida).toContain('wip');
+    expect(salida).toContain('arreglos');
+    expect(salida).toContain('Agrega la tabla de cocineros');
   });
 });
 
 describe('git remote', () => {
   it('add registra el remoto y -v lo muestra con sus dos direcciones', () => {
     const estado = correr(
-      escenarioPorId('E3'),
+      repoConRamaDesdeMain(),
       'git remote add origin https://gitlab.sii.cl/taller/recetario.git',
     );
 
@@ -755,7 +790,7 @@ describe('git remote', () => {
   });
 
   it('reclama ante duplicados, uso incorrecto y remotos inexistentes', () => {
-    const estado = correr(escenarioPorId('E3'), 'git remote add origin https://ejemplo.cl/r.git');
+    const estado = correr(repoConRamaDesdeMain(), 'git remote add origin https://ejemplo.cl/r.git');
 
     expect(texto(ejecutar(estado, 'git remote add origin https://otro.cl/r.git'))).toContain(
       'already exists',

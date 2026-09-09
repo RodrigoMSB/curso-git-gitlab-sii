@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { ejecutar } from '../src/core/motor';
-import { escenarioPorId } from '../src/escenarios';
+import { repoConRamas, repoLineal, repoVacio } from './ayudas';
 import { colorearSalida, completar, indicadorDe, navegarHistorial } from '../src/vista/consola';
 import {
   avanzar,
@@ -36,15 +36,19 @@ function correrSesion(escenario: string, ...ordenes: readonly string[]) {
 
 describe('consola', () => {
   it('4.1 el indicador reproduce el de Git Bash, con carpeta y rama', () => {
-    const indicador = indicadorDe(escenarioPorId('E3'));
+    const indicador = indicadorDe(repoConRamas());
     expect(indicador.usuario).toContain('MINGW64');
-    expect(indicador.ruta).toBe('~/recetario');
+    // La ruta que el participante ve en su terminal, no solo la ultima carpeta.
+    expect(indicador.ruta).toBe('~/taller-git-trabajo/lab-06/recetario');
     expect(indicador.rama).toBe('main');
   });
 
   it('4.5 la salida larga de git status va en verde lo preparado y en rojo lo pendiente', () => {
     const estado = ejecutar(
-      ejecutar(escenarioPorId('E3'), 'git add notas.tmp').estado,
+      ejecutar(
+        ejecutar(repoConRamas(), 'echo "x" >> notas.tmp').estado,
+        'git add notas.tmp',
+      ).estado,
       'echo "x" >> platos.md',
     ).estado;
     const salida = ejecutar(estado, 'git status').salida;
@@ -57,7 +61,11 @@ describe('consola', () => {
   });
 
   it('4.5 la forma corta colorea por el codigo de dos columnas', () => {
-    const estado = ejecutar(escenarioPorId('E3'), 'git add notas.tmp').estado;
+    const conEstorbos = ejecutar(
+      ejecutar(repoConRamas(), 'echo "x" >> notas.tmp').estado,
+      'echo "x" >> respaldo.bak',
+    ).estado;
+    const estado = ejecutar(conEstorbos, 'git add notas.tmp').estado;
     const renglones = colorearSalida(ejecutar(estado, 'git status -s').salida, 'p');
 
     expect(renglones.find((r) => r.texto.startsWith('A '))?.color).toBe('exito');
@@ -66,7 +74,7 @@ describe('consola', () => {
 
   it('4.5 el conflicto va en rojo y el aviso de fusion en amarillo', () => {
     const renglones = colorearSalida(
-      ejecutar(escenarioPorId('E4'), 'git merge tailandesa').salida,
+      ejecutar(repoConRamas(), 'git merge peruana').salida,
       'p',
     );
     expect(renglones.find((r) => r.texto.startsWith('CONFLICT'))?.color).toBe('error');
@@ -74,19 +82,19 @@ describe('consola', () => {
   });
 
   it('4.5 los errores del motor se pintan como errores', () => {
-    const renglones = colorearSalida(ejecutar(escenarioPorId('E3'), 'gti status').salida, 'p');
+    const renglones = colorearSalida(ejecutar(repoConRamas(), 'gti status').salida, 'p');
     expect(renglones[0]?.color).toBe('error');
   });
 
   it('4.4 la tabulacion completa cuando hay una unica coincidencia', () => {
-    const estado = escenarioPorId('E3');
+    const estado = repoConRamas();
     expect(completar('git swi', estado).texto).toBe('git switch');
-    expect(completar('git switch tail', estado).texto).toBe('git switch tailandesa');
+    expect(completar('git switch peru', estado).texto).toBe('git switch peruana');
     expect(completar('pw', estado).texto).toBe('pwd');
   });
 
   it('4.4 con varias coincidencias las lista y no completa', () => {
-    const resultado = completar('git re', escenarioPorId('E3'));
+    const resultado = completar('git re', repoConRamas());
     expect(resultado.texto).toBeNull();
     expect(resultado.sugerencias).toEqual(
       expect.arrayContaining(['rebase', 'reflog', 'remote', 'reset', 'restore', 'revert']),
@@ -94,7 +102,7 @@ describe('consola', () => {
   });
 
   it('4.4 sin coincidencias no propone nada', () => {
-    const resultado = completar('git zzz', escenarioPorId('E3'));
+    const resultado = completar('git zzz', repoConRamas());
     expect(resultado.texto).toBeNull();
     expect(resultado.sugerencias).toHaveLength(0);
   });
@@ -118,7 +126,7 @@ describe('consola', () => {
 
 describe('sesion y linea de tiempo', () => {
   it('7.1 retroceder devuelve el estado y la consola de ese momento', () => {
-    const sesion = correrSesion('E3', 'git switch tailandesa', 'git switch main');
+    const sesion = correrSesion('lab-08', 'git switch tailandesa', 'git switch main');
     expect(sesion.pasos).toHaveLength(3);
 
     const atras = retroceder(sesion);
@@ -130,7 +138,7 @@ describe('sesion y linea de tiempo', () => {
   });
 
   it('7.2 ejecutar desde un punto anterior corta la historia desde ahi', () => {
-    const sesion = correrSesion('E3', 'git switch tailandesa', 'git switch main');
+    const sesion = correrSesion('lab-08', 'git switch tailandesa', 'git switch main');
     const desdeElPrimero = ejecutarOrden(irAPaso(sesion, 1), 'git branch mexicana');
 
     expect(desdeElPrimero.pasos).toHaveLength(3);
@@ -139,7 +147,7 @@ describe('sesion y linea de tiempo', () => {
   });
 
   it('4.7 clear vacia la consola sin tocar el estado ni la linea de tiempo', () => {
-    const antes = correrSesion('E3', 'git status');
+    const antes = correrSesion('lab-08', 'git status');
     const despues = ejecutarOrden(antes, 'clear');
 
     expect(renglonesDe(despues)).toHaveLength(0);
@@ -148,19 +156,19 @@ describe('sesion y linea de tiempo', () => {
   });
 
   it('una linea en blanco no agrega pasos', () => {
-    const sesion = iniciarSesion('E3');
+    const sesion = iniciarSesion('lab-08');
     expect(ejecutarOrden(sesion, '   ')).toBe(sesion);
   });
 
   it('los limites de la linea de tiempo no se pasan', () => {
-    const sesion = iniciarSesion('E3');
+    const sesion = iniciarSesion('lab-08');
     expect(retroceder(sesion).indice).toBe(0);
     expect(avanzar(sesion).indice).toBe(0);
     expect(irAPaso(sesion, 99).indice).toBe(0);
   });
 
   it('seleccionar dos veces la misma confirmacion la deselecciona', () => {
-    const sesion = iniciarSesion('E3');
+    const sesion = iniciarSesion('lab-08');
     const id = estadoDe(sesion).confirmaciones[0]?.id ?? '';
     expect(seleccionarConfirmacion(sesion, id).seleccion).toBe(id);
     expect(seleccionarConfirmacion(seleccionarConfirmacion(sesion, id), id).seleccion).toBeNull();
@@ -169,17 +177,19 @@ describe('sesion y linea de tiempo', () => {
 
 describe('zona D: areas y paneles', () => {
   it('CA2 preparar un archivo lo pasa de la primera columna a la segunda', () => {
-    const antes = columnasDeAreas(escenarioPorId('E2'));
-    expect(antes[0]?.elementos.map((e) => e.texto)).toContain('platos.md');
-    expect(antes[1]?.elementos).toHaveLength(0);
+    // El escenario ya trae cocineros.md preparado: la columna de preparados
+    // parte con ese, y al preparar ingredientes.md se le suma.
+    const antes = columnasDeAreas(repoLineal());
+    expect(antes[0]?.elementos.map((e) => e.texto)).toContain('ingredientes.md');
+    expect(antes[1]?.elementos.map((e) => e.texto)).toEqual(['cocineros.md']);
 
-    const despues = columnasDeAreas(ejecutar(escenarioPorId('E2'), 'git add platos.md').estado);
-    expect(despues[0]?.elementos.map((e) => e.texto)).not.toContain('platos.md');
-    expect(despues[1]?.elementos.map((e) => e.texto)).toEqual(['platos.md']);
+    const despues = columnasDeAreas(ejecutar(repoLineal(), 'git add ingredientes.md').estado);
+    expect(despues[0]?.elementos.map((e) => e.texto)).not.toContain('ingredientes.md');
+    expect(despues[1]?.elementos.map((e) => e.texto)).toEqual(['ingredientes.md', 'cocineros.md']);
   });
 
   it('los rotulos de la zona D van acentuados', () => {
-    const columnas = columnasDeAreas(escenarioPorId('E1'));
+    const columnas = columnasDeAreas(repoVacio());
     expect(columnas.map((columna) => columna.titulo)).toEqual([
       'Directorio de trabajo',
       'Área de preparación',
@@ -189,7 +199,7 @@ describe('zona D: areas y paneles', () => {
   });
 
   it('las cuatro columnas son fijas y siempre estan', () => {
-    const columnas = columnasDeAreas(escenarioPorId('E1'));
+    const columnas = columnasDeAreas(repoVacio());
     expect(columnas.map((columna) => columna.clave)).toEqual([
       'trabajo',
       'preparacion',
@@ -200,22 +210,22 @@ describe('zona D: areas y paneles', () => {
   });
 
   it('los paneles que no aplican no se muestran', () => {
-    const paneles = panelesVisibles(escenarioPorId('E3'), null, [], null, false);
+    const paneles = panelesVisibles(repoConRamas(), null, [], null, false);
     expect(paneles.guardado).toBeNull();
     expect(paneles.diferencias).toBeNull();
     expect(paneles.objetos).toBeNull();
   });
 
   it('el panel de guardado aparece cuando la pila tiene entradas', () => {
-    const estado = ejecutar(escenarioPorId('E2'), 'git stash push -m "a medias"').estado;
+    const estado = ejecutar(repoLineal(), 'git stash push -m "a medias"').estado;
     const paneles = panelesVisibles(estado, 'git stash push -m "a medias"', [], null, false);
     expect(paneles.guardado).toHaveLength(1);
     expect(paneles.guardado?.[0]?.texto).toContain('stash@{0}');
-    expect(paneles.guardado?.[0]?.archivos).toEqual(['platos.md']);
+    expect(paneles.guardado?.[0]?.archivos).toEqual(['ingredientes.md', 'cocineros.md']);
   });
 
   it('el panel de diferencias aparece solo tras una comparacion', () => {
-    const sesion = correrSesion('E2', 'git diff');
+    const sesion = correrSesion('lab-02', 'git diff');
     const conDiff = panelesVisibles(
       estadoDe(sesion),
       'git diff',
@@ -236,7 +246,7 @@ describe('zona D: areas y paneles', () => {
   });
 
   it('9.2 el panel de objetos muestra la confirmacion, su arbol y sus elementos', () => {
-    const estado = escenarioPorId('E2');
+    const estado = repoLineal();
     const id = estado.confirmaciones[3]?.id ?? '';
     const paneles = panelesVisibles(estado, null, [], id, false);
 
@@ -251,7 +261,7 @@ describe('zona D: areas y paneles', () => {
   });
 
   it('CA9 el modo relator oculta los tres paneles secundarios', () => {
-    const estado = ejecutar(escenarioPorId('E2'), 'git stash push -m "a medias"').estado;
+    const estado = ejecutar(repoLineal(), 'git stash push -m "a medias"').estado;
     const id = estado.confirmaciones[0]?.id ?? '';
 
     const normal = panelesVisibles(estado, 'git diff', [], id, false);
@@ -270,21 +280,24 @@ describe('zona D: areas y paneles', () => {
 
 describe('barra de estado y armado de la pantalla', () => {
   it('resume el repositorio, la rama y los cambios sin confirmar', () => {
-    const barra = resumenBarra(escenarioPorId('E3'));
+    const barra = resumenBarra(repoConRamas());
     expect(barra.repositorio).toBe('recetario');
     expect(barra.rama).toBe('main');
     expect(barra.desconectado).toBe(false);
-    expect(barra.cambiosSinConfirmar).toBe(3);
-    expect(barra.escenarios.map((escenario) => escenario.id)).toEqual(['E1', 'E2', 'E3', 'E4']);
+    expect(barra.cambiosSinConfirmar).toBe(0);
+    // El selector ofrece los diez laboratorios con escenario, en su orden.
+    expect(barra.escenarios.map((escenario) => escenario.laboratorio)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+    ]);
   });
 
   it('avisa cuando la posicion quedo desconectada', () => {
-    const estado = ejecutar(escenarioPorId('E2'), 'git checkout HEAD~1').estado;
+    const estado = ejecutar(repoLineal(), 'git checkout HEAD~1').estado;
     expect(resumenBarra(estado).desconectado).toBe(true);
   });
 
   it('6.1 con la previsualizacion activa la pantalla anuncia lo que la orden haria', () => {
-    const sesion = correrSesion('E2', 'git add platos.md');
+    const sesion = correrSesion('lab-02', 'git add platos.md');
     const pantalla = construirPantalla(sesion, {
       ...OPCIONES,
       entrada: 'git commit -m "Corrige"',
@@ -296,10 +309,10 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('CA3 al borrar la orden desaparece la confirmacion discontinua', () => {
-    const sesion = iniciarSesion('E4');
+    const sesion = iniciarSesion('lab-06');
     const conOrden = construirPantalla(sesion, {
       ...OPCIONES,
-      entrada: 'git merge tailandesa',
+      entrada: 'git merge peruana',
     });
     const sinOrden = construirPantalla(sesion, OPCIONES);
 
@@ -308,10 +321,10 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('con la previsualizacion apagada no se anuncia nada', () => {
-    const sesion = iniciarSesion('E4');
+    const sesion = iniciarSesion('lab-06');
     const pantalla = construirPantalla(sesion, {
       previsualizacionActiva: false,
-      entrada: 'git merge tailandesa',
+      entrada: 'git merge peruana',
       modoRelator: false,
     });
 
@@ -320,7 +333,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('una orden invalida no anuncia nada', () => {
-    const pantalla = construirPantalla(iniciarSesion('E3'), {
+    const pantalla = construirPantalla(iniciarSesion('lab-08'), {
       ...OPCIONES,
       entrada: 'git merge fantasma',
     });
@@ -328,7 +341,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('la union comprometida por un conflicto sigue dibujada hasta que se resuelve', () => {
-    const enConflicto = correrSesion('E4', 'git merge tailandesa');
+    const enConflicto = correrSesion('lab-06', 'git merge peruana');
     const pendiente = construirPantalla(enConflicto, OPCIONES);
     const anunciada = pendiente.grafo.nodos.find((nodo) => nodo.previsualizada);
 
@@ -338,7 +351,7 @@ describe('barra de estado y armado de la pantalla', () => {
     const resuelta = construirPantalla(
       ejecutarOrden(
         ejecutarOrden(enConflicto, 'git add platos.md'),
-        'git commit -m "Fusiona tailandesa"',
+        'git commit -m "Fusiona la cocina peruana"',
       ),
       OPCIONES,
     );
@@ -349,7 +362,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('la linea de tiempo lleva un segmento por paso y marca el actual', () => {
-    const sesion = correrSesion('E3', 'git status', 'git branch mexicana');
+    const sesion = correrSesion('lab-08', 'git status', 'git branch mexicana');
     const pantalla = construirPantalla(irAPaso(sesion, 1), OPCIONES);
 
     expect(pantalla.segmentos).toHaveLength(3);

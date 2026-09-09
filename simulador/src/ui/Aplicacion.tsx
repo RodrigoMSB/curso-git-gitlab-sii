@@ -13,6 +13,7 @@ import {
   construirPantalla,
   ejecutarOrden,
   estadoDe,
+  escenarioDeArranque,
   iniciarSesion,
   irAPaso,
   navegarHistorial,
@@ -27,10 +28,8 @@ import { Grafo } from './Grafo';
 import { LineaTiempo } from './LineaTiempo';
 import { useMovimientoReducido } from './useMovimientoReducido';
 
-const ESCENARIO_INICIAL = 'E1';
-
 export function Aplicacion(): React.ReactElement {
-  const [sesion, setSesion] = useState<Sesion>(() => iniciarSesion(ESCENARIO_INICIAL));
+  const [sesion, setSesion] = useState<Sesion>(() => iniciarSesion(escenarioDeArranque(window.location)));
   const [entrada, setEntrada] = useState('');
   const [sugerencias, setSugerencias] = useState<readonly string[]>([]);
   const [indiceHistorial, setIndiceHistorial] = useState(0);

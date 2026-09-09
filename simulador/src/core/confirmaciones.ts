@@ -19,6 +19,15 @@ export interface DatosConfirmacion {
   readonly idForzado?: string;
   /** Marca que distingue copias del rebase de sus originales. */
   readonly matiz?: string;
+  /**
+   * Autor y fecha declarados. Los usan los escenarios de laboratorio, que
+   * reproducen una historia escrita por varias personas en fechas concretas.
+   * Sin declarar, se toman del estado y del contador, como en toda orden que
+   * el participante ejecuta.
+   */
+  readonly autor?: string;
+  readonly correo?: string;
+  readonly fecha?: string;
 }
 
 export function agregarConfirmacion(
@@ -41,9 +50,9 @@ export function agregarConfirmacion(
     mensaje: datos.mensaje,
     padres: datos.padres,
     carril: datos.carril,
-    autor: autor.nombre,
-    correo: autor.correo,
-    fecha: fechaDeterminista(estado.contador),
+    autor: datos.autor ?? autor.nombre,
+    correo: datos.correo ?? autor.correo,
+    fecha: datos.fecha ?? fechaDeterminista(estado.contador),
     archivos: datos.archivos,
   };
 

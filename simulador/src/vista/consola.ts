@@ -28,10 +28,13 @@ export interface Indicador {
  * entorno donde los participantes van a trabajar (punto 4.1).
  */
 export function indicadorDe(estado: EstadoRepositorio): Indicador {
-  const carpeta = estado.directorio.split('/').filter(Boolean).at(-1) ?? '';
+  // La ruta completa del laboratorio y no solo la ultima carpeta: en el disco
+  // el participante esta parado en taller-git-trabajo/lab-NN/recetario, y el
+  // indicador tiene que decir lo mismo que su terminal (SPEC 007).
+  const ruta = estado.directorio.replace(/^\/+/, '');
   return {
     usuario: 'participante@SII-TALLER MINGW64',
-    ruta: `~/${carpeta}`,
+    ruta: `~/${ruta}`,
     rama: estado.iniciado ? ramaActual(estado) : null,
   };
 }
