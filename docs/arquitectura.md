@@ -1078,3 +1078,157 @@ carpeta es precisamente el que no esta leyendo.
   seccion 15 tiene que seguir atrapandolo. Se comprobo que esas pruebas fallan
   contra la version vieja del verificador; una prueba que nunca se vio fallar no
   prueba nada.
+
+---
+
+# SPEC 005 · Laboratorio 02 armado
+
+## 18. Forma de los laboratorios con escenario
+
+El laboratorio 01 parte sin repositorio, porque crearlo es el ejercicio. Del 02
+en adelante cada laboratorio parte de un escenario armado, con historia previa,
+autores, fechas y errores plantados.
+
+**Cada laboratorio arma su propio escenario con un script local.** No se usa
+`semillas/`, no se clona ningun paquete y no hay infraestructura compartida
+entre laboratorios. Un laboratorio es una carpeta con todo lo que necesita
+adentro.
+
+```
+labs/lab-02/
+├── README.md        enunciado que lee el participante
+├── preparar.sh      arma el escenario inicial
+└── verificar.sh     comprueba si el laboratorio quedo bien
+```
+
+El trabajo del participante sigue viviendo fuera del clon, en
+`taller-git-trabajo/lab-02/recetario`, por la regla de la seccion 17. Los dos
+scripts deducen esa ruta de su propia ubicacion y se corren sin argumentos.
+
+### El escenario es determinista
+
+`preparar.sh` construye el repositorio desde cero con ordenes de Git reales, y
+produce **los mismos identificadores de confirmacion en cualquier maquina y en
+cualquier momento**. Eso permite que un enunciado cite una confirmacion y que el
+verificador compare contra un estado conocido.
+
+Las tres tecnicas son las del SPEC 003, ahora sin biblioteca compartida:
+
+- Las fechas van como epoca y no como texto. `date` no acepta los mismos
+  argumentos en BSD y en GNU, y de ahi salen historias distintas segun la
+  maquina.
+- Autor y confirmador se fijan en cada confirmacion, con el mismo instante. Si
+  el confirmador tomara la hora del reloj, el identificador cambiaria en cada
+  ejecucion.
+- `core.autocrlf` y `core.eol` se fijan en el repositorio generado. Sobre
+  Windows, el final de linea cambiaria el contenido confirmado y con el los
+  identificadores.
+
+Hay dos pruebas que lo fijan: una corre la preparacion dos veces y compara, y
+otra la corre en dos carpetas distintas y con configuraciones globales
+distintas, que es lo que se parece a dos maquinas.
+
+## 19. Decisiones no especificadas del SPEC 005
+
+### El verificador tiene dos modos, y por eso puede rechazar un laboratorio sin hacer
+
+Este es el punto delicado del SPEC 005. El punto 3.4 pide que la preparacion
+llame al verificador para comprobar que el escenario quedo bien; el punto 6.3
+pide que el verificador **rechace** el escenario recien preparado. Son dos
+comprobaciones opuestas sobre el mismo repositorio.
+
+Se resolvio con un solo archivo y dos modos:
+
+- `./verificar.sh` comprueba el **estado final**: si el participante hizo el
+  laboratorio. Es el que corre el participante y el unico que el enunciado
+  menciona.
+- `./verificar.sh --escenario` comprueba el **estado inicial**: si la
+  preparacion dejo el escenario como corresponde. Lo usa `preparar.sh` y nadie
+  mas.
+
+Un solo archivo evita que las dos descripciones del mismo escenario se separen
+con el tiempo. El modo `--escenario` comprueba ademas lo que el enunciado
+necesita para funcionar y el modo final no mira: los tres autores, que Juana
+Perez firme alguna confirmacion, que las fechas se repartan en varios meses de
+2024, que la historia sea lineal y que `curanto` este en el contenido.
+
+Lo que separa un laboratorio hecho de uno sin empezar **no es la cantidad de
+confirmaciones**, porque en los dos estados hay cinco. Son dos cosas: el mensaje
+mal escrito ya no esta en la historia, y el area de preparacion quedo vacia. Un
+verificador que solo contara aprobaria un laboratorio sin tocar, y hay una
+prueba dedicada a que eso no vuelva a ser posible.
+
+### El repositorio se comprueba como un criterio mas
+
+El SPEC 005 lista cinco criterios en el punto 6.2 y el verificador imprime seis.
+El que sobra es que exista el repositorio, que la regla 1 de la seccion 15 exige
+comprobar comparando la cima. Se imprime como criterio propio, igual que en el
+laboratorio 01, para que el participante que todavia no preparo el laboratorio
+lea que le falta eso y no cinco fallas sueltas.
+
+### El borrado se avisa, se pregunta y se marca
+
+`preparar.sh` destruye el repositorio del participante cuando rehace el
+escenario. Antes avisa con un bloque de ATENCION que dice exactamente que se
+pierde, pregunta y solo sigue si la respuesta es `si`. Con `--forzar` no
+pregunta, que es lo que usan las pruebas.
+
+Si no hay terminal y no se paso `--forzar`, **se detiene en vez de borrar**. Un
+script de preparacion que arrasa con el trabajo de la clase porque nadie pudo
+contestarle es peor que uno que no corre.
+
+### La palabra `curanto` vive en `platos.md` y no se mueve
+
+El enunciado la busca con `git log -S`. Entra en la segunda confirmacion y
+ninguna parte del ejercicio la toca: los dos archivos que el participante
+manipula son `ingredientes.md` y `cocineros.md`. Asi el criterio no depende de
+que el participante haga bien o mal los pasos anteriores, solo de que no haya
+destruido la historia.
+
+### En Bash 3.2, `«$VARIABLE»` no es lo que parece
+
+Escribir `"«$MENSAJE_MALO»"` hacia que Bash 3.2 tomara los bytes de `»` como
+parte del nombre de la variable y muriera con `unbound variable`. Las comillas
+angulares son de varios bytes y ese Bash no las separa del identificador.
+
+La forma correcta es `"«${MENSAJE_MALO}»"`, con llaves. **Vale para los catorce
+laboratorios que vienen**, porque los mensajes de los verificadores citan
+contenido entre comillas angulares todo el tiempo. El verificador del
+laboratorio 01 no tenia el problema por casualidad: ahi las comillas angulares
+solo rodean texto literal.
+
+## 20. Los criterios del SPEC 005
+
+| Criterio | Estado |
+|---|---|
+| CA1 · `labs/lab-02/` con los tres archivos | cumplido |
+| CA2 · escenario de la seccion 4 y dos corridas iguales | cumplido |
+| CA3 · avisa y pregunta antes de rehacer | cumplido |
+| CA4 · rechaza el escenario sin trabajo hecho | cumplido |
+| CA5 · aprueba el hecho y rechaza cada criterio roto | cumplido, seis criterios |
+| CA6 · el enunciado difiere solo en los cambios autorizados | cumplido, con una salvedad |
+| CA7 · nada invoca `semillas/` | cumplido |
+| CA8 · la suite pasa completa | cumplido, 370 pruebas |
+
+Sobre CA6, la salvedad. Dentro de la seccion de preparacion, la frase «El script
+clona la semilla» quedo como «El script arma el escenario». Es parte de la misma
+seccion que el spec manda reemplazar, y dejarla habria dejado al enunciado
+diciendo algo falso sobre lo que acaba de ocurrir. Se anota aqui porque no es
+uno de los tres cambios enumerados y el product owner puede revertirla.
+
+El subtitulo del enunciado sigue diciendo «repositorio semilla lab-02», que ya no
+es cierto. **No se toco**, porque esta fuera de las secciones que el spec
+autoriza a cambiar.
+
+### El hallazgo del punto 5.4
+
+**El enunciado, seguido en el orden que el mismo indica, no alcanza su propia
+seccion de Comprobacion.** Esta contado en detalle en el informe de entrega. En
+resumen: el paso 3.1 hace `git commit --amend`, que confirma lo que haya en el
+area de preparacion, o sea el cambio de `cocineros.md` que el paso 3.3 tenia que
+sacar. Cuando el participante llega a 3.3 no queda nada que sacar, y la
+Comprobacion pide que `cocineros.md` aparezca modificado.
+
+Basta hacer 3.3 antes de 3.1 para que el laboratorio termine bien. **El enunciado
+no se toco**, porque el punto 5.4 del spec reserva esa decision al product owner.
+Hay dos pruebas que fijan las dos rutas: la literal no aprueba, la corregida si.

@@ -6,10 +6,13 @@ Cada laboratorio es una carpeta autocontenida. No clona nada, no corre ninguna
 preparacion previa y no depende de `semillas/`, que quedo sin uso en este
 esquema.
 
-Dentro de cada carpeta hay dos archivos.
+Dentro de cada carpeta hay dos o tres archivos.
 
 - `README.md`, el enunciado que lee el participante.
 - `verificar.sh`, que comprueba si el laboratorio quedo bien hecho.
+- `preparar.sh`, que arma el escenario inicial, en los laboratorios que parten
+  de una historia previa. El 01 no lo lleva, porque ahi crear el repositorio es
+  el ejercicio.
 
 ## Donde trabaja el participante
 
@@ -22,7 +25,9 @@ repositorio del curso.
 GIT-GITLAB/
 ├── curso-git-gitlab-sii/        este clon: enunciados y verificadores
 └── taller-git-trabajo/          el trabajo del participante
-    └── lab-01/
+    ├── lab-01/
+    │   └── recetario/
+    └── lab-02/
         └── recetario/
 ```
 
@@ -47,5 +52,16 @@ cd labs/lab-01
 Imprime una linea por criterio y un resumen. Cuando un criterio falla dice que
 esperaba y que encontro, y el codigo de salida queda distinto de cero.
 
-Por ahora esta armado el laboratorio 01. Los otros catorce se agregan en specs
-posteriores.
+En los laboratorios que traen `preparar.sh`, se corre antes que nada y deja el
+escenario listo. Rehacerlo borra el trabajo que hubiera en ese laboratorio, asi
+que avisa y pregunta antes.
+
+```
+labs/lab-02/preparar.sh
+```
+
+El escenario es determinista: entrega siempre la misma historia, con los mismos
+identificadores de confirmacion, en cualquier maquina.
+
+Por ahora estan armados los laboratorios 01 y 02. Los otros trece se agregan en
+specs posteriores.
