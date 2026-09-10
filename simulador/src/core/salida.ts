@@ -24,6 +24,10 @@ export function lineaExito(texto: string): LineaSalida {
   return { tipo: 'exito', texto };
 }
 
+export function lineaLimite(texto: string): LineaSalida {
+  return { tipo: 'limite', texto };
+}
+
 export function lineas(...textos: readonly string[]): readonly LineaSalida[] {
   return textos.map(linea);
 }
@@ -54,6 +58,31 @@ export function fallo(
   return {
     estado,
     salida: textos.map(lineaError),
+    error: true,
+    proyectadas: [],
+    limpiarConsola: false,
+  };
+}
+
+/**
+ * Respuesta a una orden que el motor declara no implementar (seccion 6 del
+ * SPEC 010).
+ *
+ * El estado no cambia y el mensaje dice dos cosas: que es lo que no hace, con
+ * nombre y apellido, y que en la terminal si funciona. Va marcado como error
+ * para que nada aguas abajo lo tome por una orden ejecutada, pero sus lineas
+ * son de tipo `limite` y la pantalla las pinta distinto de un reclamo de Git.
+ */
+export function limite(
+  estado: EstadoRepositorio,
+  queNoHace: string,
+): ResultadoOrden {
+  return {
+    estado,
+    salida: [
+      lineaLimite(`el simulador no implementa ${queNoHace}.`),
+      lineaLimite('En tu terminal si funciona: esta orden hazla ahi.'),
+    ],
     error: true,
     proyectadas: [],
     limpiarConsola: false,

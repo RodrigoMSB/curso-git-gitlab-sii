@@ -108,11 +108,53 @@ export const ordenAdd: Manejador = (estado, argumentos) => {
   for (const archivo of objetivo) {
     if (archivo.estado === 'limpio' || archivo.estado === 'preparado') continue;
     siguiente = establecerArchivo(siguiente, archivo.nombre, 'preparado');
+    // El nombre que este archivo tenia antes deja de estar pendiente: su
+    // desaparicion ya esta contada como parte del renombrado.
+    if (archivo.renombradoDe !== undefined) {
+      siguiente = {
+        ...siguiente,
+        borradosSinPreparar: siguiente.borradosSinPreparar.filter(
+          (nombre) => nombre !== archivo.renombradoDe,
+        ),
+      };
+    }
   }
+
+  // Preparar un borrado que estaba pendiente lo pasa al area de preparacion,
+  // que es lo que hace `git add` sobre un archivo que ya no esta. Se mira la
+  // lista ya podada: el nombre viejo de un renombrado salio de ahi arriba y
+  // volver a tomarlo lo contaria dos veces, como baja y como renombrado.
+  siguiente = prepararBorrados(siguiente, todo, rutas);
 
   // Resolver el ultimo conflicto no cierra la fusion: falta confirmar.
   return ok(siguiente);
 };
+
+/**
+ * Pasa al area de preparacion los borrados pendientes que la orden alcanza.
+ *
+ * `git add .` y `git add -A` los toman todos; `git add <ruta>` solo el que
+ * nombra, aunque el archivo ya no este en el directorio de trabajo.
+ */
+function prepararBorrados(
+  siguiente: EstadoRepositorio,
+  todo: boolean,
+  rutas: readonly string[],
+): EstadoRepositorio {
+  const alcanza = (nombre: string): boolean => {
+    if (todo || rutas.length === 0) return true;
+    return rutas.some(
+      (ruta) => ruta === '.' || ruta === './' || ruta === nombre || nombre.startsWith(`${ruta}/`),
+    );
+  };
+  const alcanzados = siguiente.borradosSinPreparar.filter(alcanza);
+  if (alcanzados.length === 0) return siguiente;
+  return {
+    ...siguiente,
+    borrados: [...new Set([...siguiente.borrados, ...alcanzados])],
+    borradosSinPreparar: siguiente.borradosSinPreparar.filter((nombre) => !alcanza(nombre)),
+  };
+}
 
 /** `git restore`, con archivo puntual y `--staged`. */
 export const ordenRestore: Manejador = (estado, argumentos) => {
@@ -136,6 +178,16 @@ export const ordenRestore: Manejador = (estado, argumentos) => {
         if (archivo.estado !== 'preparado') continue;
         const destino = estaSeguido(siguiente, archivo.nombre) ? 'modificado' : 'sin-seguimiento';
         siguiente = establecerArchivo(siguiente, archivo.nombre, destino);
+        // El indice de Git es por ruta: sacar de la preparacion el nombre
+        // nuevo de un renombrado **no** saca la baja del nombre viejo, que
+        // sigue preparada. Comprobado contra Git: queda `D  platos.md` junto
+        // al archivo nuevo sin seguimiento.
+        if (archivo.renombradoDe !== undefined) {
+          siguiente = {
+            ...siguiente,
+            borrados: [...new Set([...siguiente.borrados, archivo.renombradoDe])],
+          };
+        }
       } else {
         if (archivo.estado !== 'modificado') continue;
         siguiente = establecerArchivo(siguiente, archivo.nombre, 'limpio');

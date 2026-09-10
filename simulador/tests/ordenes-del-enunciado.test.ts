@@ -9,7 +9,22 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { bloquesDe, ordenesDe, resolverMarcadores, resumen } from '../cypress/soporte/ordenes';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { ejecutar } from '../src/core/motor';
+import { EQUIVALENTES, OPCIONES } from '../src/core/contrato';
+import { escenarioPorId } from '../src/escenarios';
+import {
+  bloquesDe,
+  motivoDeclarado,
+  ordenesDe,
+  ordenesEnProsa,
+  resolverMarcadores,
+  resumen,
+  type OrdenDelEnunciado,
+} from '../cypress/soporte/ordenes';
+
+const MOTOR = fileURLToPath(new URL('../src/core', import.meta.url));
 
 const LABS = fileURLToPath(new URL('../../labs', import.meta.url));
 const enunciado = (numero: string): string =>
@@ -53,14 +68,14 @@ describe('la clasificacion no salta nada en silencio', () => {
     // El verbo se consulta contra la tabla de ordenes del propio motor: el dia
     // que aprenda una orden nueva, la prueba la recoge sola.
     const ordenes = ordenesDe('```\ngit bisect start\ngit status\n```\n');
-    expect(ordenes[0]?.clase).toBe('solo-git');
+    expect(ordenes[0]?.clase).toBe('declarada');
     expect(ordenes[0]?.motivo).toContain('git bisect');
     expect(ordenes[1]?.clase).toBe('comparada');
   });
 
   it('mirar dentro de la carpeta oculta se corre solo en Git', () => {
     const ordenes = ordenesDe('```\ncat .git/HEAD\n```\n');
-    expect(ordenes[0]?.clase).toBe('solo-git');
+    expect(ordenes[0]?.clase).toBe('declarada');
     expect(ordenes[0]?.motivo).toContain('carpeta oculta');
   });
 });
@@ -91,33 +106,105 @@ describe('los marcadores que si se pueden resolver salen del escenario', () => {
   });
 });
 
-describe('cuanto de cada laboratorio queda comparado', () => {
-  it('el laboratorio 02 se compara en poco mas de la mitad, y se sabe por que', () => {
-    // Dos cosas bajan la cifra, y las dos con razon. La Parte 1 enseña a
-    // filtrar el historial por autor y por fecha, y el motor no implementa
-    // esos filtros (seccion 28 de docs/arquitectura.md). La Parte 4, que llego
-    // con el SPEC 009 desde el antiguo laboratorio 03, mira por dentro la
-    // carpeta oculta, que el simulador no modela a proposito.
-    const ordenes = resolverMarcadores(ordenesDe(enunciado('02')), '02');
-    const cuenta = resumen(ordenes);
-    expect(cuenta.comparadas / cuenta.total).toBeGreaterThan(0.55);
+describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
+  // La garantia central del SPEC 010. Para cada orden del guion, el motor
+  // tiene que hacer una de tres cosas: ejecutarla entera, decir que no la
+  // implementa, o decir que la orden no existe. La cuarta, aceptarla y
+  // descartarla en silencio, es la que este spec viene a eliminar.
+  const LABORATORIOS = ['01', '02', '03', '04', '05', '06'];
 
-    const soloGit = ordenes.filter((orden) => orden.clase === 'solo-git');
-    const porFiltro = soloGit.filter((orden) => orden.texto.startsWith('git log'));
-    const porLaCarpetaOculta = soloGit.filter((orden) =>
-      (orden.motivo ?? '').includes('carpeta oculta'),
-    );
-    expect(porFiltro.length).toBeGreaterThanOrEqual(4);
-    expect(porLaCarpetaOculta.length).toBeGreaterThanOrEqual(10);
-    // Entre las dos explican casi todo lo que queda sin comparar.
-    expect(porFiltro.length + porLaCarpetaOculta.length).toBeGreaterThan(soloGit.length * 0.7);
+  function guionDe(numero: string): readonly OrdenDelEnunciado[] {
+    const texto = enunciado(numero);
+    return [...resolverMarcadores(ordenesDe(texto), numero), ...ordenesEnProsa(texto)];
+  }
+
+  it('cada orden del guion cae en una de las tres respuestas, con motivo escrito', () => {
+    for (const numero of LABORATORIOS) {
+      for (const orden of guionDe(numero)) {
+        if (orden.clase === 'comparada') {
+          expect(orden.motivo, `lab-${numero}: ${orden.texto}`).toBe('');
+          continue;
+        }
+        expect(orden.motivo, `lab-${numero}: ${orden.texto}`).not.toBe('');
+      }
+    }
   });
 
-  it('el laboratorio 03 se compara en dos tercios: es de mover y borrar archivos', () => {
-    // Ordenar el recetario es trabajo de arbol y de indice, que el motor si
-    // modela. Lo que queda fuera es sobre todo `ls` y `cat`, que no son Git.
-    const cuenta = resumen(resolverMarcadores(ordenesDe(enunciado('03')), '03'));
-    expect(cuenta.comparadas / cuenta.total).toBeGreaterThan(0.6);
-    expect(cuenta.comparadas).toBeGreaterThan(cuenta.soloGit);
+  it('lo declarado como no soportado el motor lo dice, y no lo ejecuta', () => {
+    for (const numero of LABORATORIOS) {
+      const estado = escenarioPorId(`lab-${numero}`);
+      for (const orden of guionDe(numero)) {
+        if (orden.clase !== 'declarada') continue;
+        const resultado = ejecutar(estado, orden.texto);
+        const dicho = resultado.salida.some((linea) => linea.tipo === 'limite');
+        const inexistente = resultado.salida.some(
+          (linea) =>
+            linea.texto.includes('is not a git command') ||
+            linea.texto.includes('command not found'),
+        );
+        expect(dicho || inexistente, `lab-${numero}: ${orden.texto}`).toBe(true);
+        expect(resultado.estado, `lab-${numero}: ${orden.texto}`).toBe(estado);
+      }
+    }
+  });
+
+  it('toda opcion que el contrato reconoce la lee alguien, o esta declarada como equivalente', () => {
+    // Una opcion listada como reconocida que ningun manejador consulta es,
+    // literalmente, una opcion aceptada y descartada. Esto lo detecta sin
+    // depender de que alguien se acuerde de mirarlo.
+    const fuentes = readdirSync(MOTOR, { recursive: true, encoding: 'utf8' })
+      .filter((nombre) => nombre.endsWith('.ts'))
+      .map((nombre) => readFileSync(join(MOTOR, nombre), 'utf8'))
+      .join('\n');
+
+    for (const [verbo, opciones] of Object.entries(OPCIONES)) {
+      for (const opcion of opciones) {
+        if (opcion === '--' || Object.hasOwn(EQUIVALENTES, opcion)) continue;
+        expect(fuentes.includes(`'${opcion}'`), `${verbo} ${opcion}`).toBe(true);
+      }
+    }
+  });
+
+  it('el guion no usa ninguna opcion que el contrato no nombre', () => {
+    // Al reves que la anterior: lo que el enunciado escribe tiene que estar
+    // decidido, sea implementado o declarado. Nada a medio camino.
+    for (const numero of LABORATORIOS) {
+      for (const orden of guionDe(numero)) {
+        if (orden.clase !== 'comparada') continue;
+        expect(motivoDeclarado(orden.texto), `lab-${numero}: ${orden.texto}`).toBeNull();
+      }
+    }
+  });
+});
+
+describe('lo que queda declarado, y por que', () => {
+  it('las excepciones del punto 7.3 son las de los marcadores', () => {
+    // Los pasos donde el participante copia un identificador de una salida
+    // anterior. No se automatizan porque los identificadores del simulador y
+    // los de Git no coinciden por diseño.
+    const conMarcador: string[] = [];
+    for (const numero of ['01', '02', '03', '04', '05', '06']) {
+      const texto = enunciado(numero);
+      for (const orden of resolverMarcadores(ordenesDe(texto), numero)) {
+        if (orden.clase === 'omitida' && orden.motivo.includes('marcador')) {
+          conMarcador.push(`${numero}: ${orden.texto}`);
+        }
+      }
+    }
+    expect(conMarcador).toHaveLength(7);
+  });
+
+  it('lo demas que se declara es por contenido, por la carpeta oculta o por el disco', () => {
+    const familias = new Set<string>();
+    for (const numero of ['01', '02', '03', '04', '05', '06']) {
+      const texto = enunciado(numero);
+      for (const orden of [...resolverMarcadores(ordenesDe(texto), numero), ...ordenesEnProsa(texto)]) {
+        if (orden.clase !== 'declarada') continue;
+        familias.add(orden.motivo);
+      }
+    }
+    // Cada motivo distinto es una decision tomada y escrita en el contrato.
+    for (const motivo of familias) expect(motivo.length).toBeGreaterThan(10);
+    expect(familias.size).toBeLessThanOrEqual(10);
   });
 });

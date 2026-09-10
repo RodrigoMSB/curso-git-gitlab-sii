@@ -25,7 +25,7 @@ import {
   renombrarCarril,
 } from '../estado';
 import { formatearEstadisticas } from '../formato';
-import { archivosCambiados, baseComun, esAntepasado } from '../grafo';
+import { antepasados, archivosCambiados, baseComun, esAntepasado } from '../grafo';
 import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
 import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
@@ -160,7 +160,20 @@ export const ordenBranch: Manejador = (estado, argumentos) => {
  * Cambia la posicion actual. Mueve el puntero y nada mas, que es el punto 8.2
  * del SPEC 001: ninguna confirmacion se toca.
  */
-function cambiarA(estado: EstadoRepositorio, destino: string, nueva: boolean): ResultadoOrden {
+/**
+ * Cambia la posicion a una rama o, si no lo es, a la confirmacion que el
+ * nombre resuelva.
+ *
+ * `avisoLargo` distingue las dos ordenes: `git checkout` explica el estado
+ * desconectado con su parrafo, y `git switch --detach` solo dice donde quedo
+ * la posicion. Es la diferencia que Git hace y que el participante ve.
+ */
+function cambiarA(
+  estado: EstadoRepositorio,
+  destino: string,
+  nueva: boolean,
+  avisoLargo = true,
+): ResultadoOrden {
   const origen = ramaActual(estado) ?? idActual(estado) ?? 'HEAD';
   const rama = ramaPorNombre(estado, destino);
 
@@ -195,6 +208,12 @@ function cambiarA(estado: EstadoRepositorio, destino: string, nueva: boolean): R
       descripcion: `moving from ${origen} to ${id}`,
     },
   );
+  if (!avisoLargo) {
+    return ok(
+      siguiente,
+      lineas(`HEAD is now at ${id} ${confirmacion?.mensaje ?? ''}`.trimEnd()),
+    );
+  }
   return ok(
     siguiente,
     lineas(
@@ -213,8 +232,8 @@ function cambiarA(estado: EstadoRepositorio, destino: string, nueva: boolean): R
 export const ordenSwitch: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
-  const nombres = posicionales(argumentos, ['-c', '--create']);
-  const aCrear = valorDeOpcion(argumentos, '-c', '--create');
+  const nombres = posicionales(argumentos, ['-c', '--create', '-C', '--force-create']);
+  const aCrear = valorDeOpcion(argumentos, '-c', '--create', '-C', '--force-create');
 
   if (aCrear !== null) {
     const creacion = crearRama(estado, aCrear, nombres[0] ?? null);
@@ -226,13 +245,46 @@ export const ordenSwitch: Manejador = (estado, argumentos) => {
   if (destino === undefined) {
     return fallo(estado, 'fatal: missing branch or commit argument');
   }
+
+  // Con `--detach` el destino puede ser cualquier referencia; sin el, Git
+  // exige una rama y lo dice con esas palabras.
+  if (tieneOpcion(argumentos, '--detach')) {
+    if (resolverReferencia(estado, destino) === null) {
+      return fallo(estado, `fatal: invalid reference: '${destino}'`);
+    }
+    return cambiarA(estado, destino, false, false);
+  }
+
   if (ramaPorNombre(estado, destino) === undefined) {
+    if (resolverReferencia(estado, destino) !== null) {
+      return fallo(
+        estado,
+        `fatal: a branch is expected, got commit '${destino}'`,
+        'hint: If you want to detach HEAD at the commit, try again with the --detach option.',
+      );
+    }
     return fallo(estado, `fatal: invalid reference: '${destino}'`);
   }
   return cambiarA(estado, destino, false);
 };
 
 /** `git checkout`, con cambio, `-b` y `--` para descartar cambios. */
+/** Si la ruta existia en el arbol alcanzable desde esa confirmacion. */
+function confirmacionesQueTocan(
+  estado: EstadoRepositorio,
+  id: string,
+  ruta: string,
+): boolean {
+  const alcanzables = antepasados(estado, id);
+  let existia = false;
+  for (const confirmacion of estado.confirmaciones) {
+    if (!alcanzables.has(confirmacion.id)) continue;
+    if (confirmacion.archivos.includes(ruta)) existia = true;
+    if (confirmacion.borrados.includes(ruta)) existia = false;
+  }
+  return existia;
+}
+
 export const ordenCheckout: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
@@ -240,8 +292,37 @@ export const ordenCheckout: Manejador = (estado, argumentos) => {
   if (separador >= 0) {
     const rutas = argumentos.slice(separador + 1);
     if (rutas.length === 0) return fallo(estado, 'fatal: you must specify path(s) to restore');
+
+    // `git checkout <confirmacion> -- <ruta>` no es lo mismo que
+    // `git checkout -- <ruta>`. El primero saca el archivo de esa confirmacion
+    // y lo deja **preparado**; el segundo solo descarta lo que hubiera en el
+    // directorio de trabajo. Es la orden con la que el rescate del laboratorio
+    // 03 recupera un archivo borrado por error.
+    const desde = posicionales(argumentos.slice(0, separador))[0];
+    const origen = desde === undefined ? null : resolverReferencia(estado, desde);
+    if (desde !== undefined && origen === null) {
+      return fallo(estado, `fatal: invalid reference: ${desde}`);
+    }
+
     let siguiente = estado;
     for (const ruta of rutas) {
+      if (origen !== null) {
+        const registrada = confirmacionesQueTocan(siguiente, origen, ruta);
+        if (!registrada) {
+          return fallo(
+            estado,
+            `error: pathspec '${ruta}' did not match any file(s) known to git`,
+          );
+        }
+        siguiente = establecerArchivo(siguiente, ruta, 'preparado');
+        siguiente = {
+          ...siguiente,
+          borrados: siguiente.borrados.filter((nombre) => nombre !== ruta),
+          borradosSinPreparar: siguiente.borradosSinPreparar.filter((nombre) => nombre !== ruta),
+        };
+        continue;
+      }
+
       const archivo = siguiente.archivos.find((candidato) => candidato.nombre === ruta);
       if (archivo === undefined) {
         return fallo(

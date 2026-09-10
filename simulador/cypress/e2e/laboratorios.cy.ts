@@ -37,6 +37,10 @@ const ESTADO_POR_TONO: Readonly<Record<string, string>> = {
   nuevo: 'sin-seguimiento',
   conflicto: 'en-conflicto',
   limpio: 'limpio',
+  // Git muestra las bajas con el mismo codigo de dos columnas que el resto:
+  // `D ` cuando estan preparadas y ` D` cuando no.
+  'borrado-preparado': 'preparado',
+  'borrado-pendiente': 'modificado',
 };
 
 /**
@@ -154,6 +158,23 @@ function falloEnElSimulador(): Cypress.Chainable<boolean> {
   });
 }
 
+/**
+ * Si la ultima orden recibio la respuesta de limite del simulador.
+ *
+ * Se reconoce por el color con que la consola la pinta, que es distinto del de
+ * un reclamo de Git a proposito (punto 6.3): un limite de la herramienta no es
+ * una falla del participante.
+ */
+function limiteEnElSimulador(): Cypress.Chainable<boolean> {
+  return cy.document().then((doc) => {
+    const renglones = [...doc.querySelectorAll<HTMLElement>('[data-color]')];
+    const ultimoEco = renglones.map((renglon) => renglon.dataset.color).lastIndexOf('orden');
+    return renglones
+      .slice(ultimoEco + 1)
+      .some((renglon) => renglon.dataset.color === 'limite');
+  });
+}
+
 /** Escribe la orden en la consola y la ejecuta, como lo haria el participante. */
 function ejecutarEnElSimulador(orden: string): void {
   // Con retardo cero el campo controlado por React llega a perder el primer
@@ -165,13 +186,24 @@ function ejecutarEnElSimulador(orden: string): void {
     .type('{enter}');
 }
 
-/** Recorre un laboratorio comparando los dos lados despues de cada orden. */
+/**
+ * Recorre un laboratorio comparando los dos lados despues de cada orden.
+ *
+ * Desde el SPEC 010 esto no informa un porcentaje: **afirma**. Toda orden del
+ * guion se ejecuta en los dos lados y los estados coinciden, o la prueba falla
+ * (punto 7.1). Las categorias de «solo en Git» y de corte desaparecieron: si
+ * algo del guion no se puede comparar, es un defecto y no una categoria.
+ *
+ * Quedan dos excepciones, y estan declaradas (punto 7.3):
+ *
+ * - Los pasos con marcador, donde el participante copia un identificador de
+ *   una salida anterior. Los identificadores difieren por diseño.
+ * - Las ordenes que el contrato declara no soportadas, de las que se comprueba
+ *   que el simulador lo diga, no que las ejecute.
+ */
 function recorrer(numero: string): void {
   let lab: Laboratorio;
   let ordenes: readonly OrdenDelEnunciado[] = [];
-  /** Las que de verdad se compararon, contadas al recorrer. */
-  let comparadas = 0;
-  let cortadoEn: OrdenDelEnunciado | null = null;
 
   before(() => {
     cy.task<string>('leerEnunciado', numero).then((enunciado) => {
@@ -198,32 +230,26 @@ function recorrer(numero: string): void {
     cy.visit(`/SIMULADOR.html?lab=${numero}`);
 
     cy.then(() => {
-      // Una orden que el motor no implementa y que cambia el estado hace
-      // avanzar solo al repositorio real. Desde ahi comparar no dice nada, asi
-      // que el recorrido sigue ejecutandose en Git para que el laboratorio
-      // termine, pero se deja de comparar y se informa hasta donde se llego.
-      let comparable = true;
-
       for (const orden of ordenes) {
         if (orden.clase === 'omitida') continue;
 
-        if (orden.clase === 'comparada' && comparable) ejecutarEnElSimulador(orden.texto);
+        ejecutarEnElSimulador(orden.texto);
         cy.task<{ salida: string; fallo: boolean; cambio: boolean }>('ejecutarEnGit', {
           lab,
           orden: orden.texto,
-          // Solo hace falta medir el cambio en las que el simulador no ejecuta.
-          medirCambio: orden.clase === 'solo-git',
+          medirCambio: false,
         }).then((resultado) => {
-          // Si una orden que el simulador no ejecuto movio el repositorio real,
-          // desde aqui los dos lados dejan de ser comparables.
-          if (orden.clase === 'solo-git' && resultado.cambio && comparable) {
-            comparable = false;
-            cortadoEn = orden;
-            cy.log(
-              `el recorrido comparado se corta en «${orden.texto}» (linea ${orden.linea}): ${orden.motivo}`,
-            );
+          if (orden.clase === 'declarada') {
+            // Lo declarado no se ejecuta: se comprueba que el simulador diga
+            // que no lo implementa, con su motivo, y que el estado no cambie.
+            limiteEnElSimulador().then((dicho) => {
+              expect(
+                dicho,
+                `«${orden.texto}» (enunciado, linea ${orden.linea}) esta declarada como no soportada y el simulador tiene que decirlo`,
+              ).to.equal(true);
+            });
+            return;
           }
-          if (orden.clase !== 'comparada' || !comparable) return;
           // Una orden que funciona en la terminal y falla en el simulador, o
           // al reves, enseña algo distinto aunque el estado quede igual.
           falloEnElSimulador().then((falloSimulador) => {
@@ -239,8 +265,6 @@ function recorrer(numero: string): void {
         if (orden.clase !== 'comparada') continue;
 
         cy.task<EstadoComparable>('estadoDeGit', lab).then((git) => {
-          if (!comparable) return;
-          comparadas += 1;
           estadoDelSimulador().then((simulador) => {
             // El mensaje dice en que orden ocurrio y que mostro cada lado
             // (punto 5.4): un fallo que solo diga que difieren no sirve.
@@ -263,39 +287,29 @@ function recorrer(numero: string): void {
     });
   });
 
-  it('informa cuantas ordenes se compararon y cuantas se saltaron', () => {
-    // Nunca se salta nada en silencio (punto 6.4). Un laboratorio donde se
-    // salta la mitad de las ordenes no esta probado y hay que saberlo.
+  it('el guion entero queda cubierto, sin categorias intermedias', () => {
     cy.then(() => {
       const cuenta = resumen(ordenes);
-      const porcentaje = Math.round((comparadas / cuenta.total) * 100);
+      const declaradas = ordenes.filter((orden) => orden.clase === 'declarada');
       cy.log(
-        `lab-${numero}: ${comparadas} de ${cuenta.total} ordenes comparadas (${porcentaje}%)`,
+        `lab-${numero}: ${cuenta.comparadas} comparadas, ${cuenta.declaradas} declaradas, ${cuenta.omitidas} con marcador`,
       );
-      if (cortadoEn !== null) {
-        cy.log(
-          `  el recorrido se corto en «${cortadoEn.texto}» (linea ${cortadoEn.linea}) · ${cortadoEn.motivo}`,
-        );
-      }
       cy.task('anotarCobertura', {
         laboratorio: numero,
         total: cuenta.total,
-        comparadas,
-        soloGit: cuenta.soloGit,
-        omitidas: cuenta.omitidas,
-        cortadoEn: cortadoEn === null ? null : cortadoEn.texto,
+        comparadas: cuenta.comparadas,
+        declaradas: cuenta.declaradas,
+        conMarcador: cuenta.omitidas,
       });
-      for (const orden of ordenes.filter((candidata) => candidata.clase !== 'comparada')) {
-        cy.log(`  saltada «${orden.texto}» · ${orden.motivo}`);
-      }
       // eslint-disable-next-line no-console
       console.table(
-        ordenes
-          .filter((candidata) => candidata.clase !== 'comparada')
-          .map((orden) => ({ orden: orden.texto, clase: orden.clase, motivo: orden.motivo })),
+        declaradas.map((orden) => ({ orden: orden.texto, motivo: orden.motivo })),
       );
-      expect(cuenta.total, 'el enunciado tiene ordenes que recorrer').to.be.greaterThan(0);
-      expect(comparadas, 'alguna orden se compara').to.be.greaterThan(0);
+      // Cada orden esta en una de las tres, y ninguna quedo sin decidir.
+      expect(cuenta.comparadas + cuenta.declaradas + cuenta.omitidas).to.equal(cuenta.total);
+      expect(cuenta.comparadas, 'la mayoria del guion se compara').to.be.greaterThan(
+        cuenta.declaradas + cuenta.omitidas,
+      );
     });
   });
 }

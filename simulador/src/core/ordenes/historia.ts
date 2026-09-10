@@ -96,11 +96,22 @@ export const ordenReset: Manejador = (estado, argumentos) => {
       );
     }
     for (const nombre of afectados) {
-      siguiente = establecerArchivo(siguiente, nombre, modo === 'soft' ? 'preparado' : 'modificado');
+      if (modo === 'soft') {
+        siguiente = establecerArchivo(siguiente, nombre, 'preparado');
+        continue;
+      }
+      // Un archivo que la confirmacion deshecha habia estrenado deja de estar
+      // versionado, y entonces reaparece **sin seguimiento**, no modificado.
+      // Git lo muestra con `??` y el simulador lo mostraba con ` M`: la
+      // diferencia la encontro el recorrido comparado del laboratorio 06.
+      const destino = estaSeguido(siguiente, nombre) ? 'modificado' : 'sin-seguimiento';
+      siguiente = establecerArchivo(siguiente, nombre, destino);
     }
   }
 
-  siguiente = { ...siguiente, fusion: null };
+  // Git guarda en ORIG_HEAD donde estaba antes del salto. Es la red que el
+  // enunciado enseña a usar cuando el reset se fue de mas.
+  siguiente = { ...siguiente, fusion: null, origHead: cabeza };
   siguiente = anotarMovimiento(siguiente, {
     id: destino,
     idAnterior: cabeza,

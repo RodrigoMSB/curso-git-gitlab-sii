@@ -19,6 +19,8 @@ const COLOR_POR_TONO: Readonly<Record<TonoElemento, string>> = {
   preparado: 'var(--consola-verde)',
   conflicto: 'var(--consola-amarillo)',
   neutro: 'var(--texto-apagado)',
+  'borrado-preparado': 'var(--consola-verde)',
+  'borrado-pendiente': 'var(--consola-rojo)',
 };
 
 export function Areas({
@@ -50,7 +52,7 @@ export function Areas({
                   data-tono={elemento.tono}
                   style={{ color: COLOR_POR_TONO[elemento.tono] }}
                 >
-                  {elemento.texto}
+                  {elemento.tono.startsWith('borrado-') ? <s>{elemento.texto}</s> : elemento.texto}
                 </li>
               ))}
             </ul>

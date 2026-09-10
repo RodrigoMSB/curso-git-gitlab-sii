@@ -7,7 +7,10 @@
 
 import type { OrdenAnalizada } from '../analizador';
 import { tokenizar } from '../analizador';
-import { fallo } from '../salida';
+import { esOperador } from '../analizador';
+import { formaSinSoporte, opcionesNoReconocidas } from '../contrato';
+import { archivoPorNombre, establecerArchivo } from '../estado';
+import { fallo, limite } from '../salida';
 import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
 import {
   ordenAdd,
@@ -18,16 +21,26 @@ import {
   ordenStatus,
   type Manejador,
 } from './basicas';
+import { ordenLsFiles, ordenMv, ordenRm } from './archivos';
 import { ordenCommit, ordenLog } from './confirmar';
 import { ordenStash } from './guardado';
 import { ordenRebase, ordenReflog, ordenReset, ordenRevert } from './historia';
+import {
+  ordenCatFile,
+  ordenMergeBase,
+  ordenRevParse,
+  ordenShow,
+} from './inspeccion';
 import {
   ordenCat,
   ordenClear,
   ordenDesconocida,
   ordenEcho,
   ordenLs,
+  ordenMkdir,
+  ordenMv as ordenMvInterprete,
   ordenPwd,
+  ordenRm as ordenRmInterprete,
   ordenRemote,
 } from './interprete';
 import {
@@ -45,6 +58,9 @@ export const ORDENES_GIT: Readonly<Record<string, Manejador>> = {
   status: ordenStatus,
   add: ordenAdd,
   restore: ordenRestore,
+  rm: ordenRm,
+  mv: ordenMv,
+  'ls-files': ordenLsFiles,
   commit: ordenCommit,
   log: ordenLog,
   diff: ordenDiff,
@@ -59,11 +75,18 @@ export const ORDENES_GIT: Readonly<Record<string, Manejador>> = {
   reflog: ordenReflog,
   rebase: ordenRebase,
   remote: ordenRemote,
+  show: ordenShow,
+  'rev-parse': ordenRevParse,
+  'merge-base': ordenMergeBase,
+  'cat-file': ordenCatFile,
 };
 
 /** Ordenes del interprete de mandatos. */
 export const ORDENES_INTERPRETE: Readonly<Record<string, Manejador>> = {
   ls: ordenLs,
+  mkdir: ordenMkdir,
+  mv: ordenMvInterprete,
+  rm: ordenRmInterprete,
   pwd: ordenPwd,
   clear: ordenClear,
   cat: ordenCat,
@@ -114,6 +137,23 @@ function expandirAlias(
   return { argumentos: actuales, ciclo: true };
 }
 
+/**
+ * Aparta la redireccion del final de la linea, si la hay.
+ *
+ * `git log --oneline > historial.txt` se ejecuta igual, pero su salida va al
+ * archivo en vez de a la consola y el archivo aparece en el directorio de
+ * trabajo. Es lo que el laboratorio 06 usa para guardarse un respaldo antes de
+ * reescribir la historia.
+ */
+function apartarRedireccion(argumentos: readonly string[]): {
+  readonly argumentos: readonly string[];
+  readonly destino: string | null;
+} {
+  const corte = argumentos.findIndex(esOperador);
+  if (corte < 0) return { argumentos, destino: null };
+  return { argumentos: argumentos.slice(0, corte), destino: argumentos[corte + 1] ?? null };
+}
+
 /** Elige el manejador y lo aplica. */
 export function despachar(
   estado: EstadoRepositorio,
@@ -128,11 +168,25 @@ export function despachar(
       );
     }
 
-    const expandida = expandirAlias(estado, orden.argumentos);
+    const redirigida = apartarRedireccion(orden.argumentos);
+    if (redirigida.destino === null && orden.argumentos.some(esOperador)) {
+      return fallo(estado, "bash: syntax error near unexpected token `newline'");
+    }
+    const expandida = expandirAlias(estado, redirigida.argumentos);
     const subOrden = expandida.argumentos[0] ?? '';
     if (expandida.ciclo) {
       return fallo(estado, `fatal: alias loop detected: expansion of '${subOrden}' does not terminate`);
     }
+
+    // La forma se consulta sobre la linea entera, con la redireccion incluida:
+    // escribir fuera del repositorio es justo una de las formas declaradas.
+    const revision = revisarContrato(
+      `git ${expandida.argumentos.join(' ')}${redirigida.destino === null ? '' : ` > ${redirigida.destino}`}`,
+      subOrden,
+      expandida.argumentos.slice(1),
+      `git ${subOrden}`,
+    );
+    if (revision !== null) return limite(estado, revision);
 
     const manejador = ORDENES_GIT[subOrden];
     if (manejador === undefined) {
@@ -141,10 +195,55 @@ export function despachar(
         `git: '${subOrden}' is not a git command. See 'git --help'.`,
       );
     }
-    return manejador(estado, expandida.argumentos.slice(1));
+
+    const resultado = manejador(estado, expandida.argumentos.slice(1));
+    if (redirigida.destino === null || resultado.error) return resultado;
+    return { ...resultado, estado: escribirEnArchivo(resultado.estado, redirigida.destino), salida: [] };
   }
+
+  const revision = revisarContrato(
+    orden.cruda,
+    orden.programa,
+    orden.argumentos,
+    orden.programa,
+  );
+  if (revision !== null) return limite(estado, revision);
 
   const manejador = ORDENES_INTERPRETE[orden.programa];
   if (manejador === undefined) return ordenDesconocida(estado, orden.programa);
   return manejador(estado, orden.argumentos);
+}
+
+/** Deja el archivo de destino de una redireccion en el directorio de trabajo. */
+function escribirEnArchivo(estado: EstadoRepositorio, destino: string): EstadoRepositorio {
+  const existente = archivoPorNombre(estado, destino);
+  if (existente === undefined) return establecerArchivo(estado, destino, 'sin-seguimiento');
+  if (existente.estado === 'limpio') return establecerArchivo(estado, destino, 'modificado');
+  return estado;
+}
+
+/**
+ * Consulta el contrato y devuelve que es lo que el motor no implementa de esta
+ * orden, o `null` si la puede ejecutar entera.
+ *
+ * Se pregunta dos cosas, en este orden. Primero si la orden cae en una forma
+ * declarada como no soportada, que lleva su propio motivo escrito. Despues si
+ * trae alguna opcion que su manejador no entiende, porque una opcion que llega
+ * al manejador sin que este la mire es justo el caso que el punto 1 del SPEC
+ * 010 viene a eliminar: aceptada y descartada en silencio.
+ */
+function revisarContrato(
+  linea: string,
+  nombre: string,
+  argumentos: readonly string[],
+  comoSeLlama: string,
+): string | null {
+  const forma = formaSinSoporte(linea);
+  if (forma !== undefined) return forma.motivo;
+
+  const fuera = opcionesNoReconocidas(nombre, argumentos);
+  if (fuera.length === 0) return null;
+  const lista = fuera.map((opcion) => `«${opcion}»`).join(', ');
+  const plural = fuera.length === 1 ? 'la opcion' : 'las opciones';
+  return `${plural} ${lista} de ${comoSeLlama}`;
 }

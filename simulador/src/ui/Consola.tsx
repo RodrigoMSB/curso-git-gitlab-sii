@@ -27,6 +27,7 @@ const CLASE_POR_COLOR: Readonly<Record<ColorConsola, string>> = {
   exito: 'text-[var(--consola-verde)]',
   error: 'text-[var(--consola-rojo)]',
   aviso: 'text-[var(--consola-amarillo)]',
+  limite: 'text-[var(--consola-azul)] italic',
   orden: 'text-[var(--texto)]',
   apagado: 'text-[var(--texto-apagado)]',
 };

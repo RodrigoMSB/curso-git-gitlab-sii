@@ -40,8 +40,9 @@ export function generarId(semilla: string, usados: ReadonlySet<string>): string 
   return id;
 }
 
-const EPOCA = Date.UTC(2026, 2, 2, 12, 0, 0);
-const MILISEGUNDOS_POR_HORA = 3_600_000;
+/** Instante de arranque del reloj del simulador, en segundos desde la epoca. */
+const EPOCA = Date.UTC(2026, 2, 2, 12, 0, 0) / 1000;
+const SEGUNDOS_POR_HORA = 3600;
 
 const DIAS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const MESES = [
@@ -50,23 +51,30 @@ const MESES = [
 ] as const;
 
 /**
- * Fecha determinista derivada del contador del estado.
+ * Instante determinista derivado del contador del estado, en segundos desde la
+ * epoca.
  *
  * Cada confirmacion nueva queda una hora despues de la anterior. Se evita el
  * reloj del sistema para que el motor siga siendo puro y las pruebas estables.
  */
-export function fechaDeterminista(contador: number): string {
-  return fechaDeInstante(new Date(EPOCA + contador * MILISEGUNDOS_POR_HORA));
+export function epocaDeterminista(contador: number): number {
+  return EPOCA + contador * SEGUNDOS_POR_HORA;
 }
 
 /**
- * Fecha de una epoca en segundos, que es la unidad en que los escenarios de
- * laboratorio declaran sus confirmaciones y la misma que usa `preparar.sh`
- * para fijarlas en el disco. Tener una sola unidad es lo que permite que las
- * dos caras del escenario se comparen (SPEC 007).
+ * Fecha de una epoca en segundos, que es la unidad en que las confirmaciones
+ * guardan su instante, en que los escenarios de laboratorio lo declaran y en
+ * que `preparar.sh` lo fija en el disco. Tener una sola unidad es lo que
+ * permite que las dos caras del escenario se comparen (SPEC 007), y es lo que
+ * hace posible filtrar el historial por fecha.
  */
 export function fechaDeEpoca(epoca: number): string {
   return fechaDeInstante(new Date(epoca * 1000));
+}
+
+/** La misma fecha en la forma corta que pide `git log --date=short`. */
+export function fechaCorta(epoca: number): string {
+  return new Date(epoca * 1000).toISOString().slice(0, 10);
 }
 
 function fechaDeInstante(instante: Date): string {

@@ -44,7 +44,7 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
     (archivo) => archivo.estado === 'sin-seguimiento',
   );
 
-  if (preparados.length > 0) {
+  if (preparados.length > 0 || estado.borrados.length > 0) {
     filas.push('');
     filas.push('Changes to be committed:');
     filas.push(
@@ -52,7 +52,16 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
         ? '  (use "git rm --cached <file>..." to unstage)'
         : '  (use "git restore --staged <file>..." to unstage)',
     );
+    for (const nombre of estado.borrados) {
+      filas.push(`${SANGRIA}${'deleted:'.padEnd(12)}${nombre}`);
+    }
     for (const archivo of preparados) {
+      if (archivo.renombradoDe !== undefined) {
+        filas.push(
+          `${SANGRIA}${'renamed:'.padEnd(12)}${archivo.renombradoDe} -> ${archivo.nombre}`,
+        );
+        continue;
+      }
       const etiqueta = estaSeguido(estado, archivo.nombre) ? 'modified:' : 'new file:';
       filas.push(`${SANGRIA}${etiqueta.padEnd(12)}${archivo.nombre}`);
     }
@@ -67,11 +76,14 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
     }
   }
 
-  if (modificados.length > 0) {
+  if (modificados.length > 0 || estado.borradosSinPreparar.length > 0) {
     filas.push('');
     filas.push('Changes not staged for commit:');
-    filas.push('  (use "git add <file>..." to update what will be committed)');
+    filas.push('  (use "git add/rm <file>..." to update what will be committed)');
     filas.push('  (use "git restore <file>..." to discard changes in working directory)');
+    for (const nombre of estado.borradosSinPreparar) {
+      filas.push(`${SANGRIA}${'deleted:'.padEnd(12)}${nombre}`);
+    }
     for (const archivo of modificados) {
       filas.push(`${SANGRIA}${'modified:'.padEnd(12)}${archivo.nombre}`);
     }
@@ -87,10 +99,10 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
   }
 
   filas.push('');
-  if (preparados.length > 0 || enConflicto.length > 0) {
+  if (preparados.length > 0 || enConflicto.length > 0 || estado.borrados.length > 0) {
     // Git no imprime cierre cuando hay algo preparado.
     filas.pop();
-  } else if (modificados.length > 0) {
+  } else if (modificados.length > 0 || estado.borradosSinPreparar.length > 0) {
     filas.push('no changes added to commit (use "git add" and/or "git commit -a")');
   } else if (sinSeguimiento.length > 0) {
     filas.push('nothing added to commit but untracked files present (use "git add" to track)');
@@ -107,10 +119,17 @@ export function formatearEstadoCorto(estado: EstadoRepositorio): readonly string
   // exhaustividad. Agregar un `default` para callar al linter, que no analiza
   // tipos, convertiria un error de compilacion en un caso silencioso el dia que
   // se agregue un estado nuevo.
+  const borrados = [
+    ...estado.borrados.map((nombre) => `D  ${nombre}`),
+    ...estado.borradosSinPreparar.map((nombre) => ` D ${nombre}`),
+  ];
   // biome-ignore lint/suspicious/useIterableCallbackReturn: el switch es exhaustivo por tipos
-  return estado.archivos.flatMap((archivo) => {
+  const resto = estado.archivos.flatMap((archivo) => {
     switch (archivo.estado) {
       case 'preparado':
+        if (archivo.renombradoDe !== undefined) {
+          return [`R  ${archivo.renombradoDe} -> ${archivo.nombre}`];
+        }
         return [`${estaSeguido(estado, archivo.nombre) ? 'M' : 'A'}  ${archivo.nombre}`];
       case 'modificado':
         return [` M ${archivo.nombre}`];
@@ -122,6 +141,7 @@ export function formatearEstadoCorto(estado: EstadoRepositorio): readonly string
         return [];
     }
   });
+  return [...borrados, ...resto];
 }
 
 export interface OpcionesHistorial {

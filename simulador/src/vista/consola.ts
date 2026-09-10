@@ -9,7 +9,14 @@
 import { ORDENES_GIT, ORDENES_INTERPRETE, ramaActual, tokenizar } from '../core';
 import type { EstadoRepositorio, LineaSalida } from '../core/tipos';
 
-export type ColorConsola = 'normal' | 'exito' | 'error' | 'aviso' | 'orden' | 'apagado';
+export type ColorConsola =
+  | 'normal'
+  | 'exito'
+  | 'error'
+  | 'aviso'
+  | 'limite'
+  | 'orden'
+  | 'apagado';
 
 export interface Renglon {
   readonly clave: string;
@@ -70,6 +77,9 @@ export function colorearSalida(
     const clave = `${prefijoClave}:${indice}`;
 
     if (linea.tipo === 'error') return { clave, texto, color: 'error' };
+    // Un limite del simulador no es un fallo del participante, asi que no se
+    // pinta como un reclamo de Git (punto 6.3 del SPEC 010).
+    if (linea.tipo === 'limite') return { clave, texto, color: 'limite' };
     if (linea.tipo === 'aviso') return { clave, texto, color: 'aviso' };
     if (linea.tipo === 'exito') return { clave, texto, color: 'exito' };
 

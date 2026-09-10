@@ -8,7 +8,6 @@
 
 import { agregarConfirmacion } from '../core/confirmaciones';
 import { estadoVacio } from '../core/estado';
-import { fechaDeEpoca } from '../core/identificadores';
 import type { EstadoRepositorio } from '../core/tipos';
 import type { EscenarioDeclarado } from './tipos';
 
@@ -45,7 +44,7 @@ export function construirEscenario(declaracion: EscenarioDeclarado): EstadoRepos
       matiz: `${declaracion.id}:${declarada.clave}`,
       ...(declarada.autor === undefined ? {} : { autor: declarada.autor }),
       ...(declarada.correo === undefined ? {} : { correo: declarada.correo }),
-      ...(declarada.epoca === undefined ? {} : { fecha: fechaDeEpoca(declarada.epoca) }),
+      ...(declarada.epoca === undefined ? {} : { epoca: declarada.epoca }),
     });
     estado = creado.estado;
     identificadores.set(declarada.clave, creado.confirmacion.id);

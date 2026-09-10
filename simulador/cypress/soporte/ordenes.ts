@@ -1,24 +1,38 @@
 /**
- * Las ordenes salen del enunciado (seccion 2 del SPEC 008).
+ * El guion de un laboratorio sale de su enunciado (SPEC 008, ampliado por el
+ * SPEC 010).
  *
  * No hay una lista escrita aparte, a proposito: una lista aparte se
  * desincroniza del enunciado la primera vez que alguien corrige un paso, y a
  * partir de ahi la prueba valida un laboratorio que ya no existe.
  *
- * Este modulo lee el `README.md` del laboratorio, saca sus bloques de ordenes
- * en orden y clasifica cada linea. La clasificacion decide que se ejecuta en
- * cada lado, y esta pensada para que nada se salte en silencio.
+ * Este modulo lee el `README.md` del laboratorio y saca dos cosas:
+ *
+ * 1. Las ordenes de los bloques cercados, en orden. Son las que el
+ *    participante escribe siguiendo el enunciado y las que el recorrido
+ *    ejecuta en los dos lados.
+ * 2. Las ordenes que el enunciado nombra en prosa dentro de su seccion de
+ *    rescate (punto 2.3 del SPEC 010). Un participante perdido escribe
+ *    justamente esas, asi que entran al contrato aunque el recorrido no las
+ *    ejecute.
+ *
+ * **Lo que el motor no implementa no se declara aqui.** Se declara en
+ * `src/core/contrato.ts`, que es el unico lugar donde vive el contrato, y este
+ * modulo lo consulta. Tener dos listas fue lo que dejo al extractor creyendo
+ * que `git config --list` no estaba implementado cuando si lo estaba.
  */
 
 import { ORDENES_GIT, ORDENES_INTERPRETE } from '../../src/core';
+import { tokenizar } from '../../src/core/analizador';
+import { formaSinSoporte, opcionesNoReconocidas } from '../../src/core/contrato';
 import { ALIAS_DEL_TALLER, declaracionPorId } from '../../src/escenarios';
 
 /** Que hacer con una linea del enunciado. */
 export type Clase =
   /** Se ejecuta en los dos lados y se comparan los estados. */
   | 'comparada'
-  /** Se ejecuta solo en Git real: el simulador no la soporta. */
-  | 'solo-git'
+  /** El motor la declara no soportada: se comprueba que lo diga (punto 7.3). */
+  | 'declarada'
   /** No se ejecuta en ninguno de los dos lados. */
   | 'omitida';
 
@@ -32,99 +46,7 @@ export interface OrdenDelEnunciado {
 }
 
 /**
- * Que una orden corte el recorrido comparado **no se decide con una lista**.
- *
- * Se decide mirando lo que hizo: si una orden que el motor no implementa
- * cambia el estado del repositorio real, desde ahi el simulador se queda atras
- * y comparar deja de decir nada. Si no lo cambia, como un `cat` de la carpeta
- * oculta, el recorrido sigue.
- *
- * La comprobacion vive en `cypress/e2e/laboratorios.cy.ts`, que es donde se
- * tiene el estado antes y despues.
- */
-
-/**
- * Ordenes que el motor del simulador no implementa.
- *
- * Es el unico lugar donde se declaran (punto 6.2). Cada una lleva su motivo, y
- * la prueba informa cuantas se saltaron: un laboratorio donde se salta la mitad
- * de las ordenes no esta probado y hay que saberlo.
- *
- * Se siguen ejecutando en Git real, para que el repositorio no se desalinee de
- * ahi en adelante.
- */
-export const SIN_SOPORTE: readonly { readonly patron: RegExp; readonly motivo: string }[] = [
-  {
-    patron: /^cd\b/,
-    motivo: 'el simulador trabaja siempre sobre el repositorio del escenario; no hay donde moverse',
-  },
-  {
-    patron: /^(cat|ls)\s+\.git\b/,
-    motivo: 'el simulador no modela el contenido de la carpeta oculta; la parte 4 del laboratorio 02 la mira en el disco',
-  },
-  {
-    patron: /^git config\b.*--list/,
-    motivo: 'el motor no lista la configuracion completa',
-  },
-  {
-    patron: /^git log\b.*\s-S(\s|$)/,
-    motivo:
-      'el motor no implementa la busqueda por contenido: no versiona contenido que buscar',
-  },
-  {
-    patron: /^git log\b.*\s--\s/,
-    motivo: 'el motor no implementa el filtrado del historial por archivo',
-  },
-  {
-    patron: /^git log\b.*--(author|since|until)=/,
-    motivo:
-      'el motor acepta el filtro y lo ignora: muestra la historia entera (seccion 28 de docs/arquitectura.md)',
-  },
-  {
-    patron: /^git log\b.*--format=/,
-    motivo: 'el motor acepta el formato y lo ignora: muestra siempre la forma larga',
-  },
-  {
-    patron: /^git (log|show)\b.*--stat\b/,
-    motivo: 'el motor no produce el resumen de lineas cambiadas',
-  },
-  {
-    patron: /^git log\b.*\s[^\s]+\.\.[^\s]+/,
-    motivo: 'el motor no implementa el rango «a..b» del historial',
-  },
-  {
-    patron: /^git switch\b.*(--detach|HEAD[~^])/,
-    motivo:
-      'el motor no resuelve referencias relativas en git switch, aunque si en git checkout (seccion 28 de docs/arquitectura.md)',
-  },
-  {
-    patron: /^git\b.*[^>]>[^>]/,
-    motivo: 'el interprete del simulador solo redirige la salida de echo, no la de Git',
-  },
-  {
-    patron: /^git commit\b.*\s-c\s/,
-    motivo: 'el motor no implementa reutilizar el mensaje de otra confirmacion con -c',
-  },
-];
-
-/**
- * Si el motor conoce el verbo de la orden.
- *
- * Se le pregunta al propio motor en vez de mantener una lista a mano: asi el
- * dia que el motor aprenda una orden nueva, la prueba la recoge sola y deja de
- * saltarla. Lo que queda en `SIN_SOPORTE` son los casos donde el verbo si
- * existe pero esa forma concreta no.
- */
-function verboConocido(texto: string): boolean {
-  const piezas = expandirAlias(texto).split(/\s+/);
-  const primera = piezas[0] ?? '';
-  if (primera !== 'git') return Object.hasOwn(ORDENES_INTERPRETE, primera);
-  const sub = piezas[1] ?? '';
-  return Object.hasOwn(ORDENES_GIT, sub);
-}
-
-/**
- * Reemplaza `git lg` por la orden larga que abrevia, para clasificarla.
+ * Reemplaza `git lg` por la orden larga que abrevia.
  *
  * Los alias del taller son parte del guion: el participante los configura en
  * el laboratorio 01 y desde ahi los escribe en todos los demas. Clasificar
@@ -138,6 +60,44 @@ export function expandirAlias(texto: string): string {
   const valor = (ALIAS_DEL_TALLER as Readonly<Record<string, string>>)[sub];
   if (valor === undefined) return texto;
   return ['git', valor, ...piezas.slice(2)].join(' ');
+}
+
+/**
+ * Si el motor conoce el verbo de la orden.
+ *
+ * Se le pregunta al propio motor en vez de mantener una lista a mano: el dia
+ * que aprenda una orden nueva, la prueba la recoge sola.
+ */
+function verboConocido(texto: string): boolean {
+  const piezas = expandirAlias(texto).split(/\s+/);
+  const primera = piezas[0] ?? '';
+  if (primera !== 'git') return Object.hasOwn(ORDENES_INTERPRETE, primera);
+  const sub = piezas[1] ?? '';
+  return Object.hasOwn(ORDENES_GIT, sub);
+}
+
+/**
+ * Lo que el motor responderia a esta orden, segun su contrato.
+ *
+ * Devuelve el motivo cuando la declara no soportada, y `null` cuando se
+ * compromete a ejecutarla entera.
+ */
+export function motivoDeclarado(texto: string): string | null {
+  const expandida = expandirAlias(texto);
+  const forma = formaSinSoporte(expandida);
+  if (forma !== undefined) return forma.motivo;
+
+  // Se tokeniza como lo hace el motor, respetando las comillas: si no, el
+  // valor de `git config alias.lg "log --oneline ..."` pareceria una retahila
+  // de opciones de `git config` que nadie implementa.
+  const piezas = tokenizar(expandida).filter((pieza) => pieza !== '');
+  const esGit = piezas[0] === 'git';
+  const nombre = (esGit ? piezas[1] : piezas[0]) ?? '';
+  const argumentos = piezas.slice(esGit ? 2 : 1);
+  const fuera = opcionesNoReconocidas(nombre, argumentos);
+  if (fuera.length === 0) return null;
+  const como = esGit ? `git ${nombre}` : nombre;
+  return `${fuera.map((opcion) => `«${opcion}»`).join(', ')} de ${como}`;
 }
 
 /** Lineas que no son ordenes ejecutables en ningun lado. */
@@ -155,7 +115,10 @@ const NO_EJECUTABLES: readonly { readonly patron: RegExp; readonly motivo: strin
 /** Bloques que no son ordenes, sino contenido de archivos que el enunciado muestra. */
 function pareceOrden(linea: string): boolean {
   const primera = linea.split(/\s+/)[0] ?? '';
-  return /^(git|ls|cat|pwd|echo|cd|mkdir|wc|labs|\.\/)/.test(primera);
+  // El verbo tiene que ser la palabra entera: el enunciado del laboratorio 03
+  // habla de un archivo llamado `gitignore`, que no es una orden.
+  return /^(git|ls|cat|pwd|echo|cd|mkdir|wc|diff|rm|mv|labs)$/.test(primera) ||
+    primera.startsWith('./');
 }
 
 /** Saca los bloques cercados del enunciado, en orden, con su numero de linea. */
@@ -182,6 +145,28 @@ export function bloquesDe(enunciado: string): readonly { linea: number; contenid
   return bloques;
 }
 
+/** Clasifica una linea de orden segun lo que el motor se compromete a hacer con ella. */
+function clasificar(texto: string, linea: number): OrdenDelEnunciado {
+  const noEjecutable = NO_EJECUTABLES.find((regla) => regla.patron.test(texto));
+  if (noEjecutable !== undefined) {
+    return { texto, clase: 'omitida', motivo: noEjecutable.motivo, linea };
+  }
+
+  const declarado = motivoDeclarado(texto);
+  if (declarado !== null) {
+    return { texto, clase: 'declarada', motivo: declarado, linea };
+  }
+
+  if (!verboConocido(texto)) {
+    const verbo = texto.startsWith('git ')
+      ? texto.split(/\s+/).slice(0, 2).join(' ')
+      : (texto.split(/\s+/)[0] ?? texto);
+    return { texto, clase: 'declarada', motivo: `el verbo «${verbo}»`, linea };
+  }
+
+  return { texto, clase: 'comparada', motivo: '', linea };
+}
+
 /** Clasifica cada linea de orden del enunciado, en el orden en que aparece. */
 export function ordenesDe(enunciado: string): readonly OrdenDelEnunciado[] {
   const ordenes: OrdenDelEnunciado[] = [];
@@ -189,59 +174,53 @@ export function ordenesDe(enunciado: string): readonly OrdenDelEnunciado[] {
   for (const bloque of bloquesDe(enunciado)) {
     bloque.contenido.split('\n').forEach((cruda, desplazamiento) => {
       const texto = cruda.trim();
-      const linea = bloque.linea + desplazamiento;
       if (texto === '' || !pareceOrden(texto)) return;
-
-      const noEjecutable = NO_EJECUTABLES.find((regla) => regla.patron.test(texto));
-      if (noEjecutable !== undefined) {
-        ordenes.push({
-          texto,
-          clase: 'omitida',
-          motivo: noEjecutable.motivo,
-          linea
-        });
-        return;
-      }
-
-      const sinSoporte = SIN_SOPORTE.find((regla) => regla.patron.test(texto));
-      if (sinSoporte !== undefined) {
-        ordenes.push({
-          texto,
-          clase: 'solo-git',
-          motivo: sinSoporte.motivo,
-          linea
-        });
-        return;
-      }
-
-      if (!verboConocido(texto)) {
-        const verbo = texto.startsWith('git ') ? texto.split(/\s+/).slice(0, 2).join(' ') : texto.split(/\s+/)[0];
-        ordenes.push({
-          texto,
-          clase: 'solo-git',
-          motivo: `el motor no implementa «${verbo}»`,
-          linea
-        });
-        return;
-      }
-
-      ordenes.push({ texto, clase: 'comparada', motivo: '', linea });
+      ordenes.push(clasificar(texto, bloque.linea + desplazamiento));
     });
   }
   return ordenes;
 }
 
-/** Resumen para el informe del punto 6.3. */
+/**
+ * Ordenes que el enunciado nombra en prosa dentro de su seccion de rescate
+ * (punto 2.3 del SPEC 010).
+ *
+ * Son las que escribe quien se perdio, y por eso entran al contrato aunque el
+ * recorrido no las ejecute: varias solo tienen sentido sobre un repositorio en
+ * un estado que el guion no produce.
+ */
+export function ordenesEnProsa(enunciado: string): readonly OrdenDelEnunciado[] {
+  const lineas = enunciado.split('\n');
+  const inicio = lineas.findIndex((linea) => /^##\s+Si algo sali/.test(linea));
+  if (inicio < 0) return [];
+  const finRelativo = lineas.slice(inicio + 1).findIndex((linea) => /^##\s/.test(linea));
+  const fin = finRelativo < 0 ? lineas.length : inicio + 1 + finRelativo;
+
+  const ordenes: OrdenDelEnunciado[] = [];
+  const vistas = new Set<string>();
+  for (let indice = inicio; indice < fin; indice += 1) {
+    const linea = lineas[indice] ?? '';
+    for (const coincidencia of linea.matchAll(/`([^`]+)`/g)) {
+      const texto = (coincidencia[1] ?? '').trim();
+      if (!pareceOrden(texto) || vistas.has(texto)) continue;
+      vistas.add(texto);
+      ordenes.push(clasificar(texto, indice + 1));
+    }
+  }
+  return ordenes;
+}
+
+/** Resumen del guion de un laboratorio. */
 export function resumen(ordenes: readonly OrdenDelEnunciado[]): {
   readonly total: number;
   readonly comparadas: number;
-  readonly soloGit: number;
+  readonly declaradas: number;
   readonly omitidas: number;
 } {
   return {
     total: ordenes.length,
     comparadas: ordenes.filter((orden) => orden.clase === 'comparada').length,
-    soloGit: ordenes.filter((orden) => orden.clase === 'solo-git').length,
+    declaradas: ordenes.filter((orden) => orden.clase === 'declarada').length,
     omitidas: ordenes.filter((orden) => orden.clase === 'omitida').length,
   };
 }
@@ -259,8 +238,8 @@ export function resumen(ordenes: readonly OrdenDelEnunciado[]): {
  *
  * Los marcadores que nombran un identificador de confirmacion se quedan sin
  * resolver: los identificadores del simulador y los de Git no coinciden por
- * diseño, asi que no hay un unico valor que sirva en los dos lados. Todos ellos
- * son ordenes de solo mirar, de modo que no desalinean nada.
+ * diseño, asi que no hay un unico valor que sirva en los dos lados. Son las
+ * excepciones declaradas del punto 7.3.
  */
 export function resolverMarcadores(
   ordenes: readonly OrdenDelEnunciado[],
@@ -281,11 +260,6 @@ export function resolverMarcadores(
     if (orden.clase !== 'omitida') return orden;
     const sustitucion = sustituciones.find((candidata) => candidata.patron.test(orden.texto));
     if (sustitucion === undefined || sustitucion.valor === undefined) return orden;
-    return {
-      ...orden,
-      texto: orden.texto.replace('<archivo>', sustitucion.valor),
-      clase: 'comparada' as const,
-      motivo: '',
-    };
+    return clasificar(orden.texto.replace('<archivo>', sustitucion.valor), orden.linea);
   });
 }

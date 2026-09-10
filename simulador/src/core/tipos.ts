@@ -27,6 +27,12 @@ export type EstadoArchivo =
 export interface Archivo {
   readonly nombre: string;
   readonly estado: EstadoArchivo;
+  /**
+   * Nombre anterior, cuando el archivo llego aqui por un renombrado que
+   * todavia no se confirma. Es lo que permite que `git status` diga
+   * `renamed:` en vez de un borrado y un archivo nuevo.
+   */
+  readonly renombradoDe?: string;
 }
 
 /** Nodo del grafo. Dos padres significan confirmacion de union. */
@@ -39,10 +45,21 @@ export interface Confirmacion {
   readonly carril: number;
   readonly autor: string;
   readonly correo: string;
-  /** Fecha determinista, derivada del contador del estado. */
+  /**
+   * Instante de la confirmacion, en segundos desde la epoca. Es lo que
+   * permite filtrar el historial por fecha y darle forma con `--date`.
+   */
+  readonly epoca: number;
+  /** La misma fecha ya escrita, en el formato largo que muestra `git log`. */
   readonly fecha: string;
   /** Nombres de los archivos que la confirmacion registro. */
   readonly archivos: readonly string[];
+  /**
+   * Nombres que la confirmacion saco del seguimiento. Sin esto no se puede
+   * distinguir un archivo que sigue versionado de uno que se retiro con
+   * `git rm`, que es justo lo que el laboratorio 03 viene a enseñar.
+   */
+  readonly borrados: readonly string[];
 }
 
 /**
@@ -141,17 +158,41 @@ export interface EstadoRepositorio {
   readonly etiquetas: readonly Etiqueta[];
   readonly puntero: Puntero;
   readonly archivos: readonly Archivo[];
+  /**
+   * Carpetas que existen y todavia no tienen ningun archivo dentro. Las que si
+   * lo tienen se deducen del nombre del archivo y no hace falta anotarlas.
+   */
+  readonly carpetas: readonly string[];
+  /** Archivos cuya salida del seguimiento esta preparada y sin confirmar. */
+  readonly borrados: readonly string[];
+  /**
+   * Archivos versionados que desaparecieron del directorio de trabajo sin que
+   * nadie lo preparara, tipicamente por un `rm` o un `mv` del interprete. Git
+   * los muestra como borrados en la seccion de cambios sin preparar.
+   */
+  readonly borradosSinPreparar: readonly string[];
   readonly guardados: readonly EntradaGuardado[];
   readonly reflog: readonly EntradaReflog[];
   readonly remotos: readonly Remoto[];
   readonly config: Configuracion;
   readonly fusion: FusionEnCurso | null;
+  /**
+   * Donde estaba la posicion antes de la ultima orden que la movio de golpe:
+   * `reset`, `merge` o `rebase`. Git la guarda con el nombre `ORIG_HEAD` y es
+   * la red de seguridad que el laboratorio 06 enseña a usar.
+   */
+  readonly origHead: string | null;
   readonly carriles: readonly Carril[];
   /** Contador monotono que hace deterministas los identificadores generados. */
   readonly contador: number;
 }
 
-export type TipoLinea = 'salida' | 'error' | 'aviso' | 'exito';
+/**
+ * `limite` es lo que el motor responde cuando recibe una orden que declara no
+ * implementar. No es un error de Git ni una falla del participante, y por eso
+ * se distingue de `error` tambien en la pantalla (punto 6.3 del SPEC 010).
+ */
+export type TipoLinea = 'salida' | 'error' | 'aviso' | 'exito' | 'limite';
 
 export interface LineaSalida {
   readonly tipo: TipoLinea;

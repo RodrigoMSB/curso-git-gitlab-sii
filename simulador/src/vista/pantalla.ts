@@ -32,7 +32,16 @@ export const ESCALA_RELATOR = 1.3;
  */
 export const FILAS_VISIBLES = 6;
 
-export type TonoElemento = 'nuevo' | 'modificado' | 'preparado' | 'conflicto' | 'neutro';
+export type TonoElemento =
+  | 'nuevo'
+  | 'modificado'
+  | 'preparado'
+  | 'conflicto'
+  | 'neutro'
+  /** Archivo retirado del seguimiento, con la baja ya preparada. */
+  | 'borrado-preparado'
+  /** Archivo versionado que desaparecio del directorio y nadie preparo. */
+  | 'borrado-pendiente';
 
 export interface ElementoArea {
   readonly texto: string;
@@ -124,20 +133,40 @@ export function columnasDeAreas(estado: EstadoRepositorio): readonly ColumnaArea
       clave: 'trabajo',
       titulo: 'Directorio de trabajo',
       orden: 'git status',
-      elementos: enTrabajo.map((archivo) => ({
-        texto: archivo.nombre,
-        tono: TONO_POR_ESTADO[archivo.estado],
-      })),
+      elementos: [
+        ...enTrabajo.map((archivo) => ({
+          texto: archivo.nombre,
+          tono: TONO_POR_ESTADO[archivo.estado],
+        })),
+        // Un archivo versionado que ya no esta tambien es un cambio pendiente,
+        // y Git lo muestra como tal. Sin dibujarlo, la pantalla diria que no
+        // hay nada que confirmar cuando si lo hay.
+        ...estado.borradosSinPreparar.map((nombre) => ({
+          texto: nombre,
+          tono: 'borrado-pendiente' as const,
+        })),
+      ],
       vacio: 'sin cambios pendientes',
     },
     {
       clave: 'preparacion',
       titulo: 'Área de preparación',
       orden: 'git add',
-      elementos: preparados.map((archivo) => ({
-        texto: archivo.nombre,
-        tono: 'preparado' as const,
-      })),
+      elementos: [
+        // Un renombrado se nombra como lo nombra Git, con las dos rutas: es un
+        // solo hecho, no un borrado y un archivo nuevo.
+        ...preparados.map((archivo) => ({
+          texto:
+            archivo.renombradoDe === undefined
+              ? archivo.nombre
+              : `${archivo.renombradoDe} -> ${archivo.nombre}`,
+          tono: 'preparado' as const,
+        })),
+        ...estado.borrados.map((nombre) => ({
+          texto: nombre,
+          tono: 'borrado-preparado' as const,
+        })),
+      ],
       vacio: 'nada preparado',
     },
     {

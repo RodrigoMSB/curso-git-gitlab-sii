@@ -31,11 +31,15 @@ export function estadoVacio(directorio: string = DIRECTORIO_POR_DEFECTO): Estado
     etiquetas: [],
     puntero: { tipo: 'rama', rama: RAMA_POR_DEFECTO },
     archivos: [],
+    carpetas: [],
+    borrados: [],
+    borradosSinPreparar: [],
     guardados: [],
     reflog: [],
     remotos: [],
     config: { local: {}, global: {} },
     fusion: null,
+    origHead: null,
     carriles: [{ rama: RAMA_POR_DEFECTO, carril: 0 }],
     contador: 0,
   };
@@ -94,12 +98,28 @@ export function archivoPorNombre(
 
 /** Indica si el archivo figura en alguna confirmacion alcanzable desde la posicion actual. */
 export function estaSeguido(estado: EstadoRepositorio, nombre: string): boolean {
+  return archivosSeguidos(estado).has(nombre);
+}
+
+/**
+ * Nombres que el repositorio esta versionando ahora mismo.
+ *
+ * Se recorre la historia alcanzable en orden: cada confirmacion suma lo que
+ * registro y resta lo que saco del seguimiento. Mirar solo si el nombre
+ * aparece en alguna confirmacion diria que un archivo retirado con `git rm`
+ * sigue versionado, y ese es el error que el laboratorio 03 desmonta.
+ */
+export function archivosSeguidos(estado: EstadoRepositorio): ReadonlySet<string> {
+  const seguidos = new Set<string>();
   const cabeza = idActual(estado);
-  if (cabeza === null) return false;
+  if (cabeza === null) return seguidos;
   const historia = antepasados(estado, cabeza);
-  return estado.confirmaciones.some(
-    (confirmacion) => historia.has(confirmacion.id) && confirmacion.archivos.includes(nombre),
-  );
+  for (const confirmacion of estado.confirmaciones) {
+    if (!historia.has(confirmacion.id)) continue;
+    for (const nombre of confirmacion.archivos) seguidos.add(nombre);
+    for (const nombre of confirmacion.borrados) seguidos.delete(nombre);
+  }
+  return seguidos;
 }
 
 /** Valor de configuracion, con la local por delante de la global. */
@@ -226,7 +246,9 @@ export function establecerArchivo(
   const existe = estado.archivos.some((archivo) => archivo.nombre === nombre);
   const archivos = existe
     ? estado.archivos.map((archivo) =>
-        archivo.nombre === nombre ? { nombre, estado: nuevoEstado } : archivo,
+        archivo.nombre === nombre
+          ? { ...archivo, nombre, estado: nuevoEstado }
+          : archivo,
       )
     : [...estado.archivos, { nombre, estado: nuevoEstado }];
   return { ...estado, archivos };

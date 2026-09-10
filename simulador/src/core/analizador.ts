@@ -104,6 +104,24 @@ export function valorDeOpcion(
 }
 
 /**
+ * Valor de una opcion escrita como `--nombre valor` o como `--nombre=valor`.
+ *
+ * Git acepta las dos formas y los enunciados usan las dos, asi que leerlas por
+ * separado es como se cuela un filtro sin aplicar.
+ */
+export function valorDeOpcionPegado(
+  argumentos: readonly string[],
+  ...nombres: readonly string[]
+): string | null {
+  for (const argumento of argumentos) {
+    const corte = argumento.indexOf('=');
+    if (corte < 0) continue;
+    if (nombres.includes(argumento.slice(0, corte))) return argumento.slice(corte + 1);
+  }
+  return valorDeOpcion(argumentos, ...nombres);
+}
+
+/**
  * Argumentos que no son opciones ni valores de opcion.
  *
  * `conValor` enumera las opciones que consumen la palabra siguiente, para que

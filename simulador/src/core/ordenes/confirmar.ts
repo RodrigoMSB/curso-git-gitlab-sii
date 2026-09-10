@@ -2,7 +2,7 @@
  * Ordenes que crean y consultan confirmaciones: `commit` y `log`.
  */
 
-import { posicionales, tieneOpcion, valorDeOpcion } from '../analizador';
+import { posicionales, tieneOpcion, valorDeOpcion, valorDeOpcionPegado } from '../analizador';
 import { agregarConfirmacion, resumenArchivos } from '../confirmaciones';
 import {
   archivosEn,
@@ -16,9 +16,18 @@ import {
 } from '../estado';
 import { formatearEstadoLargo, formatearHistorial } from '../formato';
 import { historia } from '../grafo';
+import {
+  aplicarFiltros,
+  aplicarFormato,
+  especificadoresFuera,
+  instanteDe,
+  SIN_FILTROS,
+  type FiltrosHistorial,
+} from '../historial';
+import { limite } from '../salida';
 import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
-import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
+import type { Confirmacion, EstadoRepositorio, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
 
 /** Etiqueta que Git antepone al identificador tras confirmar. */
@@ -100,20 +109,27 @@ function enmendar(estado: EstadoRepositorio, mensajePedido: string | null): Resu
 
   const preparados = archivosEn(estado, 'preparado').map((archivo) => archivo.nombre);
   const archivos = [...new Set([...anterior.archivos, ...preparados])];
+  const borrados = [
+    ...new Set([...anterior.borrados, ...estado.borrados, ...nombresAnteriores(estado)]),
+  ];
   const mensaje = mensajePedido ?? anterior.mensaje;
 
   const creado = agregarConfirmacion(estado, {
     mensaje,
     padres: anterior.padres,
     archivos,
+    borrados,
     carril: anterior.carril,
     matiz: `amend:${anterior.id}`,
   });
 
   let siguiente = moverPosicionActual(creado.estado, creado.confirmacion.id);
   siguiente = transformarArchivos(siguiente, (archivo) =>
-    archivo.estado === 'preparado' ? { ...archivo, estado: 'limpio' } : archivo,
+    archivo.estado === 'preparado'
+      ? { nombre: archivo.nombre, estado: 'limpio' as const }
+      : archivo,
   );
+  siguiente = { ...siguiente, borrados: [] };
   siguiente = anotarMovimiento(siguiente, {
     id: creado.confirmacion.id,
     idAnterior: cabeza,
@@ -135,13 +151,20 @@ function enmendar(estado: EstadoRepositorio, mensajePedido: string | null): Resu
 export const ordenCommit: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
-  const mensaje = valorDeOpcion(argumentos, '-m', '--message');
+  const heredado = mensajeHeredado(estado, argumentos);
+  if (typeof heredado === 'string' && heredado.startsWith('fatal:')) {
+    return fallo(estado, heredado);
+  }
+  const mensaje = valorDeOpcion(argumentos, '-m', '--message') ?? (heredado as string | null);
 
   if (estado.fusion !== null) return confirmarFusion(estado, mensaje);
   if (tieneOpcion(argumentos, '--amend')) return enmendar(estado, mensaje);
 
   const preparados = archivosEn(estado, 'preparado').map((archivo) => archivo.nombre);
-  if (preparados.length === 0) {
+  // Un renombrado deja de seguir el nombre viejo. Sin anotarlo, `git ls-files`
+  // seguiria enumerando la ruta anterior despues de confirmar el movimiento.
+  const borrados = [...new Set([...estado.borrados, ...nombresAnteriores(estado)])];
+  if (preparados.length === 0 && borrados.length === 0) {
     return ok(estado, lineas(...formatearEstadoLargo(estado)));
   }
   if (mensaje === null) {
@@ -157,13 +180,17 @@ export const ordenCommit: Manejador = (estado, argumentos) => {
     mensaje,
     padres: cabeza === null ? [] : [cabeza],
     archivos: preparados,
+    borrados,
     carril: carrilDestino(estado),
   });
 
   let siguiente = moverPosicionActual(creado.estado, creado.confirmacion.id);
   siguiente = transformarArchivos(siguiente, (archivo) =>
-    archivo.estado === 'preparado' ? { ...archivo, estado: 'limpio' } : archivo,
+    archivo.estado === 'preparado'
+      ? { nombre: archivo.nombre, estado: 'limpio' as const }
+      : archivo,
   );
+  siguiente = { ...siguiente, borrados: [] };
   siguiente = anotarMovimiento(siguiente, {
     id: creado.confirmacion.id,
     idAnterior: cabeza,
@@ -176,10 +203,38 @@ export const ordenCommit: Manejador = (estado, argumentos) => {
     siguiente,
     lineas(
       `[${rotuloPosicion(siguiente, cabeza === null)} ${creado.confirmacion.id}] ${mensaje}`,
-      resumenArchivos(preparados),
+      resumenArchivos([...preparados, ...borrados]),
     ),
   );
 };
+
+/**
+ * Mensaje que `-c` y `-C` reutilizan de otra confirmacion.
+ *
+ * En Git, `-c` abre el editor con ese mensaje ya escrito y `-C` lo toma tal
+ * cual. El simulador no tiene editor, asi que las dos toman el mensaje: es lo
+ * que ocurre cuando el participante acepta lo que el editor le ofrece, que es
+ * justo lo que el enunciado del laboratorio 06 le pide hacer.
+ */
+function mensajeHeredado(
+  estado: EstadoRepositorio,
+  argumentos: readonly string[],
+): string | null {
+  const referencia = valorDeOpcion(argumentos, '-c', '-C');
+  if (referencia === null) return null;
+  const id = resolverReferencia(estado, referencia);
+  if (id === null) return `fatal: could not lookup commit ${referencia}`;
+  const confirmacion = confirmacionPorId(estado, id);
+  if (confirmacion === undefined) return `fatal: could not lookup commit ${referencia}`;
+  return confirmacion.mensaje;
+}
+
+/** Nombres que los archivos preparados tenian antes de que `git mv` los moviera. */
+function nombresAnteriores(estado: EstadoRepositorio): readonly string[] {
+  return estado.archivos
+    .filter((archivo) => archivo.estado === 'preparado' && archivo.renombradoDe !== undefined)
+    .map((archivo) => archivo.renombradoDe as string);
+}
 
 /** Limite de confirmaciones pedido con `-n 3` o con `-3`. */
 function limitePedido(argumentos: readonly string[]): number | null {
@@ -197,38 +252,151 @@ function limitePedido(argumentos: readonly string[]): number | null {
 }
 
 /** `git log`, con `--oneline`, `--graph`, `-n` y `--all`. */
-export const ordenLog: Manejador = (estado, argumentos) => {
-  if (!estado.iniciado) return sinRepositorio(estado);
+/**
+ * Rutas pedidas detras del separador `--`, que es como Git limita el historial
+ * a un archivo o a una carpeta.
+ */
+function rutaFiltrada(argumentos: readonly string[]): string | null {
+  const corte = argumentos.indexOf('--');
+  if (corte < 0) return null;
+  return argumentos[corte + 1] ?? null;
+}
 
-  const referencias = posicionales(argumentos, ['-n', '--max-count']);
-  const puntas: string[] = [];
+/** Argumentos anteriores al separador `--`: los que nombran referencias. */
+function antesDelSeparador(argumentos: readonly string[]): readonly string[] {
+  const corte = argumentos.indexOf('--');
+  return corte < 0 ? argumentos : argumentos.slice(0, corte);
+}
+
+/**
+ * Puntas del recorrido, resueltas desde lo que el participante nombro.
+ *
+ * Un rango `a..b` es lo que hay en `b` y no en `a`, que es como Git lo define.
+ * Se devuelve tambien lo que hay que excluir para poder aplicarlo despues.
+ */
+function puntasPedidas(
+  estado: EstadoRepositorio,
+  argumentos: readonly string[],
+): { puntas: readonly string[]; excluidas: readonly string[] } | string {
+  const referencias = posicionales(
+    antesDelSeparador(argumentos),
+    ['-n', '--max-count', '--author', '--since', '--after', '--until', '--before', '--format', '--pretty', '--date'],
+  );
 
   if (tieneOpcion(argumentos, '--all')) {
-    puntas.push(...estado.ramas.map((rama) => rama.id));
-    puntas.push(...estado.etiquetas.map((etiqueta) => etiqueta.id));
+    const puntas = [
+      ...estado.ramas.map((rama) => rama.id),
+      ...estado.etiquetas.map((etiqueta) => etiqueta.id),
+    ];
     const cabeza = idActual(estado);
     if (cabeza !== null) puntas.push(cabeza);
-  } else if (referencias.length > 0) {
-    for (const referencia of referencias) {
-      const id = resolverReferencia(estado, referencia);
-      if (id === null) {
-        return fallo(estado, `fatal: ambiguous argument '${referencia}': unknown revision`);
-      }
-      puntas.push(id);
-    }
-  } else {
+    return { puntas, excluidas: [] };
+  }
+
+  if (referencias.length === 0) {
     const cabeza = idActual(estado);
     if (cabeza === null) {
       const rama = ramaActual(estado) ?? 'HEAD';
-      return fallo(
-        estado,
-        `fatal: your current branch '${rama}' does not have any commits yet`,
-      );
+      return `fatal: your current branch '${rama}' does not have any commits yet`;
     }
-    puntas.push(cabeza);
+    return { puntas: [cabeza], excluidas: [] };
   }
 
-  const confirmaciones = historia(estado, puntas);
+  const puntas: string[] = [];
+  const excluidas: string[] = [];
+  for (const referencia of referencias) {
+    const rango = /^(.+?)\.\.(.+)$/.exec(referencia);
+    const desde = rango?.[1];
+    const hasta = rango?.[2];
+    if (desde !== undefined && hasta !== undefined) {
+      const idDesde = resolverReferencia(estado, desde);
+      const idHasta = resolverReferencia(estado, hasta);
+      if (idDesde === null) return `fatal: ambiguous argument '${desde}': unknown revision`;
+      if (idHasta === null) return `fatal: ambiguous argument '${hasta}': unknown revision`;
+      puntas.push(idHasta);
+      excluidas.push(idDesde);
+      continue;
+    }
+    const id = resolverReferencia(estado, referencia);
+    if (id === null) return `fatal: ambiguous argument '${referencia}': unknown revision`;
+    puntas.push(id);
+  }
+  return { puntas, excluidas };
+}
+
+/** Lee los filtros de la linea. Devuelve el texto del reclamo si alguno no se entiende. */
+function filtrosPedidos(
+  estado: EstadoRepositorio,
+  argumentos: readonly string[],
+): FiltrosHistorial | string {
+  const autor = valorDeOpcionPegado(argumentos, '--author');
+  const desdeTexto = valorDeOpcionPegado(argumentos, '--since', '--after');
+  const hastaTexto = valorDeOpcionPegado(argumentos, '--until', '--before');
+
+  // El «ahora» del simulador es su confirmacion mas reciente, no el reloj de
+  // la maquina: el motor es codigo puro y las fechas del escenario son de 2024.
+  const ahora = estado.confirmaciones.reduce(
+    (mayor, confirmacion) => Math.max(mayor, confirmacion.epoca),
+    0,
+  );
+
+  let desde: number | null = null;
+  if (desdeTexto !== null) {
+    desde = instanteDe(desdeTexto, ahora);
+    if (desde === null) return `fatal: no puedo interpretar la fecha '${desdeTexto}'`;
+  }
+  let hasta: number | null = null;
+  if (hastaTexto !== null) {
+    hasta = instanteDe(hastaTexto, ahora);
+    if (hasta === null) return `fatal: no puedo interpretar la fecha '${hastaTexto}'`;
+  }
+
+  return { ...SIN_FILTROS, autor, desde, hasta, archivo: rutaFiltrada(argumentos) };
+}
+
+/**
+ * `git log`, con el recorrido, los filtros y el formato.
+ *
+ * Los filtros se aplican de verdad (punto 4.4 del SPEC 010). Antes se recibian
+ * y se descartaban, que es lo que hacia que el simulador enseñara algo distinto
+ * de lo que el participante veia en su terminal.
+ */
+export const ordenLog: Manejador = (estado, argumentos) => {
+  if (!estado.iniciado) return sinRepositorio(estado);
+
+  const pedido = puntasPedidas(estado, argumentos);
+  if (typeof pedido === 'string') return fallo(estado, pedido);
+
+  const filtros = filtrosPedidos(estado, argumentos);
+  if (typeof filtros === 'string') return fallo(estado, filtros);
+
+  const fuera = new Set(
+    pedido.excluidas.length === 0
+      ? []
+      : historia(estado, pedido.excluidas).map((confirmacion) => confirmacion.id),
+  );
+  const alcanzadas = historia(estado, pedido.puntas).filter(
+    (confirmacion) => !fuera.has(confirmacion.id),
+  );
+  const confirmaciones = aplicarFiltros(alcanzadas, filtros);
+
+  const formato = formatoPedido(argumentos);
+  if (formato !== null) {
+    const sobrantes = especificadoresFuera(formato);
+    if (sobrantes.length > 0) {
+      return limite(
+        estado,
+        `${sobrantes.map((uno) => `«${uno}»`).join(', ')} en el formato de git log`,
+      );
+    }
+    const corta = valorDeOpcionPegado(argumentos, '--date') === 'short';
+    const limitadas = recortar(confirmaciones, limitePedido(argumentos));
+    return ok(
+      estado,
+      lineas(...limitadas.map((confirmacion) => aplicarFormato(confirmacion, formato, corta))),
+    );
+  }
+
   return ok(
     estado,
     lineas(
@@ -240,3 +408,20 @@ export const ordenLog: Manejador = (estado, argumentos) => {
     ),
   );
 };
+
+function recortar(
+  confirmaciones: readonly Confirmacion[],
+  limite: number | null,
+): readonly Confirmacion[] {
+  return limite === null ? confirmaciones : confirmaciones.slice(0, limite);
+}
+
+/** El formato pedido con `--format=<x>` o con `--pretty=format:<x>`. */
+function formatoPedido(argumentos: readonly string[]): string | null {
+  const crudo = valorDeOpcionPegado(argumentos, '--format', '--pretty');
+  if (crudo === null) return null;
+  if (crudo.startsWith('format:')) return crudo.slice('format:'.length);
+  // `--pretty=oneline` y compañia son nombres de formato, no plantillas.
+  if (!crudo.includes('%')) return null;
+  return crudo;
+}

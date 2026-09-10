@@ -7,7 +7,7 @@
  */
 
 import { esOperador, posicionales, tieneOpcion } from '../analizador';
-import { archivoPorNombre, establecerArchivo } from '../estado';
+import { archivoPorNombre, establecerArchivo, estaSeguido } from '../estado';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
 import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
@@ -19,8 +19,12 @@ export const ordenPwd: Manejador = (estado) => ok(estado, lineas(estado.director
 export const ordenClear: Manejador = (estado) => ok(estado, [], { limpiarConsola: true });
 
 /**
- * `ls`. Muestra las entradas de primer nivel; las carpetas van con barra
- * final, como en un interprete real.
+ * `ls`, con `-a`. Muestra las entradas de primer nivel; las carpetas van con
+ * barra final, como en un interprete real.
+ *
+ * Con `-a` aparece tambien `.git`, que el laboratorio 01 hace mirar justo
+ * despues de `git init`. Se muestra la carpeta, no lo que tiene adentro: lo
+ * primero es cierto y lo segundo el motor no lo modela.
  */
 export const ordenLs: Manejador = (estado, argumentos) => {
   const prefijoPedido = posicionales(argumentos)[0] ?? '';
@@ -39,30 +43,179 @@ export const ordenLs: Manejador = (estado, argumentos) => {
     entradas.add(corte < 0 ? resto : `${resto.slice(0, corte)}/`);
   }
 
-  if (entradas.size === 0 && prefijo !== '') {
+  for (const carpeta of estado.carpetas) {
+    if (!carpeta.startsWith(prefijo)) continue;
+    const resto = carpeta.slice(prefijo.length);
+    if (resto === '') continue;
+    const corte = resto.indexOf('/');
+    entradas.add(corte < 0 ? `${resto}/` : `${resto.slice(0, corte)}/`);
+  }
+
+  if (entradas.size === 0 && prefijo !== '' && !estado.carpetas.includes(prefijoPedido)) {
     return fallo(estado, `ls: ${prefijoPedido}: No such file or directory`);
+  }
+
+  if (prefijo === '' && tieneOpcion(argumentos, '-a', '--all') && estado.iniciado) {
+    entradas.add('.git/');
   }
 
   return ok(estado, lineas(...[...entradas].sort((una, otra) => una.localeCompare(otra))));
 };
 
 /**
- * `cat`. El simulador no versiona contenido (restriccion R4), de modo que
- * declara esa limitacion en vez de inventar un texto que el participante
- * podria tomar por real.
+ * `mkdir`, con `-p`.
+ *
+ * Una carpeta que todavia no tiene archivos adentro se anota aparte: el motor
+ * deduce las demas de los nombres de archivo. El laboratorio 03 crea dos
+ * carpetas vacias antes de mover recetas a ellas, y sin esto `git mv` no
+ * tendria destino.
+ */
+export const ordenMkdir: Manejador = (estado, argumentos) => {
+  const rutas = posicionales(argumentos);
+  if (rutas.length === 0) return fallo(estado, 'usage: mkdir [-p] <directorio>...');
+  const conPadres = tieneOpcion(argumentos, '-p');
+
+  let siguiente = estado;
+  for (const cruda of rutas) {
+    const ruta = cruda.replace(/\/+$/, '');
+    if (existeCarpeta(siguiente, ruta)) {
+      if (conPadres) continue;
+      return fallo(estado, `mkdir: ${cruda}: File exists`);
+    }
+    const partes = ruta.split('/');
+    if (!conPadres && partes.length > 1) {
+      const padre = partes.slice(0, -1).join('/');
+      if (!existeCarpeta(siguiente, padre)) {
+        return fallo(estado, `mkdir: ${cruda}: No such file or directory`);
+      }
+    }
+    const nuevas = conPadres
+      ? partes.map((_, indice) => partes.slice(0, indice + 1).join('/'))
+      : [ruta];
+    siguiente = {
+      ...siguiente,
+      carpetas: [
+        ...siguiente.carpetas,
+        ...nuevas.filter((nueva) => !existeCarpeta(siguiente, nueva)),
+      ],
+    };
+  }
+  return ok(siguiente);
+};
+
+/** Si una carpeta existe, sea porque se creo o porque hay archivos dentro. */
+function existeCarpeta(estado: EstadoRepositorio, ruta: string): boolean {
+  if (ruta === '' || ruta === '.') return true;
+  if (estado.carpetas.includes(ruta)) return true;
+  return estado.archivos.some((archivo) => archivo.nombre.startsWith(`${ruta}/`));
+}
+
+/**
+ * `cat`.
+ *
+ * Mostrar el contenido de un archivo esta declarado como no soportado en el
+ * contrato, de modo que el despachador responde antes de llegar aqui y este
+ * manejador solo ve el `cat` sin argumentos. El verbo se mantiene registrado a
+ * proposito: si no lo estuviera, el simulador diria que la orden no existe, y
+ * `cat` si existe. Lo que no existe es el contenido.
  */
 export const ordenCat: Manejador = (estado, argumentos) => {
   const rutas = posicionales(argumentos);
   if (rutas.length === 0) return fallo(estado, 'cat: falta el nombre del archivo');
+  return fallo(estado, `cat: ${rutas[0]}: No such file or directory`);
+};
 
-  const filas: string[] = [];
-  for (const ruta of rutas) {
-    if (archivoPorNombre(estado, ruta) === undefined) {
-      return fallo(estado, `cat: ${ruta}: No such file or directory`);
-    }
-    filas.push(`[${ruta}: el simulador registra el estado del archivo, no su contenido]`);
+/**
+ * `mv` del interprete, que no es `git mv`.
+ *
+ * El laboratorio 03 lo usa para enseñar la diferencia: renombrar por fuera
+ * deja **un archivo borrado y otro sin seguimiento**, porque para Git son dos
+ * hechos separados hasta que compara el contenido y deduce el renombrado.
+ * Modelarlo asi es lo que permite que el paso 1.4 muestre lo que promete.
+ */
+export const ordenMv: Manejador = (estado, argumentos) => {
+  const rutas = posicionales(argumentos);
+  const destino = rutas[1];
+  const origen = rutas[0];
+  if (origen === undefined || destino === undefined) {
+    return fallo(estado, 'usage: mv <origen> <destino>');
   }
-  return ok(estado, lineas(...filas));
+  if (archivoPorNombre(estado, origen) === undefined) {
+    return fallo(estado, `mv: rename ${origen} to ${destino}: No such file or directory`);
+  }
+
+  const seguido = estaSeguido(estado, origen);
+  const sinElOrigen = estado.archivos.filter((archivo) => archivo.nombre !== origen);
+
+  // Devolver un archivo a su nombre de siempre lo deja como estaba, **si su
+  // baja no estaba preparada**: vuelve a ser el archivo versionado y su borrado
+  // deja de estar pendiente.
+  if (estado.borradosSinPreparar.includes(destino)) {
+    return ok({
+      ...estado,
+      archivos: [...sinElOrigen, { nombre: destino, estado: 'limpio' as const }],
+      borradosSinPreparar: estado.borradosSinPreparar.filter((nombre) => nombre !== destino),
+    });
+  }
+
+  // Si la baja ya estaba preparada, el archivo reaparece **sin seguimiento** y
+  // la baja sigue en el area de preparacion: el indice no se entera de lo que
+  // pasa en el disco. Comprobado contra Git.
+  if (estado.borrados.includes(destino)) {
+    return ok({
+      ...estado,
+      archivos: [...sinElOrigen, { nombre: destino, estado: 'sin-seguimiento' as const }],
+    });
+  }
+
+  return ok({
+    ...estado,
+    // Si estaba versionado, su desaparicion es un borrado sin preparar y el
+    // archivo nuevo nace sin seguimiento. Eso es lo que `git status` muestra
+    // antes de preparar nada: para Git son dos hechos separados.
+    //
+    // La procedencia se anota igual. No es contenido: es saber que este
+    // archivo llego aqui desde aquel. Git deduce lo mismo comparando bytes; el
+    // simulador lo sabe porque lo vio ocurrir, y por eso puede decir
+    // `renamed:` sin inventarse una similitud que no puede medir.
+    archivos: [
+      ...sinElOrigen,
+      seguido
+        ? { nombre: destino, estado: 'sin-seguimiento' as const, renombradoDe: origen }
+        : { nombre: destino, estado: 'sin-seguimiento' as const },
+    ],
+    borradosSinPreparar: seguido
+      ? [...estado.borradosSinPreparar, origen]
+      : estado.borradosSinPreparar,
+  });
+};
+
+/**
+ * `rm` del interprete. Borra el archivo del directorio de trabajo y nada mas.
+ *
+ * Si el archivo estaba versionado, Git lo nota como un borrado sin preparar.
+ * El enunciado solo lo usa sobre archivos sin seguimiento, pero distinguir los
+ * dos casos cuesta lo mismo y evita enseñar algo falso a quien tantee.
+ */
+export const ordenRm: Manejador = (estado, argumentos) => {
+  const rutas = posicionales(argumentos);
+  if (rutas.length === 0) return fallo(estado, 'usage: rm <archivo>...');
+
+  let siguiente = estado;
+  for (const ruta of rutas) {
+    if (archivoPorNombre(siguiente, ruta) === undefined) {
+      return fallo(estado, `rm: ${ruta}: No such file or directory`);
+    }
+    const seguido = estaSeguido(siguiente, ruta);
+    siguiente = {
+      ...siguiente,
+      archivos: siguiente.archivos.filter((archivo) => archivo.nombre !== ruta),
+      borradosSinPreparar: seguido
+        ? [...siguiente.borradosSinPreparar, ruta]
+        : siguiente.borradosSinPreparar,
+    };
+  }
+  return ok(siguiente);
 };
 
 /**

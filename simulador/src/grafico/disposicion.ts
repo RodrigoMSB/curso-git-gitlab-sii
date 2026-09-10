@@ -57,8 +57,10 @@ function confirmacionProyectada(
     carril: 0,
     autor: '',
     correo: '',
+    epoca: 0,
     fecha: '',
     archivos: [],
+    borrados: [],
   };
 }
 

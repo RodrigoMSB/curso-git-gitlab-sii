@@ -438,6 +438,93 @@ describe('git log', () => {
   });
 });
 
+describe('git log · filtros y formato', () => {
+  // Las cifras estan comprobadas contra el Git de verdad sobre el mismo
+  // escenario: cinco confirmaciones, tres autores, de enero a septiembre.
+
+  it('--author filtra por coincidencia parcial del nombre', () => {
+    const estado = repoLineal();
+    const filtrado = texto(ejecutar(estado, 'git log --author="Juana" --oneline')).split('\n');
+    expect(filtrado).toHaveLength(2);
+    for (const fila of filtrado) expect(fila).not.toContain('cocineros');
+    // Sin el filtro son cinco: es la diferencia que antes no se veia.
+    expect(texto(ejecutar(estado, 'git log --oneline')).split('\n')).toHaveLength(5);
+  });
+
+  it('--author acepta cualquier autor, no solo el que trae el enunciado', () => {
+    // El contrato es por forma (punto 2.2). Un participante que tantea con
+    // otro nombre tiene que obtener lo que Git le daria.
+    const estado = repoLineal();
+    expect(texto(ejecutar(estado, 'git log --author=Sofia --oneline')).split('\n')).toHaveLength(1);
+    expect(texto(ejecutar(estado, 'git log --author=Nadie --oneline'))).toBe('');
+  });
+
+  it('--author se escribe con igual o con espacio, como en Git', () => {
+    const estado = repoLineal();
+    expect(texto(ejecutar(estado, 'git log --author=Juana --oneline'))).toBe(
+      texto(ejecutar(estado, 'git log --author Juana --oneline')),
+    );
+  });
+
+  it('--since y --until recortan por fecha', () => {
+    const estado = repoLineal();
+    expect(
+      texto(ejecutar(estado, 'git log --oneline --since=2024-04-01')).split('\n'),
+    ).toHaveLength(3);
+    expect(
+      texto(ejecutar(estado, 'git log --oneline --until=2024-03-01')).split('\n'),
+    ).toHaveLength(2);
+    expect(
+      texto(ejecutar(estado, 'git log --oneline --since=2024-04-01 --until=2024-08-01')).split('\n'),
+    ).toHaveLength(2);
+  });
+
+  it('una fecha que no se entiende se dice, en vez de filtrar por cualquier cosa', () => {
+    const resultado = ejecutar(repoLineal(), 'git log --since=zapallo');
+    expect(resultado.error).toBe(true);
+    expect(texto(resultado)).toContain('zapallo');
+  });
+
+  it('el separador -- limita el historial a un archivo o a una carpeta', () => {
+    const estado = repoLineal();
+    expect(texto(ejecutar(estado, 'git log --oneline -- platos.md')).split('\n')).toHaveLength(1);
+    expect(texto(ejecutar(estado, 'git log --oneline -- recetas'))).toContain('pastel de choclo');
+    expect(texto(ejecutar(estado, 'git log --oneline -- fantasma.md'))).toBe('');
+  });
+
+  it('el rango a..b muestra lo que hay en b y no en a', () => {
+    const estado = repoLineal();
+    const tercera = estado.confirmaciones[2]?.id ?? '';
+    const filas = texto(ejecutar(estado, `git log --oneline ${tercera}..main`)).split('\n');
+    expect(filas).toHaveLength(2);
+    expect(texto(ejecutar(estado, 'git log --oneline main..main'))).toBe('');
+  });
+
+  it('--format escribe solo lo que se le pide', () => {
+    const estado = repoLineal();
+    expect(texto(ejecutar(estado, 'git log --format="%an')).split('\n')).toHaveLength(5);
+    const conFecha = texto(ejecutar(estado, 'git log --format="%h %an %ad %s" --date=short'));
+    expect(conFecha.split('\n')[0]).toMatch(/^[0-9a-f]{7} Marco Diaz 2024-09-30 se docuemnta/);
+  });
+
+  it('un especificador que no esta en el contrato se declara, no se copia tal cual', () => {
+    // Es el caso que el punto 1 del SPEC 010 viene a eliminar: antes el motor
+    // devolvia la plantilla escrita con los %algo sin reemplazar.
+    const resultado = ejecutar(repoLineal(), 'git log --format="%cd"');
+    expect(resultado.error).toBe(true);
+    expect(texto(resultado)).toContain('«%cd»');
+    expect(resultado.salida.every((linea) => linea.tipo === 'limite')).toBe(true);
+  });
+
+  it('los filtros se combinan entre si y con el limite', () => {
+    const estado = repoLineal();
+    expect(
+      texto(ejecutar(estado, 'git log --oneline --author=Juana --since=2024-03-01')).split('\n'),
+    ).toHaveLength(1);
+    expect(texto(ejecutar(estado, 'git log --format="%an" -2')).split('\n')).toHaveLength(2);
+  });
+});
+
 describe('git diff', () => {
   it('sin opciones describe los archivos modificados', () => {
     const salida = texto(ejecutar(repoLineal(), 'git diff'));
@@ -527,9 +614,11 @@ describe('git switch y git checkout', () => {
   it('git switch reclama ante una rama inexistente, un identificador o sin argumentos', () => {
     const estado = repoConRamaDesdeMain();
     expect(texto(ejecutar(estado, 'git switch fantasma'))).toContain('invalid reference');
-    expect(texto(ejecutar(estado, `git switch ${estado.confirmaciones[0]?.id ?? ''}`))).toContain(
-      'invalid reference',
-    );
+    // Git distingue los dos casos: la referencia que no existe y la que si
+    // existe pero no es una rama. Con esta ultima ofrece --detach.
+    const aUnIdentificador = ejecutar(estado, `git switch ${estado.confirmaciones[0]?.id ?? ''}`);
+    expect(texto(aUnIdentificador)).toContain('a branch is expected, got commit');
+    expect(texto(aUnIdentificador)).toContain('--detach');
     expect(texto(ejecutar(estado, 'git switch'))).toContain('missing branch');
     expect(texto(ejecutar(estado, 'git switch -c tailandesa'))).toContain('already exists');
   });

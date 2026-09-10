@@ -1,8 +1,9 @@
 /**
  * Resolucion de referencias a confirmaciones.
  *
- * Acepta `HEAD`, nombres de rama, nombres de etiqueta, identificadores
- * completos o abreviados, y los sufijos `~n` y `^n` encadenados.
+ * Acepta `HEAD`, `ORIG_HEAD`, nombres de rama, nombres de etiqueta,
+ * identificadores completos o abreviados, y los sufijos `~n` y `^n`
+ * encadenados.
  */
 
 import { confirmacionPorId, etiquetaPorNombre, idActual, ramaPorNombre } from './estado';
@@ -38,6 +39,7 @@ function separarSufijos(referencia: string): { base: string; saltos: readonly Sa
 /** Resuelve el nombre base, sin sufijos, a un identificador de confirmacion. */
 function resolverBase(estado: EstadoRepositorio, base: string): string | null {
   if (base === '' || base === 'HEAD' || base === '@') return idActual(estado);
+  if (base === 'ORIG_HEAD') return estado.origHead;
 
   const rama = ramaPorNombre(estado, base);
   if (rama !== undefined) return rama.id;

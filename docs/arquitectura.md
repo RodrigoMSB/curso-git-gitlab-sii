@@ -2207,3 +2207,139 @@ lado que el simulador no modela**, no porque algo se haya roto.
 El 05, que antes era el 06, sube de 64 a 78 por ciento: es el mismo laboratorio
 y el mismo recorrido, con el enunciado reescrito por el product owner, que quedo
 mas corto y con menos ordenes fuera del alcance del motor.
+
+---
+
+# SPEC 010 · El motor acoplado al guion
+
+## 32. El contrato · que se compromete el motor a ejecutar
+
+Hasta el SPEC 010 el simulador intentaba ser un Git de proposito general. Esa
+ambicion tenia dos consecuencias malas: **su completitud no se podia demostrar**,
+porque el universo de Git no tiene borde, y aparecieron once diferencias con Git,
+seis de ellas silenciosas.
+
+Desde el SPEC 010 el motor esta acoplado al guion. **Lo que se compromete a
+ejecutar son las ordenes que aparecen en los enunciados de los laboratorios**,
+incluidas las que se nombran en prosa dentro de las secciones de rescate. Con
+ese acotamiento, «completo» deja de ser una opinion y pasa a ser una cifra.
+
+### La regla que gobierna todo
+
+**La pantalla nunca acepta una orden y la ignora.** Solo hay tres respuestas:
+
+1. La ejecuta correctamente.
+2. Dice que no la implementa y que en la terminal si funciona.
+3. Dice que la orden no existe, con el mismo texto que Git.
+
+La cuarta, aceptar y descartar en silencio, es la que este spec elimina. Era el
+caso de `--author`, `--since` y `--format`: el motor los recibia, mostraba la
+historia entera y el participante no tenia como notarlo.
+
+### Donde vive
+
+En `src/core/contrato.ts`, y en ningun otro sitio. Lleva dos listas:
+
+- `SIN_SOPORTE`, las formas que el motor declara no implementar, cada una con
+  el motivo que se le muestra al participante.
+- `OPCIONES`, las opciones que cada suborden entiende.
+
+El despachador las consulta **antes** de entregarle la orden a su manejador. Una
+opcion que no este en ninguna de las dos no llega al manejador: se responde que
+no esta implementada, con su nombre.
+
+### La distincion que hacia falta: reconocida sin codigo
+
+`--decorate` en `git log` no se lee en ninguna parte, y sin embargo no es una
+opcion ignorada: el simulador decora siempre, igual que Git cuando escribe a un
+terminal. Aceptarla y decorar no es descartarla, es coincidir.
+
+Para que esa diferencia no sea una excusa, hay una tercera lista,
+`EQUIVALENTES`, donde cada una de esas opciones lleva escrito por que no
+necesita codigo. **Una prueba exige que toda opcion declarada en `OPCIONES` o
+aparezca en el codigo del motor o este en `EQUIVALENTES`.** Una opcion listada
+como reconocida que ningun manejador consulta es, literalmente, una opcion
+aceptada y descartada, y eso lo detecta la suite sin depender de que alguien se
+acuerde de mirarlo.
+
+### El extractor dejo de tener su propia lista
+
+El arnes de las pruebas de punta a punta mantenia su propia copia de lo no
+soportado. Tener dos listas ya habia cobrado su precio: la copia decia que
+`git config --list` no estaba implementado cuando si lo estaba, y por eso esa
+orden se salto durante todo el SPEC 008. Ahora el extractor pregunta al
+contrato.
+
+## 33. Un solo lugar donde vive el tiempo
+
+Las confirmaciones guardan su instante en segundos desde la epoca, ademas del
+texto ya formateado. Sin esa cifra no hay manera de filtrar por fecha ni de
+darle forma con `--date`, y era el cambio de tipo que tocaba mas superficie.
+
+Se hizo temprano y a proposito, y salio barato porque `fecha` quedo **derivada**
+de `epoca` dentro de la fabrica de confirmaciones: quien crea una confirmacion
+declara el instante y nunca el texto, de modo que las dos no pueden divergir.
+
+## 34. Lo que el modelo tuvo que aprender
+
+Tres cosas que el motor no representaba y que el guion necesita.
+
+### Las bajas del seguimiento
+
+Un archivo retirado con `git rm` no desaparece de la historia, pero **deja de
+estar versionado**. Antes «estar versionado» se deducia mirando si el nombre
+aparecia en alguna confirmacion, y con esa regla un archivo retirado seguia
+figurando para siempre. Es exactamente lo contrario de lo que el laboratorio 03
+viene a enseñar.
+
+Ahora cada confirmacion registra tambien lo que saco del seguimiento, y el
+conjunto de archivos versionados se calcula recorriendo la historia: cada
+confirmacion suma lo que registro y resta lo que retiro.
+
+El estado lleva ademas dos listas cortas: los borrados con la baja ya preparada
+y los que desaparecieron del directorio sin que nadie lo preparara. Son las dos
+secciones en que Git los muestra.
+
+### La procedencia de un renombrado
+
+`git status` dice `renamed:` cuando reconoce que un archivo cambio de sitio. Git
+lo deduce comparando contenido, y el motor no tiene contenido que comparar.
+
+La salida no fue inventar una similitud, sino **anotar la procedencia**: cuando
+`git mv` o el `mv` del interprete mueven un archivo, el destino recuerda de
+donde vino. Eso no es contenido, es haber visto ocurrir el movimiento. Con eso
+el simulador puede decir `renamed:` sin fingir que mide parecidos, y un archivo
+nuevo que no viene de ninguna parte nunca se confunde con un renombrado.
+
+### ORIG_HEAD
+
+`git reset` guarda en `ORIG_HEAD` donde estaba la posicion antes del salto. Es
+la red de seguridad que el laboratorio 06 enseña a usar, y sin ella
+`git commit -c ORIG_HEAD` no tiene a que referirse.
+
+## 35. Lo que no se implementa, y por que
+
+Todo lo de esta lista cae por la misma razon de fondo: **el motor modela nodos y
+punteros, no contenido de archivos**. Es la restriccion R4 del SPEC 001 y el
+punto 5.2 del SPEC 010 la confirma.
+
+| Forma | Que necesitaria |
+|---|---|
+| `git log -S` | buscar dentro de las confirmaciones |
+| `git log --stat`, `git show --stat` | contar lineas cambiadas |
+| `git cat-file -p` | el contenido de un objeto |
+| `cat <archivo del proyecto>` | el contenido del archivo |
+| `diff` | el contenido de los dos archivos |
+
+Y tres familias que no son de contenido sino de alcance:
+
+| Forma | Por que |
+|---|---|
+| `cat`, `ls`, `wc` sobre `.git` | el tramo de la carpeta oculta se hace en la terminal a proposito (punto 3.3) |
+| `cd`, `mkdir` fuera del repositorio, redireccion a `~` | el simulador es un repositorio, no el disco del participante |
+| `git --version` | no es una instalacion de Git, es un modelo de como funciona |
+
+Cada una responde con el mismo formato: que no hace, y que en la terminal si
+funciona. La consola las pinta **distinto de un reclamo de Git**, porque un
+reclamo de Git es una falla del participante y esto es un limite de la
+herramienta.

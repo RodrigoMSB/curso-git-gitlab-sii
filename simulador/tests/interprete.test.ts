@@ -136,12 +136,21 @@ describe('ordenes del interprete de mandatos', () => {
     expect(resultado.salida).toHaveLength(0);
   });
 
-  it('cat declara que el simulador no versiona contenido y reclama si el archivo no existe', () => {
-    expect(texto(ejecutar(repoConRamas(), 'cat platos.md'))).toContain('no su contenido');
-    expect(texto(ejecutar(repoConRamas(), 'cat fantasma.md'))).toContain(
-      'No such file or directory',
-    );
-    expect(texto(ejecutar(repoConRamas(), 'cat'))).toContain('falta el nombre');
+  it('cat dice que el simulador no muestra contenido, en vez de fabricarlo', () => {
+    // El contrato del SPEC 010 responde antes que el manejador: mostrar el
+    // contenido de un archivo esta declarado como no soportado, porque el
+    // motor modela nodos y punteros y no bytes.
+    const resultado = ejecutar(repoConRamas(), 'cat platos.md');
+    expect(resultado.error).toBe(true);
+    expect(texto(resultado)).toContain('no implementa mostrar el contenido de un archivo');
+    expect(texto(resultado)).toContain('En tu terminal si funciona');
+    expect(resultado.salida.every((linea) => linea.tipo === 'limite')).toBe(true);
+  });
+
+  it('cat sin argumentos reclama como el interprete, no como un limite', () => {
+    const resultado = ejecutar(repoConRamas(), 'cat');
+    expect(texto(resultado)).toContain('falta el nombre');
+    expect(resultado.salida.every((linea) => linea.tipo === 'error')).toBe(true);
   });
 
   it('echo sin redireccion escribe en la consola', () => {

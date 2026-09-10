@@ -34,6 +34,8 @@
   --consola-verde: #4ec27a;
   --consola-rojo: #f2685f;
   --consola-amarillo: #e3bb4a;
+  /* Los limites del simulador: ni verde de exito ni rojo de error. */
+  --consola-azul: #6fb3e8;
 
   color-scheme: dark;
 }

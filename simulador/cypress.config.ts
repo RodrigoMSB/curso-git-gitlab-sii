@@ -199,14 +199,29 @@ function estadoDeGit(lab: Laboratorio): EstadoComparable {
   // Ramas y etiquetas con el mensaje de su confirmacion, en una sola llamada.
   // El estado se lee despues de cada orden y hay cientos: cada proceso de Git
   // que se ahorra aqui se ahorra centenares de veces.
+  //
+  // Una etiqueta anotada es un objeto propio con su propio mensaje, asi que
+  // `%(contents:subject)` devuelve el mensaje de la etiqueta y no el de la
+  // confirmacion que rotula. Lo que aqui se compara es a que confirmacion
+  // apunta cada nombre, de modo que se pide tambien la version desreferenciada,
+  // `%(*contents:subject)`, que solo trae valor cuando la etiqueta es anotada.
   const referencias = lineas(
-    git({}, 'for-each-ref', '--format=%(refname)\t%(contents:subject)', 'refs/heads', 'refs/tags'),
+    git(
+      {},
+      'for-each-ref',
+      '--format=%(refname)\t%(contents:subject)\t%(*contents:subject)',
+      'refs/heads',
+      'refs/tags',
+    ),
   ).map((linea) => linea.split('\t'));
 
   const nombrar = (prefijo: string): readonly string[] =>
     referencias
       .filter(([ref = '']) => ref.startsWith(prefijo))
-      .map(([ref = '', asunto = '']) => `${ref.slice(prefijo.length)} -> ${asunto}`)
+      .map(([ref = '', propio = '', apuntado = '']) => {
+        const asunto = apuntado === '' ? propio : apuntado;
+        return `${ref.slice(prefijo.length)} -> ${asunto}`;
+      })
       .sort();
 
   const ramas = nombrar('refs/heads/');
@@ -218,14 +233,20 @@ function estadoDeGit(lab: Laboratorio): EstadoComparable {
       ? `desconectado -> ${git({}, 'log', '-1', '--format=%s')}`
       : `${ramaActual} -> ${git({}, 'log', '-1', '--format=%s')}`;
 
-  const seguidos = lineas(git({}, 'ls-files'));
-  const sucios = new Map<string, string>();
-  for (const linea of lineas(git({ crudo: true }, 'status', '--porcelain'))) {
-    sucios.set(linea.slice(3), estadoDeCodigo(linea.slice(0, 2)));
-  }
-  const archivos = [...new Set([...seguidos, ...sucios.keys()])]
-    .map((nombre) => `${nombre}:${sucios.get(nombre) ?? 'limpio'}`)
-    .sort();
+  // Un mismo archivo puede aparecer dos veces en el estado corto, y con dos
+  // codigos distintos: `git rm --cached notas.tmp` deja la baja preparada y el
+  // archivo sin seguimiento a la vez. Guardarlos en un mapa por nombre perdia
+  // uno de los dos y hacia que la comparacion diera por igual lo que no lo era.
+  const pendientes = lineas(git({ crudo: true }, 'status', '--porcelain')).map(
+    (linea) => `${linea.slice(3)}:${estadoDeCodigo(linea.slice(0, 2))}`,
+  );
+  const nombrados = new Set(
+    lineas(git({ crudo: true }, 'status', '--porcelain')).map((linea) => linea.slice(3)),
+  );
+  const limpios = lineas(git({}, 'ls-files'))
+    .filter((nombre) => !nombrados.has(nombre))
+    .map((nombre) => `${nombre}:limpio`);
+  const archivos = [...pendientes, ...limpios].sort();
 
   const guardados = lineas(git({}, 'stash', 'list', '--format=%gs'));
 

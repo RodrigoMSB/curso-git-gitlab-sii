@@ -7,13 +7,15 @@
  */
 
 import { autorActual, idsUsados } from './estado';
-import { fechaDeterminista, generarId } from './identificadores';
+import { epocaDeterminista, fechaDeEpoca, generarId } from './identificadores';
 import type { Confirmacion, EstadoRepositorio } from './tipos';
 
 export interface DatosConfirmacion {
   readonly mensaje: string;
   readonly padres: readonly string[];
   readonly archivos: readonly string[];
+  /** Nombres que la confirmacion saca del seguimiento. */
+  readonly borrados?: readonly string[];
   readonly carril: number;
   /** Identificador reservado de antemano, como el de una fusion con conflictos. */
   readonly idForzado?: string;
@@ -27,7 +29,8 @@ export interface DatosConfirmacion {
    */
   readonly autor?: string;
   readonly correo?: string;
-  readonly fecha?: string;
+  /** Instante en segundos desde la epoca. Sin declarar, lo pone el contador. */
+  readonly epoca?: number;
 }
 
 export function agregarConfirmacion(
@@ -45,6 +48,8 @@ export function agregarConfirmacion(
 
   const id = datos.idForzado ?? generarId(semilla, idsUsados(estado));
 
+  const epoca = datos.epoca ?? epocaDeterminista(estado.contador);
+
   const confirmacion: Confirmacion = {
     id,
     mensaje: datos.mensaje,
@@ -52,8 +57,10 @@ export function agregarConfirmacion(
     carril: datos.carril,
     autor: datos.autor ?? autor.nombre,
     correo: datos.correo ?? autor.correo,
-    fecha: datos.fecha ?? fechaDeterminista(estado.contador),
+    epoca,
+    fecha: fechaDeEpoca(epoca),
     archivos: datos.archivos,
+    borrados: datos.borrados ?? [],
   };
 
   return {
