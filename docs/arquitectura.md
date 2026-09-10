@@ -1300,9 +1300,15 @@ en silencio.
 
 # Laboratorio 03 · abrir la caja
 
-## 21. Decisiones del laboratorio 03
+## 21. Decisiones del laboratorio que abre la caja
 
-Es el primero armado replicando la forma de la seccion 18, y el que muestra que
+> **Numeracion.** Esto se escribio cuando abrir la carpeta oculta era el
+> laboratorio 03. Con el SPEC 009 dejo de ser un laboratorio aparte y quedo
+> como la **parte 4 del laboratorio 02**. Todo lo que dice esta seccion sigue
+> valiendo, ahora sobre el escenario del 02. La tabla de renumeracion completa
+> esta en la seccion 31.
+
+Fue el primero armado replicando la forma de la seccion 18, y el que muestra que
 esa forma no es mecanica: el escenario que necesita cada laboratorio sale de lo
 que su enunciado hace mirar.
 
@@ -1592,24 +1598,29 @@ se habia puesto en `Aplicacion.tsx`.
 
 ## 24. Que laboratorios llevan escenario, y que no se puede mostrar
 
-Llevan escenario **los laboratorios 01 al 10**, que son los que ocurren en disco
-y tienen grafo que mirar. No llevan el 11, 12, 14 y 15, porque ocurren en la
-plataforma, ni el 13, que es integracion continua.
+> **Numeracion.** Los numeros de esta seccion son los del SPEC 009, que dejo el
+> taller en catorce laboratorios. La tabla de equivalencia con la numeracion
+> anterior esta en la seccion 31.
 
-De los diez, **solo el 02 y el 03 tienen `preparar.sh` en el repositorio**, que
-son los laboratorios armados hasta hoy. Los otros ocho estan declarados y a la
+Llevan escenario **los laboratorios 01 al 07 y el 09**, que son los que ocurren
+en disco y tienen grafo que mirar. No llevan el 10, 11, 13 y 14, porque ocurren
+en la plataforma, ni el 12, que es integracion continua. Tampoco el 08, por la
+razon que se explica mas abajo.
+
+De los ocho, **tienen `preparar.sh` en el repositorio los del 02 al 06**, que
+son los laboratorios armados hasta hoy. Los demas estan declarados y a la
 espera: cuando cada laboratorio se arme, su script entra solo a la comparacion y
 tiene que calzar con lo declarado. Una prueba enumera cuales faltan, de modo que
 la lista no pueda quedar vieja en silencio.
 
-Los escenarios del 04 al 10 se derivaron de los verificadores de las semillas
-del SPEC 003, que son la descripcion mas precisa que existe del estado inicial
-que cada enunciado supone.
+Los escenarios del 03 en adelante se derivaron primero de los verificadores de
+las semillas del SPEC 003 y despues se rehicieron contra los enunciados, que es
+la unica fuente que manda (seccion 29).
 
-### El laboratorio 09 · no lleva escenario
+### El laboratorio 08 · no lleva escenario
 
-**Decision del product owner: el laboratorio 09 queda fuera del simulador.** Es
-de terminal pura.
+**Decision del product owner: el laboratorio que enseña remotos queda fuera del
+simulador.** Es de terminal pura. Era el 09 y con el SPEC 009 es el 08.
 
 Se intento darle escenario y el resultado dejaba a la vista el problema: se
 mostraba la historia local de cuatro confirmaciones y un remoto declarado, o
@@ -1628,10 +1639,10 @@ Esto es lo que el motor de hoy no puede mostrar:
 - **El gancho de pre-confirmacion.** El motor no ejecuta ganchos.
 
 **No se invento soporte nuevo**, como el SPEC 007 pidio. Si alguna vez se quiere
-que el laboratorio 09 se pueda seguir en el simulador, lo que hace falta es al
+que ese laboratorio se pueda seguir en el simulador, lo que hace falta es al
 menos ramas de seguimiento remoto y las ordenes de red, y eso es un spec propio.
 
-Los escenarios quedan entonces en **nueve**: los laboratorios 01 al 08 y el 10.
+Los escenarios quedan entonces en **ocho**: los laboratorios 01 al 07 y el 09.
 
 ### El laboratorio 01 · la unica licencia
 
@@ -1985,6 +1996,10 @@ comporta como Git.
 
 ## 29. Los cuatro laboratorios, y lo que las semillas no decian
 
+> **Numeracion.** Escrita antes del SPEC 009: los numeros de esta seccion son
+> los antiguos. Hoy el 04 es el 03, el 05 es el 04, el 06 es el 05 y el 07 es el
+> 06. La tabla completa esta en la seccion 31.
+
 Con el 04, el 05, el 06 y el 07 quedan cerradas las sesiones 1 a la 4: siete
 laboratorios armados con la forma de la seccion 18, cada uno con su enunciado,
 su preparacion, su verificador, su escenario en el simulador y su recorrido
@@ -2046,6 +2061,10 @@ union limpia. El verificador lo comprueba explicitamente.
 
 ## 30. La cobertura de los siete laboratorios
 
+> **Numeracion.** Cifras de la corrida del SPEC 008, con la numeracion antigua y
+> con el enunciado que cada laboratorio tenia entonces. La medicion vigente,
+> renumerada, esta en la seccion 31.
+
 Medida en la corrida, no estimada. «Comparadas» son las ordenes que se
 ejecutaron en los dos lados y cuyo resultado se comparo; el resto se corrio solo
 en Git o no se corrio.
@@ -2098,3 +2117,93 @@ seguir entero en el simulador y lo que muestra coincide con la terminal.
 
 El **03** tiene 27 por ciento y esta bien asi: mira dentro de la carpeta oculta,
 que el simulador no modela a proposito.
+
+---
+
+# SPEC 009 · Correccion de alcance de los laboratorios
+
+## 31. La renumeracion, y por que el antiguo 03 no era un laboratorio
+
+El taller pasa de **quince a catorce laboratorios**. El antiguo 03, «Abrir la
+caja», deja de existir como laboratorio propio y su contenido util queda como
+**parte 4 del laboratorio 02**, con veinte minutos asignados.
+
+### La tabla
+
+| Antes | Ahora | Titulo |
+|---|---|---|
+| 01 | 01 | El recetario nace |
+| 02 | 02 | Leer la historia y abrir la caja |
+| 03 | — | absorbido en la parte 4 del 02 |
+| 04 | 03 | Ordenar el recetario |
+| 05 | 04 | Tres cocinas en paralelo |
+| 06 | 05 | Fusionar y resolver |
+| 07 | 06 | Retroceder, revertir y etiquetar |
+| 08 | 07 | Interrumpir y limpiar la historia |
+| 09 | 08 | Conectar y publicar |
+| 10 | 09 | Etiquetas, versiones y limpieza |
+| 11 al 15 | 10 al 14 | los de la plataforma y la tuberia |
+
+### Que sobrevivio del antiguo 03 y que no
+
+Sobrevive lo que se puede mirar en dos minutos y deja una idea: `cat .git/HEAD`,
+que una rama son cuarenta y un bytes de texto, el recorrido de crear una rama,
+cambiarse a ella, volver y borrarla, y ver que el directorio de trabajo no
+cambia por eso.
+
+No sobrevive lo que exigia mas tiempo del que el tema merece: recorrer los
+objetos con `cat-file`, medir el arbol, comparar contra una confirmacion
+anterior y buscar por contenido con `git log -S`.
+
+### Lo que la desaparicion se llevo por delante
+
+El antiguo 03 tenia escenario propio en el simulador, una tanda de pruebas y una
+fila en las tablas de cobertura. Al borrarlo:
+
+- **Su escenario desaparecio.** `ESCENARIOS` pasa de nueve a ocho declaraciones.
+- **Las pruebas que lo cubrian se rehicieron**, no se borraron: las que seguian
+  diciendo algo cierto se mudaron al 02, que es quien hoy tiene ese contenido.
+  El verificador del 02 gano dos criterios, «solo existe la rama main» y «HEAD
+  apunta a main», que son los que comprueban la parte 4.
+- **Las pruebas de interfaz apuntaban a su escenario justamente por ser corto**,
+  cuatro confirmaciones limpias. El escenario que hoy lleva el numero 03 tiene
+  cinco y los conteos habia que corregirlos. Es el unico lugar donde el numero
+  del laboratorio estaba metido en una cifra y no en un texto.
+
+### El criterio para renumerar sin dejar referencias viejas
+
+No se reviso a ojo. La palabra `laboratorio` y la forma `lab-NN` se buscaron en
+todo el repositorio y cada aparicion se clasifico en una de tres:
+
+1. **Referencia viva**, que se corrige.
+2. **Registro historico** de un spec anterior, que se conserva y se marca con
+   una nota de numeracion que remite a esta tabla.
+3. **Codigo muerto**, que se deja quieto: `semillas/` no se toca desde el SPEC
+   004 y conserva la numeracion vieja. Nada en `labs/` la invoca y hay una
+   prueba que lo fija.
+
+Ademas quedo una prueba que no depende de que alguien vuelva a mirar: recorre
+los enunciados armados y exige que el titulo diga su propio numero, que cada uno
+prepare y trabaje sobre su propia carpeta y no sobre la de otro, y que ninguna
+mencion apunte a un laboratorio mayor que catorce.
+
+### La cobertura despues del cambio
+
+Medida en la corrida, con la numeracion nueva.
+
+| Laboratorio | Ordenes | Comparadas | Cobertura | Donde se corta |
+|---|---|---|---|---|
+| 02 · leer la historia y abrir la caja | 53 | 31 | 58 % | no se corta |
+| 03 · ordenar el recetario | 57 | 5 | 9 % | `git mv` |
+| 04 · tres cocinas en paralelo | 66 | 9 | 14 % | `git switch -c mexicana HEAD~3` |
+| 05 · fusionar y resolver | 45 | 35 | 78 % | no se corta |
+| 06 · retroceder, revertir y etiquetar | 51 | 6 | 12 % | `git commit -c ORIG_HEAD` |
+
+El 02 sube de 40 a 53 ordenes y baja de 65 a 58 por ciento: la parte 4 que
+heredo son trece ordenes que miran dentro de la carpeta oculta, y esas se corren
+solo en Git a proposito. **La cifra baja porque el laboratorio crecio por el
+lado que el simulador no modela**, no porque algo se haya roto.
+
+El 05, que antes era el 06, sube de 64 a 78 por ciento: es el mismo laboratorio
+y el mismo recorrido, con el enunciado reescrito por el product owner, que quedo
+mas corto y con menos ordenes fuera del alcance del motor.

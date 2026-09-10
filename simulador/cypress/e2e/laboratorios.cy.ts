@@ -300,28 +300,24 @@ function recorrer(numero: string): void {
   });
 }
 
-describe('laboratorio 02 · leer la historia y volver atras', () => {
+describe('laboratorio 02 · leer la historia y abrir la caja', () => {
   recorrer('02');
 });
 
-describe('laboratorio 03 · abrir la caja', () => {
+describe('laboratorio 03 · ordenar el recetario', () => {
   recorrer('03');
 });
 
-describe('laboratorio 04 · ordenar el recetario', () => {
+describe('laboratorio 04 · tres cocinas en paralelo', () => {
   recorrer('04');
 });
 
-describe('laboratorio 05 · tres cocinas en paralelo', () => {
+describe('laboratorio 05 · fusionar y resolver', () => {
   recorrer('05');
 });
 
-describe('laboratorio 06 · fusionar y resolver', () => {
+describe('laboratorio 06 · retroceder, revertir y etiquetar', () => {
   recorrer('06');
-});
-
-describe('laboratorio 07 · retroceder, revertir y etiquetar', () => {
-  recorrer('07');
 });
 
 after(() => {

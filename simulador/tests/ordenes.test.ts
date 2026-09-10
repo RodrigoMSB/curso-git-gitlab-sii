@@ -769,7 +769,7 @@ describe('git rebase', () => {
     const despues = ejecutar(partida, 'git rebase main').estado;
     const salida = texto(ejecutar(despues, 'git log --oneline'));
 
-    // Los mensajes que el laboratorio 08 manda arreglar sobreviven al rebase.
+    // Los mensajes que el laboratorio 07 manda arreglar sobreviven al rebase.
     expect(salida).toContain('wip');
     expect(salida).toContain('arreglos');
     expect(salida).toContain('Agrega la tabla de cocineros');

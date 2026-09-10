@@ -82,7 +82,7 @@ export const LAB01: EscenarioDeclarado = {
 };
 
 // ---------------------------------------------------------------------------
-// Laboratorio 02 · Leer la historia y volver atras
+// Laboratorio 02 · Leer la historia y abrir la caja
 // ---------------------------------------------------------------------------
 
 /** Corresponde a `labs/lab-02/preparar.sh`, confirmacion por confirmacion. */
@@ -90,9 +90,9 @@ export const LAB02: EscenarioDeclarado = {
   id: 'lab-02',
   laboratorio: 2,
   sesion: 2,
-  titulo: 'Leer la historia y volver atras',
+  titulo: 'Leer la historia y abrir la caja',
   proposito:
-    'Filtrar el historial por autor, por fecha y por contenido, y despues corregir el mensaje, descartar un cambio y sacar un archivo del area de preparacion.',
+    'Filtrar el historial por autor y por archivo, corregir el mensaje, descartar un cambio, sacar un archivo del area de preparacion, y abrir la carpeta oculta para ver que una rama es un archivo de texto.',
   directorio: directorioDe(2),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
@@ -158,73 +158,7 @@ export const LAB02: EscenarioDeclarado = {
 };
 
 // ---------------------------------------------------------------------------
-// Laboratorio 03 · Abrir la caja
-// ---------------------------------------------------------------------------
-
-/** Corresponde a `labs/lab-03/preparar.sh`. Historia corta y limpia. */
-export const LAB03: EscenarioDeclarado = {
-  id: 'lab-03',
-  laboratorio: 3,
-  sesion: 2,
-  titulo: 'Abrir la caja',
-  proposito:
-    'Mirar por dentro la carpeta .git: donde vive una rama, que hay en una confirmacion y como se encadenan los objetos.',
-  directorio: directorioDe(3),
-  configuracion: CONFIGURACION_PUESTA,
-  confirmaciones: [
-    {
-      clave: 'c1',
-      mensaje: 'se inicia el recetario',
-      archivos: ['README.md'],
-      padres: [],
-      carril: 0,
-      ...JUANA,
-      epoca: cuando(3, 5, 9, 30),
-    },
-    {
-      clave: 'c2',
-      mensaje: 'se agregan los platos chilenos',
-      archivos: ['platos.md'],
-      padres: ['c1'],
-      carril: 0,
-      ...MARCO,
-      epoca: cuando(5, 21, 14, 15),
-    },
-    {
-      clave: 'c3',
-      mensaje: 'se agregan los ingredientes y los cocineros',
-      archivos: ['ingredientes.md', 'cocineros.md'],
-      padres: ['c2'],
-      carril: 0,
-      ...JUANA,
-      epoca: cuando(8, 13, 11, 0),
-    },
-    {
-      clave: 'c4',
-      mensaje: 'se documentan las dos primeras recetas',
-      archivos: ['recetas/pastel-de-choclo.md', 'recetas/empanadas.md'],
-      padres: ['c3'],
-      carril: 0,
-      ...MARCO,
-      epoca: cuando(11, 6, 16, 20),
-    },
-  ],
-  ramas: [{ nombre: 'main', en: 'c4', carril: 0 }],
-  etiquetas: [],
-  posicion: 'main',
-  archivos: limpios(
-    'README.md',
-    'platos.md',
-    'ingredientes.md',
-    'cocineros.md',
-    'recetas/pastel-de-choclo.md',
-    'recetas/empanadas.md',
-  ),
-  remotos: [],
-};
-
-// ---------------------------------------------------------------------------
-// Laboratorio 04 · Ordenar el recetario
+// Laboratorio 03 · Ordenar el recetario
 // ---------------------------------------------------------------------------
 
 /**
@@ -233,14 +167,14 @@ export const LAB03: EscenarioDeclarado = {
  * ignorar un archivo y sacarlo del seguimiento, que es el punto del ejercicio.
  * No hay archivo de exclusiones: lo escribe el participante.
  */
-export const LAB04: EscenarioDeclarado = {
-  id: 'lab-04',
-  laboratorio: 4,
+export const LAB03: EscenarioDeclarado = {
+  id: 'lab-03',
+  laboratorio: 3,
   sesion: 3,
   titulo: 'Ordenar el recetario',
   proposito:
     'Escribir el archivo de exclusiones y sacar del seguimiento lo que nunca debio entrar, sin perderlo del disco.',
-  directorio: directorioDe(4),
+  directorio: directorioDe(3),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
     {
@@ -315,7 +249,7 @@ export const LAB04: EscenarioDeclarado = {
 };
 
 // ---------------------------------------------------------------------------
-// Laboratorio 05 · Tres cocinas en paralelo
+// Laboratorio 04 · Tres cocinas en paralelo
 // ---------------------------------------------------------------------------
 
 /**
@@ -323,13 +257,13 @@ export const LAB04: EscenarioDeclarado = {
  * un archivo distinto, de modo que las tres ramas que el participante crea
  * puedan nacer de sitios distintos y las diferencias se lean sin ambiguedad.
  */
-export const LAB05: EscenarioDeclarado = {
-  id: 'lab-05',
-  laboratorio: 5,
+export const LAB04: EscenarioDeclarado = {
+  id: 'lab-04',
+  laboratorio: 4,
   sesion: 3,
   titulo: 'Tres cocinas en paralelo',
   proposito: 'Crear ramas, moverse entre ellas y ver que el grafo se abre y se cierra.',
-  directorio: directorioDe(5),
+  directorio: directorioDe(4),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
     {
@@ -402,25 +336,26 @@ export const LAB05: EscenarioDeclarado = {
 };
 
 // ---------------------------------------------------------------------------
-// Laboratorio 06 · Fusionar y resolver
+// Laboratorio 05 · Fusionar y resolver
 // ---------------------------------------------------------------------------
 
 /**
- * Dos ramas con destinos distintos a proposito.
+ * Tres ramas con destinos distintos a proposito, uno por cada caso de fusion.
  *
- *   mexicana  nace de la punta de main, que no avanzo despues, de modo que su
- *             fusion es un avance rapido y no crea confirmacion de union.
- *   peruana   nace una confirmacion antes y toca la misma linea de platos.md
- *             que toco main despues, de modo que su fusion choca.
+ *   tailandesa  nace de la punta de main, que no avanzo despues, de modo que
+ *               su fusion es un avance rapido y no crea confirmacion de union.
+ *   azteca      nace antes y toca otros archivos: la fusion une sin chocar.
+ *   andina      toca la misma linea de platos.md que toco main despues, de
+ *               modo que su fusion choca.
  */
-export const LAB06: EscenarioDeclarado = {
-  id: 'lab-06',
-  laboratorio: 6,
+export const LAB05: EscenarioDeclarado = {
+  id: 'lab-05',
+  laboratorio: 5,
   sesion: 4,
   titulo: 'Fusionar y resolver',
   proposito:
     'Reconocer cual de los tres casos de fusion se tiene delante antes de escribir la orden, y saber que hacer cuando choca.',
-  directorio: directorioDe(6),
+  directorio: directorioDe(5),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
     {
@@ -507,7 +442,7 @@ export const LAB06: EscenarioDeclarado = {
 };
 
 // ---------------------------------------------------------------------------
-// Laboratorio 07 · Retroceder, revertir y etiquetar
+// Laboratorio 06 · Retroceder, revertir y etiquetar
 // ---------------------------------------------------------------------------
 
 /**
@@ -515,14 +450,14 @@ export const LAB06: EscenarioDeclarado = {
  * ingredientes y quedan tres confirmaciones encima. El enunciado la trata como
  * ya publicada, que es lo que hace preferible revertir antes que retroceder.
  */
-export const LAB07: EscenarioDeclarado = {
-  id: 'lab-07',
-  laboratorio: 7,
-  sesion: 5,
+export const LAB06: EscenarioDeclarado = {
+  id: 'lab-06',
+  laboratorio: 6,
+  sesion: 4,
   titulo: 'Retroceder, revertir y etiquetar',
   proposito:
     'Revertir una confirmacion ya publicada sin reescribir lo que vino despues, y marcar una version con una etiqueta.',
-  directorio: directorioDe(7),
+  directorio: directorioDe(6),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
     {
@@ -607,7 +542,7 @@ export const LAB07: EscenarioDeclarado = {
 };
 
 // ---------------------------------------------------------------------------
-// Laboratorio 08 · Interrumpir y limpiar la historia
+// Laboratorio 07 · Interrumpir y limpiar la historia
 // ---------------------------------------------------------------------------
 
 /**
@@ -615,14 +550,14 @@ export const LAB07: EscenarioDeclarado = {
  * nada, y `main` avanzo dos por su cuenta. El participante arranca parado en la
  * rama de trabajo, con un archivo sin seguimiento encima.
  */
-export const LAB08: EscenarioDeclarado = {
-  id: 'lab-08',
-  laboratorio: 8,
+export const LAB07: EscenarioDeclarado = {
+  id: 'lab-07',
+  laboratorio: 7,
   sesion: 5,
   titulo: 'Interrumpir y limpiar la historia',
   proposito:
     'Guardar el trabajo a medias, reordenar la rama sobre main y dejar una historia que se pueda leer.',
-  directorio: directorioDe(8),
+  directorio: directorioDe(7),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
     {
@@ -717,7 +652,7 @@ export const LAB08: EscenarioDeclarado = {
 };
 
 // ---------------------------------------------------------------------------
-// Laboratorio 09 · no lleva escenario
+// Laboratorio 08 · no lleva escenario
 // ---------------------------------------------------------------------------
 //
 // Se saco del simulador a proposito. Lo que ese laboratorio enseña son dos
@@ -730,18 +665,18 @@ export const LAB08: EscenarioDeclarado = {
 // seccion 24 de docs/arquitectura.md.
 
 // ---------------------------------------------------------------------------
-// Laboratorio 10 · Conectar y publicar
+// Laboratorio 09 · Conectar y publicar
 // ---------------------------------------------------------------------------
 
 /** Ocho confirmaciones, archivo de exclusiones ya escrito y una version etiquetada. */
-export const LAB10: EscenarioDeclarado = {
-  id: 'lab-10',
-  laboratorio: 10,
+export const LAB09: EscenarioDeclarado = {
+  id: 'lab-09',
+  laboratorio: 9,
   sesion: 6,
   titulo: 'Conectar y publicar',
   proposito:
     'Conectar el repositorio local con GitLab y publicar la historia completa, con su etiqueta de version.',
-  directorio: directorioDe(10),
+  directorio: directorioDe(9),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
     {
@@ -846,6 +781,5 @@ export const ESCENARIOS: readonly EscenarioDeclarado[] = [
   LAB05,
   LAB06,
   LAB07,
-  LAB08,
-  LAB10,
+  LAB09,
 ];

@@ -81,7 +81,7 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
   });
 
   it('8.4 el rebase produce confirmaciones nuevas y deja las originales en el modelo', () => {
-    // El laboratorio 08 es el que tiene una rama de trabajo con varias
+    // El laboratorio 07 es el que tiene una rama de trabajo con varias
     // confirmaciones propias, que es lo que el rebase reescribe.
     const partida = repoConRamaDeTrabajo();
     const originales = [...antepasados(partida, ramaPorNombre(partida, 'tailandesa')?.id ?? '')];

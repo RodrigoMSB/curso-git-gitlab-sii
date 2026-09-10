@@ -1,346 +1,236 @@
-# Laboratorio 05 · Tres cocinas en paralelo
+# Laboratorio 05 · Fusionar y resolver
 
-**Sesión 3 · 85 minutos**
+**Sesión 4 · 70 minutos**
+
+*Antes se llamaba laboratorio 06. Ver la tabla de renumeración.*
 
 ---
 
 ## Qué vas a hacer
 
-Vas a abrir tres cocinas en el recetario, cada una arrancando desde un punto distinto de la historia. Después vas a renombrar una, eliminar otra, y perderte a propósito en el estado desconectado para aprender a salir de ahí.
+Vas a fusionar tres ramas y las tres se van a comportar distinto. Una va a avanzar sin crear nada, otra va a crear una confirmación de unión, y la tercera va a chocar.
 
-Antes de mirar el resultado vas a dibujar en un papel cómo crees que quedó el grafo. Esa parte no es opcional. Es la que te dice si entendiste o si solo copiaste órdenes.
+Siempre vas a escribir la misma orden. Lo que decide qué ocurre es la forma que tiene el grafo, no lo que tú quieras.
 
 ---
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
-
 ```
-labs/lab-05/preparar.sh
-cd ../taller-git-trabajo/lab-05/recetario
+./preparar.sh
+cd ../../../taller-git-trabajo/lab-05/recetario
 ```
 
-Mira el punto de partida.
+Mira con qué te encontraste.
 
 ```
-git log --oneline
-git lg
 git branch
+git lg
 ```
 
-Seis confirmaciones en una sola línea recta y una sola rama. De aquí en adelante deja de ser recta.
+Tres ramas de trabajo separadas de `main` en puntos distintos. Estúdialas un minuto antes de seguir.
 
 ---
 
-## Parte 1 · Tres ramas desde tres puntos
+## Parte 1 · La fusión que no crea nada
 
-**Tiempo sugerido, 35 minutos.**
+**Tiempo sugerido, 20 minutos.**
 
-### 1.1 La primera, desde donde estás
-
-```
-git branch tailandesa
-git branch
-git lg
-```
-
-Lee el grafo. Hay dos nombres apuntando a la misma confirmación. No pasó nada más.
-
-Cámbiate a ella y confirma algo.
-
-```
-git switch tailandesa
-```
-
-Crea `recetas/pad-thai.md`.
-
-```
-# Pad thai
-
-Fideos de arroz, tamarindo, mani, huevo y salsa de pescado.
-```
-
-Y confirma.
-
-```
-git add recetas/pad-thai.md
-git commit -m "se abre la cocina tailandesa"
-git lg
-```
-
-Ahora los dos nombres apuntan a confirmaciones distintas.
-
-### 1.2 La segunda, desde una confirmación anterior
-
-Esta no nace de donde estás parado, nace de tres confirmaciones atrás.
+### 1.1 Mira la situación
 
 ```
 git switch main
+git log --oneline main
+git log --oneline tailandesa
+```
+
+`main` no avanzó desde que `tailandesa` se separó. Todo lo que tiene `main` lo tiene también `tailandesa`, más lo suyo propio.
+
+Cuando pasa eso, no hay nada que combinar. Basta con mover el nombre hacia adelante.
+
+### 1.2 Fusiona
+
+```
+git merge tailandesa
+git lg
 git log --oneline
-git switch -c mexicana HEAD~3
-git lg
 ```
 
-La orden `switch -c` con una referencia hace dos cosas de una vez, crea la rama en ese punto y te cambia a ella.
+Lee la salida. Git dice `Fast-forward` y no abrió ningún editor.
 
-Fíjate en tu directorio de trabajo.
+Y mira el grafo. No apareció ninguna confirmación nueva. El nombre `main` simplemente se corrió hasta donde estaba `tailandesa`.
 
-```
-ls
-ls recetas
-```
-
-Los archivos cambiaron. Estás parado tres confirmaciones atrás, así que ves el proyecto como estaba en ese momento.
-
-Confirma algo acá.
-
-```
-mkdir -p recetas
-```
-
-Crea `recetas/tacos.md`.
-
-```
-# Tacos
-
-Tortilla de maiz, carne, cebolla, cilantro y limon.
-```
-
-Y confirma.
-
-```
-git add recetas/tacos.md
-git commit -m "se abre la cocina mexicana"
-git lg
-```
-
-El grafo ya no es una línea. Se abrió.
-
-### 1.3 La tercera, desde una confirmación específica
-
-Ahora vas a usar un identificador en lugar de una referencia relativa.
+### 1.3 Comprueba
 
 ```
 git log --oneline main
+git log --oneline tailandesa
 ```
 
-Elige la segunda confirmación de esa lista y copia su identificador.
+Idénticos. Las dos ramas apuntan a la misma confirmación.
+
+Limpia la rama, que ya cumplió.
 
 ```
-git branch peruana <identificador>
-git switch peruana
-git lg
+git branch -d tailandesa
+git branch
 ```
 
-Confirma algo. Crea `recetas/ceviche.md`.
-
-```
-# Ceviche
-
-Pescado blanco, limon, cebolla morada, aji y camote.
-```
-
-Y confirma.
-
-```
-git add recetas/ceviche.md
-git commit -m "se abre la cocina peruana"
-```
-
-### 1.4 Dibuja antes de mirar
-
-**No ejecutes nada todavía.**
-
-Toma un papel y dibuja cómo crees que quedó el grafo. Marca dónde está cada una de las cuatro ramas y de qué punto sale cada una.
-
-Cuando lo tengas dibujado, y solo entonces.
-
-```
-git lg
-```
-
-Compara. Si no coincide, no sigas hasta entender dónde te equivocaste. Vuelve sobre los puntos 1.1 a 1.3 y sigue el hilo.
+Git no reclamó, porque no había nada que perder.
 
 ---
 
-## Parte 2 · Renombrar y eliminar
+## Parte 2 · La fusión que sí crea algo
 
-**Tiempo sugerido, 15 minutos.**
+**Tiempo sugerido, 20 minutos.**
 
-### 2.1 Renombrar la rama donde estás
+### 2.1 Mira la situación
 
 ```
-git branch
-git branch -m peruana andina
-git branch
 git lg
 ```
 
-Cambió el nombre. Nada más cambió, la confirmación es la misma.
+Ahora es distinto. `main` avanzó por su cuenta después de que `azteca` se separó.
 
-Si quieres comprobarlo con lo que aprendiste en el laboratorio 03.
+Las dos ramas tienen trabajo que la otra no tiene. No hay forma de resolver esto moviendo un nombre, hay que combinar de verdad.
 
-```
-ls .git/refs/heads
-```
-
-Un archivo se renombró. Eso fue todo.
-
-### 2.2 Renombrar una rama donde no estás
+### 2.2 Fusiona
 
 ```
-git branch -m mexicana azteca
-git branch
+git merge azteca
 ```
 
-Con dos nombres, el primero es la rama a renombrar y el segundo el nombre nuevo. No necesitas estar parado en ella.
+Git abre el editor con un mensaje ya escrito. Acéptalo tal cual, no lo cambies. Guarda y cierra.
 
-### 2.3 Eliminar una rama
-
-Crea una que no sirva y bórrala.
+Si configuraste Visual Studio Code en el laboratorio 01, el mensaje se abre en una pestaña. Se acepta cerrando la pestaña.
 
 ```
-git branch temporal
-git branch
-git branch -d temporal
-git branch
+git lg
+git log --oneline -3
 ```
 
-Sin drama, porque `temporal` no tenía nada que las otras no tuvieran.
+### 2.3 Mira lo que se creó
 
-### 2.4 Cuando Git se niega
-
-Intenta borrar una que sí tiene trabajo propio.
+La confirmación de arriba es distinta de todas las que has visto. Tiene dos padres, mientras que todas las anteriores tenían uno.
 
 ```
-git switch main
+git log --oneline -1
+git show --stat HEAD
+```
+
+Ahí está la diferencia con el avance rápido. En el primer caso el grafo siguió recto. En este se abrió y se volvió a cerrar, y esa forma queda registrada para siempre en la historia.
+
+```
 git branch -d azteca
 ```
 
-Git se niega y te explica por qué. Esa rama tiene una confirmación que ninguna otra tiene, y borrarla dejaría ese trabajo sin nadie apuntándolo.
-
-**ATENCIÓN. La opción `-D` en mayúscula fuerza el borrado y no pregunta. La confirmación no se destruye de inmediato, queda huérfana y se puede recuperar con el registro de referencias, que vas a ver en el laboratorio 07. Pero si pasa el tiempo suficiente, el recolector de basura de Git la elimina de verdad.**
-
-No la borres. Déjala como está y sigue.
-
 ---
 
-## Parte 3 · Perderse a propósito
+## Parte 3 · La fusión que choca
 
-**Tiempo sugerido, 25 minutos.**
+**Tiempo sugerido, 30 minutos.**
 
-Acá vas a entrar al estado que más asusta la primera vez.
-
-### 3.1 Entrar
+### 3.1 Mira por qué va a chocar
 
 ```
-git log --oneline main
+git diff main andina -- platos.md
 ```
 
-Copia el identificador de la tercera confirmación de la lista y cámbiate a ella directamente, sin nombre de rama.
+Las dos ramas tocaron la misma línea del mismo archivo, y la dejaron distinta. Git no tiene forma de saber cuál de las dos versiones quieres.
+
+### 3.2 Fusiona y observa el choque
 
 ```
-git switch --detach <identificador>
+git merge andina
 ```
 
-Lee el mensaje completo. Git te avisa que estás en estado desconectado y te explica lo que puede pasar. Es largo y da la impresión de ser un error. No lo es.
-
-### 3.2 Mira dónde estás
+Lee el mensaje. Git dice qué archivo chocó y te avisa que la fusión quedó a medias.
 
 ```
 git status
-git branch
-cat .git/HEAD
 ```
 
-En `git branch` aparece una entrada rara arriba de todo, que no es un nombre de rama.
+Presta atención a la sección nueva que aparece, los archivos sin fusionar. Ese estado no lo habías visto antes.
 
-Y en `.git/HEAD` ya no hay una referencia a una rama, hay un identificador directo. Eso es exactamente lo que significa estar desconectado. `HEAD` apunta a una confirmación en vez de apuntar a una rama.
-
-### 3.3 Trabaja igual
-
-Puedes confirmar acá sin problema. Crea `recetas/humita.md`.
+### 3.3 Mira el conflicto
 
 ```
-# Humita
-
-Choclo molido, albahaca, cebolla, cocida en las mismas hojas.
+cat platos.md
 ```
 
-Y confirma.
+Ahí están los marcadores. Se leen así.
+
+Entre `<<<<<<< HEAD` y `=======` está **tu** versión, la de la rama donde estás parado.
+
+Entre `=======` y `>>>>>>> andina` está la versión que viene de la otra rama.
+
+Los marcadores son texto corriente que Git escribió en tu archivo. No son mágicos y hay que borrarlos a mano.
+
+### 3.4 Practica el aborto primero
+
+Antes de resolverlo, aprende a salir. Es lo que más vas a necesitar los primeros meses.
 
 ```
-git add recetas/humita.md
-git commit -m "se agrega la humita"
-git log --oneline -2
+git merge --abort
+git status
+cat platos.md
 git lg
 ```
 
-Tu confirmación existe y es tan válida como cualquier otra. El problema es que ningún nombre la apunta. Si te vas de acá ahora, no vas a tener cómo volver a encontrarla.
+Todo volvió a como estaba. El archivo quedó limpio, sin marcadores, y la fusión no ocurrió.
 
-### 3.4 El error
+Esa orden es tu salida de emergencia cuando el conflicto es más grande de lo que esperabas y prefieres consultar antes de seguir.
 
-Cámbiate a otra rama.
+### 3.5 Ahora sí, resuelve
 
 ```
-git switch main
+git merge andina
+git status
 ```
 
-Lee la advertencia. Git te avisa que dejas atrás una confirmación y te ofrece el identificador para rescatarla.
+Abre `platos.md` en tu editor y déjalo con las dos versiones combinadas, o sea con los platos de las dos ramas y sin ningún marcador.
+
+Borra las tres líneas de marcadores, `<<<<<<< HEAD`, `=======` y `>>>>>>> andina`. Deja el contenido que quieres conservar.
+
+Comprueba que no quedó ninguno.
+
+```
+grep -n "<<<<<<<\|=======\|>>>>>>>" platos.md
+```
+
+Si no devuelve nada, está limpio. Si devuelve líneas, todavía quedan marcadores.
+
+### 3.6 Marca el conflicto como resuelto
+
+```
+git add platos.md
+git status
+```
+
+Lee el cambio. Ya no aparece como archivo sin fusionar. `git add` es lo que le dice a Git que ese conflicto está resuelto.
+
+```
+git commit
+```
+
+Git abre el editor con el mensaje de la fusión. Acéptalo.
 
 ```
 git lg
 ```
 
-Tu humita no aparece por ninguna parte.
-
-### 3.5 El rescate
-
-Todavía se puede. Copia el identificador que Git te ofreció en la advertencia.
+### 3.7 Comprueba el resultado
 
 ```
-git branch rescate <identificador>
-git lg
+cat platos.md
+git log --oneline -1
 ```
 
-Ahí está de vuelta. Le pusiste un nombre y volvió al grafo.
-
-Si no copiaste el identificador a tiempo, se recupera con el registro de referencias.
+Es una confirmación de unión normal, la única diferencia fue que tuviste que armar el contenido tú.
 
 ```
-git reflog
+git branch -d andina
 ```
-
-Ahí está todo lo que hiciste, incluida esa confirmación.
-
-### 3.6 Cómo se hace bien
-
-La forma correcta es crear la rama **antes** de irte, no después.
-
-```
-git switch --detach HEAD~2
-```
-
-Crea `recetas/sopaipillas.md`.
-
-```
-# Sopaipillas
-
-Harina, zapallo, manteca. Fritas y con pebre.
-```
-
-Confirma y esta vez ponle nombre antes de moverte.
-
-```
-git add recetas/sopaipillas.md
-git commit -m "se agregan las sopaipillas"
-git switch -c fritangas
-git lg
-git switch main
-```
-
-Sin advertencia y sin rescate. La rama ya existía cuando te fuiste.
 
 ---
 
@@ -350,19 +240,25 @@ Sin advertencia y sin rescate. La rama ya existía cuando te fuiste.
 git branch
 ```
 
-Deben aparecer `main`, `tailandesa`, `azteca`, `andina`, `rescate` y `fritangas`. Seis en total, y `main` marcada como la actual.
+Solo debe quedar `main`.
+
+```
+git log --oneline
+```
+
+Debe haber dos confirmaciones de unión en la historia.
 
 ```
 git lg
 ```
 
-El grafo debe mostrar cinco puntos de separación distintos sobre la línea de `main`.
+El grafo debe mostrar una rama que entró sin dejar marca, la del avance rápido, y dos que se abrieron y se cerraron.
 
 ```
-cat .git/HEAD
+grep -rn "<<<<<<<" .
 ```
 
-Debe apuntar a `main`, no a un identificador suelto.
+No debe devolver nada. Si devuelve algo, quedó un marcador dentro de un archivo.
 
 ```
 git status
@@ -374,22 +270,33 @@ Directorio limpio.
 
 ## Si algo salió mal
 
-**Quedaste desconectado y no sabes volver.** `git switch main` te devuelve siempre. Si tenías trabajo sin nombre, revisa la advertencia que Git imprime al salir o usa `git reflog`.
+**Confirmaste con los marcadores adentro.** Pasa más de lo que crees y es la razón del `grep` del paso 3.5. Arréglalo con lo que aprendiste en el laboratorio 02.
 
-**Perdiste una confirmación y no anotaste el identificador.** Está en `git reflog`. No se pierde hasta que pasan semanas y corre el recolector.
+```
+git restore --staged platos.md
+```
 
-**Creaste una rama en el punto equivocado.** Bórrala con `git branch -d` y créala de nuevo. Como no tiene trabajo propio, Git no va a reclamar.
+Edita el archivo, sácale los marcadores, y después.
 
-**El grafo no coincide con tu dibujo.** No sigas hasta entender por qué. Ese es el ejercicio.
+```
+git add platos.md
+git commit --amend --no-edit
+```
+
+**Estás en medio de una fusión y no sabes en qué punto vas.** `git status` siempre te lo dice, y siempre te ofrece la salida.
+
+**Quieres salir de la fusión sin resolver.** `git merge --abort`. No pierde nada de lo que había antes de empezar.
+
+**El editor se abrió y no sabes cerrarlo.** Si es Visual Studio Code, cierra la pestaña. Si se abrió otro editor dentro de la consola, tienes un problema de configuración y conviene volver al punto 1.2 del laboratorio 01.
 
 ---
 
 ## Lo que te llevas
 
-Una rama se crea donde tú digas, no solo donde estás parado. Con una referencia relativa o con un identificador puedes abrirla desde cualquier punto de la historia.
+Hay tres resultados posibles y siempre se escribe la misma orden. Lo que decide cuál te toca es la forma del grafo, no lo que tú quieras.
 
-Renombrar una rama renombra un archivo. Eliminarla borra ese archivo. Nada más ocurre.
+Cuando una rama está contenida entera en la otra, Git mueve el nombre y no crea nada. Cuando las dos avanzaron por su lado, crea una confirmación con dos padres. Cuando además tocaron la misma línea, se detiene y te pide que decidas tú.
 
-El estado desconectado no es un error ni es peligroso por sí mismo. Significa que `HEAD` apunta a una confirmación en vez de a una rama. Lo único que hay que recordar es ponerle nombre al trabajo antes de irse.
+Los marcadores de conflicto son texto que Git escribió en tu archivo. Hay que borrarlos a mano y conviene comprobar que no quedó ninguno antes de confirmar.
 
-Y cuando se te olvidó, el registro de referencias lo tiene. Eso lo vas a usar en serio en el laboratorio 07.
+`git merge --abort` deja todo como estaba. Úsala sin culpa cada vez que el conflicto sea más grande de lo que esperabas.

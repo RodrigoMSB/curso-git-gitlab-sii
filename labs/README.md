@@ -30,13 +30,13 @@ GIT-GITLAB/
     ├── lab-02/
     │   └── recetario/
     ├── ...
-    └── lab-07/
+    └── lab-06/
         └── recetario/
 ```
 
 La razon esta en la seccion 17 de [`docs/arquitectura.md`](../docs/arquitectura.md),
 con los cinco efectos que provoca trabajar dentro del clon. Es la regla que
-heredan los quince laboratorios: **el trabajo del participante nunca vive dentro
+heredan los catorce laboratorios: **el trabajo del participante nunca vive dentro
 del clon del curso.**
 
 Al terminar el taller se borra `taller-git-trabajo` de una vez y no queda nada
@@ -66,5 +66,10 @@ labs/lab-02/preparar.sh
 El escenario es determinista: entrega siempre la misma historia, con los mismos
 identificadores de confirmacion, en cualquier maquina.
 
-Por ahora estan armados los laboratorios 01 al 07, que cubren las sesiones 1 a
+Por ahora estan armados los laboratorios 01 al 06, que cubren las sesiones 1 a
 la 4 completas. Los otros ocho se agregan en specs posteriores.
+
+La numeracion cambio con el SPEC 009: los laboratorios pasaron de quince a
+catorce. El antiguo 03, que abria la carpeta oculta, ya no es un laboratorio
+aparte y su contenido vive en la parte 4 del 02. Del antiguo 04 en adelante,
+cada uno bajo un numero.

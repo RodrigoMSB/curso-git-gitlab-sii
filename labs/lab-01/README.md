@@ -101,7 +101,7 @@ ls -a
 
 Ahí está `.git`. Esa carpeta oculta **es** el repositorio. Todo lo demás que crees de aquí en adelante es solo tu directorio de trabajo.
 
-No entres todavía. La vas a abrir en el laboratorio 03, cuando tengas confirmaciones propias que valga la pena inspeccionar.
+No entres todavía. La vas a abrir en el laboratorio 02, cuando tengas confirmaciones propias que valga la pena inspeccionar.
 
 ### 2.3 El primer estado
 

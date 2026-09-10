@@ -2,18 +2,13 @@
 # Verificador del laboratorio 03 (reglas de la seccion 15 de
 # docs/arquitectura.md).
 #
-# Sin argumentos comprueba el ESTADO FINAL. Con `--escenario` comprueba el
-# ESTADO INICIAL, que es lo que usa preparar.sh.
+# Sin argumentos comprueba el ESTADO FINAL, con los criterios de la seccion
+# «Comprobacion» del enunciado. Con `--escenario` comprueba el ESTADO INICIAL,
+# que es lo que usa preparar.sh antes de entregar el laboratorio.
 #
-# El laboratorio 03 es de mirar, no de tocar: el participante abre la carpeta
-# .git y lee lo que hay. Por eso el estado final se parece muchisimo al
-# inicial, y contar confirmaciones o mirar si el directorio esta limpio no
-# distingue a quien hizo el laboratorio de quien no lo abrio nunca.
-#
-# Lo que si distingue es la parte 4, donde el participante crea la rama
-# `prueba`, se cambia a ella, vuelve y la borra. Eso no deja nada en el
-# directorio de trabajo, pero deja huella en el registro de referencias, que es
-# justamente una de las cosas que el laboratorio enseña a mirar.
+# Lo que distingue un laboratorio hecho de uno recien preparado es que los tres
+# archivos que sobran hayan salido del seguimiento y que exista el archivo de
+# exclusiones. Contar confirmaciones no bastaria: el participante agrega tres.
 #
 # Escrito para Bash 3.2, el de macOS.
 
@@ -24,8 +19,6 @@ CLON=$(cd "$RAIZ/../.." && pwd -P)
 TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-03"
 REPOSITORIO="$TRABAJO/recetario"
 REPOSITORIO_DICHO='taller-git-trabajo/lab-03/recetario'
-
-RAMA_DE_PRUEBA='prueba'
 
 MODO=final
 if [ "${1:-}" = '--escenario' ]; then
@@ -59,11 +52,17 @@ g() {
   git -C "$REPOSITORIO" "$@" 2>/dev/null
 }
 
+# `--porcelain` deja un espacio en la primera columna cuando el cambio no esta
+# preparado. Recortarlo lee el estado al reves (seccion 27 de la arquitectura).
+suciedad() {
+  git -C "$REPOSITORIO" status --porcelain 2>/dev/null | sed 's/[[:space:]]*$//' | paste -sd '|' -
+}
+
 echo
 if [ "$MODO" = escenario ]; then
   echo "Comprobando el escenario inicial del laboratorio 03"
 else
-  echo "Verificador del laboratorio 03 · abrir la caja"
+  echo "Verificador del laboratorio 03 · ordenar el recetario"
 fi
 echo
 
@@ -86,138 +85,141 @@ else
   fi
 fi
 
-# --- Criterio · HEAD apunta a main -------------------------------------------
-
-if [ "$HAY_REPOSITORIO" = no ]; then
-  sin_repositorio 'HEAD apunta a main' 'ref: refs/heads/main'
-else
-  CABEZA=$(g symbolic-ref HEAD) || CABEZA=''
-  if [ "$CABEZA" = 'refs/heads/main' ]; then
-    aprobado 'HEAD apunta a main'
-  elif [ -z "$CABEZA" ]; then
-    fallido 'HEAD apunta a main' 'refs/heads/main' \
-      'HEAD no apunta a ninguna rama, quedaste en estado desconectado; vuelve con git switch main'
-  else
-    fallido 'HEAD apunta a main' 'refs/heads/main' "$CABEZA"
-  fi
-fi
-
-# --- Criterio · solo la rama main --------------------------------------------
-
-if [ "$HAY_REPOSITORIO" = no ]; then
-  sin_repositorio 'solo existe la rama main' 'main'
-else
-  RAMAS=$(g for-each-ref --format='%(refname:short)' refs/heads | sort | paste -sd ' ' -)
-  if [ "$RAMAS" = 'main' ]; then
-    aprobado 'solo existe la rama main'
-  else
-    fallido 'solo existe la rama main' 'main' \
-      "${RAMAS:-ninguna}; falta borrar la rama de prueba con git branch -d"
-  fi
-fi
-
-# --- Criterio · el directorio de trabajo esta limpio -------------------------
-
-if [ "$HAY_REPOSITORIO" = no ]; then
-  sin_repositorio 'el directorio de trabajo esta limpio' 'nada que confirmar'
-else
-  SUCIEDAD=$(g status --porcelain | sort | paste -sd ' ' -)
-  if [ -z "$SUCIEDAD" ]; then
-    aprobado 'el directorio de trabajo esta limpio, no se toco el proyecto'
-  else
-    fallido 'el directorio de trabajo esta limpio' 'nada que confirmar' \
-      "hay cambios: $SUCIEDAD"
-  fi
-fi
+SEGUIDOS=$(g ls-files | paste -sd ' ' -)
 
 if [ "$MODO" = final ]; then
-  # --- Criterio · la parte 4 se hizo -----------------------------------------
-  #
-  # Sin esto el verificador aprobaria un laboratorio que nadie abrio: el estado
-  # final de un laboratorio de solo mirar es igual al inicial. La huella de la
-  # parte 4 esta en el registro de referencias, que sobrevive al borrado de la
-  # rama porque el registro de HEAD es aparte.
+  # --- Criterio · los tres archivos salieron del seguimiento ----------------
   if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio "el registro de referencias muestra el paso por la rama $RAMA_DE_PRUEBA" \
-      "haber creado la rama $RAMA_DE_PRUEBA y haberte cambiado a ella"
+    sin_repositorio 'los archivos que sobran salieron del seguimiento' \
+      'ni notas.tmp, ni respaldo.bak, ni credenciales.txt bajo seguimiento'
   else
-    PASOS=$(g reflog --format='%gs' | grep -c "to $RAMA_DE_PRUEBA\$") || PASOS=0
-    if [ "$PASOS" -ge 1 ]; then
-      aprobado "el registro de referencias muestra el paso por la rama $RAMA_DE_PRUEBA"
+    COLADOS=''
+    for archivo in notas.tmp respaldo.bak credenciales.txt; do
+      case " $SEGUIDOS " in
+        *" $archivo "*) COLADOS="${COLADOS:+$COLADOS }$archivo" ;;
+      esac
+    done
+    if [ -z "$COLADOS" ]; then
+      aprobado 'notas.tmp, respaldo.bak y credenciales.txt ya no estan bajo seguimiento'
     else
-      fallido "el registro de referencias muestra el paso por la rama $RAMA_DE_PRUEBA" \
-        "haber creado la rama $RAMA_DE_PRUEBA y haberte cambiado a ella, como pide la parte 4" \
-        'no hay rastro de ese cambio de rama; falta hacer la parte 4'
+      fallido 'los archivos que sobran salieron del seguimiento' \
+        'ninguno de los tres bajo seguimiento' \
+        "siguen seguidos: $COLADOS; el archivo de exclusiones no basta, hace falta git rm --cached"
+    fi
+  fi
+
+  # --- Criterio · el archivo de exclusiones esta confirmado -----------------
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'el archivo de exclusiones esta confirmado' '.gitignore bajo seguimiento'
+  else
+    case " $SEGUIDOS " in
+      *" .gitignore "*) aprobado 'el archivo de exclusiones esta confirmado' ;;
+      *)
+        fallido 'el archivo de exclusiones esta confirmado' '.gitignore bajo seguimiento' \
+          'no esta; va dentro del repositorio para que el equipo comparta las reglas'
+        ;;
+    esac
+  fi
+
+  # --- Criterio · lo que queda en el disco ----------------------------------
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'notas.tmp y respaldo.bak siguen en la carpeta' 'los dos presentes'
+  else
+    FALTAN=''
+    for archivo in notas.tmp respaldo.bak; do
+      [ -e "$REPOSITORIO/$archivo" ] || FALTAN="${FALTAN:+$FALTAN }$archivo"
+    done
+    if [ -z "$FALTAN" ]; then
+      aprobado 'notas.tmp y respaldo.bak siguen en tu carpeta, como corresponde'
+    else
+      fallido 'notas.tmp y respaldo.bak siguen en la carpeta' 'los dos presentes' \
+        "faltan: $FALTAN; salieron del disco, y --cached era justamente para que no"
+    fi
+  fi
+
+  # --- Criterio · la credencial ya no esta en el disco -----------------------
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'credenciales.txt ya no esta en la carpeta' 'el archivo borrado del disco'
+  elif [ -e "$REPOSITORIO/credenciales.txt" ]; then
+    fallido 'credenciales.txt ya no esta en la carpeta' 'el archivo borrado del disco' \
+      'sigue ahi; con la credencial no basta sacarla del seguimiento'
+  else
+    aprobado 'credenciales.txt ya no esta en tu carpeta'
+  fi
+
+  # --- Criterio · las recetas quedaron ordenadas ----------------------------
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'las recetas quedaron ordenadas por tipo' 'recetas/principales y recetas/postres'
+  else
+    PRINCIPALES=$(ls "$REPOSITORIO/recetas/principales" 2>/dev/null | paste -sd ' ' -)
+    POSTRES=$(ls "$REPOSITORIO/recetas/postres" 2>/dev/null | paste -sd ' ' -)
+    if [ -n "$PRINCIPALES" ] && [ -n "$POSTRES" ]; then
+      aprobado "las recetas quedaron ordenadas: principales ($PRINCIPALES) y postres ($POSTRES)"
+    else
+      fallido 'las recetas quedaron ordenadas por tipo' \
+        'recetas/principales y recetas/postres con las recetas dentro' \
+        "principales: ${PRINCIPALES:-vacia}; postres: ${POSTRES:-vacia}"
+    fi
+  fi
+
+  # --- Criterio · el directorio de trabajo esta limpio ----------------------
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'el directorio de trabajo esta limpio' 'nada que confirmar'
+  else
+    SUCIO=$(suciedad)
+    if [ -z "$SUCIO" ]; then
+      aprobado 'el directorio de trabajo esta limpio'
+    else
+      fallido 'el directorio de trabajo esta limpio' 'nada que confirmar' "hay cambios: $SUCIO"
     fi
   fi
 fi
-
-# --- Comprobaciones que solo tienen sentido sobre el escenario inicial -------
 
 if [ "$MODO" = escenario ] && [ "$HAY_REPOSITORIO" = si ]; then
   CONFIRMACIONES=$(g rev-list --count HEAD) || CONFIRMACIONES=0
-  if [ "$CONFIRMACIONES" = '4' ]; then
-    aprobado 'hay cuatro confirmaciones en el historial'
+  if [ "$CONFIRMACIONES" = '5' ]; then
+    aprobado 'hay cinco confirmaciones en el historial'
   else
-    fallido 'cantidad de confirmaciones' '4' "$CONFIRMACIONES"
+    fallido 'cantidad de confirmaciones' '5' "$CONFIRMACIONES"
   fi
 
-  FUSIONES=$(g log --merges --format=%H | grep -c .) || FUSIONES=0
-  if [ "$FUSIONES" = '0' ]; then
-    aprobado 'la historia es lineal, sin confirmaciones de union'
+  # Lo que hace al laboratorio: los tres estan confirmados, no sueltos.
+  FALTAN=''
+  for archivo in notas.tmp respaldo.bak credenciales.txt; do
+    [ -n "$(g log --format=%H -1 -- "$archivo")" ] || FALTAN="${FALTAN:+$FALTAN }$archivo"
+  done
+  if [ -z "$FALTAN" ]; then
+    aprobado 'los tres archivos que sobran estan en la historia confirmada'
   else
-    fallido 'historia lineal' 'ninguna confirmacion de union' "$FUSIONES"
+    fallido 'los tres archivos que sobran estan confirmados' \
+      'notas.tmp, respaldo.bak y credenciales.txt en la historia' "faltan: $FALTAN"
   fi
 
-  # Lo que sostiene la parte 2.2 entera. Con el formato `reftable`, que Git
-  # 2.45 trajo como alternativa, este archivo no existe y el enunciado se queda
-  # sin nada que leer ni que medir.
-  REFERENCIA="$REPOSITORIO/.git/refs/heads/main"
-  if [ ! -f "$REFERENCIA" ]; then
-    fallido 'la rama main es un archivo suelto' \
-      '.git/refs/heads/main, un archivo de texto' \
-      'no existe; el repositorio no usa el formato de referencias «files»'
+  if grep -q 'clave:' "$REPOSITORIO/credenciales.txt" 2>/dev/null; then
+    aprobado 'credenciales.txt lleva una clave dentro, que es el punto del ejercicio'
   else
-    BYTES=$(wc -c < "$REFERENCIA" | tr -d ' ')
-    if [ "$BYTES" = '41' ]; then
-      aprobado 'la rama main es un archivo suelto de 41 bytes, como dice el enunciado'
-    else
-      fallido 'la rama main mide 41 bytes' '41' "$BYTES"
-    fi
+    fallido 'credenciales.txt lleva una clave' 'una linea con «clave:»' 'no la tiene'
   fi
 
-  # La parte 3.5 entra a una carpeta, asi que el arbol de la raiz tiene que
-  # tener un arbol adentro.
-  if g cat-file -p 'HEAD^{tree}' | grep -q '	recetas$'; then
-    aprobado 'el arbol de la raiz tiene la carpeta recetas como arbol'
+  if [ -e "$REPOSITORIO/.gitignore" ]; then
+    fallido 'no hay archivo de exclusiones' 'que no exista; escribirlo es el ejercicio' 'ya existe'
   else
-    fallido 'la carpeta recetas esta en el arbol de la raiz' \
-      'una linea de tipo tree llamada recetas' 'no esta'
+    aprobado 'no hay archivo de exclusiones: escribirlo es el ejercicio'
   fi
 
-  # La parte 3 recorre objetos sueltos. Si algo los empaquetara, `cat-file`
-  # seguiria funcionando, pero .git/objects dejaria de tener nada que mirar.
-  SUELTOS=$(g count-objects | awk '{print $1}')
-  if [ "$SUELTOS" -ge 10 ]; then
-    aprobado "hay $SUELTOS objetos sueltos que mirar en .git/objects"
+  RECETAS=$(ls "$REPOSITORIO/recetas" 2>/dev/null | sort | paste -sd ' ' -)
+  ESPERADAS='empanadas.md leche-asada.md mote-con-huesillo.md pastel-de-choclo.md'
+  if [ "$RECETAS" = "$ESPERADAS" ]; then
+    aprobado 'las cuatro recetas estan mezcladas, sin carpetas por tipo'
   else
-    fallido 'objetos sueltos en .git/objects' 'al menos 10' "$SUELTOS"
+    fallido 'las cuatro recetas mezcladas' "$ESPERADAS" "${RECETAS:-ninguna}"
   fi
 
-  # La parte 1.2 lee .git/config, y sin configuracion local no hay nada ahi.
-  if [ -f "$REPOSITORIO/.git/config" ] && g config --local --get user.name > /dev/null; then
-    aprobado 'el .git/config local trae configuracion que mirar'
+  SUCIO=$(suciedad)
+  if [ -z "$SUCIO" ]; then
+    aprobado 'el directorio de trabajo esta limpio'
   else
-    fallido 'configuracion local en .git/config' \
-      'al menos user.name puesto en el repositorio' 'no hay'
-  fi
-
-  # La parte 3.7 sigue los padres hasta una confirmacion sin padre.
-  RAICES=$(g rev-list --max-parents=0 HEAD | grep -c .) || RAICES=0
-  if [ "$RAICES" = '1' ]; then
-    aprobado 'la cadena de padres llega a una unica confirmacion sin padre'
-  else
-    fallido 'confirmaciones sin padre' '1' "$RAICES"
+    fallido 'el directorio de trabajo esta limpio' 'nada que confirmar' "hay cambios: $SUCIO"
   fi
 fi
 

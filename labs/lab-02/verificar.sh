@@ -66,7 +66,7 @@ echo
 if [ "$MODO" = escenario ]; then
   echo "Comprobando el escenario inicial del laboratorio 02"
 else
-  echo "Verificador del laboratorio 02 · leer la historia y volver atras"
+  echo "Verificador del laboratorio 02 · leer la historia y abrir la caja"
 fi
 echo
 
@@ -198,18 +198,35 @@ else
   fi
 fi
 
-# --- Criterio · la busqueda de curanto ---------------------------------------
+# --- Criterio · solo queda la rama main --------------------------------------
+
+# La parte 4 hace crear la rama `prueba`, cambiarse a ella y borrarla. Si quedo
+# viva, el laboratorio no esta terminado.
+if [ "$HAY_REPOSITORIO" = no ]; then
+  sin_repositorio 'solo existe la rama main' 'main'
+else
+  RAMAS=$(g for-each-ref --format='%(refname:short)' refs/heads | sort | paste -sd ' ' -)
+  if [ "$RAMAS" = 'main' ]; then
+    aprobado 'solo existe la rama main'
+  else
+    fallido 'solo existe la rama main' 'main' \
+      "${RAMAS:-ninguna}; falta borrar la rama de prueba con git branch -d"
+  fi
+fi
+
+# --- Criterio · HEAD apunta a main -------------------------------------------
 
 if [ "$HAY_REPOSITORIO" = no ]; then
-  sin_repositorio 'la busqueda de curanto encuentra algo' 'al menos una confirmacion'
+  sin_repositorio 'HEAD apunta a main' 'refs/heads/main'
 else
-  CON_CURANTO=$(g log -S 'curanto' --format=%H | grep -c .) || CON_CURANTO=0
-  if [ "$CON_CURANTO" -ge 1 ]; then
-    aprobado "la busqueda de curanto encuentra $CON_CURANTO confirmacion(es)"
+  CABEZA=$(g symbolic-ref HEAD) || CABEZA=''
+  if [ "$CABEZA" = 'refs/heads/main' ]; then
+    aprobado 'HEAD apunta a main'
+  elif [ -z "$CABEZA" ]; then
+    fallido 'HEAD apunta a main' 'refs/heads/main' \
+      'HEAD no apunta a ninguna rama; quedaste desconectado, vuelve con git switch main'
   else
-    fallido 'la busqueda de curanto encuentra algo' \
-      'al menos una confirmacion' \
-      'ninguna; se perdio la confirmacion que introdujo la palabra'
+    fallido 'HEAD apunta a main' 'refs/heads/main' "$CABEZA"
   fi
 fi
 
@@ -258,12 +275,6 @@ if [ "$MODO" = escenario ] && [ "$HAY_REPOSITORIO" = si ]; then
       "faltan: $FALTANTES"
   fi
 
-  if grep -q 'curanto' "$REPOSITORIO/platos.md" 2>/dev/null; then
-    aprobado 'la palabra curanto sigue presente en el proyecto'
-  else
-    fallido 'curanto presente en el proyecto' \
-      'la palabra en platos.md' 'no esta'
-  fi
 fi
 
 # --- Resumen -----------------------------------------------------------------

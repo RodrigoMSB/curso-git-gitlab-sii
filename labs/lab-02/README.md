@@ -1,4 +1,4 @@
-# Laboratorio 02 · Leer la historia y volver atrás
+# Laboratorio 02 · Leer la historia y abrir la caja
 
 **Sesión 2 · 95 minutos**
 
@@ -6,22 +6,24 @@
 
 ## Qué vas a hacer
 
-Dos cosas que en el trabajo van siempre juntas. Primero aprender a encontrar algo en un historial que no escribiste tú, y después arreglar lo que encuentres mal.
+Tres cosas que en el trabajo van juntas.
 
-El repositorio con el que vas a trabajar no es el tuyo. Tiene cinco confirmaciones hechas por tres personas distintas, en fechas distintas, y trae problemas plantados a propósito. Tu tarea es encontrarlos y repararlos.
+Primero aprender a encontrar algo en un historial que no escribiste tú. Después arreglar lo que encuentres mal. Y al final abrir la carpeta oculta para ver de qué está hecho todo esto.
+
+El repositorio con el que vas a trabajar no es el tuyo. Tiene cinco confirmaciones hechas por tres personas distintas y trae problemas plantados a propósito.
 
 ---
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+Desde la carpeta del laboratorio.
 
 ```
-labs/lab-02/preparar.sh
-cd ../taller-git-trabajo/lab-02/recetario
+./preparar.sh
+cd ../../../taller-git-trabajo/lab-02/recetario
 ```
 
-El script arma el escenario, deja el directorio de trabajo como corresponde y verifica que todo quedó bien antes de devolverte el control. Si algo falla, se detiene y te dice qué encontró.
+El script arma el escenario y verifica que quedó bien antes de devolverte el control.
 
 Confirma dónde estás parado.
 
@@ -36,7 +38,7 @@ Cinco confirmaciones. Un archivo modificado sin preparar y otro preparado. Toma 
 
 ## Parte 1 · Leer la historia
 
-**Tiempo sugerido, 40 minutos.**
+**Tiempo sugerido, 30 minutos.**
 
 ### 1.1 Las tres formas de mirar
 
@@ -77,22 +79,7 @@ git log --author="Juana" --oneline
 
 El filtro es por coincidencia parcial, no necesitas el nombre completo.
 
-### 1.4 Filtrar por fecha
-
-```
-git log --since="2024-01-01" --oneline
-git log --until="2024-06-30" --oneline
-```
-
-Y las dos juntas para acotar un rango.
-
-```
-git log --since="2024-01-01" --until="2024-06-30" --oneline
-```
-
-Prueba con fechas que dejen fuera algunas confirmaciones. Si te devuelve todo o nada, ajusta el rango mirando las fechas reales del historial.
-
-### 1.5 Filtrar por archivo
+### 1.4 Filtrar por archivo
 
 Qué le pasó a un archivo en particular.
 
@@ -102,25 +89,7 @@ git log --oneline -- platos.md
 
 Los dos guiones separan las opciones de los nombres de archivo. Sin ellos, si existiera una rama llamada igual que el archivo, Git no sabría a cuál te refieres.
 
-### 1.6 Buscar dónde entró una línea
-
-Esta es la que se usa de verdad cuando algo se rompió y nadie sabe cuándo.
-
-```
-git log -S "curanto" --oneline
-```
-
-Devuelve las confirmaciones donde esa palabra apareció o desapareció del proyecto. No busca en los mensajes, busca en el contenido.
-
-Encuentra la confirmación que la introdujo y míra la completa.
-
-```
-git show <identificador>
-```
-
-Reemplaza `<identificador>` por el que te devolvió el paso anterior. Con los primeros siete caracteres basta.
-
-### 1.7 Formato a tu medida
+### 1.5 Formato a tu medida
 
 ```
 git log --format="%h %an %ad %s" --date=short
@@ -134,7 +103,7 @@ Si un formato lo vas a repetir, conviértelo en alias como hiciste en el laborat
 
 ## Parte 2 · Ver lo que cambió
 
-**Tiempo sugerido, 20 minutos.**
+**Tiempo sugerido, 15 minutos.**
 
 ### 2.1 Lo que no está preparado
 
@@ -154,21 +123,11 @@ Muestra lo que se llevaría una confirmación hecha ahora mismo.
 
 Estas dos órdenes muestran cosas distintas y ese es todo el punto. La primera te dice qué te falta preparar. La segunda te dice qué estás a punto de confirmar.
 
-### 2.3 Comparar contra una confirmación
-
-```
-git diff HEAD~2
-```
-
-Diferencia entre lo que tienes ahora y el estado de hace dos confirmaciones.
-
-`HEAD` es donde estás parado. `HEAD~1` es la anterior, `HEAD~2` la anterior a esa, y así.
-
 ---
 
 ## Parte 3 · Volver atrás
 
-**Tiempo sugerido, 35 minutos.**
+**Tiempo sugerido, 30 minutos.**
 
 Acá están los tres problemas plantados. Resuélvelos en orden.
 
@@ -255,7 +214,105 @@ Vuelve a confirmarlos con un mensaje mejor.
 git commit -m "se documenta la receta del pastel de choclo"
 ```
 
-Esto es lo mismo que hizo `--amend`, pero en dos pasos y viendo el intermedio. Los tres modos de retroceso se ven completos en el laboratorio 07.
+Esto es lo mismo que hizo `--amend`, pero en dos pasos y viendo el intermedio. Los tres modos de retroceso se ven completos en el laboratorio 06.
+
+---
+
+## Parte 4 · Abrir la caja
+
+**Tiempo sugerido, 20 minutos.**
+
+Ahora que tienes confirmaciones propias que inspeccionar, vas a mirar de qué está hecho todo esto.
+
+No es curiosidad. Cuando termines vas a saber que una rama son cuarenta y un bytes de texto en un archivo, y eso hace que el resto del taller deje de ser magia.
+
+### 4.1 Qué hay adentro
+
+```
+ls -a
+ls .git
+```
+
+Hay bastante. La mayoría no te interesa hoy. Estos son los tres que importan.
+
+**HEAD**, un archivo que dice dónde estás parado.
+**refs**, donde viven las ramas y las etiquetas.
+**config**, la configuración de este repositorio en particular.
+
+### 4.2 El archivo que dice dónde estás
+
+```
+cat .git/HEAD
+```
+
+Una línea. Dice que apuntas a una rama, y cuál.
+
+No dice a qué confirmación. Dice a qué **rama**. Esa distinción es la que hace que cambiar de rama sea instantáneo.
+
+### 4.3 La rama por dentro
+
+```
+ls .git/refs/heads
+cat .git/refs/heads/main
+```
+
+Un identificador de confirmación y un salto de línea. Nada más.
+
+Mide el archivo.
+
+```
+wc -c .git/refs/heads/main
+```
+
+Cuarenta y un bytes. Cuarenta caracteres del identificador y el salto de línea.
+
+**Eso es una rama.** No es una copia del proyecto, no es una carpeta, no es un espacio de trabajo. Es un archivo de texto con un identificador adentro.
+
+### 4.4 Compruébalo
+
+```
+git log --oneline -1
+```
+
+El identificador corto que muestra Git son los primeros caracteres del que acabas de leer en el archivo.
+
+### 4.5 Crea una rama y mira qué pasó
+
+```
+ls .git/refs/heads
+git branch prueba
+ls .git/refs/heads
+cat .git/refs/heads/prueba
+cat .git/refs/heads/main
+```
+
+Apareció un archivo nuevo con el mismo identificador adentro. Eso es todo lo que hizo crear una rama. Ningún archivo de tu proyecto se tocó.
+
+### 4.6 Cambia de rama y mira qué se movió
+
+```
+cat .git/HEAD
+git switch prueba
+cat .git/HEAD
+```
+
+Cambió una línea en un archivo. Las dos ramas siguen apuntando a lo mismo, tu proyecto no cambió, y lo único distinto es dónde dice que estás parado.
+
+### 4.7 Vuelve y limpia
+
+```
+git switch main
+git branch -d prueba
+ls .git/refs/heads
+```
+
+El archivo desapareció. Eso es borrar una rama.
+
+### 4.8 La pregunta
+
+Escribe en una línea, con tus palabras, qué es una rama.
+
+Si tu respuesta usa las palabras copia, carpeta o espacio de trabajo, vuelve al punto 4.3.
 
 ---
 
@@ -274,27 +331,37 @@ git status
 Nada en el área de preparación. El archivo del punto 3.2 aparece como modificado.
 
 ```
-git log -S "curanto" --oneline
+ls .git/refs/heads
 ```
 
-Debe devolver al menos una confirmación. Si devuelve vacío, te equivocaste en algún paso de la parte 3.
+Solo `main`.
+
+```
+cat .git/HEAD
+```
+
+Debe apuntar a `main`.
 
 ---
 
 ## Si algo salió mal
 
-**Borraste algo con `git restore` que sí necesitabas.** No hay rescate. Ese contenido nunca estuvo en una confirmación. Vuelve a prepararlo con `labs/lab-02/preparar.sh` y repite desde la parte 3.
+**Borraste algo con `git restore` que sí necesitabas.** No hay rescate. Ese contenido nunca estuvo en una confirmación. Vuelve a ejecutar `preparar.sh` y repite desde la parte 3.
 
-**Hiciste `reset` de más y perdiste confirmaciones.** Sí hay rescate y se ve completo en el laboratorio 07. Por ahora vuelve a ejecutar `preparar.sh`.
+**Hiciste `reset` de más y perdiste confirmaciones.** Sí hay rescate y se ve completo en el laboratorio 06. Por ahora prepara el escenario de nuevo.
 
-**El historial te quedó irreconocible.** Borra la carpeta y vuelve a ejecutar `preparar.sh`. La preparación siempre entrega el mismo estado inicial.
+**Editaste un archivo dentro de `.git` a mano.** Prepara el escenario otra vez. Editar ahí a mano es la única forma real de dañar un repositorio.
+
+**El historial te quedó irreconocible.** Vuelve a ejecutar `preparar.sh`. El escenario siempre entrega el mismo estado inicial.
 
 ---
 
 ## Lo que te llevas
 
-Encontrar algo en un historial ajeno es una habilidad aparte, y se resuelve con tres filtros. Por autor, por fecha y por contenido. El de contenido, `-S`, es el que salva el día cuando algo se rompió y nadie sabe cuándo.
+Encontrar algo en un historial ajeno es una habilidad aparte, y se resuelve con dos filtros. Por autor y por archivo.
 
 Corregir la última confirmación no la corrige. La reemplaza por otra con identificador distinto. Mientras nadie más la haya visto, da lo mismo. Cuando ya la compartiste, deja de dar lo mismo.
 
 `git restore` con `--staged` y sin `--staged` son operaciones distintas. Una es reversible y la otra no.
+
+Y una rama es un archivo de texto con un identificador adentro. Crear una rama no mueve nada. Cambiar de rama modifica una línea. Nada de esto es magia, es texto en archivos y lo acabas de leer con tus propios ojos.

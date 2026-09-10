@@ -1,11 +1,11 @@
 /**
  * Estados iniciales de los laboratorios del taller (SPEC 007).
  *
- * Llevan escenario los laboratorios 01 al 08 y el 10: los que ocurren en disco
- * y tienen grafo que mirar. Los del 11 en adelante ocurren en la plataforma o
+ * Llevan escenario los laboratorios 01 al 07 y el 09: los que ocurren en disco
+ * y tienen grafo que mirar. Los del 10 en adelante ocurren en la plataforma o
  * en la tuberia de integracion, y no hay repositorio local que reflejar.
  *
- * El 09 tampoco lleva, aunque ocurra en disco: enseña remotos, un submodulo y
+ * El 08 tampoco lleva, aunque ocurra en disco: enseña remotos, un submodulo y
  * un gancho, y el motor no implementa ninguna de las tres cosas.
  */
 
@@ -25,8 +25,7 @@ export {
   LAB05,
   LAB06,
   LAB07,
-  LAB08,
-  LAB10,
+  LAB09,
 } from './laboratorios';
 
 /** El escenario por omision: el primer laboratorio del taller. */

@@ -6,8 +6,9 @@
 # «Comprobacion» del enunciado. Con `--escenario` comprueba el ESTADO INICIAL,
 # que es lo que usa preparar.sh antes de entregar el laboratorio.
 #
-# Lo que distingue un laboratorio hecho de uno recien preparado son las dos
-# confirmaciones de union y que no quede ninguna rama de trabajo.
+# Lo que distingue un laboratorio hecho de uno recien preparado es la
+# confirmacion de reversion y la etiqueta anotada. El escenario trae siete
+# confirmaciones y ninguna etiqueta.
 #
 # Escrito para Bash 3.2, el de macOS.
 
@@ -61,7 +62,7 @@ echo
 if [ "$MODO" = escenario ]; then
   echo "Comprobando el escenario inicial del laboratorio 06"
 else
-  echo "Verificador del laboratorio 06 · fusionar y resolver"
+  echo "Verificador del laboratorio 06 · retroceder, revertir y etiquetar"
 fi
 echo
 
@@ -84,42 +85,68 @@ else
   fi
 fi
 
-RAMAS=$(g for-each-ref --format='%(refname:short)' refs/heads | sort | paste -sd ' ' -)
-
 if [ "$MODO" = final ]; then
   if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'solo queda la rama main' 'main'
-  elif [ "$RAMAS" = 'main' ]; then
-    aprobado 'solo queda la rama main: las tres de trabajo ya cumplieron'
+    sin_repositorio 'hay una confirmacion mas que al empezar' '8'
   else
-    fallido 'solo queda la rama main' 'main' \
-      "$RAMAS; falta borrar con git branch -d la que ya se fusiono"
-  fi
-
-  if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'hay dos confirmaciones de union' '2'
-  else
-    UNIONES=$(g log --merges --format=%H | grep -c .) || UNIONES=0
-    if [ "$UNIONES" = '2' ]; then
-      aprobado 'hay dos confirmaciones de union: la limpia y la que choco'
+    CONFIRMACIONES=$(g rev-list --count HEAD) || CONFIRMACIONES=0
+    if [ "$CONFIRMACIONES" = '8' ]; then
+      aprobado 'hay ocho confirmaciones: las siete originales mas la reversion'
     else
-      fallido 'confirmaciones de union en la historia' \
-        '2, una por cada fusion que no fue avance rapido' \
-        "$UNIONES; el avance rapido no crea ninguna, las otras dos si"
+      fallido 'cantidad de confirmaciones' \
+        '8, o sea las siete del escenario mas la de la reversion' \
+        "$CONFIRMACIONES; revertir agrega historia, no la quita"
     fi
   fi
 
-  # El marcador olvidado dentro de un archivo es el error clasico de este
-  # laboratorio, y no lo delata ninguna otra comprobacion.
   if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'no quedan marcadores de conflicto' 'ningun <<<<<<< en los archivos'
+    sin_repositorio 'la reversion esta en la historia' 'una confirmacion que empiece por Revert'
   else
-    CON_MARCADOR=$(grep -rl '<<<<<<<' "$REPOSITORIO" --exclude-dir=.git 2>/dev/null | paste -sd ' ' -)
-    if [ -z "$CON_MARCADOR" ]; then
-      aprobado 'no quedo ningun marcador de conflicto dentro de los archivos'
+    REVERSIONES=$(g log --format=%s | grep -c '^Revert') || REVERSIONES=0
+    if [ "$REVERSIONES" = '1' ]; then
+      aprobado 'la reversion quedo en la historia, con su confirmacion propia'
     else
-      fallido 'no quedan marcadores de conflicto' 'ningun <<<<<<< en los archivos' \
-        "quedaron en: $CON_MARCADOR"
+      fallido 'la reversion esta en la historia' 'una confirmacion que empiece por Revert' \
+        "$REVERSIONES"
+    fi
+  fi
+
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'solo queda la etiqueta v1.0' 'v1.0'
+  else
+    ETIQUETAS=$(g tag | sort | paste -sd ' ' -)
+    if [ "$ETIQUETAS" = 'v1.0' ]; then
+      aprobado 'solo queda la etiqueta v1.0'
+    else
+      fallido 'solo queda la etiqueta v1.0' 'v1.0' \
+        "${ETIQUETAS:-ninguna}; v0.9 era de practica y hay que borrarla"
+    fi
+  fi
+
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'v1.0 es una etiqueta anotada, con mensaje' 'una etiqueta de tipo tag'
+  else
+    TIPO=$(g cat-file -t v1.0) || TIPO=''
+    if [ "$TIPO" = 'tag' ]; then
+      aprobado 'v1.0 es una etiqueta anotada y lleva su mensaje'
+    else
+      fallido 'v1.0 es una etiqueta anotada' 'una etiqueta de tipo tag' \
+        "${TIPO:-no existe}; una etiqueta simple no guarda mensaje ni autor"
+    fi
+  fi
+
+  # Las dos confirmaciones siguen en la historia: la que metio el error y la
+  # que lo deshizo. Ese es el punto del laboratorio.
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'el error y su reversion siguen los dos en la historia' '2 confirmaciones'
+  else
+    CON_ERROR=$(g log -S 'sal marina en polvo' --format=%H | grep -c .) || CON_ERROR=0
+    if [ "$CON_ERROR" = '2' ]; then
+      aprobado 'el error y su reversion siguen los dos en la historia'
+    else
+      fallido 'el error y su reversion siguen los dos en la historia' \
+        '2 confirmaciones que tocan «sal marina en polvo»' \
+        "$CON_ERROR; si es 1 falta revertir, si es 0 se reescribio la historia"
     fi
   fi
 
@@ -128,7 +155,7 @@ if [ "$MODO" = final ]; then
   else
     SUCIO=$(suciedad)
     if [ -z "$SUCIO" ]; then
-      aprobado 'el directorio de trabajo esta limpio, sin fusiones a medias'
+      aprobado 'el directorio de trabajo esta limpio'
     else
       fallido 'el directorio de trabajo esta limpio' 'nada que confirmar' "hay cambios: $SUCIO"
     fi
@@ -136,50 +163,42 @@ if [ "$MODO" = final ]; then
 fi
 
 if [ "$MODO" = escenario ] && [ "$HAY_REPOSITORIO" = si ]; then
-  ESPERADAS='andina azteca main tailandesa'
-  if [ "$RAMAS" = "$ESPERADAS" ]; then
-    aprobado 'estan main y las tres ramas de trabajo'
+  CONFIRMACIONES=$(g rev-list --count HEAD) || CONFIRMACIONES=0
+  if [ "$CONFIRMACIONES" = '7' ]; then
+    aprobado 'hay siete confirmaciones en el historial'
   else
-    fallido 'las ramas del escenario' "$ESPERADAS" "$RAMAS"
+    fallido 'cantidad de confirmaciones' '7' "$CONFIRMACIONES"
   fi
 
-  if [ "$(g branch --show-current)" = 'main' ]; then
-    aprobado 'el participante arranca parado en main'
+  if grep -q 'sal marina en polvo' "$REPOSITORIO/ingredientes.md" 2>/dev/null; then
+    aprobado 'el error plantado esta en ingredientes.md, listo para encontrarse por contenido'
   else
-    fallido 'posicion de partida' 'main' "$(g branch --show-current)"
+    fallido 'el error plantado' 'la linea «sal marina en polvo» en ingredientes.md' 'no esta'
   fi
 
-  # tailandesa contiene main entera: su fusion es un avance rapido.
-  if g merge-base --is-ancestor main tailandesa; then
-    aprobado 'tailandesa contiene main: su fusion sera un avance rapido'
+  # Tres confirmaciones encima del error: es lo que hace preferible revertir
+  # antes que retroceder.
+  ERROR=$(g log --format=%H -S 'sal marina en polvo' | tail -1)
+  ENCIMA=$(g rev-list --count "$ERROR"..HEAD) || ENCIMA=0
+  if [ "$ENCIMA" = '3' ]; then
+    aprobado 'quedan tres confirmaciones encima del error'
   else
-    fallido 'tailandesa se fusiona por avance rapido' \
-      'que main sea antepasada de tailandesa' 'no lo es'
+    fallido 'confirmaciones posteriores al error' '3' "$ENCIMA"
   fi
 
-  # azteca y andina divergieron: sus fusiones crean union.
-  for rama in azteca andina; do
-    if g merge-base --is-ancestor main "$rama"; then
-      fallido "$rama diverge de main" 'que main no sea antepasada suya' 'lo es, avanzaria rapido'
-    else
-      aprobado "$rama diverge de main: su fusion creara una confirmacion de union"
-    fi
-  done
-
-  # Solo andina toca la misma linea que main: es la unica que debe chocar.
-  BASE=$(g merge-base main andina)
-  if g diff --name-only "$BASE" main | grep -q '^platos.md$' &&
-     g diff --name-only "$BASE" andina | grep -q '^platos.md$'; then
-    aprobado 'main y andina tocan ambas platos.md desde su base comun: van a chocar'
+  # El mensaje no delata el error: el enunciado lo hace buscar por contenido.
+  if g log --format=%s | grep -qi 'sal marina'; then
+    fallido 'el mensaje no delata el error' \
+      'ningun mensaje que nombre la sal marina' 'alguno la nombra'
   else
-    fallido 'andina choca con main' 'que las dos toquen platos.md desde la base comun' 'no lo hacen'
+    aprobado 'ningun mensaje delata el error: hay que buscarlo por contenido'
   fi
 
-  BASE_AZTECA=$(g merge-base main azteca)
-  if g diff --name-only "$BASE_AZTECA" azteca | grep -q '^platos.md$'; then
-    fallido 'azteca no choca con main' 'que azteca no toque platos.md' 'lo toca, chocaria'
+  ETIQUETAS=$(g tag | paste -sd ' ' -)
+  if [ -z "$ETIQUETAS" ]; then
+    aprobado 'no hay etiquetas: ponerlas es el ejercicio'
   else
-    aprobado 'azteca no toca platos.md: su fusion sera limpia'
+    fallido 'no hay etiquetas de partida' 'ninguna' "$ETIQUETAS"
   fi
 
   SUCIO=$(suciedad)

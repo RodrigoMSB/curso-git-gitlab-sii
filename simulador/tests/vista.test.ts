@@ -39,7 +39,7 @@ describe('consola', () => {
     const indicador = indicadorDe(repoConRamas());
     expect(indicador.usuario).toContain('MINGW64');
     // La ruta que el participante ve en su terminal, no solo la ultima carpeta.
-    expect(indicador.ruta).toBe('~/taller-git-trabajo/lab-06/recetario');
+    expect(indicador.ruta).toBe('~/taller-git-trabajo/lab-05/recetario');
     expect(indicador.rama).toBe('main');
   });
 
@@ -126,7 +126,7 @@ describe('consola', () => {
 
 describe('sesion y linea de tiempo', () => {
   it('7.1 retroceder devuelve el estado y la consola de ese momento', () => {
-    const sesion = correrSesion('lab-08', 'git switch tailandesa', 'git switch main');
+    const sesion = correrSesion('lab-07', 'git switch tailandesa', 'git switch main');
     expect(sesion.pasos).toHaveLength(3);
 
     const atras = retroceder(sesion);
@@ -138,7 +138,7 @@ describe('sesion y linea de tiempo', () => {
   });
 
   it('7.2 ejecutar desde un punto anterior corta la historia desde ahi', () => {
-    const sesion = correrSesion('lab-08', 'git switch tailandesa', 'git switch main');
+    const sesion = correrSesion('lab-07', 'git switch tailandesa', 'git switch main');
     const desdeElPrimero = ejecutarOrden(irAPaso(sesion, 1), 'git branch azteca');
 
     expect(desdeElPrimero.pasos).toHaveLength(3);
@@ -147,7 +147,7 @@ describe('sesion y linea de tiempo', () => {
   });
 
   it('4.7 clear vacia la consola sin tocar el estado ni la linea de tiempo', () => {
-    const antes = correrSesion('lab-08', 'git status');
+    const antes = correrSesion('lab-07', 'git status');
     const despues = ejecutarOrden(antes, 'clear');
 
     expect(renglonesDe(despues)).toHaveLength(0);
@@ -156,19 +156,19 @@ describe('sesion y linea de tiempo', () => {
   });
 
   it('una linea en blanco no agrega pasos', () => {
-    const sesion = iniciarSesion('lab-08');
+    const sesion = iniciarSesion('lab-07');
     expect(ejecutarOrden(sesion, '   ')).toBe(sesion);
   });
 
   it('los limites de la linea de tiempo no se pasan', () => {
-    const sesion = iniciarSesion('lab-08');
+    const sesion = iniciarSesion('lab-07');
     expect(retroceder(sesion).indice).toBe(0);
     expect(avanzar(sesion).indice).toBe(0);
     expect(irAPaso(sesion, 99).indice).toBe(0);
   });
 
   it('seleccionar dos veces la misma confirmacion la deselecciona', () => {
-    const sesion = iniciarSesion('lab-08');
+    const sesion = iniciarSesion('lab-07');
     const id = estadoDe(sesion).confirmaciones[0]?.id ?? '';
     expect(seleccionarConfirmacion(sesion, id).seleccion).toBe(id);
     expect(seleccionarConfirmacion(seleccionarConfirmacion(sesion, id), id).seleccion).toBeNull();
@@ -285,10 +285,10 @@ describe('barra de estado y armado de la pantalla', () => {
     expect(barra.rama).toBe('main');
     expect(barra.desconectado).toBe(false);
     expect(barra.cambiosSinConfirmar).toBe(0);
-    // El selector ofrece los diez laboratorios con escenario, en su orden.
-    // El 09 no lleva escenario: es de terminal pura.
+    // El selector ofrece los ocho laboratorios con escenario, en su orden.
+    // El 08 no lleva escenario: es de terminal pura.
     expect(barra.escenarios.map((escenario) => escenario.laboratorio)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 10,
+      1, 2, 3, 4, 5, 6, 7, 9,
     ]);
   });
 
@@ -310,7 +310,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('CA3 al borrar la orden desaparece la confirmacion discontinua', () => {
-    const sesion = iniciarSesion('lab-06');
+    const sesion = iniciarSesion('lab-05');
     const conOrden = construirPantalla(sesion, {
       ...OPCIONES,
       entrada: 'git merge andina',
@@ -322,7 +322,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('con la previsualizacion apagada no se anuncia nada', () => {
-    const sesion = iniciarSesion('lab-06');
+    const sesion = iniciarSesion('lab-05');
     const pantalla = construirPantalla(sesion, {
       previsualizacionActiva: false,
       entrada: 'git merge andina',
@@ -334,7 +334,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('una orden invalida no anuncia nada', () => {
-    const pantalla = construirPantalla(iniciarSesion('lab-08'), {
+    const pantalla = construirPantalla(iniciarSesion('lab-07'), {
       ...OPCIONES,
       entrada: 'git merge fantasma',
     });
@@ -342,7 +342,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('la union comprometida por un conflicto sigue dibujada hasta que se resuelve', () => {
-    const enConflicto = correrSesion('lab-06', 'git merge andina');
+    const enConflicto = correrSesion('lab-05', 'git merge andina');
     const pendiente = construirPantalla(enConflicto, OPCIONES);
     const anunciada = pendiente.grafo.nodos.find((nodo) => nodo.previsualizada);
 
@@ -363,7 +363,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('la linea de tiempo lleva un segmento por paso y marca el actual', () => {
-    const sesion = correrSesion('lab-08', 'git status', 'git branch azteca');
+    const sesion = correrSesion('lab-07', 'git status', 'git branch azteca');
     const pantalla = construirPantalla(irAPaso(sesion, 1), OPCIONES);
 
     expect(pantalla.segmentos).toHaveLength(3);

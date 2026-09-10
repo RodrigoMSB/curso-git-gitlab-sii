@@ -1,14 +1,16 @@
-# Laboratorio 06 · Fusionar y resolver
+# Laboratorio 06 · Retroceder, revertir y etiquetar
 
-**Sesión 4 · 95 minutos**
+**Sesión 4 · 70 minutos**
 
 ---
 
 ## Qué vas a hacer
 
-Vas a fusionar tres ramas y las tres se van a comportar distinto. Una va a avanzar sin crear nada, otra va a crear una confirmación de unión, y la tercera va a chocar.
+Vas a deshacer la misma confirmación de cuatro maneras distintas y a registrar qué pierde cada una.
 
-El objetivo no es aprender la orden, que es siempre la misma. Es reconocer cuál de los tres casos tienes delante antes de escribirla, y saber qué hacer cuando choca.
+Después vas a recuperar algo que creías perdido, y vas a cerrar marcando una versión del recetario.
+
+De todo el taller, este es el laboratorio donde más importa leer antes de escribir. Una de las órdenes destruye trabajo sin preguntar.
 
 ---
 
@@ -21,270 +23,298 @@ labs/lab-06/preparar.sh
 cd ../taller-git-trabajo/lab-06/recetario
 ```
 
-Mira con qué te encontraste.
+Mira el punto de partida.
 
 ```
-git branch
-git lg
-```
-
-Tres ramas de trabajo separadas de `main` en puntos distintos. Estúdialas un minuto antes de seguir, porque la diferencia entre ellas es lo que decide qué va a pasar en cada fusión.
-
----
-
-## Parte 1 · La fusión que no crea nada
-
-**Tiempo sugerido, 25 minutos.**
-
-### 1.1 Mira la situación
-
-```
-git switch main
-git log --oneline main
-git log --oneline tailandesa
-```
-
-`main` no avanzó desde que `tailandesa` se separó. Todo lo que tiene `main` lo tiene también `tailandesa`, más lo suyo propio.
-
-Cuando pasa eso, no hay nada que combinar. Basta con mover el nombre hacia adelante.
-
-### 1.2 Comprueba antes de fusionar
-
-```
-git merge-base main tailandesa
-git rev-parse main
-```
-
-Las dos órdenes devuelven lo mismo. El punto donde las ramas se separaron es la punta actual de `main`, o sea `main` está contenida entera dentro de `tailandesa`.
-
-Ese es el diagnóstico. Cuando esos dos identificadores coinciden, la fusión va a ser por avance rápido.
-
-### 1.3 Fusiona
-
-```
-git merge tailandesa
-git lg
 git log --oneline
+git lg
 ```
 
-Lee la salida. Git dice `Fast-forward` y no abrió ningún editor.
+Siete confirmaciones. Una de ellas metió un error que ya está publicado y que vas a tener que resolver sin reescribir la historia.
 
-Y mira el grafo. No apareció ninguna confirmación nueva. El nombre `main` simplemente se corrió hasta donde estaba `tailandesa`.
-
-### 1.4 Comprueba
+Antes de empezar, guarda una foto del estado actual en un papel o en un archivo aparte.
 
 ```
-git log --oneline main
-git log --oneline tailandesa
+git log --oneline > ~/historial-original.txt
+cat ~/historial-original.txt
 ```
 
-Idénticos. Las dos ramas apuntan a la misma confirmación.
-
-Limpia la rama, que ya cumplió.
-
-```
-git branch -d tailandesa
-git branch
-```
-
-Git no reclamó, porque no había nada que perder.
+Lo vas a necesitar para comparar.
 
 ---
 
-## Parte 2 · La fusión que sí crea algo
+## Parte 1 · Los tres modos de retroceso
 
 **Tiempo sugerido, 30 minutos.**
 
-### 2.1 Mira la situación
+Los tres mueven el nombre de la rama hacia atrás. Lo que cambia es qué hacen con tus archivos.
+
+### 1.1 Modo suave
 
 ```
-git lg
-git merge-base main azteca
-git rev-parse main
+git log --oneline -3
+git reset --soft HEAD~1
+git log --oneline -3
+git status
 ```
 
-Ahora los identificadores **no** coinciden. `main` avanzó por su cuenta después de que `azteca` se separó.
+Anota lo que ves. La confirmación desapareció del historial, pero sus cambios están enteros en el área de preparación.
 
-Las dos ramas tienen trabajo que la otra no tiene. No hay forma de resolver esto moviendo un nombre, hay que combinar de verdad.
+Es como si la confirmación nunca se hubiera hecho pero el trabajo siguiera listo para confirmarse. Sirve cuando quieres rehacer la confirmación con otro mensaje o partirla en dos.
 
-### 2.2 Mira qué trae cada una
-
-```
-git log --oneline main..azteca
-git log --oneline azteca..main
-```
-
-Los dos puntos significan lo que tiene la segunda y no tiene la primera. Es la forma rápida de saber qué vas a recibir y qué vas a aportar antes de fusionar.
-
-### 2.3 Fusiona
+Deshaz el retroceso.
 
 ```
-git merge azteca
+git commit -c ORIG_HEAD
 ```
 
-Git abre el editor con un mensaje ya escrito. Acéptalo tal cual, no lo cambies. Guarda y cierra.
-
-Si configuraste Visual Studio Code en el laboratorio 01, el mensaje se abre en una pestaña. Se acepta cerrando la pestaña.
+La opción `-c ORIG_HEAD` reusa el mensaje y los datos de la confirmación que acabas de deshacer, y te abre el editor para que lo revises. Acéptalo.
 
 ```
-git lg
 git log --oneline -3
 ```
 
-### 2.4 Mira lo que se creó
-
-La confirmación de arriba es distinta de todas las que has visto.
+### 1.2 Modo mixto
 
 ```
-git cat-file -p HEAD
+git reset --mixed HEAD~1
+git log --oneline -3
+git status
 ```
 
-Tiene **dos padres**. Todas las anteriores tenían uno. Esa es la marca de una confirmación de unión.
+Compara con lo anterior. La confirmación desapareció igual, pero los cambios ya no están preparados, están solo en tu directorio de trabajo.
 
-Ahí está la diferencia con el avance rápido. En el primer caso el grafo siguió recto. En este se abrió y se volvió a cerrar, y esa forma queda registrada para siempre en la historia.
+Este es el modo por omisión. Escribir `git reset HEAD~1` a secas hace exactamente esto.
+
+Recupera.
 
 ```
-git branch -d azteca
+git add .
+git commit -c ORIG_HEAD
+git log --oneline -3
 ```
+
+### 1.3 Modo duro
+
+Este es distinto y por eso va aparte.
+
+**ATENCIÓN. La orden siguiente descarta tus cambios sin confirmar de forma permanente. Cualquier trabajo en el directorio o en el área de preparación que no esté en una confirmación se pierde y no hay manera de recuperarlo, porque Git nunca lo guardó. Las confirmaciones sí se pueden recuperar con el registro de referencias, los archivos sin confirmar no.**
+
+Antes de ejecutarla, comprueba que no tienes nada pendiente.
+
+```
+git status
+```
+
+Si dice que el directorio está limpio, puedes seguir.
+
+```
+git reset --hard HEAD~1
+git log --oneline -3
+git status
+ls
+```
+
+La confirmación desapareció y sus archivos también. Tu directorio quedó como estaba antes de esa confirmación.
+
+### 1.4 Anota la comparación
+
+Completa esta tabla con lo que observaste. La respuesta está en lo que hiciste, no la busques.
+
+| Modo | Mueve la rama | Área de preparación | Directorio de trabajo |
+|---|---|---|---|
+| `--soft` | sí | | |
+| `--mixed` | sí | | |
+| `--hard` | sí | | |
 
 ---
 
-## Parte 3 · La fusión que choca
+## Parte 2 · El rescate
 
-**Tiempo sugerido, 40 minutos.**
+**Tiempo sugerido, 15 minutos.**
 
-### 3.1 Mira por qué va a chocar
+Acabas de perder una confirmación con el modo duro. Vas a recuperarla.
 
-```
-git log --oneline main..andina
-git diff main andina -- platos.md
-```
-
-Las dos ramas tocaron la misma línea del mismo archivo, y la dejaron distinta. Git no tiene forma de saber cuál de las dos versiones quieres.
-
-### 3.2 Fusiona y observa el choque
+### 2.1 El registro de referencias
 
 ```
-git merge andina
+git reflog
 ```
 
-Lee el mensaje. Git dice qué archivo chocó y te avisa que la fusión quedó a medias.
+Lee la salida completa. Es todo lo que hiciste en este repositorio, en orden, con el identificador de cada punto por el que pasaste.
+
+Esto no es el historial. El historial son las confirmaciones alcanzables desde una rama. El registro de referencias es la bitácora de tus movimientos, e incluye los puntos que abandonaste.
+
+### 2.2 Encuentra lo perdido
+
+Busca la entrada anterior al `reset --hard`. Vas a reconocerla porque el registro dice qué orden causó cada movimiento.
 
 ```
-git status
+git reflog -10
 ```
 
-Presta atención a la sección nueva que aparece, los archivos sin fusionar. Ese estado no lo habías visto antes.
+Copia el identificador de la confirmación que perdiste.
 
-### 3.3 Mira el conflicto
-
-```
-cat platos.md
-```
-
-Ahí están los marcadores. Se leen así.
-
-Entre `<<<<<<< HEAD` y `=======` está **tu** versión, la de la rama donde estás parado.
-
-Entre `=======` y `>>>>>>> andina` está la versión que viene de la otra rama.
-
-Los marcadores son texto corriente que Git escribió en tu archivo. No son mágicos y hay que borrarlos a mano.
-
-### 3.4 Practica el aborto primero
-
-Antes de resolverlo, aprende a salir. Es lo que más vas a necesitar los primeros meses.
+### 2.3 Recupérala
 
 ```
-git merge --abort
-git status
-cat platos.md
+git reset --hard <identificador>
+git log --oneline -3
+ls
+```
+
+Volvió completa, con sus archivos.
+
+Compara con la foto que guardaste al principio.
+
+```
+diff <(git log --oneline) ~/historial-original.txt && echo "identicos"
+```
+
+Si dice idénticos, recuperaste exactamente el estado original.
+
+### 2.4 Lo que hay que entender
+
+Una confirmación no se destruye cuando la abandonas. Queda sin nadie apuntándola, y sigue ahí hasta que el recolector de basura de Git pasa a limpiarla, lo que demora semanas.
+
+Por eso el modo duro es peligroso con los archivos sin confirmar y no lo es con las confirmaciones. Lo que Git guardó alguna vez, se recupera. Lo que nunca guardó, no.
+
+---
+
+## Parte 3 · Revertir
+
+**Tiempo sugerido, 15 minutos.**
+
+Ahora el problema de verdad. Hay una confirmación con un error, y ya fue publicada.
+
+### 3.1 Encuentra el error
+
+```
+git log --oneline
+git log -S "sal marina en polvo" --oneline
+```
+
+Esa confirmación metió algo que no corresponde. Míralo.
+
+```
+git show <identificador>
+```
+
+### 3.2 Por qué no sirve el retroceso
+
+Si usaras `reset` para sacarla, tendrías que mover el nombre de la rama hacia atrás, y eso borraría también las confirmaciones que vinieron después.
+
+Y hay algo peor. Esta confirmación ya la tienen otras personas. Cambiar la historia que otros ya descargaron es la fuente de casi todos los desastres serios con Git, y lo vas a ver en detalle en la sesión 5.
+
+### 3.3 Revierte
+
+```
+git revert <identificador>
+```
+
+Git abre el editor con un mensaje ya escrito. Acéptalo.
+
+```
+git log --oneline -3
 git lg
 ```
 
-Todo volvió a como estaba. El archivo quedó limpio, sin marcadores, y la fusión no ocurrió.
+### 3.4 Mira la diferencia
 
-Esa orden es tu salida de emergencia cuando el conflicto es más grande de lo que esperabas y prefieres consultar antes de seguir.
-
-### 3.5 Ahora sí, resuelve
+No desapareció nada. **Apareció** una confirmación nueva que deshace los efectos de la otra.
 
 ```
-git merge andina
-git status
+git show HEAD
 ```
 
-Abre `platos.md` en tu editor y déjalo con las dos versiones combinadas, o sea con los platos de las dos ramas y sin ningún marcador.
+Lee el contenido. Es el cambio original al revés. Lo que aquella confirmación agregó, esta lo quita.
 
-Borra las tres líneas de marcadores, `<<<<<<< HEAD`, `=======` y `>>>>>>> andina`. Deja el contenido que quieres conservar.
+Las dos conviven en la historia. Cualquiera que mire el proyecto puede ver que hubo un error y que se corrigió, y cuándo.
 
-Comprueba que no quedó ninguno.
+### 3.5 Cuándo usar cada uno
 
-```
-grep -n "<<<<<<<\|=======\|>>>>>>>" platos.md
-```
+Retroceder reescribe la historia y sirve mientras el trabajo sea solo tuyo y no lo hayas compartido.
 
-Si no devuelve nada, está limpio. Si devuelve líneas, todavía quedan marcadores.
+Revertir agrega historia y es lo único correcto cuando otras personas ya tienen esas confirmaciones.
 
-### 3.6 Marca el conflicto como resuelto
+La pregunta que decide es siempre la misma. ¿Alguien más tiene esto? Si la respuesta es sí, revertir.
 
-```
-git add platos.md
-git status
-```
+---
 
-Lee el cambio. Ya no aparece como archivo sin fusionar. `git add` es lo que le dice a Git que ese conflicto está resuelto.
+## Parte 4 · Etiquetar
 
-```
-git commit
-```
+**Tiempo sugerido, 10 minutos.**
 
-Git abre el editor con el mensaje de la fusión. Acéptalo.
+### 4.1 Etiqueta simple
 
 ```
+git tag v0.9
+git tag
 git lg
-cat .git/MERGE_HEAD 2>/dev/null || echo "la fusion termino"
 ```
 
-### 3.7 Comprueba el resultado
+Es un nombre apuntando a una confirmación, igual que una rama. La diferencia es que no se mueve cuando confirmas.
+
+### 4.2 Etiqueta anotada
 
 ```
-cat platos.md
-git log --oneline -1
-git cat-file -p HEAD
+git tag -a v1.0 -m "primera version completa del recetario"
+git tag
 ```
 
-Dos padres otra vez. Es una confirmación de unión normal, la única diferencia fue que tuviste que armar el contenido tú.
+Míralas por dentro y compara.
 
 ```
-git branch -d andina
+git cat-file -t v0.9
+git cat-file -t v1.0
 ```
+
+La simple es un puntero directo a la confirmación. La anotada es un objeto propio, con autor, fecha y mensaje.
+
+```
+git show v1.0
+```
+
+### 4.3 Cuál usar
+
+La anotada, prácticamente siempre. Deja constancia de quién marcó la versión y por qué. La simple sirve para marcas temporales de trabajo personal.
+
+### 4.4 Eliminar una mal puesta
+
+```
+git tag -d v0.9
+git tag
+```
+
+Sin drama, porque las etiquetas todavía no salieron de tu máquina. Cuando ya están publicadas, borrarlas es otra historia y se ve en la sesión 6.
 
 ---
 
 ## Comprobación
 
 ```
-git branch
-```
-
-Solo debe quedar `main`.
-
-```
 git log --oneline
 ```
 
-Debe haber dos confirmaciones de unión en la historia.
+Debe tener una confirmación más que el original, la de la reversión.
 
 ```
-git lg
+git tag
 ```
 
-El grafo debe mostrar una rama que entró sin dejar marca, la del avance rápido, y dos que se abrieron y se cerraron.
+Solo `v1.0`.
 
 ```
-grep -rn "<<<<<<<" .
+git show v1.0
 ```
 
-No debe devolver nada. Si devuelve algo, quedó un marcador dentro de un archivo.
+Debe mostrar el mensaje que escribiste.
+
+```
+git log -S "sal marina en polvo" --oneline
+```
+
+Debe devolver dos confirmaciones. La que lo agregó y la que lo quitó. Las dos siguen en la historia, que es exactamente el punto.
 
 ```
 git status
@@ -296,33 +326,28 @@ Directorio limpio.
 
 ## Si algo salió mal
 
-**Confirmaste con los marcadores adentro.** Pasa más de lo que crees y es la razón del `grep` del paso 3.5. Arréglalo con lo que aprendiste en el laboratorio 02.
+**Hiciste `reset --hard` y perdiste trabajo sin confirmar.** No hay rescate. Git nunca guardó eso. Es la razón de la advertencia.
+
+**Hiciste `reset --hard` y perdiste confirmaciones.** Sí hay rescate. `git reflog`, busca el identificador, y `git reset --hard` hacia él.
+
+**El registro de referencias está tan largo que no encuentras nada.** Acótalo con `git reflog -20` y busca por la orden que causó cada movimiento, que aparece al final de cada línea.
+
+**Reverteiste la confirmación equivocada.** Revierte la reversión. Es una confirmación como cualquier otra.
 
 ```
-git restore --staged platos.md
+git revert HEAD
 ```
 
-Edita el archivo, sácale los marcadores, y después.
-
-```
-git add platos.md
-git commit --amend --no-edit
-```
-
-**Estás en medio de una fusión y no sabes en qué punto vas.** `git status` siempre te lo dice, y siempre te ofrece la salida.
-
-**Quieres salir de la fusión sin resolver.** `git merge --abort`. No pierde nada de lo que había antes de empezar.
-
-**El editor se abrió y no sabes cerrarlo.** Si es Visual Studio Code, cierra la pestaña. Si se abrió otro editor dentro de la consola, tienes un problema de configuración y conviene volver al punto 1.2 del laboratorio 01.
+**Quedaste perdido del todo.** Vuelve a ejecutar `preparar.sh` y repite desde la parte que te falló.
 
 ---
 
 ## Lo que te llevas
 
-Hay tres resultados posibles y siempre se escribe la misma orden. Lo que decide cuál te toca es la forma del grafo, no lo que tú quieras.
+Los tres modos de retroceso mueven la rama hacia atrás. El suave conserva el trabajo preparado, el mixto lo deja en el directorio, y el duro lo borra.
 
-Cuando una rama está contenida entera en la otra, Git mueve el nombre y no crea nada. Cuando las dos avanzaron por su lado, crea una confirmación con dos padres. Cuando además tocaron la misma línea, se detiene y te pide que decidas tú.
+Lo que Git guardó alguna vez se puede recuperar aunque lo abandones. Lo que nunca guardó, no. Por eso el modo duro es peligroso con archivos sin confirmar y no con confirmaciones.
 
-Los marcadores de conflicto son texto que Git escribió en tu archivo. Hay que borrarlos a mano y conviene comprobar que no quedó ninguno antes de confirmar.
+El registro de referencias es tu red de seguridad y guarda todo lo que hiciste, no solo lo que quedó en la historia.
 
-`git merge --abort` deja todo como estaba. Úsala sin culpa cada vez que el conflicto sea más grande de lo que esperabas.
+Retroceder sirve cuando el trabajo es solo tuyo. Revertir es lo correcto cuando alguien más ya lo tiene. La pregunta que decide es si esto ya salió de tu máquina.

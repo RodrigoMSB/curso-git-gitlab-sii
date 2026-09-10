@@ -55,7 +55,11 @@ export function repoLineal(): EstadoRepositorio {
   return escenarioPorId('lab-02');
 }
 
-/** Historia corta y limpia, con carpeta de recetas para mirar (lab 03). */
+/**
+ * Historia limpia, con carpeta de recetas para mirar (lab 03, ordenar el
+ * recetario). Reemplaza al antiguo laboratorio 03, que desaparecio con el
+ * SPEC 009 y cuyo contenido se incorporo al 02.
+ */
 export function repoLimpio(): EstadoRepositorio {
   return escenarioPorId('lab-03');
 }
@@ -66,19 +70,19 @@ export function repoLimpio(): EstadoRepositorio {
  * archivos, y `andina` nace ahi mismo y choca sobre platos.md.
  */
 export function repoConRamas(): EstadoRepositorio {
-  return escenarioPorId('lab-06');
+  return escenarioPorId('lab-05');
 }
 
 /** Rama de trabajo con mensajes que no dicen nada y algo a medias encima (lab 08). */
 export function repoConRamaDeTrabajo(): EstadoRepositorio {
-  return escenarioPorId('lab-08');
+  return escenarioPorId('lab-07');
 }
 
 /**
- * El laboratorio 08 mirado desde `main`: dos ramas que divergieron de verdad,
+ * El laboratorio 07 mirado desde `main`: dos ramas que divergieron de verdad,
  * con la posicion en el tronco. Es la forma que necesitan las ordenes que
  * cambian de rama, fusionan sin conflicto o reordenan.
  */
 export function repoConRamaDesdeMain(): EstadoRepositorio {
-  return ejecutar(escenarioPorId('lab-08'), 'git switch main').estado;
+  return ejecutar(escenarioPorId('lab-07'), 'git switch main').estado;
 }

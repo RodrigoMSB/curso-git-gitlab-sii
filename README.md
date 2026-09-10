@@ -209,7 +209,7 @@ es siempre el archivo de `dist`.
 ## Que se ve en pantalla
 
 Hay capturas de la pantalla real en [`docs/capturas`](docs/capturas), sobre los
-escenarios de los laboratorios 01, 02, 06 y 08, incluyendo la previsualizacion de una fusion y el
+escenarios de los laboratorios 01, 02, 05 y 07, incluyendo la previsualizacion de una fusion y el
 resultado de un rebase. Se rehacen con `npm run capturas` despues de construir,
 de modo que se pueden actualizar cada vez que la vista cambie.
 
@@ -263,26 +263,29 @@ laboratorio tiene su escenario.
 |---|---|---|
 | Lab 01 | 1 | Sin repositorio todavia, con los archivos del recetario sin seguimiento |
 | Lab 02 | 2 | Cinco confirmaciones de tres autores, un cambio sin preparar y otro preparado por error |
-| Lab 03 | 2 | Historia corta y limpia de cuatro confirmaciones, para mirar por dentro |
-| Lab 04 | 3 | Cinco confirmaciones, con tres archivos que nunca debieron entrar al historial |
-| Lab 05 | 3 | Seis confirmaciones en `main`, cada una tocando un archivo distinto |
-| Lab 06 | 4 | `mexicana` avanza rapido y `peruana` choca sobre la misma linea |
-| Lab 07 | 5 | Siete confirmaciones, con un error tres confirmaciones atras |
-| Lab 08 | 5 | Rama de trabajo con mensajes que no dicen nada y algo a medias encima |
-| Lab 10 | 6 | Ocho confirmaciones, archivo de exclusiones y una version etiquetada |
+| Lab 03 | 3 | Cinco confirmaciones, con tres archivos que nunca debieron entrar al historial |
+| Lab 04 | 3 | Seis confirmaciones en `main`, cada una tocando un archivo distinto |
+| Lab 05 | 4 | `tailandesa` avanza rapido, `azteca` une sin chocar y `andina` choca sobre la misma linea |
+| Lab 06 | 4 | Siete confirmaciones, con un error tres confirmaciones atras |
+| Lab 07 | 5 | Rama de trabajo con mensajes que no dicen nada y algo a medias encima |
+| Lab 09 | 6 | Ocho confirmaciones, archivo de exclusiones y una version etiquetada |
 
-El laboratorio 09 no lleva escenario: enseña remotos, un submodulo y un gancho,
+El laboratorio 08 no lleva escenario: enseña remotos, un submodulo y un gancho,
 y el motor no implementa ninguna de las tres cosas. Es de terminal pura. Los del
-11 en adelante ocurren en la plataforma o en la tuberia de integracion, y no
+10 en adelante ocurren en la plataforma o en la tuberia de integracion, y no
 tienen repositorio local que reflejar.
+
+La numeracion es la del SPEC 009, que dejo el taller en catorce laboratorios: el
+antiguo 03, que abria la carpeta oculta, paso a ser la parte 4 del 02, y del
+antiguo 04 en adelante cada uno bajo un numero.
 
 Para abrir el simulador directo en un escenario, se le pide en la direccion:
 
 ```
-SIMULADOR.html?lab=06
+SIMULADOR.html?lab=05
 ```
 
-Sirve tambien `#lab-06`. Sin nada, abre el laboratorio 01. El selector de la
+Sirve tambien `#lab-05`. Sin nada, abre el laboratorio 01. El selector de la
 barra permite cambiar de escenario en cualquier momento.
 
 ## Como esta hecho por dentro

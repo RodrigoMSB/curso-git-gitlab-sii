@@ -60,7 +60,7 @@ export const SIN_SOPORTE: readonly { readonly patron: RegExp; readonly motivo: s
   },
   {
     patron: /^(cat|ls)\s+\.git\b/,
-    motivo: 'el simulador no modela el contenido de la carpeta oculta; el laboratorio 03 la mira en el disco',
+    motivo: 'el simulador no modela el contenido de la carpeta oculta; la parte 4 del laboratorio 02 la mira en el disco',
   },
   {
     patron: /^git config\b.*--list/,

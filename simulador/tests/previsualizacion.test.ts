@@ -8,7 +8,7 @@ import { idActual, ramaPorNombre } from '../src/core/estado';
 import { correr, repoConRamaDeTrabajo, repoConRamas, repoLineal } from './ayudas';
 
 describe('previsualizacion de ordenes', () => {
-  it('CA7 la previsualizacion de git merge sobre el laboratorio 06 anuncia exactamente una confirmacion nueva', () => {
+  it('CA7 la previsualizacion de git merge sobre el laboratorio 05 anuncia exactamente una confirmacion nueva', () => {
     const partida = repoConRamas();
     const copia = structuredClone(partida);
 
@@ -77,7 +77,7 @@ describe('previsualizacion de ordenes', () => {
     expect(vista.estadoResultante).toEqual(partida);
   });
 
-  it('la fusion con conflicto del laboratorio 06 se materializa en la union que anuncio la previsualizacion', () => {
+  it('la fusion con conflicto del laboratorio 05 se materializa en la union que anuncio la previsualizacion', () => {
     const partida = repoConRamas();
     const anunciada = previsualizar(partida, 'git merge andina').confirmacionesNuevas[0];
 

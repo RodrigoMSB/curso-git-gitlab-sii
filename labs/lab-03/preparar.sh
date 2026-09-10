@@ -2,11 +2,10 @@
 # Preparacion del escenario del laboratorio 03 (forma de la seccion 18 de
 # docs/arquitectura.md).
 #
-# El laboratorio 03 abre la carpeta .git y mira lo que hay adentro, asi que el
-# escenario no necesita suciedad: necesita una historia corta y limpia, y una
-# carpeta oculta que valga la pena inspeccionar. Cuatro confirmaciones, un
-# arbol con una carpeta dentro para que la cadena de objetos tenga dos niveles,
-# y configuracion local de verdad en .git/config.
+# Los tres archivos que no deberian estar versionados entran a la historia
+# confirmada, no solo al directorio de trabajo. Esa es la diferencia entre
+# ignorar un archivo y sacarlo del seguimiento, que es el punto del ejercicio.
+# No hay archivo de exclusiones: lo escribe el participante.
 #
 # Determinista con las tecnicas de siempre: fechas como epoca, autor y
 # confirmador fijados, finales de linea fijados en el repositorio generado.
@@ -92,35 +91,27 @@ echo
 mkdir -p "$REPOSITORIO"
 cd "$REPOSITORIO"
 
-# El laboratorio entero se sostiene sobre que `.git/refs/heads/main` sea un
-# archivo suelto de 41 bytes. Git 2.45 trajo un segundo formato de referencias,
-# `reftable`, que las guarda en una base binaria: con el no existe
-# `.git/refs/heads` y la parte 2.2 del enunciado se queda sin nada que leer. Se
-# pide `files` explicitamente para que la maquina del participante no decida.
 if git init -q -b main --ref-format=files . 2>/dev/null; then
   :
 else
   git init -q -b main .
 fi
 
-# Configuracion local de verdad, que es lo que el participante lee en la parte
-# 1.2. Sin esto `.git/config` no tiene nada que mirar.
-git config user.name 'Juana Perez'
-git config user.email 'juana.perez@recetario.cl'
+git config user.name 'Participante del taller'
+git config user.email 'participante@sii.cl'
 git config core.autocrlf false
 git config core.eol lf
 git config commit.gpgsign false
-# El registro de referencias es la unica huella que deja la parte 4, donde el
-# participante crea una rama, se cambia a ella y la borra. Si la maquina lo
-# tuviera apagado, esa parte no dejaria rastro.
 git config core.logAllRefUpdates true
-# Nada de empaquetado automatico: la parte 3 recorre objetos sueltos y la 2.2
-# mide un archivo de referencia suelto.
 git config gc.auto 0
 
 CORREO_JUANA='juana.perez@recetario.cl'
 CORREO_MARCO='marco.diaz@recetario.cl'
+CORREO_SOFIA='sofia.rojas@recetario.cl'
 
+# Autor y confirmador llevan el mismo nombre y el mismo instante: si el
+# confirmador tomara la hora de la maquina, el identificador cambiaria en cada
+# ejecucion.
 confirmar() {
   local nombre=$1 correo=$2 epoca=$3 mensaje=$4
   git add -A
@@ -133,46 +124,25 @@ confirmar() {
     git commit -q -m "$mensaje"
 }
 
-# 1 · 5 de marzo de 2024
+# 1 · 5 de febrero de 2024
 cat > README.md <<'ARCHIVO'
 # Recetario COMIDA CHILENA
 
 Recopilacion de platos, ingredientes y cocineros.
 Proyecto del taller de Git y GitLab.
 ARCHIVO
-confirmar 'Juana Perez' "$CORREO_JUANA" 1709641800 'se inicia el recetario'
-
-# 2 · 21 de mayo de 2024
 cat > platos.md <<'ARCHIVO'
 # Platos
 
 - pastel de choclo
 - empanadas de pino
-- cazuela
-- curanto
+- leche asada
+- mote con huesillo
 ARCHIVO
-confirmar 'Marco Diaz' "$CORREO_MARCO" 1716311700 'se agregan los platos chilenos'
+confirmar 'Juana Perez' "$CORREO_JUANA" 1707136800 'Agrega el README y la lista de platos'
 
-# 3 · 13 de agosto de 2024
-cat > ingredientes.md <<'ARCHIVO'
-# Ingredientes
-
-- choclo
-- carne de vacuno
-- cebolla
-- aji de color
-ARCHIVO
-cat > cocineros.md <<'ARCHIVO'
-# Cocineros
-
-- Juana Perez, especialidad pastel de choclo
-- Marco Diaz, especialidad empanadas
-ARCHIVO
-confirmar 'Juana Perez' "$CORREO_JUANA" 1723557600 'se agregan los ingredientes y los cocineros'
-
-# 4 · 6 de noviembre de 2024. La carpeta recetas es lo que hace que el arbol de
-# la raiz tenga un arbol adentro, y sin eso la parte 3.5 del enunciado, la que
-# entra a una carpeta, no tiene por donde entrar.
+# 2 · 19 de febrero de 2024. Cuatro recetas mezcladas sin orden: dos de fondo y
+# dos de postre. El participante las separa en dos carpetas con `git mv`.
 mkdir -p recetas
 cat > recetas/pastel-de-choclo.md <<'ARCHIVO'
 # Pastel de choclo
@@ -184,7 +154,48 @@ cat > recetas/empanadas.md <<'ARCHIVO'
 
 Masa, pino frio, huevo duro, aceituna, doblado y horno.
 ARCHIVO
-confirmar 'Marco Diaz' "$CORREO_MARCO" 1730920800 'se documentan las dos primeras recetas'
+cat > recetas/leche-asada.md <<'ARCHIVO'
+# Leche asada
+
+Leche, huevos y azucar al horno, con caramelo en el molde.
+ARCHIVO
+cat > recetas/mote-con-huesillo.md <<'ARCHIVO'
+# Mote con huesillo
+
+Huesillos cocidos con canela y azucar rubia, mote de trigo aparte.
+ARCHIVO
+confirmar 'Marco Diaz' "$CORREO_MARCO" 1708352100 'Agrega las cuatro primeras recetas'
+
+# 3 · 11 de marzo de 2024. Basura que nunca debio versionarse, confirmada.
+cat > notas.tmp <<'ARCHIVO'
+Reunion de cocina del martes.
+Pendiente: definir el menu de septiembre.
+ARCHIVO
+cat > respaldo.bak <<'ARCHIVO'
+Respaldo automatico del listado de platos.
+ARCHIVO
+confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1710183900 'Guarda notas de la reunion de cocina'
+
+# 4 · 2 de abril de 2024. La credencial, que es el punto del laboratorio.
+cat > credenciales.txt <<'ARCHIVO'
+usuario: casino_recetario
+clave: 4lm3ndr4s-2024
+servidor: casino.interno.cl
+ARCHIVO
+confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1712064600 'Agrega el acceso al sistema del casino'
+
+# 5 · 23 de abril de 2024
+cat > ingredientes.md <<'ARCHIVO'
+# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+- leche
+- huesillos
+ARCHIVO
+confirmar 'Juana Perez' "$CORREO_JUANA" 1713898200 'Completa la lista de ingredientes'
 
 if ! "$RAIZ/verificar.sh" --escenario; then
   fallar "el escenario no quedo como corresponde; no se entrega asi"
@@ -199,5 +210,6 @@ echo "      cd $REPOSITORIO_DICHO"
 echo
 echo "  Y desde ahi, para ubicarte:"
 echo "      git log --oneline"
+echo "      ls recetas"
 echo "      git status"
 echo

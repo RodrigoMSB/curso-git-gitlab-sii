@@ -1,16 +1,14 @@
-# Laboratorio 04 · Ordenar el recetario
+# Laboratorio 04 · Tres cocinas en paralelo
 
-**Sesión 3 · 75 minutos**
+**Sesión 3 · 85 minutos**
 
 ---
 
 ## Qué vas a hacer
 
-El recetario que te toca está desordenado y tiene tres archivos que nunca debieron entrar. Uno de ellos es un archivo de credenciales.
+Vas a abrir tres cocinas en el recetario, cada una arrancando desde un punto distinto de la historia. Después vas a renombrar una, eliminar otra, y perderte a propósito en el estado desconectado para aprender a salir de ahí.
 
-Vas a reorganizar la carpeta de recetas, comparar dos formas de renombrar un archivo, y sacar del repositorio lo que no corresponde.
-
-El punto central es el último y es más sutil de lo que parece. Ignorar un archivo y sacarlo del seguimiento son cosas distintas, y si confundes una con otra dejas una credencial dentro de la historia del proyecto.
+Antes de mirar el resultado vas a dibujar en un papel cómo crees que quedó el grafo. Esa parte no es opcional. Es la que te dice si entendiste o si solo copiaste órdenes.
 
 ---
 
@@ -23,294 +21,348 @@ labs/lab-04/preparar.sh
 cd ../taller-git-trabajo/lab-04/recetario
 ```
 
-Mira con qué te encontraste.
+Mira el punto de partida.
 
 ```
 git log --oneline
-ls
-ls recetas
-git status
+git lg
+git branch
 ```
 
-Toma nota de los tres archivos que sobran. Están confirmados en la historia, no son basura suelta en tu directorio.
+Seis confirmaciones en una sola línea recta y una sola rama. De aquí en adelante deja de ser recta.
 
 ---
 
-## Parte 1 · Mover y borrar con Git
-
-**Tiempo sugerido, 25 minutos.**
-
-### 1.1 La carpeta desordenada
-
-```
-ls recetas
-```
-
-Hay recetas mezcladas sin ningún orden. Vas a separarlas por tipo de plato.
-
-```
-mkdir recetas/principales
-mkdir recetas/postres
-```
-
-### 1.2 Mover con Git
-
-```
-git mv recetas/pastel-de-choclo.md recetas/principales/
-git mv recetas/empanadas.md recetas/principales/
-git status
-```
-
-Lee la salida. Git dice `renamed` y muestra la ruta vieja y la nueva. Reconoció que es el mismo archivo que cambió de lugar.
-
-Mueve el resto.
-
-```
-git mv recetas/leche-asada.md recetas/postres/
-git mv recetas/mote-con-huesillo.md recetas/postres/
-git status
-```
-
-### 1.3 Confirma el orden
-
-```
-git commit -m "se ordenan las recetas por tipo de plato"
-```
-
-### 1.4 Ahora hazlo por fuera
-
-Ese fue el camino cómodo. Ahora mira qué pasa cuando renombras sin decirle nada a Git.
-
-```
-mv platos.md listado-de-platos.md
-git status
-```
-
-Lee esto con cuidado. Git no dice `renamed`. Dice que borraste un archivo y que apareció otro sin seguimiento. Para Git son dos hechos separados, no un renombrado.
-
-### 1.5 Que Git se dé cuenta
-
-```
-git add .
-git status
-```
-
-Ahora sí dice `renamed`. Git lo dedujo al comparar el contenido, porque los dos archivos son idénticos y concluyó que es el mismo que cambió de nombre.
-
-O sea, `git mv` no hace nada especial. Es un atajo que hace el `mv` y el `add` de una vez. La detección del renombrado ocurre igual.
-
-Déjalo como estaba.
-
-```
-git restore --staged listado-de-platos.md
-mv listado-de-platos.md platos.md
-git status
-```
-
-Directorio limpio otra vez.
-
-### 1.6 Borrar con Git
-
-Hay una receta que no va.
-
-```
-git rm recetas/postres/mote-con-huesillo.md
-git status
-git commit -m "se retira la receta que no corresponde al recetario"
-```
-
-El archivo desapareció de tu carpeta y del seguimiento. Pero sigue en la historia, en las confirmaciones anteriores. Comprúebalo.
-
-```
-git log --oneline -- recetas/mote-con-huesillo.md
-```
-
-Nada se borra de verdad en Git. Solo deja de estar en el estado actual.
-
----
-
-## Parte 2 · Lo que nunca debió entrar
+## Parte 1 · Tres ramas desde tres puntos
 
 **Tiempo sugerido, 35 minutos.**
 
-Esta es la parte importante.
+### 1.1 La primera, desde donde estás
 
-### 2.1 Mira el problema
+```
+git branch tailandesa
+git branch
+git lg
+```
+
+Lee el grafo. Hay dos nombres apuntando a la misma confirmación. No pasó nada más.
+
+Cámbiate a ella y confirma algo.
+
+```
+git switch tailandesa
+```
+
+Crea `recetas/pad-thai.md`.
+
+```
+# Pad thai
+
+Fideos de arroz, tamarindo, mani, huevo y salsa de pescado.
+```
+
+Y confirma.
+
+```
+git add recetas/pad-thai.md
+git commit -m "se abre la cocina tailandesa"
+git lg
+```
+
+Ahora los dos nombres apuntan a confirmaciones distintas.
+
+### 1.2 La segunda, desde una confirmación anterior
+
+Esta no nace de donde estás parado, nace de tres confirmaciones atrás.
+
+```
+git switch main
+git log --oneline
+git switch -c mexicana HEAD~3
+git lg
+```
+
+La orden `switch -c` con una referencia hace dos cosas de una vez, crea la rama en ese punto y te cambia a ella.
+
+Fíjate en tu directorio de trabajo.
 
 ```
 ls
-cat credenciales.txt
+ls recetas
 ```
 
-Ahí hay una credencial. Y no está suelta en tu carpeta, está confirmada.
+Los archivos cambiaron. Estás parado tres confirmaciones atrás, así que ves el proyecto como estaba en ese momento.
+
+Confirma algo acá.
 
 ```
-git log --oneline -- credenciales.txt
+mkdir -p recetas
 ```
 
-Alguien la agregó y confirmó. Lo mismo pasa con `notas.tmp` y `respaldo.bak`.
-
-### 2.2 El error que casi todos cometen
-
-La reacción natural es crear el archivo de exclusiones y listo. Prueba a ver qué pasa.
-
-Crea `.gitignore` con este contenido.
+Crea `recetas/tacos.md`.
 
 ```
-*.tmp
-*.bak
-credenciales.txt
+# Tacos
+
+Tortilla de maiz, carne, cebolla, cilantro y limon.
 ```
 
-Y mira el estado.
+Y confirma.
 
 ```
-git status
+git add recetas/tacos.md
+git commit -m "se abre la cocina mexicana"
+git lg
 ```
 
-`.gitignore` aparece como archivo nuevo. Los tres archivos problemáticos no aparecen por ninguna parte.
+El grafo ya no es una línea. Se abrió.
 
-Parecería resuelto. No lo está.
+### 1.3 La tercera, desde una confirmación específica
 
-```
-git ls-files
-```
-
-Ahí siguen los tres. **El archivo de exclusiones no toca lo que ya está en seguimiento.** Solo evita que Git te moleste con archivos que nunca entraron.
-
-Si te quedas acá, la credencial sigue en el repositorio y se va a publicar completa cuando envíes esto a la plataforma en la sesión 6.
-
-### 2.3 Sacar del seguimiento sin borrar
-
-Necesitas que Git deje de seguir esos archivos, pero sin borrarlos de tu disco, porque `notas.tmp` y `respaldo.bak` a lo mejor los sigues usando.
+Ahora vas a usar un identificador en lugar de una referencia relativa.
 
 ```
-git rm --cached notas.tmp
-git rm --cached respaldo.bak
-git status
-ls
+git log --oneline main
 ```
 
-Lee las dos cosas. En el estado aparecen como borrados y además como archivos sin seguimiento, porque el archivo de exclusiones todavía no está confirmado. Y en tu carpeta siguen ahí, intactos.
-
-La opción `--cached` es la diferencia. Sin ella, `git rm` borra el archivo del disco también.
-
-### 2.4 La credencial es distinta
-
-Con `credenciales.txt` no basta con sacarlo del seguimiento. El archivo tiene una clave adentro y no lo quieres ni en tu disco.
-
-**ATENCIÓN. La orden siguiente borra el archivo de tu disco además de sacarlo del repositorio. El contenido se pierde de tu carpeta. Sigue estando en la historia del repositorio, así que se puede recuperar de ahí, pero no vas a tener el archivo delante.**
+Elige la segunda confirmación de esa lista y copia su identificador.
 
 ```
-git rm credenciales.txt
-ls
-git status
+git branch peruana <identificador>
+git switch peruana
+git lg
 ```
 
-### 2.5 Confirma la limpieza
+Confirma algo. Crea `recetas/ceviche.md`.
 
 ```
-git add .gitignore
-git status
-git commit -m "se sacan del seguimiento los archivos que no corresponden"
+# Ceviche
+
+Pescado blanco, limon, cebolla morada, aji y camote.
 ```
 
-Comprueba.
+Y confirma.
 
 ```
-git ls-files
-git status
+git add recetas/ceviche.md
+git commit -m "se abre la cocina peruana"
 ```
 
-Los tres desaparecieron del seguimiento. El directorio está limpio. `notas.tmp` y `respaldo.bak` siguen en tu carpeta pero Git ya no los menciona.
+### 1.4 Dibuja antes de mirar
 
-### 2.6 El problema que queda
+**No ejecutes nada todavía.**
 
-Busca la credencial en la historia.
+Toma un papel y dibuja cómo crees que quedó el grafo. Marca dónde está cada una de las cuatro ramas y de qué punto sale cada una.
+
+Cuando lo tengas dibujado, y solo entonces.
 
 ```
-git log --oneline -- credenciales.txt
-git show <identificador-de-la-confirmacion-que-la-agrego>
+git lg
 ```
 
-Ahí está. Completa y legible.
-
-Sacar un archivo del seguimiento no lo borra del pasado. Cualquiera que clone este repositorio puede recuperar esa credencial recorriendo la historia.
-
-**Esto no se arregla en este laboratorio.** Limpiar el pasado de un repositorio es una operación pesada que reescribe todas las confirmaciones, y solo tiene sentido si el repositorio nunca se publicó. Cuando la credencial ya salió de tu máquina, la única respuesta correcta es rotarla.
-
-Quédate con la regla. La credencial que entró a un repositorio compartido está comprometida, aunque después la borres.
+Compara. Si no coincide, no sigas hasta entender dónde te equivocaste. Vuelve sobre los puntos 1.1 a 1.3 y sigue el hilo.
 
 ---
 
-## Parte 3 · Prevenir
+## Parte 2 · Renombrar y eliminar
 
 **Tiempo sugerido, 15 minutos.**
 
-### 3.1 Comprueba que las exclusiones funcionan
+### 2.1 Renombrar la rama donde estás
 
 ```
-echo "prueba" > temporal.tmp
+git branch
+git branch -m peruana andina
+git branch
+git lg
+```
+
+Cambió el nombre. Nada más cambió, la confirmación es la misma.
+
+Si quieres comprobarlo con lo que aprendiste en el laboratorio 02.
+
+```
+ls .git/refs/heads
+```
+
+Un archivo se renombró. Eso fue todo.
+
+### 2.2 Renombrar una rama donde no estás
+
+```
+git branch -m mexicana azteca
+git branch
+```
+
+Con dos nombres, el primero es la rama a renombrar y el segundo el nombre nuevo. No necesitas estar parado en ella.
+
+### 2.3 Eliminar una rama
+
+Crea una que no sirva y bórrala.
+
+```
+git branch temporal
+git branch
+git branch -d temporal
+git branch
+```
+
+Sin drama, porque `temporal` no tenía nada que las otras no tuvieran.
+
+### 2.4 Cuando Git se niega
+
+Intenta borrar una que sí tiene trabajo propio.
+
+```
+git switch main
+git branch -d azteca
+```
+
+Git se niega y te explica por qué. Esa rama tiene una confirmación que ninguna otra tiene, y borrarla dejaría ese trabajo sin nadie apuntándolo.
+
+**ATENCIÓN. La opción `-D` en mayúscula fuerza el borrado y no pregunta. La confirmación no se destruye de inmediato, queda huérfana y se puede recuperar con el registro de referencias, que vas a ver en el laboratorio 06. Pero si pasa el tiempo suficiente, el recolector de basura de Git la elimina de verdad.**
+
+No la borres. Déjala como está y sigue.
+
+---
+
+## Parte 3 · Perderse a propósito
+
+**Tiempo sugerido, 25 minutos.**
+
+Acá vas a entrar al estado que más asusta la primera vez.
+
+### 3.1 Entrar
+
+```
+git log --oneline main
+```
+
+Copia el identificador de la tercera confirmación de la lista y cámbiate a ella directamente, sin nombre de rama.
+
+```
+git switch --detach <identificador>
+```
+
+Lee el mensaje completo. Git te avisa que estás en estado desconectado y te explica lo que puede pasar. Es largo y da la impresión de ser un error. No lo es.
+
+### 3.2 Mira dónde estás
+
+```
 git status
+git branch
+cat .git/HEAD
 ```
 
-No aparece. La regla `*.tmp` lo está tapando.
+En `git branch` aparece una entrada rara arriba de todo, que no es un nombre de rama.
+
+Y en `.git/HEAD` ya no hay una referencia a una rama, hay un identificador directo. Eso es exactamente lo que significa estar desconectado. `HEAD` apunta a una confirmación en vez de apuntar a una rama.
+
+### 3.3 Trabaja igual
+
+Puedes confirmar acá sin problema. Crea `recetas/humita.md`.
 
 ```
-rm temporal.tmp
+# Humita
+
+Choclo molido, albahaca, cebolla, cocida en las mismas hojas.
 ```
 
-### 3.2 Forzar cuando de verdad lo necesitas
-
-A veces un archivo cae bajo una regla de exclusión pero sí lo quieres versionar.
+Y confirma.
 
 ```
-echo "esta si va" > importante.tmp
-git status
-git add -f importante.tmp
-git status
+git add recetas/humita.md
+git commit -m "se agrega la humita"
+git log --oneline -2
+git lg
 ```
 
-La opción `-f` pasa por encima de la exclusión. Úsala poco y a conciencia.
+Tu confirmación existe y es tan válida como cualquier otra. El problema es que ningún nombre la apunta. Si te vas de acá ahora, no vas a tener cómo volver a encontrarla.
 
-Déjalo fuera.
+### 3.4 El error
 
-```
-git restore --staged importante.tmp
-rm importante.tmp
-```
-
-### 3.3 Por qué el archivo de exclusiones se confirma
-
-`.gitignore` va dentro del repositorio y viaja con él. Así todo el equipo comparte las mismas reglas y nadie sube por accidente lo que los demás están ignorando.
-
-Si tienes exclusiones que son solo tuyas, van en `.git/info/exclude`, que es local y no se comparte.
+Cámbiate a otra rama.
 
 ```
-cat .git/info/exclude
+git switch main
 ```
+
+Lee la advertencia. Git te avisa que dejas atrás una confirmación y te ofrece el identificador para rescatarla.
+
+```
+git lg
+```
+
+Tu humita no aparece por ninguna parte.
+
+### 3.5 El rescate
+
+Todavía se puede. Copia el identificador que Git te ofreció en la advertencia.
+
+```
+git branch rescate <identificador>
+git lg
+```
+
+Ahí está de vuelta. Le pusiste un nombre y volvió al grafo.
+
+Si no copiaste el identificador a tiempo, se recupera con el registro de referencias.
+
+```
+git reflog
+```
+
+Ahí está todo lo que hiciste, incluida esa confirmación.
+
+### 3.6 Cómo se hace bien
+
+La forma correcta es crear la rama **antes** de irte, no después.
+
+```
+git switch --detach HEAD~2
+```
+
+Crea `recetas/sopaipillas.md`.
+
+```
+# Sopaipillas
+
+Harina, zapallo, manteca. Fritas y con pebre.
+```
+
+Confirma y esta vez ponle nombre antes de moverte.
+
+```
+git add recetas/sopaipillas.md
+git commit -m "se agregan las sopaipillas"
+git switch -c fritangas
+git lg
+git switch main
+```
+
+Sin advertencia y sin rescate. La rama ya existía cuando te fuiste.
 
 ---
 
 ## Comprobación
 
 ```
-git ls-files
+git branch
 ```
 
-No deben aparecer `notas.tmp`, `respaldo.bak` ni `credenciales.txt`. Sí debe aparecer `.gitignore`.
+Deben aparecer `main`, `tailandesa`, `azteca`, `andina`, `rescate` y `fritangas`. Seis en total, y `main` marcada como la actual.
 
 ```
-ls
+git lg
 ```
 
-`notas.tmp` y `respaldo.bak` siguen en tu carpeta. `credenciales.txt` no.
+El grafo debe mostrar cinco puntos de separación distintos sobre la línea de `main`.
 
 ```
-ls recetas/principales recetas/postres
+cat .git/HEAD
 ```
 
-Las recetas ordenadas por tipo.
+Debe apuntar a `main`, no a un identificador suelto.
 
 ```
 git status
@@ -322,22 +374,22 @@ Directorio limpio.
 
 ## Si algo salió mal
 
-**Borraste `notas.tmp` del disco sin querer.** Usaste `git rm` sin `--cached`. Recupéralo desde la historia.
+**Quedaste desconectado y no sabes volver.** `git switch main` te devuelve siempre. Si tenías trabajo sin nombre, revisa la advertencia que Git imprime al salir o usa `git reflog`.
 
-```
-git checkout HEAD~1 -- notas.tmp
-```
+**Perdiste una confirmación y no anotaste el identificador.** Está en `git reflog`. No se pierde hasta que pasan semanas y corre el recolector.
 
-**El archivo de exclusiones no está tapando nada.** Revisa que se llame exactamente `.gitignore`, con el punto adelante. Un archivo llamado `gitignore` no hace nada.
+**Creaste una rama en el punto equivocado.** Bórrala con `git branch -d` y créala de nuevo. Como no tiene trabajo propio, Git no va a reclamar.
 
-**Sigues viendo los archivos en `git status` después de confirmar.** Te faltó el `git rm --cached`. Vuelve al punto 2.3.
+**El grafo no coincide con tu dibujo.** No sigas hasta entender por qué. Ese es el ejercicio.
 
 ---
 
 ## Lo que te llevas
 
-Ignorar y sacar del seguimiento son operaciones distintas. El archivo de exclusiones solo actúa sobre lo que nunca entró. Lo que ya está en seguimiento sale con `git rm --cached`.
+Una rama se crea donde tú digas, no solo donde estás parado. Con una referencia relativa o con un identificador puedes abrirla desde cualquier punto de la historia.
 
-`git mv` es un atajo, no una operación especial. Git detecta el renombrado comparando contenido, con o sin esa orden.
+Renombrar una rama renombra un archivo. Eliminarla borra ese archivo. Nada más ocurre.
 
-Nada se borra de la historia. Un archivo eliminado hoy sigue completo en las confirmaciones donde estaba, y una credencial que entró una vez queda comprometida aunque la saques después.
+El estado desconectado no es un error ni es peligroso por sí mismo. Significa que `HEAD` apunta a una confirmación en vez de a una rama. Lo único que hay que recordar es ponerle nombre al trabajo antes de irse.
+
+Y cuando se te olvidó, el registro de referencias lo tiene. Eso lo vas a usar en serio en el laboratorio 06.

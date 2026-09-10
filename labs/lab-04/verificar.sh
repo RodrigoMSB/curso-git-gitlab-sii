@@ -6,9 +6,8 @@
 # «Comprobacion» del enunciado. Con `--escenario` comprueba el ESTADO INICIAL,
 # que es lo que usa preparar.sh antes de entregar el laboratorio.
 #
-# Lo que distingue un laboratorio hecho de uno recien preparado es que los tres
-# archivos que sobran hayan salido del seguimiento y que exista el archivo de
-# exclusiones. Contar confirmaciones no bastaria: el participante agrega tres.
+# Lo que distingue un laboratorio hecho de uno recien preparado son las ramas:
+# el escenario trae una sola y el enunciado deja seis.
 #
 # Escrito para Bash 3.2, el de macOS.
 
@@ -62,7 +61,7 @@ echo
 if [ "$MODO" = escenario ]; then
   echo "Comprobando el escenario inicial del laboratorio 04"
 else
-  echo "Verificador del laboratorio 04 · ordenar el recetario"
+  echo "Verificador del laboratorio 04 · tres cocinas en paralelo"
 fi
 echo
 
@@ -85,84 +84,47 @@ else
   fi
 fi
 
-SEGUIDOS=$(g ls-files | paste -sd ' ' -)
+RAMAS=$(g for-each-ref --format='%(refname:short)' refs/heads | sort | paste -sd ' ' -)
 
 if [ "$MODO" = final ]; then
-  # --- Criterio · los tres archivos salieron del seguimiento ----------------
+  ESPERADAS='andina azteca fritangas main rescate tailandesa'
   if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'los archivos que sobran salieron del seguimiento' \
-      'ni notas.tmp, ni respaldo.bak, ni credenciales.txt bajo seguimiento'
+    sin_repositorio 'las seis ramas del enunciado' "$ESPERADAS"
+  elif [ "$RAMAS" = "$ESPERADAS" ]; then
+    aprobado 'estan las seis ramas: main, tailandesa, azteca, andina, rescate y fritangas'
   else
-    COLADOS=''
-    for archivo in notas.tmp respaldo.bak credenciales.txt; do
-      case " $SEGUIDOS " in
-        *" $archivo "*) COLADOS="${COLADOS:+$COLADOS }$archivo" ;;
-      esac
-    done
-    if [ -z "$COLADOS" ]; then
-      aprobado 'notas.tmp, respaldo.bak y credenciales.txt ya no estan bajo seguimiento'
+    fallido 'las seis ramas del enunciado' "$ESPERADAS" "${RAMAS:-ninguna}"
+  fi
+
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'estas parado en main' 'main'
+  else
+    ACTUAL=$(g branch --show-current)
+    if [ "$ACTUAL" = 'main' ]; then
+      aprobado 'estas parado en main, no en una posicion desconectada'
+    elif [ -z "$ACTUAL" ]; then
+      fallido 'estas parado en main' 'main' \
+        'HEAD no apunta a ninguna rama; quedaste desconectado, vuelve con git switch main'
     else
-      fallido 'los archivos que sobran salieron del seguimiento' \
-        'ninguno de los tres bajo seguimiento' \
-        "siguen seguidos: $COLADOS; el archivo de exclusiones no basta, hace falta git rm --cached"
+      fallido 'estas parado en main' 'main' "$ACTUAL"
     fi
   fi
 
-  # --- Criterio · el archivo de exclusiones esta confirmado -----------------
-  if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'el archivo de exclusiones esta confirmado' '.gitignore bajo seguimiento'
-  else
-    case " $SEGUIDOS " in
-      *" .gitignore "*) aprobado 'el archivo de exclusiones esta confirmado' ;;
-      *)
-        fallido 'el archivo de exclusiones esta confirmado' '.gitignore bajo seguimiento' \
-          'no esta; va dentro del repositorio para que el equipo comparta las reglas'
-        ;;
-    esac
-  fi
-
-  # --- Criterio · lo que queda en el disco ----------------------------------
-  if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'notas.tmp y respaldo.bak siguen en la carpeta' 'los dos presentes'
-  else
-    FALTAN=''
-    for archivo in notas.tmp respaldo.bak; do
-      [ -e "$REPOSITORIO/$archivo" ] || FALTAN="${FALTAN:+$FALTAN }$archivo"
-    done
-    if [ -z "$FALTAN" ]; then
-      aprobado 'notas.tmp y respaldo.bak siguen en tu carpeta, como corresponde'
+  # Cinco puntos de separacion distintos, que es lo que el enunciado hace
+  # dibujar en el grafo.
+  if [ "$HAY_REPOSITORIO" = si ]; then
+    BASES=$(for rama in tailandesa azteca andina rescate fritangas; do
+      g merge-base main "$rama" 2>/dev/null
+    done | sort -u | grep -c .)
+    if [ "$BASES" -ge 4 ]; then
+      aprobado "las ramas nacen de $BASES puntos distintos de la historia"
     else
-      fallido 'notas.tmp y respaldo.bak siguen en la carpeta' 'los dos presentes' \
-        "faltan: $FALTAN; salieron del disco, y --cached era justamente para que no"
+      fallido 'las ramas nacen de puntos distintos' 'al menos 4 puntos de separacion' "$BASES"
     fi
-  fi
-
-  # --- Criterio · la credencial ya no esta en el disco -----------------------
-  if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'credenciales.txt ya no esta en la carpeta' 'el archivo borrado del disco'
-  elif [ -e "$REPOSITORIO/credenciales.txt" ]; then
-    fallido 'credenciales.txt ya no esta en la carpeta' 'el archivo borrado del disco' \
-      'sigue ahi; con la credencial no basta sacarla del seguimiento'
   else
-    aprobado 'credenciales.txt ya no esta en tu carpeta'
+    sin_repositorio 'las ramas nacen de puntos distintos' 'al menos 4 puntos de separacion'
   fi
 
-  # --- Criterio · las recetas quedaron ordenadas ----------------------------
-  if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'las recetas quedaron ordenadas por tipo' 'recetas/principales y recetas/postres'
-  else
-    PRINCIPALES=$(ls "$REPOSITORIO/recetas/principales" 2>/dev/null | paste -sd ' ' -)
-    POSTRES=$(ls "$REPOSITORIO/recetas/postres" 2>/dev/null | paste -sd ' ' -)
-    if [ -n "$PRINCIPALES" ] && [ -n "$POSTRES" ]; then
-      aprobado "las recetas quedaron ordenadas: principales ($PRINCIPALES) y postres ($POSTRES)"
-    else
-      fallido 'las recetas quedaron ordenadas por tipo' \
-        'recetas/principales y recetas/postres con las recetas dentro' \
-        "principales: ${PRINCIPALES:-vacia}; postres: ${POSTRES:-vacia}"
-    fi
-  fi
-
-  # --- Criterio · el directorio de trabajo esta limpio ----------------------
   if [ "$HAY_REPOSITORIO" = no ]; then
     sin_repositorio 'el directorio de trabajo esta limpio' 'nada que confirmar'
   else
@@ -177,42 +139,34 @@ fi
 
 if [ "$MODO" = escenario ] && [ "$HAY_REPOSITORIO" = si ]; then
   CONFIRMACIONES=$(g rev-list --count HEAD) || CONFIRMACIONES=0
-  if [ "$CONFIRMACIONES" = '5' ]; then
-    aprobado 'hay cinco confirmaciones en el historial'
+  if [ "$CONFIRMACIONES" = '6' ]; then
+    aprobado 'hay seis confirmaciones en el historial'
   else
-    fallido 'cantidad de confirmaciones' '5' "$CONFIRMACIONES"
+    fallido 'cantidad de confirmaciones' '6' "$CONFIRMACIONES"
   fi
 
-  # Lo que hace al laboratorio: los tres estan confirmados, no sueltos.
-  FALTAN=''
-  for archivo in notas.tmp respaldo.bak credenciales.txt; do
-    [ -n "$(g log --format=%H -1 -- "$archivo")" ] || FALTAN="${FALTAN:+$FALTAN }$archivo"
-  done
-  if [ -z "$FALTAN" ]; then
-    aprobado 'los tres archivos que sobran estan en la historia confirmada'
+  if [ "$RAMAS" = 'main' ]; then
+    aprobado 'hay una sola rama: abrir las otras es el ejercicio'
   else
-    fallido 'los tres archivos que sobran estan confirmados' \
-      'notas.tmp, respaldo.bak y credenciales.txt en la historia' "faltan: $FALTAN"
+    fallido 'una sola rama de partida' 'main' "$RAMAS"
   fi
 
-  if grep -q 'clave:' "$REPOSITORIO/credenciales.txt" 2>/dev/null; then
-    aprobado 'credenciales.txt lleva una clave dentro, que es el punto del ejercicio'
+  FUSIONES=$(g log --merges --format=%H | grep -c .) || FUSIONES=0
+  if [ "$FUSIONES" = '0' ]; then
+    aprobado 'la historia es una sola linea recta'
   else
-    fallido 'credenciales.txt lleva una clave' 'una linea con «clave:»' 'no la tiene'
+    fallido 'historia lineal' 'ninguna confirmacion de union' "$FUSIONES"
   fi
 
-  if [ -e "$REPOSITORIO/.gitignore" ]; then
-    fallido 'no hay archivo de exclusiones' 'que no exista; escribirlo es el ejercicio' 'ya existe'
+  # Cada confirmacion toca un archivo distinto: es lo que hace que las ramas
+  # nazcan de puntos que se distinguen.
+  VARIAS=$(g log --format=%H | while read -r id; do
+    g show --name-only --format='' "$id" | grep -c .
+  done | grep -c -v '^1$') || VARIAS=0
+  if [ "$VARIAS" = '0' ]; then
+    aprobado 'cada confirmacion toca un solo archivo'
   else
-    aprobado 'no hay archivo de exclusiones: escribirlo es el ejercicio'
-  fi
-
-  RECETAS=$(ls "$REPOSITORIO/recetas" 2>/dev/null | sort | paste -sd ' ' -)
-  ESPERADAS='empanadas.md leche-asada.md mote-con-huesillo.md pastel-de-choclo.md'
-  if [ "$RECETAS" = "$ESPERADAS" ]; then
-    aprobado 'las cuatro recetas estan mezcladas, sin carpetas por tipo'
-  else
-    fallido 'las cuatro recetas mezcladas' "$ESPERADAS" "${RECETAS:-ninguna}"
+    fallido 'cada confirmacion toca un solo archivo' '0 con mas de uno' "$VARIAS"
   fi
 
   SUCIO=$(suciedad)

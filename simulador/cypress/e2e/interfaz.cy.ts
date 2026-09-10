@@ -45,9 +45,9 @@ describe('9.1 · la consola recibe texto y ejecuta al apretar entrada', () => {
   });
 
   it('la orden cambia el estado que la pantalla muestra', () => {
-    nodosSolidos().should('have.length', 4);
-    confirmarAlgo();
     nodosSolidos().should('have.length', 5);
+    confirmarAlgo();
+    nodosSolidos().should('have.length', 6);
   });
 
   it('el campo queda vacio despues de ejecutar, listo para la siguiente', () => {
@@ -89,8 +89,8 @@ describe('9.3 · la previsualizacion aparece al escribir y desaparece al borrar'
       parseSpecialCharSequences: false,
     });
     cy.get('g[data-confirmacion][data-previsualizada="si"]').should('have.length', 1);
-    // La confirmacion anunciada todavia no existe: sigue habiendo cuatro.
-    nodosSolidos().should('have.length', 4);
+    // La confirmacion anunciada todavia no existe: siguen siendo cinco.
+    nodosSolidos().should('have.length', 5);
   });
 
   it('borrar la orden hace desaparecer lo anunciado', () => {
@@ -118,16 +118,16 @@ describe('9.4 · la linea de tiempo retrocede y el grafo vuelve atras', () => {
   });
 
   it('retroceder devuelve el grafo al estado anterior', () => {
-    nodosSolidos().should('have.length', 5);
+    nodosSolidos().should('have.length', 6);
     cy.contains('button', 'retroceder').click();
-    nodosSolidos().should('have.length', 4);
+    nodosSolidos().should('have.length', 5);
   });
 
   it('avanzar vuelve a dejarlo como estaba', () => {
     cy.contains('button', 'retroceder').click();
-    nodosSolidos().should('have.length', 4);
-    cy.contains('button', 'avanzar').click();
     nodosSolidos().should('have.length', 5);
+    cy.contains('button', 'avanzar').click();
+    nodosSolidos().should('have.length', 6);
   });
 
   it('la linea de tiempo lleva un paso por orden ejecutada', () => {
@@ -138,8 +138,8 @@ describe('9.4 · la linea de tiempo retrocede y el grafo vuelve atras', () => {
 
 describe('9.5 · el selector cambia de escenario', () => {
   it('elegir otro laboratorio carga su historia', () => {
-    cy.visit('/SIMULADOR.html?lab=03');
-    nodosSolidos().should('have.length', 4);
+    cy.visit('/SIMULADOR.html?lab=04');
+    nodosSolidos().should('have.length', 6);
 
     cy.get('select').select('lab-02');
     nodosSolidos().should('have.length', 5);
@@ -148,8 +148,8 @@ describe('9.5 · el selector cambia de escenario', () => {
 
   it('la direccion del archivo preselecciona el escenario', () => {
     // El mecanismo del SPEC 007, comprobado en el navegador.
-    cy.visit('/SIMULADOR.html?lab=06');
-    cy.get('select').should('have.value', 'lab-06');
+    cy.visit('/SIMULADOR.html?lab=05');
+    cy.get('select').should('have.value', 'lab-05');
     cy.get('g[data-etiqueta="andina"]').should('exist');
   });
 });

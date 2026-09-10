@@ -2,10 +2,9 @@
 # Preparacion del escenario del laboratorio 04 (forma de la seccion 18 de
 # docs/arquitectura.md).
 #
-# Los tres archivos que no deberian estar versionados entran a la historia
-# confirmada, no solo al directorio de trabajo. Esa es la diferencia entre
-# ignorar un archivo y sacarlo del seguimiento, que es el punto del ejercicio.
-# No hay archivo de exclusiones: lo escribe el participante.
+# Seis confirmaciones en `main` con puntos de separacion claros: cada una toca
+# un archivo distinto, de modo que las tres ramas que el participante crea
+# puedan nacer de sitios distintos y las diferencias se lean sin ambiguedad.
 #
 # Determinista con las tecnicas de siempre: fechas como epoca, autor y
 # confirmador fijados, finales de linea fijados en el repositorio generado.
@@ -124,67 +123,27 @@ confirmar() {
     git commit -q -m "$mensaje"
 }
 
-# 1 · 5 de febrero de 2024
+# 1 · 9 de enero de 2024
 cat > README.md <<'ARCHIVO'
 # Recetario COMIDA CHILENA
 
 Recopilacion de platos, ingredientes y cocineros.
 Proyecto del taller de Git y GitLab.
 ARCHIVO
+confirmar 'Juana Perez' "$CORREO_JUANA" 1704802500 'Agrega el README del recetario'
+
+# 2 · 23 de enero de 2024
 cat > platos.md <<'ARCHIVO'
 # Platos
 
 - pastel de choclo
 - empanadas de pino
-- leche asada
-- mote con huesillo
+- cazuela
+- curanto
 ARCHIVO
-confirmar 'Juana Perez' "$CORREO_JUANA" 1707136800 'Agrega el README y la lista de platos'
+confirmar 'Marco Diaz' "$CORREO_MARCO" 1706017200 'Agrega la lista de platos'
 
-# 2 · 19 de febrero de 2024. Cuatro recetas mezcladas sin orden: dos de fondo y
-# dos de postre. El participante las separa en dos carpetas con `git mv`.
-mkdir -p recetas
-cat > recetas/pastel-de-choclo.md <<'ARCHIVO'
-# Pastel de choclo
-
-Preparacion del pino, molienda del choclo, horneado en greda.
-ARCHIVO
-cat > recetas/empanadas.md <<'ARCHIVO'
-# Empanadas de pino
-
-Masa, pino frio, huevo duro, aceituna, doblado y horno.
-ARCHIVO
-cat > recetas/leche-asada.md <<'ARCHIVO'
-# Leche asada
-
-Leche, huevos y azucar al horno, con caramelo en el molde.
-ARCHIVO
-cat > recetas/mote-con-huesillo.md <<'ARCHIVO'
-# Mote con huesillo
-
-Huesillos cocidos con canela y azucar rubia, mote de trigo aparte.
-ARCHIVO
-confirmar 'Marco Diaz' "$CORREO_MARCO" 1708352100 'Agrega las cuatro primeras recetas'
-
-# 3 · 11 de marzo de 2024. Basura que nunca debio versionarse, confirmada.
-cat > notas.tmp <<'ARCHIVO'
-Reunion de cocina del martes.
-Pendiente: definir el menu de septiembre.
-ARCHIVO
-cat > respaldo.bak <<'ARCHIVO'
-Respaldo automatico del listado de platos.
-ARCHIVO
-confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1710183900 'Guarda notas de la reunion de cocina'
-
-# 4 · 2 de abril de 2024. La credencial, que es el punto del laboratorio.
-cat > credenciales.txt <<'ARCHIVO'
-usuario: casino_recetario
-clave: 4lm3ndr4s-2024
-servidor: casino.interno.cl
-ARCHIVO
-confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1712064600 'Agrega el acceso al sistema del casino'
-
-# 5 · 23 de abril de 2024
+# 3 · 13 de febrero de 2024
 cat > ingredientes.md <<'ARCHIVO'
 # Ingredientes
 
@@ -192,10 +151,35 @@ cat > ingredientes.md <<'ARCHIVO'
 - carne de vacuno
 - cebolla
 - aji de color
-- leche
-- huesillos
 ARCHIVO
-confirmar 'Juana Perez' "$CORREO_JUANA" 1713898200 'Completa la lista de ingredientes'
+confirmar 'Juana Perez' "$CORREO_JUANA" 1707845100 'Agrega los ingredientes base'
+
+# 4 · 5 de marzo de 2024
+mkdir -p recetas
+cat > recetas/pastel-de-choclo.md <<'ARCHIVO'
+# Pastel de choclo
+
+Preparacion del pino, molienda del choclo, horneado en greda.
+ARCHIVO
+confirmar 'Marco Diaz' "$CORREO_MARCO" 1709650200 'Agrega la receta del pastel de choclo'
+
+# 5 · 26 de marzo de 2024
+cat > recetas/cazuela.md <<'ARCHIVO'
+# Cazuela
+
+Presa de vacuno, zapallo, papa y choclo en caldo largo.
+ARCHIVO
+confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1711480200 'Agrega la receta de la cazuela'
+
+# 6 · 16 de abril de 2024
+cat > cocineros.md <<'ARCHIVO'
+# Cocineros
+
+- Juana Perez, especialidad pastel de choclo
+- Marco Diaz, especialidad empanadas
+- Sofia Rojas, especialidad cazuela
+ARCHIVO
+confirmar 'Juana Perez' "$CORREO_JUANA" 1713272100 'Agrega la tabla de cocineros'
 
 if ! "$RAIZ/verificar.sh" --escenario; then
   fallar "el escenario no quedo como corresponde; no se entrega asi"
@@ -210,6 +194,5 @@ echo "      cd $REPOSITORIO_DICHO"
 echo
 echo "  Y desde ahi, para ubicarte:"
 echo "      git log --oneline"
-echo "      ls recetas"
-echo "      git status"
+echo "      git branch"
 echo

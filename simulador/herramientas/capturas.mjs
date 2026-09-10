@@ -199,35 +199,35 @@ await escenario('lab-01');
 await capturar('01-lab-01-inicio.png');
 await comprobar('El recetario nace');
 
-console.log('lab-02 · leer la historia y volver atras');
+console.log('lab-02 · leer la historia y abrir la caja');
 await escenario('lab-02');
 await capturar('02-lab-02-inicio.png');
-await comprobar('Leer la historia y volver atras');
+await comprobar('Leer la historia y abrir la caja');
 
-console.log('lab-06 · dos ramas con destinos distintos');
-await escenario('lab-06');
-await capturar('03-lab-06-inicio.png');
-await comprobar('peruana');
+console.log('lab-05 · tres ramas con destinos distintos');
+await escenario('lab-05');
+await capturar('03-lab-05-inicio.png');
+await comprobar('andina');
 
-console.log('lab-06 · rama nueva y confirmacion');
+console.log('lab-05 · rama nueva y confirmacion');
 await ejecutar('git switch -c postres');
 await ejecutar('echo "sopaipillas" >> platos.md');
 await ejecutar('git add platos.md');
 await ejecutar('git commit -m "agrega sopaipillas al listado"');
-await capturar('04-lab-06-rama-nueva-y-confirmacion.png');
+await capturar('04-lab-05-rama-nueva-y-confirmacion.png');
 await comprobar('postres');
 
-console.log('lab-06 · previsualizacion de la fusion, escrita y sin ejecutar');
-await escenario('lab-06');
-await escribir('git merge peruana');
+console.log('lab-05 · previsualizacion de la fusion, escrita y sin ejecutar');
+await escenario('lab-05');
+await escribir('git merge andina');
 await esperar(400);
-await capturar('05-lab-06-previsualizacion-fusion.png');
+await capturar('05-lab-05-previsualizacion-fusion.png');
 await comprobar('Entrar ejecuta, Escape descarta');
 
-console.log('lab-08 · despues del rebase');
-await escenario('lab-08');
+console.log('lab-07 · despues del rebase');
+await escenario('lab-07');
 await ejecutar('git rebase main');
-await capturar('06-lab-08-despues-del-rebase.png');
+await capturar('06-lab-07-despues-del-rebase.png');
 await comprobar('sin referencia');
 
 socket.close();

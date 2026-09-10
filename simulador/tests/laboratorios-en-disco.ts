@@ -124,7 +124,6 @@ export function montarLab(numero: string): Escenario {
 }
 
 export const montarLab02 = (): Escenario => montarLab('02');
-export const montarLab03 = (): Escenario => montarLab('03');
 
 export function preparar(esc: Escenario, ...argumentos: readonly string[]): Corrida {
   try {

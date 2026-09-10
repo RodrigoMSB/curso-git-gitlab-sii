@@ -33,7 +33,7 @@ describe('escenarios de laboratorio', () => {
     // El 09 no lleva: enseña remotos, un submodulo y un gancho, y el motor no
     // implementa ninguna de las tres cosas.
     expect(ESCENARIOS.map((escenario) => escenario.laboratorio)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 10,
+      1, 2, 3, 4, 5, 6, 7, 9,
     ]);
     expect(ESCENARIOS.map((escenario) => escenario.id)).toEqual([
       'lab-01',
@@ -43,8 +43,7 @@ describe('escenarios de laboratorio', () => {
       'lab-05',
       'lab-06',
       'lab-07',
-      'lab-08',
-      'lab-10',
+      'lab-09',
     ]);
   });
 
@@ -127,14 +126,8 @@ describe('escenarios de laboratorio', () => {
     expect(autores).toContain('Juana Perez');
   });
 
-  it('el laboratorio 03 es historia corta y limpia', () => {
+  it('el laboratorio 03 trae confirmados los archivos que no debieron entrar', () => {
     const estado = escenarioPorId('lab-03');
-    expect(estado.confirmaciones).toHaveLength(4);
-    expect(estado.archivos.every((archivo) => archivo.estado === 'limpio')).toBe(true);
-  });
-
-  it('el laboratorio 04 trae confirmados los archivos que no debieron entrar', () => {
-    const estado = escenarioPorId('lab-04');
     const confirmados = estado.confirmaciones.flatMap((confirmacion) => confirmacion.archivos);
     expect(confirmados).toEqual(
       expect.arrayContaining(['notas.tmp', 'respaldo.bak', 'credenciales.txt']),
@@ -143,17 +136,17 @@ describe('escenarios de laboratorio', () => {
     expect(estado.archivos.find((archivo) => archivo.nombre === '.gitignore')).toBeUndefined();
   });
 
-  it('el laboratorio 05 toca un archivo distinto en cada confirmacion', () => {
+  it('el laboratorio 04 toca un archivo distinto en cada confirmacion', () => {
     // Asi las ramas que el participante crea nacen de sitios que se distinguen.
-    const estado = escenarioPorId('lab-05');
+    const estado = escenarioPorId('lab-04');
     expect(estado.confirmaciones).toHaveLength(6);
     for (const confirmacion of estado.confirmaciones) {
       expect(confirmacion.archivos, confirmacion.mensaje).toHaveLength(1);
     }
   });
 
-  it('el laboratorio 06 deja las tres fusiones que el enunciado necesita', () => {
-    const estado = escenarioPorId('lab-06');
+  it('el laboratorio 05 deja las tres fusiones que el enunciado necesita', () => {
+    const estado = escenarioPorId('lab-05');
     const puntaMain = ramaPorNombre(estado, 'main')?.id ?? '';
 
     // tailandesa cuelga de la punta de main: avance rapido, sin union.
@@ -175,8 +168,8 @@ describe('escenarios de laboratorio', () => {
     expect(texto(ejecutar(estado, 'git merge andina'))).toContain('CONFLICT');
   });
 
-  it('el laboratorio 07 deja tres confirmaciones encima del error a revertir', () => {
-    const estado = escenarioPorId('lab-07');
+  it('el laboratorio 06 deja tres confirmaciones encima del error a revertir', () => {
+    const estado = escenarioPorId('lab-06');
     const indice = estado.confirmaciones.findIndex((confirmacion) =>
       confirmacion.mensaje.startsWith('Suma un ingrediente'),
     );
@@ -184,8 +177,8 @@ describe('escenarios de laboratorio', () => {
     expect(estado.confirmaciones.length - 1 - indice).toBe(3);
   });
 
-  it('el laboratorio 08 arranca en la rama de trabajo, con algo a medias encima', () => {
-    const estado = escenarioPorId('lab-08');
+  it('el laboratorio 07 arranca en la rama de trabajo, con algo a medias encima', () => {
+    const estado = escenarioPorId('lab-07');
     expect(ramaActual(estado)).toBe('tailandesa');
     expect(
       estado.archivos.filter((archivo) => archivo.estado === 'sin-seguimiento').map((a) => a.nombre),
@@ -195,11 +188,11 @@ describe('escenarios de laboratorio', () => {
     expect(mensajes).toEqual(expect.arrayContaining(['wip', 'cambios', 'mas cambios', 'arreglos']));
   });
 
-  it('el laboratorio 09 no tiene escenario, y es a proposito', () => {
+  it('el laboratorio 08 no tiene escenario, y es a proposito', () => {
     // Enseña dos remotos, un submodulo y un gancho. El motor no implementa
     // ninguna de las tres cosas, asi que un escenario suyo mostraria la
     // historia local y nada de lo que el laboratorio viene a enseñar.
-    expect(declaracionPorId('lab-09')).toBeUndefined();
+    expect(declaracionPorId('lab-08')).toBeUndefined();
   });
 
   it('solo el 01 declara algo sin reflejar', () => {
@@ -209,8 +202,8 @@ describe('escenarios de laboratorio', () => {
     expect(conFaltantes).toEqual(['lab-01']);
   });
 
-  it('el laboratorio 10 trae la etiqueta de version y el archivo de exclusiones', () => {
-    const estado = escenarioPorId('lab-10');
+  it('el laboratorio 09 trae la etiqueta de version y el archivo de exclusiones', () => {
+    const estado = escenarioPorId('lab-09');
     expect(estado.confirmaciones).toHaveLength(8);
     expect(estado.etiquetas.map((etiqueta) => etiqueta.nombre)).toEqual(['v1.0']);
     expect(estado.etiquetas[0]?.tipo).toBe('anotada');
@@ -239,11 +232,11 @@ describe('escenarios de laboratorio', () => {
 
 describe('escenario preseleccionado desde la direccion del archivo', () => {
   it('reconoce las formas razonables de nombrar un laboratorio', () => {
-    expect(escenarioDeLaDireccion('?lab=06', '')).toBe('lab-06');
-    expect(escenarioDeLaDireccion('?lab=6', '')).toBe('lab-06');
-    expect(escenarioDeLaDireccion('?lab=lab-06', '')).toBe('lab-06');
-    expect(escenarioDeLaDireccion('', '#lab-06')).toBe('lab-06');
-    expect(escenarioDeLaDireccion('', '#06')).toBe('lab-06');
+    expect(escenarioDeLaDireccion('?lab=05', '')).toBe('lab-05');
+    expect(escenarioDeLaDireccion('?lab=5', '')).toBe('lab-05');
+    expect(escenarioDeLaDireccion('?lab=lab-05', '')).toBe('lab-05');
+    expect(escenarioDeLaDireccion('', '#lab-05')).toBe('lab-05');
+    expect(escenarioDeLaDireccion('', '#05')).toBe('lab-05');
   });
 
   it('devuelve nulo cuando no hay nada que reconocer', () => {

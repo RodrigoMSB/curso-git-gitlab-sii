@@ -2,15 +2,13 @@
 # Preparacion del escenario del laboratorio 06 (forma de la seccion 18 de
 # docs/arquitectura.md).
 #
-# Tres ramas con destinos distintos a proposito, que es lo que el enunciado
-# necesita para mostrar los tres casos de fusion:
+# Siete confirmaciones. La cuarta mete un ingrediente que no corresponde y
+# quedan tres confirmaciones encima. El enunciado la trata como ya publicada,
+# que es lo que hace preferible revertir antes que retroceder: retroceder
+# obligaria a reescribir tres confirmaciones que otros ya tienen.
 #
-#   tailandesa  cuelga de la punta de main, que no avanzo despues, de modo que
-#               su fusion es un avance rapido y no crea nada.
-#   azteca      nace una confirmacion antes y toca archivos que main no toco,
-#               de modo que su fusion crea una confirmacion de union limpia.
-#   andina      nace en el mismo punto y cambia la misma linea de platos.md que
-#               cambio main, de modo que su fusion choca.
+# El mensaje de esa cuarta confirmacion no delata el error a proposito: el
+# enunciado la encuentra buscando «sal marina en polvo» por contenido.
 #
 # Determinista con las tecnicas de siempre: fechas como epoca, autor y
 # confirmador fijados, finales de linea fijados en el repositorio generado.
@@ -129,33 +127,27 @@ confirmar() {
     git commit -q -m "$mensaje"
 }
 
-# 1 · 7 de mayo de 2024
+# 1 · 16 de enero de 2024
 cat > README.md <<'ARCHIVO'
 # Recetario COMIDA CHILENA
 
 Recopilacion de platos, ingredientes y cocineros.
 Proyecto del taller de Git y GitLab.
 ARCHIVO
-confirmar 'Juana Perez' "$CORREO_JUANA" 1715084400 'Agrega el README del recetario'
+confirmar 'Juana Perez' "$CORREO_JUANA" 1705407000 'Agrega el README del recetario'
 
-# 2 · 21 de mayo de 2024
+# 2 · 6 de febrero de 2024
 cat > platos.md <<'ARCHIVO'
 # Platos
 
-## Fondos
-
 - pastel de choclo
+- empanadas de pino
 - cazuela
 - curanto
-
-## Entradas
-
-- empanadas de pino
 ARCHIVO
-confirmar 'Marco Diaz' "$CORREO_MARCO" 1716302100 'Agrega la lista de platos'
+confirmar 'Marco Diaz' "$CORREO_MARCO" 1707229200 'Agrega la lista de platos'
 
-# 3 · 11 de junio de 2024. De aqui cuelgan las dos ramas que nacen antes de que
-# main toque la linea de la cazuela.
+# 3 · 27 de febrero de 2024
 cat > ingredientes.md <<'ARCHIVO'
 # Ingredientes
 
@@ -164,72 +156,46 @@ cat > ingredientes.md <<'ARCHIVO'
 - cebolla
 - aji de color
 ARCHIVO
-confirmar 'Juana Perez' "$CORREO_JUANA" 1718131500 'Agrega los ingredientes base'
-BASE=$(git rev-parse HEAD)
+confirmar 'Juana Perez' "$CORREO_JUANA" 1709055900 'Agrega los ingredientes base'
 
-# 4 · 2 de julio de 2024. main cambia la linea de la cazuela.
-cat > platos.md <<'ARCHIVO'
-# Platos
+# 4 · 19 de marzo de 2024. El error que el participante va a revertir.
+cat > ingredientes.md <<'ARCHIVO'
+# Ingredientes
 
-## Fondos
-
-- pastel de choclo
-- cazuela con chuchoca
-- curanto
-
-## Entradas
-
-- empanadas de pino
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+- sal marina en polvo
 ARCHIVO
-confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1719926700 'Precisa que la cazuela lleva chuchoca'
+confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1710853500 'Suma un ingrediente a la lista base'
 
-# La rama que se fusiona por avance rapido: cuelga de la punta de main, y main
-# no vuelve a moverse.
-git switch -q -c tailandesa
+# 5 · 9 de abril de 2024
 mkdir -p recetas
-cat > recetas/pad-thai.md <<'ARCHIVO'
-# Pad thai
+cat > recetas/pastel-de-choclo.md <<'ARCHIVO'
+# Pastel de choclo
 
-Fideos de arroz, tamarindo, mani y salsa de pescado.
+Preparacion del pino, molienda del choclo, horneado en greda.
 ARCHIVO
-confirmar 'Marco Diaz' "$CORREO_MARCO" 1720537500 'Agrega la receta del pad thai'
+confirmar 'Marco Diaz' "$CORREO_MARCO" 1712687400 'Agrega la receta del pastel de choclo'
 
-# La rama que se fusiona con confirmacion de union: nace antes de la punta y
-# toca archivos que main no toco.
-git switch -q -c azteca "$BASE"
-mkdir -p recetas
-cat > recetas/guacamole.md <<'ARCHIVO'
-# Guacamole
+# 6 · 30 de abril de 2024
+cat > recetas/cazuela.md <<'ARCHIVO'
+# Cazuela
 
-Palta, cebolla morada, cilantro y limon de pica.
+Presa de vacuno, zapallo, papa y choclo en caldo largo.
 ARCHIVO
-confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1721134200 'Agrega la receta del guacamole'
+confirmar 'Marco Diaz' "$CORREO_MARCO" 1714480800 'Agrega la receta de la cazuela'
 
-# La rama que choca: nace en el mismo punto y cambia la misma linea de la
-# cazuela que acaba de cambiar main.
-git switch -q -c andina "$BASE"
-cat > platos.md <<'ARCHIVO'
-# Platos
+# 7 · 21 de mayo de 2024
+cat > cocineros.md <<'ARCHIVO'
+# Cocineros
 
-## Fondos
-
-- pastel de choclo
-- lomo saltado
-- curanto
-
-## Entradas
-
-- empanadas de pino
+- Juana Perez, especialidad pastel de choclo
+- Marco Diaz, especialidad empanadas
+- Sofia Rojas, especialidad cazuela
 ARCHIVO
-mkdir -p recetas
-cat > recetas/lomo-saltado.md <<'ARCHIVO'
-# Lomo saltado
-
-Lomo en tiras, cebolla, tomate y papas fritas, al wok.
-ARCHIVO
-confirmar 'Marco Diaz' "$CORREO_MARCO" 1721763000 'Reemplaza la cazuela por el lomo saltado'
-
-git switch -q main
+confirmar 'Juana Perez' "$CORREO_JUANA" 1716318900 'Agrega la tabla de cocineros'
 
 if ! "$RAIZ/verificar.sh" --escenario; then
   fallar "el escenario no quedo como corresponde; no se entrega asi"
@@ -243,6 +209,6 @@ echo "  Tu primera orden es:"
 echo "      cd $REPOSITORIO_DICHO"
 echo
 echo "  Y desde ahi, para ubicarte:"
-echo "      git branch"
+echo "      git log --oneline"
 echo "      git log --oneline --graph --all --decorate"
 echo

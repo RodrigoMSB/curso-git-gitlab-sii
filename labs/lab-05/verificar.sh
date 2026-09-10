@@ -6,8 +6,8 @@
 # «Comprobacion» del enunciado. Con `--escenario` comprueba el ESTADO INICIAL,
 # que es lo que usa preparar.sh antes de entregar el laboratorio.
 #
-# Lo que distingue un laboratorio hecho de uno recien preparado son las ramas:
-# el escenario trae una sola y el enunciado deja seis.
+# Lo que distingue un laboratorio hecho de uno recien preparado son las dos
+# confirmaciones de union y que no quede ninguna rama de trabajo.
 #
 # Escrito para Bash 3.2, el de macOS.
 
@@ -61,7 +61,7 @@ echo
 if [ "$MODO" = escenario ]; then
   echo "Comprobando el escenario inicial del laboratorio 05"
 else
-  echo "Verificador del laboratorio 05 · tres cocinas en paralelo"
+  echo "Verificador del laboratorio 05 · fusionar y resolver"
 fi
 echo
 
@@ -87,42 +87,40 @@ fi
 RAMAS=$(g for-each-ref --format='%(refname:short)' refs/heads | sort | paste -sd ' ' -)
 
 if [ "$MODO" = final ]; then
-  ESPERADAS='andina azteca fritangas main rescate tailandesa'
   if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'las seis ramas del enunciado' "$ESPERADAS"
-  elif [ "$RAMAS" = "$ESPERADAS" ]; then
-    aprobado 'estan las seis ramas: main, tailandesa, azteca, andina, rescate y fritangas'
+    sin_repositorio 'solo queda la rama main' 'main'
+  elif [ "$RAMAS" = 'main' ]; then
+    aprobado 'solo queda la rama main: las tres de trabajo ya cumplieron'
   else
-    fallido 'las seis ramas del enunciado' "$ESPERADAS" "${RAMAS:-ninguna}"
+    fallido 'solo queda la rama main' 'main' \
+      "$RAMAS; falta borrar con git branch -d la que ya se fusiono"
   fi
 
   if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'estas parado en main' 'main'
+    sin_repositorio 'hay dos confirmaciones de union' '2'
   else
-    ACTUAL=$(g branch --show-current)
-    if [ "$ACTUAL" = 'main' ]; then
-      aprobado 'estas parado en main, no en una posicion desconectada'
-    elif [ -z "$ACTUAL" ]; then
-      fallido 'estas parado en main' 'main' \
-        'HEAD no apunta a ninguna rama; quedaste desconectado, vuelve con git switch main'
+    UNIONES=$(g log --merges --format=%H | grep -c .) || UNIONES=0
+    if [ "$UNIONES" = '2' ]; then
+      aprobado 'hay dos confirmaciones de union: la limpia y la que choco'
     else
-      fallido 'estas parado en main' 'main' "$ACTUAL"
+      fallido 'confirmaciones de union en la historia' \
+        '2, una por cada fusion que no fue avance rapido' \
+        "$UNIONES; el avance rapido no crea ninguna, las otras dos si"
     fi
   fi
 
-  # Cinco puntos de separacion distintos, que es lo que el enunciado hace
-  # dibujar en el grafo.
-  if [ "$HAY_REPOSITORIO" = si ]; then
-    BASES=$(for rama in tailandesa azteca andina rescate fritangas; do
-      g merge-base main "$rama" 2>/dev/null
-    done | sort -u | grep -c .)
-    if [ "$BASES" -ge 4 ]; then
-      aprobado "las ramas nacen de $BASES puntos distintos de la historia"
-    else
-      fallido 'las ramas nacen de puntos distintos' 'al menos 4 puntos de separacion' "$BASES"
-    fi
+  # El marcador olvidado dentro de un archivo es el error clasico de este
+  # laboratorio, y no lo delata ninguna otra comprobacion.
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'no quedan marcadores de conflicto' 'ningun <<<<<<< en los archivos'
   else
-    sin_repositorio 'las ramas nacen de puntos distintos' 'al menos 4 puntos de separacion'
+    CON_MARCADOR=$(grep -rl '<<<<<<<' "$REPOSITORIO" --exclude-dir=.git 2>/dev/null | paste -sd ' ' -)
+    if [ -z "$CON_MARCADOR" ]; then
+      aprobado 'no quedo ningun marcador de conflicto dentro de los archivos'
+    else
+      fallido 'no quedan marcadores de conflicto' 'ningun <<<<<<< en los archivos' \
+        "quedaron en: $CON_MARCADOR"
+    fi
   fi
 
   if [ "$HAY_REPOSITORIO" = no ]; then
@@ -130,7 +128,7 @@ if [ "$MODO" = final ]; then
   else
     SUCIO=$(suciedad)
     if [ -z "$SUCIO" ]; then
-      aprobado 'el directorio de trabajo esta limpio'
+      aprobado 'el directorio de trabajo esta limpio, sin fusiones a medias'
     else
       fallido 'el directorio de trabajo esta limpio' 'nada que confirmar' "hay cambios: $SUCIO"
     fi
@@ -138,35 +136,50 @@ if [ "$MODO" = final ]; then
 fi
 
 if [ "$MODO" = escenario ] && [ "$HAY_REPOSITORIO" = si ]; then
-  CONFIRMACIONES=$(g rev-list --count HEAD) || CONFIRMACIONES=0
-  if [ "$CONFIRMACIONES" = '6' ]; then
-    aprobado 'hay seis confirmaciones en el historial'
+  ESPERADAS='andina azteca main tailandesa'
+  if [ "$RAMAS" = "$ESPERADAS" ]; then
+    aprobado 'estan main y las tres ramas de trabajo'
   else
-    fallido 'cantidad de confirmaciones' '6' "$CONFIRMACIONES"
+    fallido 'las ramas del escenario' "$ESPERADAS" "$RAMAS"
   fi
 
-  if [ "$RAMAS" = 'main' ]; then
-    aprobado 'hay una sola rama: abrir las otras es el ejercicio'
+  if [ "$(g branch --show-current)" = 'main' ]; then
+    aprobado 'el participante arranca parado en main'
   else
-    fallido 'una sola rama de partida' 'main' "$RAMAS"
+    fallido 'posicion de partida' 'main' "$(g branch --show-current)"
   fi
 
-  FUSIONES=$(g log --merges --format=%H | grep -c .) || FUSIONES=0
-  if [ "$FUSIONES" = '0' ]; then
-    aprobado 'la historia es una sola linea recta'
+  # tailandesa contiene main entera: su fusion es un avance rapido.
+  if g merge-base --is-ancestor main tailandesa; then
+    aprobado 'tailandesa contiene main: su fusion sera un avance rapido'
   else
-    fallido 'historia lineal' 'ninguna confirmacion de union' "$FUSIONES"
+    fallido 'tailandesa se fusiona por avance rapido' \
+      'que main sea antepasada de tailandesa' 'no lo es'
   fi
 
-  # Cada confirmacion toca un archivo distinto: es lo que hace que las ramas
-  # nazcan de puntos que se distinguen.
-  VARIAS=$(g log --format=%H | while read -r id; do
-    g show --name-only --format='' "$id" | grep -c .
-  done | grep -c -v '^1$') || VARIAS=0
-  if [ "$VARIAS" = '0' ]; then
-    aprobado 'cada confirmacion toca un solo archivo'
+  # azteca y andina divergieron: sus fusiones crean union.
+  for rama in azteca andina; do
+    if g merge-base --is-ancestor main "$rama"; then
+      fallido "$rama diverge de main" 'que main no sea antepasada suya' 'lo es, avanzaria rapido'
+    else
+      aprobado "$rama diverge de main: su fusion creara una confirmacion de union"
+    fi
+  done
+
+  # Solo andina toca la misma linea que main: es la unica que debe chocar.
+  BASE=$(g merge-base main andina)
+  if g diff --name-only "$BASE" main | grep -q '^platos.md$' &&
+     g diff --name-only "$BASE" andina | grep -q '^platos.md$'; then
+    aprobado 'main y andina tocan ambas platos.md desde su base comun: van a chocar'
   else
-    fallido 'cada confirmacion toca un solo archivo' '0 con mas de uno' "$VARIAS"
+    fallido 'andina choca con main' 'que las dos toquen platos.md desde la base comun' 'no lo hacen'
+  fi
+
+  BASE_AZTECA=$(g merge-base main azteca)
+  if g diff --name-only "$BASE_AZTECA" azteca | grep -q '^platos.md$'; then
+    fallido 'azteca no choca con main' 'que azteca no toque platos.md' 'lo toca, chocaria'
+  else
+    aprobado 'azteca no toca platos.md: su fusion sera limpia'
   fi
 
   SUCIO=$(suciedad)

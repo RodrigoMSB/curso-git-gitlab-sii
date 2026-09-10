@@ -92,25 +92,32 @@ describe('los marcadores que si se pueden resolver salen del escenario', () => {
 });
 
 describe('cuanto de cada laboratorio queda comparado', () => {
-  it('el laboratorio 02 se compara en dos tercios, y lo que falta es git log', () => {
-    // La Parte 1 del enunciado enseña a filtrar el historial por autor, por
-    // fecha, por archivo y por contenido, y el motor no implementa ninguno de
-    // esos filtros (seccion 28 de docs/arquitectura.md). Es lo que hace bajar
-    // esta cifra, y baja con razon.
+  it('el laboratorio 02 se compara en poco mas de la mitad, y se sabe por que', () => {
+    // Dos cosas bajan la cifra, y las dos con razon. La Parte 1 enseña a
+    // filtrar el historial por autor y por fecha, y el motor no implementa
+    // esos filtros (seccion 28 de docs/arquitectura.md). La Parte 4, que llego
+    // con el SPEC 009 desde el antiguo laboratorio 03, mira por dentro la
+    // carpeta oculta, que el simulador no modela a proposito.
     const ordenes = resolverMarcadores(ordenesDe(enunciado('02')), '02');
     const cuenta = resumen(ordenes);
-    expect(cuenta.comparadas / cuenta.total).toBeGreaterThan(0.6);
+    expect(cuenta.comparadas / cuenta.total).toBeGreaterThan(0.55);
 
-    const porFiltro = ordenes.filter(
-      (orden) => orden.clase === 'solo-git' && orden.texto.startsWith('git log'),
+    const soloGit = ordenes.filter((orden) => orden.clase === 'solo-git');
+    const porFiltro = soloGit.filter((orden) => orden.texto.startsWith('git log'));
+    const porLaCarpetaOculta = soloGit.filter((orden) =>
+      (orden.motivo ?? '').includes('carpeta oculta'),
     );
-    expect(porFiltro.length).toBeGreaterThanOrEqual(6);
+    expect(porFiltro.length).toBeGreaterThanOrEqual(4);
+    expect(porLaCarpetaOculta.length).toBeGreaterThanOrEqual(10);
+    // Entre las dos explican casi todo lo que queda sin comparar.
+    expect(porFiltro.length + porLaCarpetaOculta.length).toBeGreaterThan(soloGit.length * 0.7);
   });
 
-  it('el laboratorio 03 se compara poco, y es por lo que enseña', () => {
-    // Mira por dentro la carpeta .git, que el simulador no modela a proposito.
+  it('el laboratorio 03 se compara en dos tercios: es de mover y borrar archivos', () => {
+    // Ordenar el recetario es trabajo de arbol y de indice, que el motor si
+    // modela. Lo que queda fuera es sobre todo `ls` y `cat`, que no son Git.
     const cuenta = resumen(resolverMarcadores(ordenesDe(enunciado('03')), '03'));
-    expect(cuenta.comparadas / cuenta.total).toBeLessThan(0.35);
-    expect(cuenta.soloGit).toBeGreaterThan(cuenta.comparadas);
+    expect(cuenta.comparadas / cuenta.total).toBeGreaterThan(0.6);
+    expect(cuenta.comparadas).toBeGreaterThan(cuenta.soloGit);
   });
 });

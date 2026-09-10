@@ -90,7 +90,7 @@ describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
   });
 });
 
-describe('CA3 · previsualizacion de la fusion sobre el laboratorio 06', () => {
+describe('CA3 · previsualizacion de la fusion sobre el laboratorio 05', () => {
   it('dibuja la union proyectada en trazo discontinuo sin haberla creado', () => {
     const estado = repoConRamas();
     const vista = previsualizar(estado, 'git merge andina');
