@@ -169,6 +169,26 @@ export const ordenRestore: Manejador = (estado, argumentos) => {
 
   let siguiente = estado;
   for (const ruta of rutas) {
+    // Una baja preparada tambien se saca de la preparacion, y entonces el
+    // archivo vuelve a estar versionado. Es la ruta la que estaba anotada como
+    // borrada, no el archivo del disco: por eso hay que nombrarla aparte
+    // aunque el archivo este ahi delante.
+    if (preparado && siguiente.borrados.includes(ruta)) {
+      siguiente = {
+        ...siguiente,
+        borrados: siguiente.borrados.filter((nombre) => nombre !== ruta),
+        archivos: siguiente.archivos.some((archivo) => archivo.nombre === ruta)
+          ? siguiente.archivos.map((archivo) =>
+              archivo.nombre === ruta ? { nombre: ruta, estado: 'limpio' as const } : archivo,
+            )
+          : siguiente.archivos,
+        borradosSinPreparar: siguiente.archivos.some((archivo) => archivo.nombre === ruta)
+          ? siguiente.borradosSinPreparar
+          : [...siguiente.borradosSinPreparar, ruta],
+      };
+      continue;
+    }
+
     const encontrados = coincidencias(estado, ruta);
     if (encontrados.length === 0) {
       return fallo(estado, `error: pathspec '${ruta}' did not match any file(s) known to git`);

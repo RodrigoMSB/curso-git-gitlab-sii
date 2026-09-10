@@ -2317,6 +2317,43 @@ nuevo que no viene de ninguna parte nunca se confunde con un renombrado.
 la red de seguridad que el laboratorio 06 enseña a usar, y sin ella
 `git commit -c ORIG_HEAD` no tiene a que referirse.
 
+## 34b. El area de preparacion guarda rutas, no renombrados
+
+El recorrido comparado del laboratorio 03 dejo a la vista un error del
+enunciado, y de paso una propiedad de Git que conviene tener escrita.
+
+`git status` muestra un renombrado como un solo hecho, `renamed: viejo -> nuevo`,
+pero **en el area de preparacion hay dos anotaciones separadas**: la baja de la
+ruta vieja y el alta de la nueva. Git las junta al mostrarlas porque deduce que
+son la misma cosa; no estan juntas.
+
+La consecuencia practica es la que el enunciado no contaba. Sacar de la
+preparacion el nombre nuevo no saca la baja del viejo:
+
+```
+$ git restore --staged listado-de-platos.md
+$ git status --short
+D  platos.md
+?? listado-de-platos.md
+```
+
+Y devolver el archivo a su nombre en el disco tampoco la saca, porque lo que
+esta anotado es la ruta y no el archivo:
+
+```
+$ mv listado-de-platos.md platos.md
+$ git status --short
+D  platos.md
+?? platos.md
+```
+
+El paso 1.5 del laboratorio 03 terminaba ahi y decia «directorio limpio otra
+vez». No lo estaba, y el propio verificador del laboratorio lo rechazaba con
+**6 de 7 criterios**. Falta un `git restore --staged platos.md`, que el
+enunciado ahora hace y explica.
+
+El motor reproduce las tres situaciones, comprobadas contra Git una por una.
+
 ## 35. Lo que no se implementa, y por que
 
 Todo lo de esta lista cae por la misma razon de fondo: **el motor modela nodos y

@@ -99,11 +99,30 @@ Ahora sí dice `renamed`. Git lo dedujo al comparar el contenido, porque los dos
 
 O sea, `git mv` no hace nada especial. Es un atajo que hace el `mv` y el `add` de una vez. La detección del renombrado ocurre igual.
 
-Déjalo como estaba.
+Déjalo como estaba. Son tres pasos y el segundo sorprende.
 
 ```
 git restore --staged listado-de-platos.md
+git status
+```
+
+Sacaste de la preparación el nombre nuevo. Y sin embargo `platos.md` sigue ahí, borrado y preparado.
+
+**El área de preparación no guarda renombrados, guarda rutas.** Adentro había dos anotaciones separadas, la baja de `platos.md` y el alta de `listado-de-platos.md`. `git status` te las mostró juntas como un `renamed` porque dedujo que eran la misma cosa, pero siguen siendo dos. Sacaste una y la otra quedó donde estaba.
+
+Devuelve el archivo a su nombre de siempre.
+
+```
 mv listado-de-platos.md platos.md
+git status
+```
+
+El archivo volvió a tu carpeta y Git sigue diciendo que `platos.md` está borrado. No se contradice. Lo que está anotado como borrado es la ruta dentro del área de preparación, y eso no cambia porque tú muevas archivos en el disco. Por eso ahora el mismo nombre te aparece dos veces, borrado arriba y sin seguimiento abajo.
+
+Saca esa anotación también.
+
+```
+git restore --staged platos.md
 git status
 ```
 
