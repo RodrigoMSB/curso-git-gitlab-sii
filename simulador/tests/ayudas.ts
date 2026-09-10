@@ -61,8 +61,9 @@ export function repoLimpio(): EstadoRepositorio {
 }
 
 /**
- * Dos ramas con destinos distintos (lab 06): `mexicana` cuelga de la punta de
- * main y se fusiona por avance rapido; `peruana` nace antes y choca.
+ * Tres ramas con destinos distintos (lab 06): `tailandesa` cuelga de la punta
+ * de main y se fusiona por avance rapido, `azteca` nace antes y toca otros
+ * archivos, y `andina` nace ahi mismo y choca sobre platos.md.
  */
 export function repoConRamas(): EstadoRepositorio {
   return escenarioPorId('lab-06');

@@ -137,6 +137,23 @@ function pendientesDe(estado: EstadoComparable): readonly string[] {
   return estado.archivos.filter((archivo) => !archivo.endsWith(':limpio'));
 }
 
+/**
+ * Si la ultima orden escrita en la consola termino en error.
+ *
+ * Se mira lo que el participante lee: Git antepone `fatal:` o `error:` cuando
+ * rechaza una orden. El color no sirve para esto, porque la consola pinta de
+ * rojo tambien los archivos modificados de un `git status` que funciono.
+ */
+function falloEnElSimulador(): Cypress.Chainable<boolean> {
+  return cy.document().then((doc) => {
+    const renglones = [...doc.querySelectorAll<HTMLElement>('[data-color]')];
+    const ultimoEco = renglones.map((renglon) => renglon.dataset.color).lastIndexOf('orden');
+    return renglones
+      .slice(ultimoEco + 1)
+      .some((renglon) => /^(fatal|error):/.test(renglon.textContent ?? ''));
+  });
+}
+
 /** Escribe la orden en la consola y la ejecuta, como lo haria el participante. */
 function ejecutarEnElSimulador(orden: string): void {
   // Con retardo cero el campo controlado por React llega a perder el primer
@@ -152,6 +169,9 @@ function ejecutarEnElSimulador(orden: string): void {
 function recorrer(numero: string): void {
   let lab: Laboratorio;
   let ordenes: readonly OrdenDelEnunciado[] = [];
+  /** Las que de verdad se compararon, contadas al recorrer. */
+  let comparadas = 0;
+  let cortadoEn: OrdenDelEnunciado | null = null;
 
   before(() => {
     cy.task<string>('leerEnunciado', numero).then((enunciado) => {
@@ -178,15 +198,49 @@ function recorrer(numero: string): void {
     cy.visit(`/SIMULADOR.html?lab=${numero}`);
 
     cy.then(() => {
+      // Una orden que el motor no implementa y que cambia el estado hace
+      // avanzar solo al repositorio real. Desde ahi comparar no dice nada, asi
+      // que el recorrido sigue ejecutandose en Git para que el laboratorio
+      // termine, pero se deja de comparar y se informa hasta donde se llego.
+      let comparable = true;
+
       for (const orden of ordenes) {
         if (orden.clase === 'omitida') continue;
 
-        if (orden.clase === 'comparada') ejecutarEnElSimulador(orden.texto);
-        cy.task('ejecutarEnGit', { lab, orden: orden.texto });
+        if (orden.clase === 'comparada' && comparable) ejecutarEnElSimulador(orden.texto);
+        cy.task<{ salida: string; fallo: boolean; cambio: boolean }>('ejecutarEnGit', {
+          lab,
+          orden: orden.texto,
+          // Solo hace falta medir el cambio en las que el simulador no ejecuta.
+          medirCambio: orden.clase === 'solo-git',
+        }).then((resultado) => {
+          // Si una orden que el simulador no ejecuto movio el repositorio real,
+          // desde aqui los dos lados dejan de ser comparables.
+          if (orden.clase === 'solo-git' && resultado.cambio && comparable) {
+            comparable = false;
+            cortadoEn = orden;
+            cy.log(
+              `el recorrido comparado se corta en «${orden.texto}» (linea ${orden.linea}): ${orden.motivo}`,
+            );
+          }
+          if (orden.clase !== 'comparada' || !comparable) return;
+          // Una orden que funciona en la terminal y falla en el simulador, o
+          // al reves, enseña algo distinto aunque el estado quede igual.
+          falloEnElSimulador().then((falloSimulador) => {
+            expect(
+              falloSimulador,
+              `«${orden.texto}» (enunciado, linea ${orden.linea}): en Git ${
+                resultado.fallo ? 'fallo' : 'funciono'
+              } y en el simulador ${falloSimulador ? 'fallo' : 'funciono'}`,
+            ).to.equal(resultado.fallo);
+          });
+        });
 
         if (orden.clase !== 'comparada') continue;
 
         cy.task<EstadoComparable>('estadoDeGit', lab).then((git) => {
+          if (!comparable) return;
+          comparadas += 1;
           estadoDelSimulador().then((simulador) => {
             // El mensaje dice en que orden ocurrio y que mostro cada lado
             // (punto 5.4): un fallo que solo diga que difieren no sirve.
@@ -214,10 +268,23 @@ function recorrer(numero: string): void {
     // salta la mitad de las ordenes no esta probado y hay que saberlo.
     cy.then(() => {
       const cuenta = resumen(ordenes);
-      const porcentaje = Math.round((cuenta.comparadas / cuenta.total) * 100);
+      const porcentaje = Math.round((comparadas / cuenta.total) * 100);
       cy.log(
-        `lab-${numero}: ${cuenta.comparadas} de ${cuenta.total} ordenes comparadas (${porcentaje}%)`,
+        `lab-${numero}: ${comparadas} de ${cuenta.total} ordenes comparadas (${porcentaje}%)`,
       );
+      if (cortadoEn !== null) {
+        cy.log(
+          `  el recorrido se corto en «${cortadoEn.texto}» (linea ${cortadoEn.linea}) · ${cortadoEn.motivo}`,
+        );
+      }
+      cy.task('anotarCobertura', {
+        laboratorio: numero,
+        total: cuenta.total,
+        comparadas,
+        soloGit: cuenta.soloGit,
+        omitidas: cuenta.omitidas,
+        cortadoEn: cortadoEn === null ? null : cortadoEn.texto,
+      });
       for (const orden of ordenes.filter((candidata) => candidata.clase !== 'comparada')) {
         cy.log(`  saltada «${orden.texto}» · ${orden.motivo}`);
       }
@@ -228,17 +295,33 @@ function recorrer(numero: string): void {
           .map((orden) => ({ orden: orden.texto, clase: orden.clase, motivo: orden.motivo })),
       );
       expect(cuenta.total, 'el enunciado tiene ordenes que recorrer').to.be.greaterThan(0);
-      expect(cuenta.comparadas, 'alguna orden se compara').to.be.greaterThan(0);
+      expect(comparadas, 'alguna orden se compara').to.be.greaterThan(0);
     });
   });
 }
 
-describe('CA3 · laboratorio 02, leer la historia y volver atras', () => {
+describe('laboratorio 02 · leer la historia y volver atras', () => {
   recorrer('02');
 });
 
-describe('CA4 · laboratorio 03, abrir la caja', () => {
+describe('laboratorio 03 · abrir la caja', () => {
   recorrer('03');
+});
+
+describe('laboratorio 04 · ordenar el recetario', () => {
+  recorrer('04');
+});
+
+describe('laboratorio 05 · tres cocinas en paralelo', () => {
+  recorrer('05');
+});
+
+describe('laboratorio 06 · fusionar y resolver', () => {
+  recorrer('06');
+});
+
+describe('laboratorio 07 · retroceder, revertir y etiquetar', () => {
+  recorrer('07');
 });
 
 after(() => {

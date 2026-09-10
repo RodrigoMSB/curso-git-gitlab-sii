@@ -40,18 +40,19 @@ describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
 
     expect(nodos).toHaveLength(7);
     expect(carrilDe(estado, 'main')).toBe(0);
-    expect(carrilDe(estado, 'peruana')).toBe(2);
-    // Las dos lineas vuelven a la misma base.
+    expect(carrilDe(estado, 'andina')).toBe(3);
+    // Tres lineas vuelven a la misma base: main, azteca y andina nacen todas
+    // de la tercera confirmacion.
     const base = estado.confirmaciones[2]?.id ?? '';
-    expect(aristas.filter((arista) => arista.hasta === base)).toHaveLength(2);
+    expect(aristas.filter((arista) => arista.hasta === base)).toHaveLength(3);
   });
 
   it('fusion: la union se marca como tal y sale de sus dos padres', () => {
     const estado = correr(
       repoConRamas(),
-      'git merge peruana',
+      'git merge andina',
       'git add platos.md',
-      'git commit -m "Fusiona la cocina peruana"',
+      'git commit -m "Fusiona la cocina andina"',
     );
     const { nodos, aristas } = disponer(estado);
     const union = nodos[0];
@@ -78,7 +79,7 @@ describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
 
     const carriles = [
       carrilDe(estado, 'main'),
-      carrilDe(estado, 'peruana'),
+      carrilDe(estado, 'andina'),
       carrilDe(estado, 'chilena'),
       carrilDe(estado, 'boliviana'),
     ];
@@ -92,7 +93,7 @@ describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
 describe('CA3 · previsualizacion de la fusion sobre el laboratorio 06', () => {
   it('dibuja la union proyectada en trazo discontinuo sin haberla creado', () => {
     const estado = repoConRamas();
-    const vista = previsualizar(estado, 'git merge peruana');
+    const vista = previsualizar(estado, 'git merge andina');
     const anunciada = vista.confirmacionesNuevas[0] ?? '';
 
     const conPrevisualizacion = disponer(vista.estadoResultante, {
@@ -120,13 +121,13 @@ describe('CA3 · previsualizacion de la fusion sobre el laboratorio 06', () => {
 
   it('al ejecutar la fusion, la union conserva el identificador anunciado', () => {
     const estado = repoConRamas();
-    const anunciada = previsualizar(estado, 'git merge peruana').confirmacionesNuevas[0];
+    const anunciada = previsualizar(estado, 'git merge andina').confirmacionesNuevas[0];
 
     const final = correr(
       estado,
-      'git merge peruana',
+      'git merge andina',
       'git add platos.md',
-      'git commit -m "Fusiona peruana"',
+      'git commit -m "Fusiona andina"',
     );
     const nodo = disponer(final).nodos.find((candidato) => candidato.id === anunciada);
 
@@ -248,7 +249,7 @@ describe('punteros y etiquetas', () => {
     expect(puntero?.texto).toBe('HEAD');
     expect(enlacePuntero?.ancla).toBe('rama');
     expect(main?.actual).toBe(true);
-    expect(etiquetas.find((etiqueta) => etiqueta.clave === 'rama:peruana')?.actual).toBe(false);
+    expect(etiquetas.find((etiqueta) => etiqueta.clave === 'rama:andina')?.actual).toBe(false);
     // Cuelga de la etiqueta de rama: misma columna, mas abajo.
     expect(puntero?.x).toBe(main?.x);
     expect(puntero?.y).toBeGreaterThan(main?.y ?? 0);
@@ -256,7 +257,7 @@ describe('punteros y etiquetas', () => {
 
   it('5.4 al cambiar de rama solo se mueve la etiqueta de posicion', () => {
     const antes = disponer(repoConRamas());
-    const despues = disponer(correr(repoConRamas(), 'git switch mexicana'));
+    const despues = disponer(correr(repoConRamas(), 'git switch azteca'));
 
     expect(despues.nodos).toEqual(antes.nodos);
     const ramasAntes = antes.etiquetas.filter((etiqueta) => etiqueta.forma === 'rama');

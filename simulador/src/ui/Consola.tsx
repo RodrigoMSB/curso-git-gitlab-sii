@@ -133,7 +133,7 @@ export function Consola({
       >
         {renglones.map((renglon) =>
           renglon.color === 'orden' ? (
-            <div key={renglon.clave} className="mt-2 first:mt-0">
+            <div key={renglon.clave} className="mt-2 first:mt-0" data-color="orden">
               <LineaIndicador indicador={indicador} />
               <div className="text-[var(--texto)]">
                 <span className="text-[var(--consola-verde)]">$ </span>
@@ -143,6 +143,9 @@ export function Consola({
           ) : (
             <pre
               key={renglon.clave}
+              // El color dice si la orden fallo, que es lo que compara la
+              // prueba de punta a punta contra el codigo de salida de Git.
+              data-color={renglon.color}
               className={`whitespace-pre-wrap font-mono ${CLASE_POR_COLOR[renglon.color]}`}
             >
               {renglon.texto === '' ? ' ' : renglon.texto}

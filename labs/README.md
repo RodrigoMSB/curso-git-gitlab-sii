@@ -29,7 +29,8 @@ GIT-GITLAB/
     │   └── recetario/
     ├── lab-02/
     │   └── recetario/
-    └── lab-03/
+    ├── ...
+    └── lab-07/
         └── recetario/
 ```
 
@@ -65,5 +66,5 @@ labs/lab-02/preparar.sh
 El escenario es determinista: entrega siempre la misma historia, con los mismos
 identificadores de confirmacion, en cualquier maquina.
 
-Por ahora estan armados los laboratorios 01, 02 y 03. Los otros doce se agregan
-en specs posteriores.
+Por ahora estan armados los laboratorios 01 al 07, que cubren las sesiones 1 a
+la 4 completas. Los otros ocho se agregan en specs posteriores.

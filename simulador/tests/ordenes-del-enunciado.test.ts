@@ -92,9 +92,19 @@ describe('los marcadores que si se pueden resolver salen del escenario', () => {
 });
 
 describe('cuanto de cada laboratorio queda comparado', () => {
-  it('el laboratorio 02 se compara casi entero', () => {
-    const cuenta = resumen(resolverMarcadores(ordenesDe(enunciado('02')), '02'));
-    expect(cuenta.comparadas / cuenta.total).toBeGreaterThan(0.85);
+  it('el laboratorio 02 se compara en dos tercios, y lo que falta es git log', () => {
+    // La Parte 1 del enunciado enseña a filtrar el historial por autor, por
+    // fecha, por archivo y por contenido, y el motor no implementa ninguno de
+    // esos filtros (seccion 28 de docs/arquitectura.md). Es lo que hace bajar
+    // esta cifra, y baja con razon.
+    const ordenes = resolverMarcadores(ordenesDe(enunciado('02')), '02');
+    const cuenta = resumen(ordenes);
+    expect(cuenta.comparadas / cuenta.total).toBeGreaterThan(0.6);
+
+    const porFiltro = ordenes.filter(
+      (orden) => orden.clase === 'solo-git' && orden.texto.startsWith('git log'),
+    );
+    expect(porFiltro.length).toBeGreaterThanOrEqual(6);
   });
 
   it('el laboratorio 03 se compara poco, y es por lo que enseña', () => {

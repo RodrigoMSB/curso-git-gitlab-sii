@@ -150,7 +150,7 @@ describe('9.5 · el selector cambia de escenario', () => {
     // El mecanismo del SPEC 007, comprobado en el navegador.
     cy.visit('/SIMULADOR.html?lab=06');
     cy.get('select').should('have.value', 'lab-06');
-    cy.get('g[data-etiqueta="peruana"]').should('exist');
+    cy.get('g[data-etiqueta="andina"]').should('exist');
   });
 });
 

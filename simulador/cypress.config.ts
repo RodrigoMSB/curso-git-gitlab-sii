@@ -54,6 +54,9 @@ interface Laboratorio {
 /** Los repositorios de las pruebas viven en una carpeta temporal (R3). */
 const montados: string[] = [];
 
+/** Lo que cada laboratorio dejo comparado, para el informe del punto 6.3. */
+const cobertura: Record<string, unknown>[] = [];
+
 /**
  * Monta un clon de mentira con el laboratorio dentro y corre su `preparar.sh`,
  * que es como el participante llega a su punto de partida.
@@ -93,22 +96,59 @@ function entorno(configGlobal: string): NodeJS.ProcessEnv {
   return { ...process.env, GIT_CONFIG_GLOBAL: configGlobal, GIT_CONFIG_SYSTEM: '/dev/null' };
 }
 
-/** Corre una orden del enunciado contra el repositorio de verdad. */
-function ejecutarEnGit({ lab, orden }: { lab: Laboratorio; orden: string }): { salida: string } {
+/**
+ * Corre una orden del enunciado contra el repositorio de verdad.
+ *
+ * Devuelve tambien si fallo. Una orden que en la terminal funciona y en el
+ * simulador no, o al reves, le enseña al participante algo distinto aunque el
+ * estado quede igual: es justo lo que se le escapaba a la comparacion cuando
+ * solo miraba el estado.
+ */
+function ejecutarEnGit({
+  lab,
+  orden,
+  medirCambio = false,
+}: {
+  lab: Laboratorio;
+  orden: string;
+  medirCambio?: boolean;
+}): {
+  salida: string;
+  fallo: boolean;
+  /** Si la orden movio el estado del repositorio. Solo se mide cuando hace falta. */
+  cambio: boolean;
+} {
+  // El antes y el despues se toman aqui, en la misma tarea, para no gastar tres
+  // viajes al navegador. Y solo se toman para las ordenes que el simulador no
+  // ejecuta, que son las unicas que pueden desalinear los dos lados: leer el
+  // estado cuesta una decena de invocaciones a Git y hay cientos de ordenes.
+  const antes = medirCambio ? JSON.stringify(estadoDeGit(lab)) : '';
+  let salida: string;
   try {
-    const salida = execFileSync('bash', ['-c', orden], {
+    salida = execFileSync('bash', ['-c', orden], {
       cwd: lab.recetario,
       encoding: 'utf8',
       env: entorno(lab.configGlobal),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    return { salida };
   } catch (error) {
-    // Una orden que falla tambien es un resultado: el simulador tiene que
-    // fallar igual y dejar el estado igual.
     const fallo = error as { stdout?: string; stderr?: string };
-    return { salida: `${fallo.stdout ?? ''}${fallo.stderr ?? ''}` };
+    salida = `${fallo.stdout ?? ''}${fallo.stderr ?? ''}`;
   }
+  const despues = medirCambio ? JSON.stringify(estadoDeGit(lab)) : '';
+  return { salida, fallo: rechazada(salida), cambio: medirCambio && despues !== antes };
+}
+
+/**
+ * Si Git rechazo la orden, mirando lo que imprime y no su codigo de salida.
+ *
+ * Tiene que ser el mismo criterio que se aplica del lado del simulador, que es
+ * lo que el participante lee. El codigo de salida no sirve para comparar: Git
+ * termina en uno cuando `git commit` no encuentra nada que confirmar, y ahi no
+ * rechazo nada, solo informo que no habia trabajo.
+ */
+function rechazada(salida: string): boolean {
+  return salida.split('\n').some((linea) => /^(fatal|error):/.test(linea));
 }
 
 export interface EstadoComparable {
@@ -148,12 +188,21 @@ function estadoDeGit(lab: Laboratorio): EstadoComparable {
   };
   const lineas = (salida: string): readonly string[] => (salida === '' ? [] : salida.split('\n'));
 
-  const ramas = lineas(git({}, 'for-each-ref', '--format=%(refname:short)', 'refs/heads'))
-    .map((rama) => `${rama} -> ${git({}, 'log', '-1', '--format=%s', rama)}`)
-    .sort();
-  const etiquetas = lineas(git({}, 'tag'))
-    .map((etiqueta) => `${etiqueta} -> ${git({}, 'log', '-1', '--format=%s', etiqueta)}`)
-    .sort();
+  // Ramas y etiquetas con el mensaje de su confirmacion, en una sola llamada.
+  // El estado se lee despues de cada orden y hay cientos: cada proceso de Git
+  // que se ahorra aqui se ahorra centenares de veces.
+  const referencias = lineas(
+    git({}, 'for-each-ref', '--format=%(refname)\t%(contents:subject)', 'refs/heads', 'refs/tags'),
+  ).map((linea) => linea.split('\t'));
+
+  const nombrar = (prefijo: string): readonly string[] =>
+    referencias
+      .filter(([ref = '']) => ref.startsWith(prefijo))
+      .map(([ref = '', asunto = '']) => `${ref.slice(prefijo.length)} -> ${asunto}`)
+      .sort();
+
+  const ramas = nombrar('refs/heads/');
+  const etiquetas = nombrar('refs/tags/');
 
   const ramaActual = git({}, 'branch', '--show-current');
   const posicion =
@@ -208,15 +257,25 @@ export default defineConfig({
 
       on('task', {
         prepararLaboratorio: (numero: string) => prepararLaboratorio(numero),
-        ejecutarEnGit: (datos: { lab: Laboratorio; orden: string }) => ejecutarEnGit(datos),
+        ejecutarEnGit: (datos: { lab: Laboratorio; orden: string; medirCambio?: boolean }) =>
+          ejecutarEnGit(datos),
         estadoDeGit: (lab: Laboratorio) => estadoDeGit(lab),
         leerEnunciado: (numero: string) =>
           execFileSync('cat', [join(CLON, 'labs', `lab-${numero}`, 'README.md')], {
             encoding: 'utf8',
           }),
+        // La cobertura de cada laboratorio, tal como salio de la corrida.
+        anotarCobertura: (dato: Record<string, unknown>) => {
+          cobertura.push(dato);
+          return null;
+        },
         limpiar: () => {
           // Nada queda fuera de la carpeta temporal (R3).
           for (const raiz of montados.splice(0)) rmSync(raiz, { recursive: true, force: true });
+          if (cobertura.length > 0) {
+            console.log('\n  cobertura del recorrido comparado');
+            console.table(cobertura);
+          }
           return null;
         },
       });

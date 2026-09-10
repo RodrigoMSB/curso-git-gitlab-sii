@@ -45,9 +45,9 @@ describe('9.2 · cadena de objetos de una confirmacion', () => {
   it('registra los padres de una confirmacion de union', () => {
     const estado = correr(
       repoConRamas(),
-      'git merge peruana',
+      'git merge andina',
       'git add platos.md',
-      'git commit -m "Fusiona la cocina peruana"',
+      'git commit -m "Fusiona la cocina andina"',
     );
     const cadena = cadenaDeObjetos(estado, estado.confirmaciones.at(-1)?.id ?? '');
     const padres = cadena?.confirmacion.campos.filter((campo) => campo.clave === 'parent');
@@ -75,7 +75,7 @@ describe('9.2 · cadena de objetos de una confirmacion', () => {
 describe('9.3 · abortar la fusion libera el identificador reservado', () => {
   it('el estado vuelve a ser exactamente el de antes de la fusion', () => {
     const partida = repoConRamas();
-    const despues = correr(partida, 'git merge peruana', 'git merge --abort');
+    const despues = correr(partida, 'git merge andina', 'git merge --abort');
 
     // Igualdad completa: si el identificador siguiera reservado, la fusion
     // quedaria en el estado y esta comparacion fallaria.
@@ -85,10 +85,10 @@ describe('9.3 · abortar la fusion libera el identificador reservado', () => {
 
   it('tras abortar, volver a fusionar reserva otra vez el mismo identificador', () => {
     const partida = repoConRamas();
-    const primera = ejecutar(partida, 'git merge peruana');
+    const primera = ejecutar(partida, 'git merge andina');
     const reservadoAntes = primera.estado.fusion?.idPrevisto;
 
-    const segunda = ejecutar(ejecutar(primera.estado, 'git merge --abort').estado, 'git merge peruana');
+    const segunda = ejecutar(ejecutar(primera.estado, 'git merge --abort').estado, 'git merge andina');
 
     expect(segunda.estado.fusion?.idPrevisto).toBe(reservadoAntes);
     expect(segunda.proyectadas).toEqual([reservadoAntes]);

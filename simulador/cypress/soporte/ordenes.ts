@@ -32,6 +32,18 @@ export interface OrdenDelEnunciado {
 }
 
 /**
+ * Que una orden corte el recorrido comparado **no se decide con una lista**.
+ *
+ * Se decide mirando lo que hizo: si una orden que el motor no implementa
+ * cambia el estado del repositorio real, desde ahi el simulador se queda atras
+ * y comparar deja de decir nada. Si no lo cambia, como `git lg` sobre un alias
+ * que no existe o un `cat` de la carpeta oculta, el recorrido sigue.
+ *
+ * La comprobacion vive en `cypress/e2e/laboratorios.cy.ts`, que es donde se
+ * tiene el estado antes y despues.
+ */
+
+/**
  * Ordenes que el motor del simulador no implementa.
  *
  * Es el unico lugar donde se declaran (punto 6.2). Cada una lleva su motivo, y
@@ -53,6 +65,45 @@ export const SIN_SOPORTE: readonly { readonly patron: RegExp; readonly motivo: s
   {
     patron: /^git config\b.*--list/,
     motivo: 'el motor no lista la configuracion completa',
+  },
+  {
+    patron: /^git log\b.*\s-S(\s|$)/,
+    motivo:
+      'el motor no implementa la busqueda por contenido: no versiona contenido que buscar',
+  },
+  {
+    patron: /^git log\b.*\s--\s/,
+    motivo: 'el motor no implementa el filtrado del historial por archivo',
+  },
+  {
+    patron: /^git log\b.*--(author|since|until)=/,
+    motivo:
+      'el motor acepta el filtro y lo ignora: muestra la historia entera (seccion 28 de docs/arquitectura.md)',
+  },
+  {
+    patron: /^git log\b.*--format=/,
+    motivo: 'el motor acepta el formato y lo ignora: muestra siempre la forma larga',
+  },
+  {
+    patron: /^git (log|show)\b.*--stat\b/,
+    motivo: 'el motor no produce el resumen de lineas cambiadas',
+  },
+  {
+    patron: /^git log\b.*\s[^\s]+\.\.[^\s]+/,
+    motivo: 'el motor no implementa el rango «a..b» del historial',
+  },
+  {
+    patron: /^git switch\b.*(--detach|HEAD[~^])/,
+    motivo:
+      'el motor no resuelve referencias relativas en git switch, aunque si en git checkout (seccion 28 de docs/arquitectura.md)',
+  },
+  {
+    patron: /^git\b.*[^>]>[^>]/,
+    motivo: 'el interprete del simulador solo redirige la salida de echo, no la de Git',
+  },
+  {
+    patron: /^git commit\b.*\s-c\s/,
+    motivo: 'el motor no implementa reutilizar el mensaje de otra confirmacion con -c',
   },
 ];
 
@@ -126,13 +177,23 @@ export function ordenesDe(enunciado: string): readonly OrdenDelEnunciado[] {
 
       const noEjecutable = NO_EJECUTABLES.find((regla) => regla.patron.test(texto));
       if (noEjecutable !== undefined) {
-        ordenes.push({ texto, clase: 'omitida', motivo: noEjecutable.motivo, linea });
+        ordenes.push({
+          texto,
+          clase: 'omitida',
+          motivo: noEjecutable.motivo,
+          linea
+        });
         return;
       }
 
       const sinSoporte = SIN_SOPORTE.find((regla) => regla.patron.test(texto));
       if (sinSoporte !== undefined) {
-        ordenes.push({ texto, clase: 'solo-git', motivo: sinSoporte.motivo, linea });
+        ordenes.push({
+          texto,
+          clase: 'solo-git',
+          motivo: sinSoporte.motivo,
+          linea
+        });
         return;
       }
 
@@ -142,7 +203,7 @@ export function ordenesDe(enunciado: string): readonly OrdenDelEnunciado[] {
           texto,
           clase: 'solo-git',
           motivo: `el motor no implementa «${verbo}»`,
-          linea,
+          linea
         });
         return;
       }

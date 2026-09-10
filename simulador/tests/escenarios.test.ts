@@ -30,8 +30,10 @@ function declaracion(id: string): EscenarioDeclarado {
 
 describe('escenarios de laboratorio', () => {
   it('hay uno por cada laboratorio del 01 al 10', () => {
+    // El 09 no lleva: enseña remotos, un submodulo y un gancho, y el motor no
+    // implementa ninguna de las tres cosas.
     expect(ESCENARIOS.map((escenario) => escenario.laboratorio)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+      1, 2, 3, 4, 5, 6, 7, 8, 10,
     ]);
     expect(ESCENARIOS.map((escenario) => escenario.id)).toEqual([
       'lab-01',
@@ -42,7 +44,6 @@ describe('escenarios de laboratorio', () => {
       'lab-06',
       'lab-07',
       'lab-08',
-      'lab-09',
       'lab-10',
     ]);
   });
@@ -151,25 +152,33 @@ describe('escenarios de laboratorio', () => {
     }
   });
 
-  it('el laboratorio 06 deja una rama que avanza rapido y otra que choca', () => {
+  it('el laboratorio 06 deja las tres fusiones que el enunciado necesita', () => {
     const estado = escenarioPorId('lab-06');
     const puntaMain = ramaPorNombre(estado, 'main')?.id ?? '';
-    const puntaPeruana = ramaPorNombre(estado, 'peruana')?.id ?? '';
 
-    // mexicana cuelga de la punta de main: su fusion es un avance rapido.
-    const mexicana = ejecutar(estado, 'git merge mexicana');
-    expect(mexicana.estado.fusion).toBeNull();
-    expect(texto(mexicana)).not.toContain('CONFLICT');
+    // tailandesa cuelga de la punta de main: avance rapido, sin union.
+    const tailandesa = ejecutar(estado, 'git merge tailandesa');
+    expect(tailandesa.estado.fusion).toBeNull();
+    expect(texto(tailandesa)).toContain('Fast-forward');
 
-    // peruana nace antes y cambia la misma linea: su fusion choca.
-    expect(baseComun(estado, puntaMain, puntaPeruana)).not.toBe(puntaMain);
-    expect(texto(ejecutar(estado, 'git merge peruana'))).toContain('CONFLICT');
+    // azteca nace antes y toca otros archivos: union limpia.
+    const azteca = ejecutar(estado, 'git merge azteca');
+    expect(texto(azteca)).not.toContain('CONFLICT');
+    expect(azteca.estado.confirmaciones).toHaveLength(estado.confirmaciones.length + 1);
+    expect(
+      azteca.estado.confirmaciones.at(-1)?.padres,
+    ).toHaveLength(2);
+
+    // andina cambia la misma linea que main: choca.
+    const puntaAndina = ramaPorNombre(estado, 'andina')?.id ?? '';
+    expect(baseComun(estado, puntaMain, puntaAndina)).not.toBe(puntaMain);
+    expect(texto(ejecutar(estado, 'git merge andina'))).toContain('CONFLICT');
   });
 
   it('el laboratorio 07 deja tres confirmaciones encima del error a revertir', () => {
     const estado = escenarioPorId('lab-07');
     const indice = estado.confirmaciones.findIndex((confirmacion) =>
-      confirmacion.mensaje.startsWith('Corrige la unidad de compra'),
+      confirmacion.mensaje.startsWith('Suma un ingrediente'),
     );
     expect(indice).toBeGreaterThanOrEqual(0);
     expect(estado.confirmaciones.length - 1 - indice).toBe(3);
@@ -186,18 +195,18 @@ describe('escenarios de laboratorio', () => {
     expect(mensajes).toEqual(expect.arrayContaining(['wip', 'cambios', 'mas cambios', 'arreglos']));
   });
 
-  it('el laboratorio 09 declara su remoto y lo que el motor no alcanza a mostrar', () => {
-    const estado = escenarioPorId('lab-09');
-    expect(estado.remotos.map((remoto) => remoto.nombre)).toEqual(['origin']);
-    // El unico escenario con partes que el motor de hoy no refleja.
-    expect(declaracion('lab-09').sinReflejar?.length).toBeGreaterThan(0);
+  it('el laboratorio 09 no tiene escenario, y es a proposito', () => {
+    // Enseña dos remotos, un submodulo y un gancho. El motor no implementa
+    // ninguna de las tres cosas, asi que un escenario suyo mostraria la
+    // historia local y nada de lo que el laboratorio viene a enseñar.
+    expect(declaracionPorId('lab-09')).toBeUndefined();
   });
 
-  it('solo el 01 y el 09 declaran algo sin reflejar', () => {
+  it('solo el 01 declara algo sin reflejar', () => {
     const conFaltantes = ESCENARIOS.filter(
       (escenario) => (escenario.sinReflejar ?? []).length > 0,
     ).map((escenario) => escenario.id);
-    expect(conFaltantes).toEqual(['lab-01', 'lab-09']);
+    expect(conFaltantes).toEqual(['lab-01']);
   });
 
   it('el laboratorio 10 trae la etiqueta de version y el archivo de exclusiones', () => {

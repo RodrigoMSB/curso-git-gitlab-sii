@@ -74,7 +74,7 @@ describe('consola', () => {
 
   it('4.5 el conflicto va en rojo y el aviso de fusion en amarillo', () => {
     const renglones = colorearSalida(
-      ejecutar(repoConRamas(), 'git merge peruana').salida,
+      ejecutar(repoConRamas(), 'git merge andina').salida,
       'p',
     );
     expect(renglones.find((r) => r.texto.startsWith('CONFLICT'))?.color).toBe('error');
@@ -89,7 +89,7 @@ describe('consola', () => {
   it('4.4 la tabulacion completa cuando hay una unica coincidencia', () => {
     const estado = repoConRamas();
     expect(completar('git swi', estado).texto).toBe('git switch');
-    expect(completar('git switch peru', estado).texto).toBe('git switch peruana');
+    expect(completar('git switch tail', estado).texto).toBe('git switch tailandesa');
     expect(completar('pw', estado).texto).toBe('pwd');
   });
 
@@ -139,10 +139,10 @@ describe('sesion y linea de tiempo', () => {
 
   it('7.2 ejecutar desde un punto anterior corta la historia desde ahi', () => {
     const sesion = correrSesion('lab-08', 'git switch tailandesa', 'git switch main');
-    const desdeElPrimero = ejecutarOrden(irAPaso(sesion, 1), 'git branch mexicana');
+    const desdeElPrimero = ejecutarOrden(irAPaso(sesion, 1), 'git branch azteca');
 
     expect(desdeElPrimero.pasos).toHaveLength(3);
-    expect(desdeElPrimero.pasos[2]?.orden).toBe('git branch mexicana');
+    expect(desdeElPrimero.pasos[2]?.orden).toBe('git branch azteca');
     expect(desdeElPrimero.pasos.map((paso) => paso.orden)).not.toContain('git switch main');
   });
 
@@ -286,8 +286,9 @@ describe('barra de estado y armado de la pantalla', () => {
     expect(barra.desconectado).toBe(false);
     expect(barra.cambiosSinConfirmar).toBe(0);
     // El selector ofrece los diez laboratorios con escenario, en su orden.
+    // El 09 no lleva escenario: es de terminal pura.
     expect(barra.escenarios.map((escenario) => escenario.laboratorio)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+      1, 2, 3, 4, 5, 6, 7, 8, 10,
     ]);
   });
 
@@ -312,7 +313,7 @@ describe('barra de estado y armado de la pantalla', () => {
     const sesion = iniciarSesion('lab-06');
     const conOrden = construirPantalla(sesion, {
       ...OPCIONES,
-      entrada: 'git merge peruana',
+      entrada: 'git merge andina',
     });
     const sinOrden = construirPantalla(sesion, OPCIONES);
 
@@ -324,7 +325,7 @@ describe('barra de estado y armado de la pantalla', () => {
     const sesion = iniciarSesion('lab-06');
     const pantalla = construirPantalla(sesion, {
       previsualizacionActiva: false,
-      entrada: 'git merge peruana',
+      entrada: 'git merge andina',
       modoRelator: false,
     });
 
@@ -341,7 +342,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('la union comprometida por un conflicto sigue dibujada hasta que se resuelve', () => {
-    const enConflicto = correrSesion('lab-06', 'git merge peruana');
+    const enConflicto = correrSesion('lab-06', 'git merge andina');
     const pendiente = construirPantalla(enConflicto, OPCIONES);
     const anunciada = pendiente.grafo.nodos.find((nodo) => nodo.previsualizada);
 
@@ -351,7 +352,7 @@ describe('barra de estado y armado de la pantalla', () => {
     const resuelta = construirPantalla(
       ejecutarOrden(
         ejecutarOrden(enConflicto, 'git add platos.md'),
-        'git commit -m "Fusiona la cocina peruana"',
+        'git commit -m "Fusiona la cocina andina"',
       ),
       OPCIONES,
     );
@@ -362,7 +363,7 @@ describe('barra de estado y armado de la pantalla', () => {
   });
 
   it('la linea de tiempo lleva un segmento por paso y marca el actual', () => {
-    const sesion = correrSesion('lab-08', 'git status', 'git branch mexicana');
+    const sesion = correrSesion('lab-08', 'git status', 'git branch azteca');
     const pantalla = construirPantalla(irAPaso(sesion, 1), OPCIONES);
 
     expect(pantalla.segmentos).toHaveLength(3);

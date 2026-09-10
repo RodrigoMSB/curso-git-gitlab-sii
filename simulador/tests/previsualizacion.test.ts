@@ -12,7 +12,7 @@ describe('previsualizacion de ordenes', () => {
     const partida = repoConRamas();
     const copia = structuredClone(partida);
 
-    const vista = previsualizar(partida, 'git merge peruana');
+    const vista = previsualizar(partida, 'git merge andina');
 
     expect(vista.confirmacionesNuevas).toHaveLength(1);
     expect(partida).toEqual(copia);
@@ -38,15 +38,15 @@ describe('previsualizacion de ordenes', () => {
   });
 
   it('no anuncia confirmaciones al crear una rama, y avisa que el puntero no se mueve', () => {
-    const vista = previsualizar(repoConRamas(), 'git branch peruana');
+    const vista = previsualizar(repoConRamas(), 'git branch andina');
 
     expect(vista.confirmacionesNuevas).toHaveLength(0);
     expect(vista.punteroMovido).toBe(false);
-    expect(ramaPorNombre(vista.estadoResultante, 'peruana')).toBeDefined();
+    expect(ramaPorNombre(vista.estadoResultante, 'andina')).toBeDefined();
   });
 
   it('avisa que el puntero se mueve al cambiar de rama, sin confirmaciones nuevas', () => {
-    const vista = previsualizar(repoConRamas(), 'git switch mexicana');
+    const vista = previsualizar(repoConRamas(), 'git switch azteca');
 
     expect(vista.confirmacionesNuevas).toHaveLength(0);
     expect(vista.punteroMovido).toBe(true);
@@ -79,13 +79,13 @@ describe('previsualizacion de ordenes', () => {
 
   it('la fusion con conflicto del laboratorio 06 se materializa en la union que anuncio la previsualizacion', () => {
     const partida = repoConRamas();
-    const anunciada = previsualizar(partida, 'git merge peruana').confirmacionesNuevas[0];
+    const anunciada = previsualizar(partida, 'git merge andina').confirmacionesNuevas[0];
 
     const final = correr(
       partida,
-      'git merge peruana',
+      'git merge andina',
       'git add platos.md',
-      'git commit -m "Fusiona la rama peruana"',
+      'git commit -m "Fusiona la rama andina"',
     );
 
     expect(idActual(final)).toBe(anunciada);

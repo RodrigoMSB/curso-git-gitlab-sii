@@ -1606,11 +1606,17 @@ Los escenarios del 04 al 10 se derivaron de los verificadores de las semillas
 del SPEC 003, que son la descripcion mas precisa que existe del estado inicial
 que cada enunciado supone.
 
-### El laboratorio 09 · lo que el motor no alcanza a mostrar
+### El laboratorio 09 · no lleva escenario
 
-Es el unico escenario que no se refleja entero. Lo que se muestra es la historia
-local de cuatro confirmaciones y que hay un remoto declarado. Lo que **no** se
-puede mostrar, con el motor de hoy:
+**Decision del product owner: el laboratorio 09 queda fuera del simulador.** Es
+de terminal pura.
+
+Se intento darle escenario y el resultado dejaba a la vista el problema: se
+mostraba la historia local de cuatro confirmaciones y un remoto declarado, o
+sea todo menos lo que el laboratorio viene a enseñar. Un escenario que no
+muestra la materia del laboratorio confunde mas de lo que ayuda.
+
+Esto es lo que el motor de hoy no puede mostrar:
 
 - **Las ramas de seguimiento remoto**, como `origin/main`. El estado guarda los
   remotos como nombre y direccion, y no tiene donde poner sus ramas. El
@@ -1621,12 +1627,11 @@ puede mostrar, con el motor de hoy:
   `.gitmodules`, ni un repositorio dentro de otro.
 - **El gancho de pre-confirmacion.** El motor no ejecuta ganchos.
 
-Esas cuatro cosas estan anotadas en el propio escenario, en su campo
-`sinReflejar`, para que queden a la vista de quien lo lea y no solo aqui.
-
-**No se invento soporte nuevo**, como el spec pidio. Si el product owner quiere
+**No se invento soporte nuevo**, como el SPEC 007 pidio. Si alguna vez se quiere
 que el laboratorio 09 se pueda seguir en el simulador, lo que hace falta es al
 menos ramas de seguimiento remoto y las ordenes de red, y eso es un spec propio.
+
+Los escenarios quedan entonces en **nueve**: los laboratorios 01 al 08 y el 10.
 
 ### El laboratorio 01 · la unica licencia
 
@@ -1768,6 +1773,9 @@ recorren de verdad:
 | lab-02 | 40 | 35 | 3 | 2 | **88 %** |
 | lab-03 | 33 | 9 | 19 | 5 | **27 %** |
 
+Esas son cifras de corridas de verdad. Las de cualquier laboratorio sin
+`preparar.sh` son estimaciones, y se dicen como tales.
+
 El 27 por ciento del laboratorio 03 no es una falla de la prueba: **es lo que
 ese laboratorio enseña**. Abre la carpeta `.git` y lee lo que hay dentro, y el
 simulador no modela esa carpeta a proposito (restriccion R4 del SPEC 001). Las
@@ -1775,13 +1783,318 @@ diecinueve ordenes que se corren solo en Git son `cat .git/...`, `ls .git/...`,
 `wc -c` y `git cat-file`. Lo que si se compara es lo que cambia el grafo: crear
 la rama, cambiarse a ella, volver y borrarla.
 
-Para los ocho laboratorios que todavia no tienen `preparar.sh`, la clasificacion
-da una estimacion que **no esta verificada**, porque no hay repositorio contra
-el cual correrla. La estimacion del laboratorio 09 en particular es optimista:
-cuenta `git remote` entre lo soportado porque el motor tiene esa orden, cuando
-en realidad solo guarda el nombre y la direccion. Lo que el laboratorio 09
-realmente hace, que es traer y publicar contra dos remotos, incorporar un
-submodulo y colgar un gancho, cae entero del lado de lo no soportado.
+Para los laboratorios que todavia no tienen `preparar.sh`, la clasificacion da
+una estimacion que **no esta verificada**, porque no hay repositorio contra el
+cual correrla. Cuando cada laboratorio se arme, su recorrido entra solo y la
+cifra se vuelve real.
 
-Cuando cada laboratorio se arme, su recorrido entra solo y la cifra se vuelve
-real.
+### El laboratorio 09 · la cifra que no hay que creerse
+
+La clasificacion le da **73 por ciento**, y esa cifra **es optimista y esta sin
+verificar**. Queda anotada aqui para que nadie la use como si fuera cobertura.
+
+Es optimista porque cuenta `git remote` entre lo soportado, ocho veces, solo
+porque el motor tiene una orden con ese nombre. Lo que el motor hace con ella es
+guardar un nombre y una direccion: no trae nada, no publica nada y no crea
+ninguna rama de seguimiento. Lo que el laboratorio 09 realmente enseña, que es
+trabajar contra dos remotos, incorporar un submodulo y colgar un gancho, cae
+entero del lado de lo no soportado.
+
+Y esta sin verificar porque **no hay `preparar.sh` del laboratorio 09**, asi que
+el recorrido comparado nunca se corrio. Una cifra de cobertura que no salio de
+una corrida no es una cifra de cobertura.
+
+El laboratorio 09 quedo ademas **fuera del simulador** (seccion 24). Es de
+terminal pura.
+
+## 27. El hallazgo · el espacio que se recortaba
+
+Este es el error que encontro el SPEC 008, y la leccion que lo justifica entero.
+
+`git status --porcelain` describe cada archivo con **dos columnas**: la primera
+dice que hay en el area de preparacion y la segunda que hay en el directorio de
+trabajo. Cuando el cambio no esta preparado, la primera columna **es un
+espacio**:
+
+```
+M  cocineros.md      preparado
+ M ingredientes.md   modificado, sin preparar
+```
+
+El lector de estado hacia `.trim()` sobre la salida completa. `trim()` recorta
+tambien el comienzo, asi que **la primera linea perdia su espacio inicial** si
+empezaba con uno. Con eso ` M ingredientes.md` pasaba a ser `M ingredientes.md`,
+y el codigo que lee las columnas por posicion se equivocaba dos veces a la vez:
+
+- `slice(0, 2)` devolvia `M ` en vez de ` M`: el archivo se leia como
+  **preparado** cuando estaba **modificado sin preparar**. El estado exactamente
+  al reves.
+- `slice(3)` devolvia `ngredientes.md` en vez de `ingredientes.md`: **el nombre
+  perdia su primera letra**.
+
+El sintoma es desconcertante, porque el error habla de un archivo que no existe:
+
+```
+- [ 'cocineros.md:modificado' ]     lo que mostraba el simulador
++ [ 'ocineros.md:preparado'  ]      lo que se creyo leer de Git
+```
+
+### Por que la comparacion del SPEC 007 pasaba por casualidad
+
+El mismo error estaba en `tests/escenarios-contra-disco.test.ts` desde que se
+escribio, y sus veintiseis pruebas pasaban.
+
+Pasaban porque en el escenario del laboratorio 02 la salida de `--porcelain`
+empieza con `M  cocineros.md`, que **no lleva espacio delante**: ahi el archivo
+preparado se ordena antes que el modificado, y `trim()` no tenia nada que
+recortar. La segunda linea, ` M ingredientes.md`, conservaba su espacio porque
+`trim()` solo toca los extremos de la cadena completa, no de cada linea.
+
+Es decir: la comparacion era correcta **para el orden en que Git devolvio esos
+dos archivos**, y habria empezado a fallar el dia que un escenario tuviera un
+archivo modificado sin preparar antes que uno preparado, o solo archivos
+modificados. Un error latente esperando un escenario distinto.
+
+### La leccion
+
+**Una prueba que compara dos representaciones del mismo hecho no vale mas que su
+lector.** El SPEC 007 comparaba el escenario declarado contra el repositorio del
+disco y daba verde, pero uno de los dos lados estaba mal leido; lo que
+comparaba, sin saberlo, era un error contra si mismo en el unico caso en que ese
+error no se notaba.
+
+Lo que lo descubrio fue recorrer el laboratorio **orden por orden**, en vez de
+mirar solo el estado inicial. En el estado inicial el orden de los dos archivos
+escondia el problema; a mitad del recorrido, cuando el participante descarta el
+cambio de `ingredientes.md`, queda un unico archivo modificado sin preparar y el
+espacio recortado sale a la luz de inmediato.
+
+Ese es el argumento del SPEC 008 completo: probar el estado final, o el inicial,
+deja pasar errores que solo aparecen en los estados intermedios.
+
+Quedo un ayudante `gitCrudo` aparte del `git` de siempre, con el motivo escrito
+al lado, para que nadie vuelva a recortar esa salida.
+
+## 28. Diferencias conocidas entre el motor y Git
+
+El recorrido comparado del SPEC 008 encontro una sola diferencia real, y **se
+deja sin arreglar a proposito**.
+
+### `git commit --allow-empty`
+
+El motor ignora la opcion y responde `nothing to commit, working tree clean`.
+Git crea la confirmacion vacia.
+
+No se arregla porque **no aparece en ningun enunciado del taller** ni en la
+carta de ordenes de la seccion 7 del SPEC 001. Aparecio al escribir las pruebas
+de la interfaz, donde hacia falta una confirmacion cualquiera; esas pruebas
+usan ahora un cambio de verdad, que ademas se parece mas a lo que hace un
+participante.
+
+Queda anotado aqui para que, si algun dia un enunciado la usa, se sepa que hay
+que implementarla antes.
+
+### Los filtros de `git log` · el hallazgo que la comparacion de estado no veia
+
+**El motor acepta `--author`, `--since` y `--until`, y los ignora.** No falla, no
+avisa: muestra la historia entera.
+
+Medido sobre el escenario del laboratorio 02, que tiene cinco confirmaciones de
+tres autores repartidas en cinco meses:
+
+| Orden | Git | Simulador |
+|---|---|---|
+| `git log --oneline` | 5 | 5 |
+| `git log --author=Juana --oneline` | 2 | **5** |
+| `git log --author=ZZZZ --oneline` | 0 | **5** |
+| `git log --since=2024-08-01 --oneline` | 1 | **5** |
+| `git log --until=2024-02-01 --oneline` | 1 | **5** |
+
+Hay tres huecos mas en la misma orden:
+
+- `git log --format="%an"` acepta el formato y lo ignora: muestra siempre la
+  forma larga.
+- `git log --oneline -- platos.md` falla con
+  `fatal: ambiguous argument 'platos.md'`: no hay filtrado por archivo.
+- `git log -S "curanto"` falla igual: el motor no versiona contenido, asi que no
+  tiene donde buscar.
+
+**Esto es exactamente lo que la Parte 1 del laboratorio 02 enseña**, punto por
+punto: filtrar por autor, por fecha, por archivo y por contenido. Un participante
+que practique esa parte en el simulador ve que el filtro no hace nada y concluye
+que escribio mal la orden.
+
+#### Por que la comparacion de estado no lo veia
+
+Ninguna de esas ordenes **cambia el estado**. La comparacion del SPEC 008 miraba
+la historia, las ramas, el puntero y los archivos despues de cada orden, y
+despues de un `git log` todo eso esta igual en los dos lados. La prueba pasaba
+en verde mientras el simulador enseñaba otra cosa.
+
+Lo que lo destapo fue agregar una comprobacion mas: **que la orden falle en los
+dos lados o funcione en los dos**. Con ella salieron a la luz `-S` y el filtrado
+por archivo, que si fallan; y al mirarlos de cerca aparecieron los tres que no
+fallan y tambien mienten.
+
+La leccion se parece a la de la seccion 27: una comparacion no vale mas que las
+cosas que decide mirar. Comparar el estado no alcanza para una orden cuya unica
+salida es lo que imprime.
+
+#### Que se hizo
+
+Las seis formas quedan declaradas como no soportadas, cada una con su motivo, y
+por lo tanto **se cuentan como saltadas** en el informe de cobertura. La
+cobertura del laboratorio 02 baja al contarlas, y esa cifra mas baja es la
+verdadera.
+
+**No se arreglaron.** Implementar los filtros de `git log` es trabajo de motor y
+no de este spec. Queda anotado que, mientras no se haga, la Parte 1 del
+laboratorio 02 hay que practicarla en la terminal y no en el simulador.
+
+### Los otros tres huecos, que aparecieron al armar el 05, el 06 y el 07
+
+La misma comprobacion de paridad los encontro apenas los cuatro laboratorios
+nuevos entraron al recorrido:
+
+| Orden | Enunciado que la enseña | Que hace el motor |
+|---|---|---|
+| `git switch --detach HEAD~2` | 05, el estado desconectado | `fatal: invalid reference: 'HEAD~2'` |
+| `git log --oneline main..azteca` | 06, ver que trae cada rama | `fatal: ambiguous argument` |
+| `git log --oneline > archivo` | 07, guardar una foto del historial | `fatal: ambiguous argument '>'` |
+| `git commit -c ORIG_HEAD` | 07, rehacer una confirmacion con el mismo mensaje | `Aborting commit due to empty commit message` |
+
+El primero es el mas raro de los tres: **`git checkout HEAD~2` si funciona y deja
+la posicion desconectada**, con su aviso y todo. Es la misma referencia relativa
+y el mismo destino; lo que falla es resolverla desde `git switch`. Un
+participante que siga el laboratorio 05 al pie de la letra se topa con eso.
+
+El tercero no es de Git sino del interprete: el analizador entiende la
+redireccion de `echo` sobre un archivo, que es como el simulador genera trabajo
+pendiente, y no la de una orden de Git.
+
+Los cuatro quedan declarados y **sin arreglar**, por la misma razon que los
+filtros de `git log`: son trabajo de motor. Suman **diez formas conocidas** en
+las que el simulador no acompaña al enunciado, todas anotadas y contadas.
+
+Fuera de esto, en las ordenes comparadas de los laboratorios 02 y 03 el motor se
+comporta como Git.
+
+---
+
+# Laboratorios 04 al 07 · sesiones 3 y 4 completas
+
+## 29. Los cuatro laboratorios, y lo que las semillas no decian
+
+Con el 04, el 05, el 06 y el 07 quedan cerradas las sesiones 1 a la 4: siete
+laboratorios armados con la forma de la seccion 18, cada uno con su enunciado,
+su preparacion, su verificador, su escenario en el simulador y su recorrido
+comparado contra Git real.
+
+Al armarlos aparecio algo que conviene dejar escrito.
+
+### Las semillas del SPEC 003 no calzaban con los enunciados
+
+Los escenarios del 04 al 10 se habian derivado en el SPEC 007 de los
+verificadores de las semillas, que eran la descripcion mas precisa que existia
+del estado inicial de cada laboratorio. **Al leer los enunciados de verdad, tres
+de ellos no calzaban.**
+
+| Laboratorio | Lo que decia la semilla | Lo que pide el enunciado |
+|---|---|---|
+| 04 | recetas de cazuela y charquican | **leche asada y mote con huesillo**, que son las que el enunciado separa en la carpeta de postres |
+| 06 | dos ramas, `mexicana` y `peruana` | **tres ramas**, `tailandesa`, `azteca` y `andina`, una por cada caso de fusion |
+| 07 | el error era una unidad de compra mal puesta | el error es **«sal marina en polvo»**, que es lo que el enunciado hace buscar por contenido |
+
+El caso del 06 es el mas serio. El enunciado dice, en su primera linea, que se
+van a fusionar **tres** ramas y que las tres se comportan distinto: una avanza
+sin crear nada, otra crea una confirmacion de union y la tercera choca. La
+semilla solo traia dos, y le faltaba justamente la del medio, que es la que
+enseña que una union no siempre es un conflicto.
+
+Con dos ramas el laboratorio se podia hacer, pero enseñaba dos de los tres casos
+y su Comprobacion, que pide **dos confirmaciones de union**, era imposible de
+cumplir.
+
+**El enunciado manda.** Los tres escenarios se rehicieron contra el enunciado, y
+la comparacion de la seccion 23 los ata a sus `preparar.sh`. Los enunciados no
+se tocaron mas alla de los cinco cambios autorizados.
+
+### El laboratorio 06 · las tres fusiones
+
+La topologia esta calculada para que cada rama caiga en un caso distinto, y el
+modo `--escenario` del verificador comprueba las tres condiciones antes de
+entregar el laboratorio:
+
+```
+c1 ── c2 ── c3 ── c4 (main)
+             │      └── t1 (tailandesa)
+             ├── a1 (azteca)
+             └── n1 (andina)
+```
+
+- **tailandesa** cuelga de `c4`, la punta de `main`, que no vuelve a moverse.
+  `main` esta contenida entera en ella, asi que su fusion es un avance rapido y
+  no crea nada.
+- **azteca** nace en `c3` y toca `recetas/guacamole.md`, que `main` no toco.
+  Divergen, asi que hay union; no comparten archivo, asi que no choca.
+- **andina** nace en `c3` y cambia la misma linea de `platos.md` que cambio
+  `c4`. Divergen y comparten linea, asi que choca.
+
+Que `azteca` **no** toque `platos.md` es tan importante como que `andina` si lo
+toque: si lo tocara, el laboratorio tendria dos conflictos y ningun caso de
+union limpia. El verificador lo comprueba explicitamente.
+
+## 30. La cobertura de los siete laboratorios
+
+Medida en la corrida, no estimada. «Comparadas» son las ordenes que se
+ejecutaron en los dos lados y cuyo resultado se comparo; el resto se corrio solo
+en Git o no se corrio.
+
+| Laboratorio | Ordenes | Comparadas | Cobertura | Donde se corta |
+|---|---|---|---|---|
+| 02 · leer la historia | 40 | 26 | 65 % | no se corta |
+| 03 · abrir la caja | 33 | 9 | 27 % | no se corta |
+| 04 · ordenar el recetario | 57 | 5 | 9 % | `git mv` |
+| 05 · tres cocinas | 66 | 9 | 14 % | `git switch -c mexicana HEAD~3` |
+| 06 · fusionar y resolver | 53 | 34 | 64 % | no se corta |
+| 07 · retroceder y revertir | 51 | 6 | 12 % | `git commit -c ORIG_HEAD` |
+
+### Que significa «se corta»
+
+Una orden que el motor no implementa y que **cambia el repositorio real** hace
+avanzar solo a un lado. Desde ahi comparar no dice nada: el simulador se quedo
+atras por una razon conocida, no por un error. El recorrido sigue ejecutandose
+en Git para que el laboratorio llegue al final, pero se deja de comparar y se
+informa donde fue.
+
+Que una orden corte **no se decide con una lista**. Se decide midiendo: se toma
+el estado del repositorio antes y despues, y si cambio, se corta. Por eso
+`git lg` sobre un alias que no existe no corta nada, aunque el motor tampoco lo
+implemente: falla en los dos lados y no mueve nada.
+
+### Por que el 04 y el 05 se cortan tan temprano
+
+**El 04 se corta en la octava orden** porque su Parte 1 entera es mover y borrar
+archivos con `git mv` y `git rm`, que el motor no implementa. Son las ordenes
+que el laboratorio viene a enseñar.
+
+**El 05 se corta en `git switch -c mexicana HEAD~3`**, que es su punto 1.2: abrir
+una rama desde una confirmacion anterior. El motor resuelve `HEAD~3` en
+`git checkout` y no en `git switch`, que es el hueco de la seccion 28.
+
+**El 07 se corta en `git commit -c ORIG_HEAD`**, en su punto 1.1: rehacer una
+confirmacion conservando el mensaje de la anterior.
+
+En los dos casos la cifra baja dice algo cierto y util: **esos laboratorios hay
+que practicarlos en la terminal**, porque el simulador no acompaña la parte que
+enseñan. No es una falla de la prueba, es la prueba haciendo su trabajo.
+
+### Los que si se recorren enteros
+
+El **02** y el **06** son los que mejor quedan cubiertos, con dos tercios de sus
+ordenes comparadas y sin corte. En el 06 eso incluye las tres fusiones, el
+conflicto, el aborto y la resolucion: el laboratorio de la sesion 4 se puede
+seguir entero en el simulador y lo que muestra coincide con la terminal.
+
+El **03** tiene 27 por ciento y esta bien asi: mira dentro de la carpeta oculta,
+que el simulador no modela a proposito.

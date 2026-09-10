@@ -72,7 +72,9 @@ function formaDelDisco(esc: Escenario): Forma {
   const lineas = (salida: string): readonly string[] =>
     salida === '' ? [] : salida.split('\n');
 
-  const identificadores = lineas(g('log', '--format=%H', '--reverse'));
+  // `--all`: la declaracion enumera todas las confirmaciones del escenario, y
+  // en los que tienen ramas hay confirmaciones que no cuelgan de main.
+  const identificadores = lineas(g('log', '--all', '--format=%H', '--reverse'));
   const archivosPorConfirmacion = identificadores.map((id) =>
     [...lineas(g('show', '--name-only', '--format=', id))].sort().join(','),
   );
@@ -97,11 +99,14 @@ function formaDelDisco(esc: Escenario): Forma {
     (etiqueta) => `${etiqueta}->${g('log', '-1', '--format=%s', etiqueta)}`,
   );
 
+  // Ordenados: con varias ramas, el orden en que Git recorre `--all` no tiene
+  // por que ser el orden en que la declaracion las escribe. Lo que fija la
+  // forma del grafo son las ramas y sus puntas, que se comparan aparte.
   return {
-    mensajes: lineas(g('log', '--format=%s', '--reverse')),
-    autores: lineas(g('log', '--format=%an', '--reverse')),
-    fechas: lineas(g('log', '--format=%at', '--reverse')),
-    archivosPorConfirmacion,
+    mensajes: [...lineas(g('log', '--all', '--format=%s'))].sort(),
+    autores: [...lineas(g('log', '--all', '--format=%an'))].sort(),
+    fechas: [...lineas(g('log', '--all', '--format=%at'))].sort(),
+    archivosPorConfirmacion: [...archivosPorConfirmacion].sort(),
     ramas: ramas.sort(),
     posicion: g('branch', '--show-current'),
     etiquetas: etiquetas.sort(),
@@ -117,12 +122,14 @@ function formaDeclarada(declaracion: EscenarioDeclarado): Forma {
   );
 
   return {
-    mensajes: estado.confirmaciones.map((confirmacion) => confirmacion.mensaje),
-    autores: estado.confirmaciones.map((confirmacion) => confirmacion.autor),
-    fechas: declaracion.confirmaciones.map((confirmacion) => String(confirmacion.epoca ?? '')),
-    archivosPorConfirmacion: declaracion.confirmaciones.map((confirmacion) =>
-      [...confirmacion.archivos].sort().join(','),
-    ),
+    mensajes: estado.confirmaciones.map((confirmacion) => confirmacion.mensaje).sort(),
+    autores: estado.confirmaciones.map((confirmacion) => confirmacion.autor).sort(),
+    fechas: declaracion.confirmaciones
+      .map((confirmacion) => String(confirmacion.epoca ?? ''))
+      .sort(),
+    archivosPorConfirmacion: declaracion.confirmaciones
+      .map((confirmacion) => [...confirmacion.archivos].sort().join(','))
+      .sort(),
     ramas: declaracion.ramas
       .map((rama) => `${rama.nombre}->${mensajePorClave.get(rama.en) ?? '?'}`)
       .sort(),
@@ -267,17 +274,19 @@ describe('los escenarios que todavia no tienen preparacion en el disco', () => {
     // solo a la comparacion de arriba y tiene que calzar con lo declarado.
     expect(SIN_PREPARACION.map((declaracion) => declaracion.id)).toEqual([
       'lab-01',
-      'lab-04',
-      'lab-05',
-      'lab-06',
-      'lab-07',
       'lab-08',
-      'lab-09',
       'lab-10',
     ]);
   });
 
   it('los que si la tienen estan comparados', () => {
-    expect(CON_PREPARACION.map((declaracion) => declaracion.id)).toEqual(['lab-02', 'lab-03']);
+    expect(CON_PREPARACION.map((declaracion) => declaracion.id)).toEqual([
+      'lab-02',
+      'lab-03',
+      'lab-04',
+      'lab-05',
+      'lab-06',
+      'lab-07',
+    ]);
   });
 });

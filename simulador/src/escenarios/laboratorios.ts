@@ -254,8 +254,14 @@ export const LAB04: EscenarioDeclarado = {
     },
     {
       clave: 'c2',
-      mensaje: 'Agrega las tres primeras recetas',
-      archivos: ['recetas/pastel-de-choclo.md', 'recetas/empanadas.md', 'recetas/cazuela.md'],
+      mensaje: 'Agrega las cuatro primeras recetas',
+      // Dos de fondo y dos de postre: el enunciado las separa en dos carpetas.
+      archivos: [
+        'recetas/pastel-de-choclo.md',
+        'recetas/empanadas.md',
+        'recetas/leche-asada.md',
+        'recetas/mote-con-huesillo.md',
+      ],
       padres: ['c1'],
       carril: 0,
       ...MARCO,
@@ -281,8 +287,8 @@ export const LAB04: EscenarioDeclarado = {
     },
     {
       clave: 'c5',
-      mensaje: 'Suma el charquican y completa los ingredientes',
-      archivos: ['ingredientes.md', 'recetas/charquican.md', 'platos.md'],
+      mensaje: 'Completa la lista de ingredientes',
+      archivos: ['ingredientes.md'],
       padres: ['c4'],
       carril: 0,
       ...JUANA,
@@ -298,8 +304,8 @@ export const LAB04: EscenarioDeclarado = {
     'ingredientes.md',
     'recetas/pastel-de-choclo.md',
     'recetas/empanadas.md',
-    'recetas/cazuela.md',
-    'recetas/charquican.md',
+    'recetas/leche-asada.md',
+    'recetas/mote-con-huesillo.md',
     // Los tres que sobran, confirmados a proposito.
     'notas.tmp',
     'respaldo.bak',
@@ -413,7 +419,7 @@ export const LAB06: EscenarioDeclarado = {
   sesion: 4,
   titulo: 'Fusionar y resolver',
   proposito:
-    'Fusionar por avance rapido, fusionar con confirmacion de union y resolver un conflicto de verdad.',
+    'Reconocer cual de los tres casos de fusion se tiene delante antes de escribir la orden, y saber que hacer cuando choca.',
   directorio: directorioDe(6),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
@@ -444,6 +450,7 @@ export const LAB06: EscenarioDeclarado = {
       ...JUANA,
       epoca: cuando(6, 11, 15, 45),
     },
+    // La punta de main, que toca la linea de la cazuela en platos.md.
     {
       clave: 'c4',
       mensaje: 'Precisa que la cazuela lleva chuchoca',
@@ -453,49 +460,49 @@ export const LAB06: EscenarioDeclarado = {
       ...SOFIA,
       epoca: cuando(7, 2, 10, 25),
     },
-    // La rama que choca: nace de c3, antes de que main tocara la linea de la
-    // cazuela, y cambia esa misma linea.
+    // tailandesa cuelga de la punta de main y main no volvio a moverse: su
+    // fusion es un avance rapido y no crea confirmacion de union.
     {
-      clave: 'p1',
-      mensaje: 'Reemplaza la cazuela por el lomo saltado',
-      archivos: ['platos.md', 'recetas/lomo-saltado.md'],
-      padres: ['c3'],
-      carril: 2,
+      clave: 't1',
+      mensaje: 'Agrega la receta del pad thai',
+      archivos: ['recetas/pad-thai.md'],
+      padres: ['c4'],
+      carril: 1,
       ...MARCO,
       epoca: cuando(7, 9, 12, 5),
     },
-    // La rama que se fusiona por avance rapido: cuelga de la punta de main.
+    // azteca nace antes de la punta y toca archivos que main no toco: su
+    // fusion crea una confirmacion de union y no choca.
     {
-      clave: 'm1',
+      clave: 'a1',
       mensaje: 'Agrega la receta del guacamole',
       archivos: ['recetas/guacamole.md'],
-      padres: ['c4'],
-      carril: 1,
+      padres: ['c3'],
+      carril: 2,
       ...SOFIA,
       epoca: cuando(7, 16, 9, 50),
     },
+    // andina nace en el mismo punto y cambia la misma linea de platos.md que
+    // cambio main: su fusion choca.
     {
-      clave: 'm2',
-      mensaje: 'Suma el guacamole a las entradas',
-      archivos: ['platos.md'],
-      padres: ['m1'],
-      carril: 1,
-      ...SOFIA,
+      clave: 'n1',
+      mensaje: 'Reemplaza la cazuela por el lomo saltado',
+      archivos: ['platos.md', 'recetas/lomo-saltado.md'],
+      padres: ['c3'],
+      carril: 3,
+      ...MARCO,
       epoca: cuando(7, 23, 16, 30),
     },
   ],
   ramas: [
     { nombre: 'main', en: 'c4', carril: 0 },
-    { nombre: 'mexicana', en: 'm2', carril: 1 },
-    { nombre: 'peruana', en: 'p1', carril: 2 },
+    { nombre: 'tailandesa', en: 't1', carril: 1 },
+    { nombre: 'azteca', en: 'a1', carril: 2 },
+    { nombre: 'andina', en: 'n1', carril: 3 },
   ],
   etiquetas: [],
   posicion: 'main',
-  archivos: limpios(
-    'README.md',
-    'platos.md',
-    'ingredientes.md',
-  ),
+  archivos: limpios('README.md', 'platos.md', 'ingredientes.md'),
   remotos: [],
 };
 
@@ -545,10 +552,12 @@ export const LAB07: EscenarioDeclarado = {
       ...JUANA,
       epoca: cuando(2, 27, 14, 45),
     },
-    // El error que el participante va a revertir.
+    // El error que el participante va a revertir. El enunciado lo encuentra
+    // buscando «sal marina en polvo» por contenido, asi que el mensaje no lo
+    // delata a proposito.
     {
       clave: 'c4',
-      mensaje: 'Corrige la unidad de compra de la carne',
+      mensaje: 'Suma un ingrediente a la lista base',
       archivos: ['ingredientes.md'],
       padres: ['c3'],
       carril: 0,
@@ -708,80 +717,17 @@ export const LAB08: EscenarioDeclarado = {
 };
 
 // ---------------------------------------------------------------------------
-// Laboratorio 09 · Dos remotos, un submodulo y un gancho
+// Laboratorio 09 · no lleva escenario
 // ---------------------------------------------------------------------------
-
-/**
- * El unico escenario que el motor no puede reflejar entero. Lo que se muestra
- * es la historia local y que hay un remoto declarado; lo que falta esta
- * enumerado en `sinReflejar` y en la seccion 23 de docs/arquitectura.md.
- */
-export const LAB09: EscenarioDeclarado = {
-  id: 'lab-09',
-  laboratorio: 9,
-  sesion: 6,
-  titulo: 'Dos remotos, un submodulo y un gancho',
-  proposito:
-    'Trabajar contra mas de un remoto, incorporar otro repositorio como submodulo y automatizar una comprobacion con un gancho.',
-  directorio: directorioDe(9),
-  configuracion: CONFIGURACION_PUESTA,
-  confirmaciones: [
-    {
-      clave: 'c1',
-      mensaje: 'Agrega el README del recetario',
-      archivos: ['README.md'],
-      padres: [],
-      carril: 0,
-      ...JUANA,
-      epoca: cuando(8, 6, 9, 30),
-    },
-    {
-      clave: 'c2',
-      mensaje: 'Agrega platos e ingredientes',
-      archivos: ['platos.md', 'ingredientes.md'],
-      padres: ['c1'],
-      carril: 0,
-      ...MARCO,
-      epoca: cuando(8, 20, 11, 40),
-    },
-    {
-      clave: 'c3',
-      mensaje: 'Agrega las dos primeras recetas',
-      archivos: ['recetas/pastel-de-choclo.md', 'recetas/empanadas.md'],
-      padres: ['c2'],
-      carril: 0,
-      ...MARCO,
-      epoca: cuando(9, 10, 15, 15),
-    },
-    {
-      clave: 'c4',
-      mensaje: 'Agrega la tabla de cocineros',
-      archivos: ['cocineros.md'],
-      padres: ['c3'],
-      carril: 0,
-      ...JUANA,
-      epoca: cuando(10, 1, 10, 20),
-    },
-  ],
-  ramas: [{ nombre: 'main', en: 'c4', carril: 0 }],
-  etiquetas: [],
-  posicion: 'main',
-  archivos: limpios(
-    'README.md',
-    'platos.md',
-    'ingredientes.md',
-    'cocineros.md',
-    'recetas/pastel-de-choclo.md',
-    'recetas/empanadas.md',
-  ),
-  remotos: [{ nombre: 'origin', url: '/taller-git-trabajo/remotos/recetario.git' }],
-  sinReflejar: [
-    'Las ramas de seguimiento remoto, como origin/main: el motor guarda el remoto pero no sus ramas.',
-    'El segundo remoto y las ordenes de red (fetch, pull, push): el motor no las implementa.',
-    'El submodulo de condimentos: el motor no modela submodulos.',
-    'El gancho de pre-confirmacion: el motor no ejecuta ganchos.',
-  ],
-};
+//
+// Se saco del simulador a proposito. Lo que ese laboratorio enseña son dos
+// remotos, un submodulo y un gancho, y el motor no implementa ninguna de las
+// tres cosas: no tiene ramas de seguimiento remoto, ni ordenes de red, ni
+// submodulos, ni ejecuta ganchos. Un escenario suyo mostraria la historia
+// local y nada de lo que el laboratorio viene a enseñar.
+//
+// Es de terminal pura, como el 08 en su parte avanzada. El detalle esta en la
+// seccion 24 de docs/arquitectura.md.
 
 // ---------------------------------------------------------------------------
 // Laboratorio 10 · Conectar y publicar
@@ -901,6 +847,5 @@ export const ESCENARIOS: readonly EscenarioDeclarado[] = [
   LAB06,
   LAB07,
   LAB08,
-  LAB09,
   LAB10,
 ];

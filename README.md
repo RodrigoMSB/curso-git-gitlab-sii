@@ -161,7 +161,7 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 470 pruebas de unidad e integracion, mas 29 de punta a punta
+Estado actual: 506 pruebas de unidad e integracion, mas 41 de punta a punta
 contra el navegador. 98 por ciento de cobertura de lineas. Las de las
 semillas y las de los laboratorios ejecutan Git de verdad y se llevan la mayor
 parte del minuto que tarda la suite.
@@ -178,8 +178,8 @@ cd simulador
 npm run e2e
 ```
 
-Construye el artefacto y lo prueba en un navegador de verdad. Toma alrededor de
-un minuto. Con `npm run e2e:abrir` se abre la ventana de Cypress, que sirve para
+Construye el artefacto y lo prueba en un navegador de verdad, recorriendo los
+seis laboratorios que tienen preparacion. Toma alrededor de cinco minutos. Con `npm run e2e:abrir` se abre la ventana de Cypress, que sirve para
 mirar paso a paso por que algo no calza.
 
 Si el simulador le enseña al participante algo distinto de lo que va a ver en su
@@ -269,11 +269,12 @@ laboratorio tiene su escenario.
 | Lab 06 | 4 | `mexicana` avanza rapido y `peruana` choca sobre la misma linea |
 | Lab 07 | 5 | Siete confirmaciones, con un error tres confirmaciones atras |
 | Lab 08 | 5 | Rama de trabajo con mensajes que no dicen nada y algo a medias encima |
-| Lab 09 | 6 | Historia local con un remoto declarado |
 | Lab 10 | 6 | Ocho confirmaciones, archivo de exclusiones y una version etiquetada |
 
-Los laboratorios del 11 en adelante ocurren en la plataforma o en la tuberia de
-integracion, y no tienen repositorio local que reflejar.
+El laboratorio 09 no lleva escenario: enseña remotos, un submodulo y un gancho,
+y el motor no implementa ninguna de las tres cosas. Es de terminal pura. Los del
+11 en adelante ocurren en la plataforma o en la tuberia de integracion, y no
+tienen repositorio local que reflejar.
 
 Para abrir el simulador directo en un escenario, se le pide en la direccion:
 

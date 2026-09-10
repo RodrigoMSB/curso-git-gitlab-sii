@@ -73,11 +73,11 @@ describe('resolucion de referencias', () => {
   it('el segundo padre de una union se alcanza con ^2', () => {
     const estado = correr(
       repoConRamas(),
-      'git merge peruana',
+      'git merge andina',
       'git add platos.md',
-      'git commit -m "Fusiona la cocina peruana"',
+      'git commit -m "Fusiona la cocina andina"',
     );
-    expect(resolverReferencia(estado, 'HEAD^2')).toBe(estado.confirmaciones[4]?.id);
+    expect(resolverReferencia(estado, 'HEAD^2')).toBe(estado.confirmaciones[6]?.id);
   });
 
   it('devuelve nulo ante referencias que no existen o que se salen del grafo', () => {

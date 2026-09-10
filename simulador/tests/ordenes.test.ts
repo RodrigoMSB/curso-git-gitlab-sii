@@ -153,7 +153,7 @@ describe('git status', () => {
   });
 
   it('marca con UU los archivos en conflicto', () => {
-    const estado = correr(repoConRamas(), 'git merge peruana');
+    const estado = correr(repoConRamas(), 'git merge andina');
     expect(texto(ejecutar(estado, 'git status -s'))).toContain('UU platos.md');
     expect(texto(ejecutar(estado, 'git status'))).toContain('Unmerged paths:');
   });
@@ -366,8 +366,8 @@ describe('git branch', () => {
   });
 
   it('crea una rama sobre una referencia dada', () => {
-    const estado = correr(repoLineal(), 'git branch peruana HEAD~2');
-    expect(ramaPorNombre(estado, 'peruana')?.id).toBe(estado.confirmaciones[2]?.id);
+    const estado = correr(repoLineal(), 'git branch andina HEAD~2');
+    expect(ramaPorNombre(estado, 'andina')?.id).toBe(estado.confirmaciones[2]?.id);
   });
 
   it('reclama si la rama ya existe o si el repositorio no tiene confirmaciones', () => {
@@ -484,7 +484,7 @@ describe('git merge', () => {
   });
 
   it('la fusion con conflicto deja la fusion en curso y el archivo en conflicto', () => {
-    const resultado = ejecutar(repoConRamas(), 'git merge peruana');
+    const resultado = ejecutar(repoConRamas(), 'git merge andina');
 
     expect(texto(resultado)).toContain('CONFLICT (content): Merge conflict in platos.md');
     expect(resultado.estado.fusion?.conflictos).toEqual(['platos.md']);
@@ -494,7 +494,7 @@ describe('git merge', () => {
   });
 
   it('no deja confirmar mientras queden archivos en conflicto', () => {
-    const estado = correr(repoConRamas(), 'git merge peruana');
+    const estado = correr(repoConRamas(), 'git merge andina');
     const resultado = ejecutar(estado, 'git commit -m "A medias"');
 
     expect(resultado.error).toBe(true);
@@ -504,9 +504,9 @@ describe('git merge', () => {
   it('resolver y confirmar cierra la fusion con una union de dos padres', () => {
     const estado = correr(
       repoConRamas(),
-      'git merge peruana',
+      'git merge andina',
       'git add platos.md',
-      'git commit -m "Fusiona la cocina peruana"',
+      'git commit -m "Fusiona la cocina andina"',
     );
     const union = estado.confirmaciones.at(-1);
 
@@ -530,7 +530,7 @@ describe('git merge', () => {
   });
 
   it('rechaza una fusion nueva mientras haya otra sin resolver', () => {
-    const estado = correr(repoConRamas(), 'git merge peruana');
+    const estado = correr(repoConRamas(), 'git merge andina');
     expect(ejecutar(estado, 'git merge main').error).toBe(true);
   });
 

@@ -14,30 +14,30 @@ import { correr, correrHasta, ids, repoConRamaDeTrabajo, repoConRamas, repoLinea
 describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', () => {
   it('8.1 crear una rama no mueve nada: solo agrega un nombre sobre la confirmacion actual', () => {
     const antes = repoConRamas();
-    const resultado = ejecutar(antes, 'git branch tailandesa');
+    const resultado = ejecutar(antes, 'git branch chilena');
     const despues = resultado.estado;
 
     expect(despues.puntero).toEqual(antes.puntero);
     expect(idActual(despues)).toBe(idActual(antes));
     expect(despues.confirmaciones).toEqual(antes.confirmaciones);
-    expect(ramaPorNombre(despues, 'tailandesa')?.id).toBe(idActual(antes));
+    expect(ramaPorNombre(despues, 'chilena')?.id).toBe(idActual(antes));
     expect(ramaPorNombre(despues, 'main')?.id).toBe(ramaPorNombre(antes, 'main')?.id);
   });
 
   it('8.2 cambiar de rama mueve unicamente el puntero de posicion: ninguna confirmacion cambia', () => {
     const antes = repoConRamas();
-    const despues = ejecutar(antes, 'git switch peruana').estado;
+    const despues = ejecutar(antes, 'git switch andina').estado;
 
     expect(ramaActual(antes)).toBe('main');
-    expect(ramaActual(despues)).toBe('peruana');
+    expect(ramaActual(despues)).toBe('andina');
     expect(despues.confirmaciones).toEqual(antes.confirmaciones);
     expect(despues.ramas).toEqual(antes.ramas);
-    expect(idActual(despues)).toBe(ramaPorNombre(antes, 'peruana')?.id);
+    expect(idActual(despues)).toBe(ramaPorNombre(antes, 'andina')?.id);
   });
 
   it('8.3 la fusion informa que no hay nada que hacer cuando la otra rama ya esta contenida', () => {
-    const partida = correr(repoConRamas(), 'git branch tailandesa');
-    const resultado = ejecutar(partida, 'git merge tailandesa');
+    const partida = correr(repoConRamas(), 'git branch chilena');
+    const resultado = ejecutar(partida, 'git merge chilena');
 
     expect(texto(resultado)).toContain('Already up to date.');
     expect(resultado.estado.confirmaciones).toHaveLength(partida.confirmaciones.length);
@@ -47,37 +47,37 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
   it('8.3 la fusion avanza el puntero sin crear confirmacion cuando la actual esta contenida en la otra', () => {
     const partida = correr(
       repoConRamas(),
-      'git switch -c tailandesa',
+      'git switch -c chilena',
       'echo "* Tacos" >> platos.md',
       'git add platos.md',
       'git commit -m "Suma los tacos"',
       'git switch main',
     );
-    const resultado = ejecutar(partida, 'git merge tailandesa');
+    const resultado = ejecutar(partida, 'git merge chilena');
 
     expect(texto(resultado)).toContain('Fast-forward');
     expect(resultado.estado.confirmaciones).toHaveLength(partida.confirmaciones.length);
     expect(ramaPorNombre(resultado.estado, 'main')?.id).toBe(
-      ramaPorNombre(partida, 'tailandesa')?.id,
+      ramaPorNombre(partida, 'chilena')?.id,
     );
   });
 
   it('8.3 la fusion crea una confirmacion con dos padres cuando las historias divergen', () => {
-    // peruana toca la misma linea que main, asi que hay que resolver antes de
+    // andina toca la misma linea que main, asi que hay que resolver antes de
     // que la union exista.
     const partida = repoConRamas();
     const resultado = correrHasta(
       partida,
-      'git merge peruana',
+      'git merge andina',
       'git add platos.md',
-      'git commit -m "Fusiona la cocina peruana"',
+      'git commit -m "Fusiona la cocina andina"',
     );
     const union = confirmacionPorId(resultado.estado, idActual(resultado.estado) ?? '');
 
     expect(resultado.estado.confirmaciones).toHaveLength(partida.confirmaciones.length + 1);
     expect(union?.padres).toHaveLength(2);
     expect(union?.padres[0]).toBe(idActual(partida));
-    expect(union?.padres[1]).toBe(ramaPorNombre(partida, 'peruana')?.id);
+    expect(union?.padres[1]).toBe(ramaPorNombre(partida, 'andina')?.id);
   });
 
   it('8.4 el rebase produce confirmaciones nuevas y deja las originales en el modelo', () => {
