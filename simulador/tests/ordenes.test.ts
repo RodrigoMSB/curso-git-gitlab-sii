@@ -15,6 +15,7 @@ import {
   ramaPorNombre,
   valorConfig,
 } from '../src/core/estado';
+import { escenarioPorId } from '../src/escenarios';
 import {
   correr,
   correrHasta,
@@ -106,6 +107,98 @@ describe('git config', () => {
     );
     expect(estado.confirmaciones[0]?.autor).toBe('Rodrigo Silva');
     expect(estado.confirmaciones[0]?.correo).toBe('rodrigo@sii.cl');
+  });
+});
+
+describe('alias', () => {
+  /** Los dos alias que el laboratorio 01 hace configurar, tal cual los escribe. */
+  function conAlias(estado: EstadoRepositorio): EstadoRepositorio {
+    return correr(
+      estado,
+      'git config --global alias.s "status -s"',
+      'git config --global alias.lg "log --oneline --graph --all --decorate"',
+    );
+  }
+
+  it('git lg hace lo mismo que la orden larga que abrevia', () => {
+    const estado = conAlias(repoLineal());
+    const porElAlias = texto(ejecutar(estado, 'git lg'));
+    const porLaOrdenLarga = texto(ejecutar(estado, 'git log --oneline --graph --all --decorate'));
+    expect(porElAlias).toBe(porLaOrdenLarga);
+    expect(porElAlias).toContain('*');
+  });
+
+  it('git s hace lo mismo que git status -s', () => {
+    const estado = conAlias(repoLineal());
+    expect(texto(ejecutar(estado, 'git s'))).toBe(texto(ejecutar(estado, 'git status -s')));
+  });
+
+  it('sin el alias configurado, reclama como Git y no inventa nada', () => {
+    // Es el laboratorio 01 antes de su punto 1.3: el alias todavia no existe.
+    const resultado = ejecutar(escenarioPorId('lab-01'), 'git lg');
+    expect(resultado.error).toBe(true);
+    expect(texto(resultado)).toContain("git: 'lg' is not a git command");
+  });
+
+  it('el alias recibe los argumentos que se le agregan detras', () => {
+    const estado = correr(repoLineal(), 'git config --global alias.h "log --oneline"');
+    const resultado = ejecutar(estado, 'git h -1');
+    expect(resultado.error).toBe(false);
+    expect(texto(resultado)).toBe(texto(ejecutar(estado, 'git log --oneline -1')));
+  });
+
+  it('la configuracion local manda sobre la global, como en Git', () => {
+    const estado = correr(
+      conAlias(repoLineal()),
+      'git config alias.lg "log --oneline"',
+    );
+    const resultado = ejecutar(estado, 'git lg');
+    expect(resultado.error).toBe(false);
+    expect(texto(resultado)).toBe(texto(ejecutar(estado, 'git log --oneline')));
+  });
+
+  it('un alias no puede tapar una orden de Git', () => {
+    // Git resuelve primero sus propias ordenes. Si el alias ganara, escribir
+    // `git status` en el simulador haria otra cosa que en la terminal.
+    const estado = correr(repoLineal(), 'git config --global alias.status "log --oneline"');
+    expect(texto(ejecutar(estado, 'git status'))).toContain('On branch main');
+  });
+
+  it('un alias que apunta a otro se sigue hasta el final', () => {
+    const estado = correr(
+      repoLineal(),
+      'git config --global alias.uno "log --oneline"',
+      'git config --global alias.dos "uno"',
+    );
+    expect(texto(ejecutar(estado, 'git dos'))).toBe(texto(ejecutar(estado, 'git log --oneline')));
+  });
+
+  it('un alias circular se corta y lo dice, en vez de colgarse', () => {
+    const estado = correr(
+      repoLineal(),
+      'git config --global alias.ida "vuelta"',
+      'git config --global alias.vuelta "ida"',
+    );
+    const resultado = ejecutar(estado, 'git ida');
+    expect(resultado.error).toBe(true);
+    expect(texto(resultado)).toContain('alias loop detected');
+  });
+
+  it('un alias de interprete, el que empieza con signo de admiracion, no se expande', () => {
+    // Git se los pasa al interprete de mandatos. El simulador no tiene uno, y
+    // fingir que lo ejecuta seria peor que decir que no conoce la orden.
+    const estado = correr(repoLineal(), 'git config --global alias.ya "!echo hola"');
+    expect(ejecutar(estado, 'git ya').error).toBe(true);
+  });
+
+  it('los escenarios del 02 en adelante ya traen los alias puestos', () => {
+    // El participante los configura en el laboratorio 01 y son globales, asi
+    // que del 02 en adelante los tiene. Si el escenario no los trajera, la
+    // primera orden de varios enunciados fallaria en el simulador y no en la
+    // terminal.
+    for (const id of ['lab-02', 'lab-03', 'lab-04', 'lab-05', 'lab-06', 'lab-07', 'lab-09']) {
+      expect(ejecutar(escenarioPorId(id), 'git lg').error, id).toBe(false);
+    }
   });
 });
 

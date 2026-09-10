@@ -11,7 +11,7 @@
  */
 
 import { ORDENES_GIT, ORDENES_INTERPRETE } from '../../src/core';
-import { declaracionPorId } from '../../src/escenarios';
+import { ALIAS_DEL_TALLER, declaracionPorId } from '../../src/escenarios';
 
 /** Que hacer con una linea del enunciado. */
 export type Clase =
@@ -36,8 +36,8 @@ export interface OrdenDelEnunciado {
  *
  * Se decide mirando lo que hizo: si una orden que el motor no implementa
  * cambia el estado del repositorio real, desde ahi el simulador se queda atras
- * y comparar deja de decir nada. Si no lo cambia, como `git lg` sobre un alias
- * que no existe o un `cat` de la carpeta oculta, el recorrido sigue.
+ * y comparar deja de decir nada. Si no lo cambia, como un `cat` de la carpeta
+ * oculta, el recorrido sigue.
  *
  * La comprobacion vive en `cypress/e2e/laboratorios.cy.ts`, que es donde se
  * tiene el estado antes y despues.
@@ -116,11 +116,28 @@ export const SIN_SOPORTE: readonly { readonly patron: RegExp; readonly motivo: s
  * existe pero esa forma concreta no.
  */
 function verboConocido(texto: string): boolean {
-  const piezas = texto.split(/\s+/);
+  const piezas = expandirAlias(texto).split(/\s+/);
   const primera = piezas[0] ?? '';
   if (primera !== 'git') return Object.hasOwn(ORDENES_INTERPRETE, primera);
   const sub = piezas[1] ?? '';
   return Object.hasOwn(ORDENES_GIT, sub);
+}
+
+/**
+ * Reemplaza `git lg` por la orden larga que abrevia, para clasificarla.
+ *
+ * Los alias del taller son parte del guion: el participante los configura en
+ * el laboratorio 01 y desde ahi los escribe en todos los demas. Clasificar
+ * `git lg` sin expandirlo diria que el motor no la conoce, cuando lo que hay
+ * que preguntarse es si conoce `git log` con esas opciones.
+ */
+export function expandirAlias(texto: string): string {
+  const piezas = texto.split(/\s+/);
+  if (piezas[0] !== 'git') return texto;
+  const sub = piezas[1] ?? '';
+  const valor = (ALIAS_DEL_TALLER as Readonly<Record<string, string>>)[sub];
+  if (valor === undefined) return texto;
+  return ['git', valor, ...piezas.slice(2)].join(' ');
 }
 
 /** Lineas que no son ordenes ejecutables en ningun lado. */

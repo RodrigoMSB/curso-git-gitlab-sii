@@ -77,7 +77,15 @@ function prepararLaboratorio(numero: string): Laboratorio {
   }
 
   const configGlobal = join(raiz, 'gitconfig-de-mentira');
-  writeFileSync(configGlobal, '[user]\n\tname = Participante del taller\n\temail = participante@sii.cl\n');
+  // La misma configuracion que el participante deja puesta en el laboratorio
+  // 01: identidad y los dos alias. Sin los alias, `git lg` fallaria en Git y
+  // funcionaria en el simulador, que es justo la diferencia que estas pruebas
+  // existen para detectar.
+  writeFileSync(
+    configGlobal,
+    '[user]\n\tname = Participante del taller\n\temail = participante@sii.cl\n' +
+      '[alias]\n\ts = status -s\n\tlg = log --oneline --graph --all --decorate\n',
+  );
 
   execFileSync('bash', ['./preparar.sh', '--forzar'], {
     cwd: carpeta,

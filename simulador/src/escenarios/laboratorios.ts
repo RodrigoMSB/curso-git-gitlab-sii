@@ -30,9 +30,27 @@ const JUANA = { autor: 'Juana Perez', correo: 'juana.perez@recetario.cl' } as co
 const MARCO = { autor: 'Marco Diaz', correo: 'marco.diaz@recetario.cl' } as const;
 const SOFIA = { autor: 'Sofia Rojas', correo: 'sofia.rojas@recetario.cl' } as const;
 
+/**
+ * Lo que el participante deja configurado al terminar el laboratorio 01: su
+ * identidad y los dos alias. Del 02 en adelante los tiene puestos, asi que los
+ * escenarios arrancan con ellos y `git lg` funciona desde la primera orden.
+ */
+/**
+ * Los dos alias que el laboratorio 01 hace configurar, en su punto 1.3, y que
+ * por ser globales acompañan al participante durante todo el taller. Se
+ * declaran aqui una sola vez: los usan los escenarios, el arnes de las pruebas
+ * de punta a punta y el extractor de ordenes del enunciado.
+ */
+export const ALIAS_DEL_TALLER = {
+  s: 'status -s',
+  lg: 'log --oneline --graph --all --decorate',
+} as const satisfies Readonly<Record<string, string>>;
+
 const CONFIGURACION_PUESTA = {
   'user.name': 'Participante del taller',
   'user.email': 'participante@sii.cl',
+  'alias.s': ALIAS_DEL_TALLER.s,
+  'alias.lg': ALIAS_DEL_TALLER.lg,
 } as const;
 
 /** Archivos limpios, que es el caso corriente. */

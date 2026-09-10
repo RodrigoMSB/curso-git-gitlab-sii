@@ -17,6 +17,7 @@ import type { EscenarioDeclarado } from './tipos';
 export type { EscenarioDeclarado, GuardadoDeclarado } from './tipos';
 export { construirEscenario } from './construir';
 export {
+  ALIAS_DEL_TALLER,
   ESCENARIOS,
   LAB01,
   LAB02,
