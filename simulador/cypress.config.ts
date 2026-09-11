@@ -12,12 +12,14 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { createReadStream, cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { createReadStream, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'cypress';
+import { configuracionDelTaller } from './cypress/soporte/enunciado';
 
 const SIMULADOR = fileURLToPath(new URL('.', import.meta.url));
 const CLON = fileURLToPath(new URL('..', import.meta.url));
@@ -85,15 +87,8 @@ function prepararLaboratorio(numero: string): Laboratorio {
   }
 
   const configGlobal = join(raiz, 'gitconfig-de-mentira');
-  // La misma configuracion que el participante deja puesta en el laboratorio
-  // 01: identidad y los dos alias. Sin los alias, `git lg` fallaria en Git y
-  // funcionaria en el simulador, que es justo la diferencia que estas pruebas
-  // existen para detectar.
-  writeFileSync(
-    configGlobal,
-    '[user]\n\tname = Participante del taller\n\temail = participante@sii.cl\n' +
-      '[alias]\n\ts = status -s\n\tlg = log --oneline --graph --all --decorate\n',
-  );
+  writeFileSync(configGlobal, '');
+  dejarPuestaLaConfiguracion(configGlobal);
 
   execFileSync('bash', ['./preparar.sh', '--forzar'], {
     cwd: carpeta,
@@ -106,6 +101,44 @@ function prepararLaboratorio(numero: string): Laboratorio {
     recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'),
     configGlobal,
   };
+}
+
+/**
+ * Deja puesta la configuracion del taller, **corriendo las ordenes del
+ * enunciado del laboratorio 01**.
+ *
+ * El arnes la escribia a mano: identidad y los dos alias, en un archivo de
+ * configuracion armado aqui. O sea hacia por el participante lo que el
+ * participante tiene que hacer, y con eso se volvia ciego a que dejara de
+ * hacerlo. Si el laboratorio 01 quitara `git config --global alias.lg`, los
+ * cinco recorridos habrian seguido en verde mientras el participante se topaba
+ * con `git: 'lg' is not a git command` en la primera orden del laboratorio 02.
+ *
+ * Ahora la unica fuente es el enunciado, y si no configura nada el recorrido se
+ * detiene aqui en vez de arrancar con una configuracion que nadie escribio.
+ */
+function dejarPuestaLaConfiguracion(configGlobal: string): void {
+  const enunciado = leerEnunciado('01');
+  const puesta = configuracionDelTaller(enunciado);
+
+  if (puesta.length === 0) {
+    throw new Error(
+      'el enunciado del laboratorio 01 no deja puesta ninguna configuracion con ' +
+        '`git config --global`; sin identidad Git no confirma y sin los alias ' +
+        '`git lg` falla en la terminal y funciona en el simulador',
+    );
+  }
+
+  for (const [clave, valor] of puesta) {
+    execFileSync('git', ['config', '--global', clave, valor], {
+      env: entorno(configGlobal),
+      stdio: 'ignore',
+    });
+  }
+}
+
+function leerEnunciado(numero: string): string {
+  return readFileSync(join(CLON, 'labs', `lab-${numero}`, 'README.md'), 'utf8');
 }
 
 function entorno(configGlobal: string): NodeJS.ProcessEnv {
@@ -268,6 +301,108 @@ function estadoDeGit(lab: Laboratorio): EstadoComparable {
   };
 }
 
+/**
+ * El directorio de trabajo completo, incluido lo que esta limpio.
+ *
+ * La comparacion de estado solo mira los archivos con algo pendiente, y eso
+ * dejo pasar un directorio de trabajo entero equivocado: sobre una rama abierta
+ * tres confirmaciones atras, el simulador seguia mostrando archivos que ahi no
+ * existian, todos limpios y por lo tanto invisibles para la comparacion.
+ *
+ * Se listan las entradas de primer nivel, con la barra al final en las
+ * carpetas, que es la forma que tiene la salida de `ls`. `.git` queda fuera: el
+ * simulador no la modela y `ls` sin `-a` tampoco la muestra.
+ */
+function directorioDeGit(lab: Laboratorio): readonly string[] {
+  return readdirSync(lab.recetario, { withFileTypes: true })
+    .filter((entrada) => entrada.name !== '.git')
+    .map((entrada) => (entrada.isDirectory() ? `${entrada.name}/` : entrada.name))
+    .sort((una, otra) => una.localeCompare(otra));
+}
+
+/**
+ * Huella de cada captura, por laboratorio y en el orden en que se tomaron.
+ *
+ * Las capturas se comparan entre si, no se miran una por una: lo que interesa
+ * es en que paso la pantalla cambio y en cual se quedo igual. Revisar
+ * doscientas ochenta imagenes a ojo no es revisarlas.
+ */
+const capturas = new Map<string, { paso: string; huella: string }[]>();
+
+function anotarCaptura(nombre: string, ruta: string): void {
+  const [laboratorio = '', paso = ''] = nombre.split('/');
+  const huella = createHash('sha1').update(readFileSync(ruta)).digest('hex');
+  capturas.set(laboratorio, [...(capturas.get(laboratorio) ?? []), { paso, huella }]);
+}
+
+/**
+ * Cruza las capturas con lo que la pantalla decia haber movido.
+ *
+ * Deja un archivo por laboratorio con las dos unicas filas que interesan:
+ *
+ * - **quieta**, la imagen no cambio respecto del paso anterior. Es lo normal en
+ *   una orden de solo mirar, y es un defecto en una que cambia el estado.
+ * - **movio**, la imagen cambio, con las piezas que el arnes midio que se
+ *   movieron.
+ *
+ * La fila que hay que buscar es la tercera, `SIN PINTAR`: el arnes midio que
+ * algo se movio y la imagen quedo identica. Eso es un cambio que el
+ * participante no ve.
+ */
+function compararCapturas(
+  laboratorio: string,
+  pasos: readonly { paso: number; orden: string; piezas: Record<string, string> }[],
+): void {
+  const tomadas = capturas.get(`lab-${laboratorio}`) ?? [];
+  const porPaso = new Map(pasos.map((paso) => [String(paso.paso).padStart(3, '0'), paso]));
+
+  const filas = [
+    `# Laboratorio ${laboratorio} · las capturas comparadas entre si`,
+    '',
+    'Cada imagen contra la del paso anterior. La fila que hay que buscar es',
+    '`SIN PINTAR`: el arnes midio que algo se movio y la imagen quedo identica.',
+    '',
+    '| paso | imagen | piezas que se movieron |',
+    '|---|---|---|',
+  ];
+
+  let anterior: { paso: string; huella: string } | undefined;
+  let anteriorPiezas: Record<string, string> | null = null;
+  let sinPintar = 0;
+
+  for (const tomada of tomadas) {
+    const numero = tomada.paso.replace(/^paso-(\d+).*$/, '$1');
+    const medido = porPaso.get(numero);
+    const movidas =
+      medido === undefined || anteriorPiezas === null
+        ? []
+        : Object.keys(medido.piezas).filter(
+            (pieza) => medido.piezas[pieza] !== anteriorPiezas?.[pieza],
+          );
+    const cambio = anterior === undefined || anterior.huella !== tomada.huella;
+
+    if (!cambio && movidas.length > 0) sinPintar += 1;
+    filas.push(
+      `| ${numero} | ${cambio ? 'movio' : movidas.length > 0 ? '**SIN PINTAR**' : 'quieta'} | ${
+        movidas.length === 0 ? '—' : movidas.join(', ')
+      } |`,
+    );
+
+    anterior = tomada;
+    if (medido !== undefined) anteriorPiezas = medido.piezas;
+  }
+
+  filas.push('');
+  filas.push(
+    sinPintar === 0
+      ? 'Ningun paso quedo sin pintar: todo lo que se movio se ve en la imagen.'
+      : `**${sinPintar} paso(s) se movieron sin que la imagen cambiara.**`,
+  );
+
+  mkdirSync(CAPTURAS, { recursive: true });
+  writeFileSync(join(CAPTURAS, `lab-${laboratorio}-capturas.md`), `${filas.join('\n')}\n`);
+}
+
 /** Traduce los codigos de dos columnas al vocabulario del simulador. */
 function estadoDeCodigo(codigo: string): string {
   if (codigo === '??') return 'sin-seguimiento';
@@ -308,6 +443,9 @@ export default defineConfig({
         const destino = join(CAPTURAS, `${detalles.name}.png`);
         mkdirSync(dirname(destino), { recursive: true });
         renameSync(detalles.path, destino);
+        // La huella se anota al pasar: comparar imagenes despues obligaria a
+        // volver a leerlas todas.
+        anotarCaptura(detalles.name, destino);
         return { path: destino };
       });
 
@@ -316,10 +454,8 @@ export default defineConfig({
         ejecutarEnGit: (datos: { lab: Laboratorio; orden: string; medirCambio?: boolean }) =>
           ejecutarEnGit(datos),
         estadoDeGit: (lab: Laboratorio) => estadoDeGit(lab),
-        leerEnunciado: (numero: string) =>
-          execFileSync('cat', [join(CLON, 'labs', `lab-${numero}`, 'README.md')], {
-            encoding: 'utf8',
-          }),
+        directorioDeGit: (lab: Laboratorio) => directorioDeGit(lab),
+        leerEnunciado: (numero: string) => leerEnunciado(numero),
         // La cobertura de cada laboratorio, tal como salio de la corrida.
         anotarCobertura: (dato: Record<string, unknown>) => {
           cobertura.push(dato);
@@ -364,6 +500,8 @@ export default defineConfig({
             join(CAPTURAS, `lab-${dato.laboratorio}-movimiento.md`),
             `${lineas.join('\n')}\n`,
           );
+          // Y las imagenes comparadas entre si, con lo medido al lado.
+          compararCapturas(dato.laboratorio, dato.pasos);
           return null;
         },
         limpiar: () => {

@@ -407,7 +407,10 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
 
   // Caso 2: la actual esta contenida en la otra. Avance del puntero, sin confirmacion.
   if (esAntepasado(estado, cabeza, idOtro)) {
-    let siguiente = moverPosicionActual(estado, idOtro);
+    // El avance rapido lleva el directorio de trabajo al arbol de destino: los
+    // archivos que trae la otra rama aparecen. Sin esto, `recetas/` seguia sin
+    // existir despues de fusionar la rama que la habia creado.
+    let siguiente = sincronizarDirectorio(moverPosicionActual(estado, idOtro));
     siguiente = anotarMovimiento(siguiente, {
       id: idOtro,
       idAnterior: cabeza,
@@ -476,7 +479,9 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
     idForzado: idPrevisto,
   });
 
-  let siguiente = moverPosicionActual(creado.estado, creado.confirmacion.id);
+  let siguiente = sincronizarDirectorio(
+    moverPosicionActual(creado.estado, creado.confirmacion.id),
+  );
   siguiente = anotarMovimiento(siguiente, {
     id: creado.confirmacion.id,
     idAnterior: cabeza,

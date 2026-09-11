@@ -2639,3 +2639,98 @@ configuración de Git que el arnés escribe por el participante en
 defecto de este spec: **el arnés hace por el participante algo que el
 participante tiene que hacer en el laboratorio 01**. Si un día el laboratorio 01
 deja de configurar los alias, los cinco recorridos van a seguir en verde.
+
+---
+
+# SPEC 011 · cierre
+
+## 42. El arnés dejó de hacer cosas por el participante
+
+Era el cuarto punto de la sección 41, el de fondo, y se cerró antes de que
+ocurriera.
+
+`prepararLaboratorio` escribía la identidad y los dos alias del taller en el
+archivo de configuración de las pruebas. O sea **hacía por el participante lo
+que el participante tiene que hacer en el laboratorio 01**, y con eso se volvía
+ciego a que dejara de hacerlo: si el laboratorio 01 quitara
+`git config --global alias.lg`, los cinco recorridos habrían seguido en verde
+mientras el participante se topaba con `git: 'lg' is not a git command` en la
+primera orden del laboratorio 02.
+
+Ahora la configuración sale del enunciado del laboratorio 01, y se deja puesta
+corriendo sus propias órdenes `git config --global`. Si el enunciado no
+configura nada, el recorrido se detiene ahí con ese mensaje.
+
+Los alias se dejaron de leer de `ALIAS_DEL_TALLER` en el extractor: la tabla
+llega desde el enunciado, así que un alias que el laboratorio 01 deje de
+configurar deja de expandirse y el recorrido lo nota en los dos lados. Tres
+pruebas nuevas lo fijan, en `tests/ordenes-del-enunciado.test.ts`:
+
+- el enunciado deja puesta una identidad, sin la cual Git no confirma;
+- los alias que el simulador declara son los que el enunciado configura;
+- todo alias que algún enunciado usa lo configura el laboratorio 01.
+
+`cypress/soporte/enunciado.ts` es el lector del enunciado, aparte de
+`ordenes.ts` porque lo usan los dos lados: el arnés dentro del navegador y la
+configuración de Cypress dentro de Node, que no puede arrastrar el motor entero
+para leer un archivo de texto.
+
+## 43. La comparación mira el directorio de trabajo entero
+
+Era el segundo punto de la sección 41. `pendientesDe` descartaba todo lo que
+estuviera en orden, y por eso un directorio de trabajo entero equivocado pasó
+inadvertido.
+
+La pantalla no dibuja los archivos limpios en ninguna parte: la zona D lista
+solo lo que tiene algo pendiente. La única ventana al directorio completo es
+`ls`, así que el recorrido lo escribe como sonda y lee lo que la consola
+imprime. **La sonda no queda en el guion**: después de leerla se retrocede un
+paso en la línea de tiempo y la orden siguiente la reemplaza, igual que en Git
+una confirmación hecha desde un punto anterior corta lo que había delante. El
+recorrido, las capturas y la línea de tiempo siguen siendo los del enunciado.
+
+Encontró un defecto en la primera corrida: **la fusión movía el puntero y no
+actualizaba el directorio de trabajo**. Después de `git merge tailandesa`, que
+es un avance rápido, Git tiene `recetas/` en la carpeta y el simulador no. Es la
+misma familia de la sección 39.2, en un tercer lugar: `sincronizarDirectorio` se
+llama ahora también en las dos ramas de `git merge`.
+
+Y destapó una prueba que pasaba sin probar nada: `--abort devuelve los archivos
+al estado previo` usaba una fusión que **no choca**, así que no había nada que
+abortar y la igualdad se cumplía sola. Ahora usa `andina`, que choca sobre
+`platos.md`.
+
+## 44. Las capturas se comparan entre sí
+
+Revisar doscientas ochenta imágenes a ojo no es revisarlas. El arnés anota la
+huella de cada captura al guardarla y deja un `lab-NN-capturas.md` que cruza dos
+cosas: si la imagen cambió respecto de la del paso anterior, y qué piezas midió
+el arnés que se movieron.
+
+La fila que hay que buscar es `SIN PINTAR`: el arnés midió que algo se movió y
+la imagen quedó idéntica. Eso es un cambio que el participante no ve. El informe
+lo cuenta al final; hoy es cero en los cinco laboratorios.
+
+## 45. El laboratorio 03 queda en el 77 por ciento
+
+La pregunta del product owner: cuánto del laboratorio 03 queda cubierto ahora
+que el tramo de las exclusiones se hace en la terminal.
+
+De sus **64 órdenes**, **12 salen a la terminal**, 3 están declaradas como no
+soportadas y 1 lleva marcador de posición. Quedan **49 en pantalla, el 77 por
+ciento**.
+
+Las 12 son la sección 2.2 desde que se crea el `.gitignore`, y la parte 3
+entera. El primer aviso que se escribió era más ancho y se llevaba también
+`git rm --cached`, que es el centro del laboratorio y que el simulador hace
+perfectamente: eso habría sacado del simulador lo único que el SPEC 010
+implementó para este laboratorio. El aviso quedó acotado a lo que de verdad
+depende de que las exclusiones filtren.
+
+**El laboratorio 03 no sale del simulador.** Con 77 por ciento está por encima
+del resto del taller, y lo que enseña de verdad, la diferencia entre ignorar y
+sacar del seguimiento, ocurre entero en pantalla.
+
+La cifra es medida y no narrada: el enunciado marca sus tramos de terminal con
+la frase en negrita, `tramosDeTerminal` los lee, y el informe de cobertura de
+cada corrida trae la columna `enPantalla`.

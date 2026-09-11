@@ -192,7 +192,7 @@ Crea `.gitignore` con este contenido.
 credenciales.txt
 ```
 
-**De aquí en adelante, hasta el final de la parte 3, trabaja en tu terminal y no en el simulador.** El simulador no lee el contenido de los archivos, así que no puede aplicar las reglas de exclusión: te crea el `.gitignore` y te lo dice, pero no filtra nada. Lo que las reglas tapan solo se ve de verdad en Git.
+**Esta sección compruébala en tu terminal.** El simulador no lee el contenido de los archivos, así que no puede aplicar las reglas de exclusión: te crea el `.gitignore` y te lo dice, pero no filtra nada. Lo que sigue de la sección 2.2 solo se ve de verdad en Git. De la 2.3 en adelante vuelves al simulador, que sí hace todo lo demás.
 
 Y mira el estado.
 
@@ -278,6 +278,8 @@ Quédate con la regla. La credencial que entró a un repositorio compartido est�
 ## Parte 3 · Prevenir
 
 **Tiempo sugerido, 15 minutos.**
+
+**Esta parte entera va en tu terminal.** Trata de lo que las exclusiones tapan, y el simulador no las aplica: te diría que los archivos aparecen cuando en Git no aparecen.
 
 ### 3.1 Comprueba que las exclusiones funcionan
 

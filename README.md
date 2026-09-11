@@ -168,7 +168,7 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 548 pruebas de unidad e integracion, mas 48 de punta a punta
+Estado actual: 551 pruebas de unidad e integracion, mas 48 de punta a punta
 contra el navegador. 94 por ciento de cobertura de lineas. Las de las
 semillas y las de los laboratorios ejecutan Git de verdad y se llevan la mayor
 parte del minuto que tarda la suite.

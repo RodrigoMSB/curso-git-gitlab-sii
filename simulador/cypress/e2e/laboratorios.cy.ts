@@ -13,6 +13,7 @@
  */
 
 import {
+  aliasDelTaller,
   direccionDelSimulador,
   ordenesDe,
   resolverMarcadores,
@@ -183,6 +184,39 @@ function limiteEnElSimulador(): Cypress.Chainable<boolean> {
 }
 
 /**
+ * El directorio de trabajo que el simulador muestra, incluido lo limpio.
+ *
+ * La pantalla no dibuja los archivos limpios en ninguna parte: la zona D lista
+ * solo lo que tiene algo pendiente. La unica ventana al directorio completo es
+ * `ls`, asi que se escribe `ls` como sonda y se lee lo que la consola imprime.
+ *
+ * **La sonda no queda en el guion.** Despues de leerla se retrocede un paso en
+ * la linea de tiempo, y la orden siguiente la reemplaza, igual que en Git una
+ * confirmacion nueva hecha desde un punto anterior corta lo que habia delante.
+ * Asi el recorrido, las capturas y la linea de tiempo siguen siendo los del
+ * enunciado y no los del arnes.
+ */
+function directorioDelSimulador(): Cypress.Chainable<readonly string[]> {
+  ejecutarEnElSimulador('ls');
+  return cy
+    .document()
+    .then((doc) => {
+      const renglones = [...doc.querySelectorAll<HTMLElement>('[data-color]')];
+      const ultimoEco = renglones.map((renglon) => renglon.dataset.color).lastIndexOf('orden');
+      return renglones
+        .slice(ultimoEco + 1)
+        .map((renglon) => (renglon.textContent ?? '').trim())
+        .filter((entrada) => entrada !== '')
+        .sort((una, otra) => una.localeCompare(otra));
+    })
+    .then((entradas) => {
+      // Se deshace la sonda: la orden siguiente ocupa su lugar.
+      cy.contains('button', 'retroceder').click();
+      return cy.wrap(entradas, { log: false });
+    });
+}
+
+/**
  * Guarda la pantalla completa despues de una orden (punto 3 del SPEC 011).
  *
  * El nombre lleva el laboratorio, el numero de paso y la orden, de modo que la
@@ -241,6 +275,8 @@ function recorrer(numero: string): void {
    * acertar solo. El enunciado no lo decia en ninguna parte y nadie se entero.
    */
   let direccion = '';
+  /** Alias del taller, sacados del enunciado del laboratorio 01. */
+  let alias: Readonly<Record<string, string>> = {};
   /** Lo pintado y lo que Git decia tras la orden anterior, para saber si se movio. */
   let dibujadoAnterior: string | null = null;
   let gitAnterior = '';
@@ -248,8 +284,13 @@ function recorrer(numero: string): void {
   const movimiento: { paso: number; orden: string; piezas: Readonly<Record<Pieza, string>> }[] = [];
 
   before(() => {
+    // Los alias del taller salen del enunciado del laboratorio 01, que es donde
+    // el participante los configura. El arnes no los escribe.
+    cy.task<string>('leerEnunciado', '01').then((primero) => {
+      alias = aliasDelTaller(primero);
+    });
     cy.task<string>('leerEnunciado', numero).then((enunciado) => {
-      ordenes = resolverMarcadores(ordenesDe(enunciado), numero);
+      ordenes = resolverMarcadores(ordenesDe(enunciado, alias), numero, alias);
       direccion = direccionDelSimulador(enunciado, numero) ?? '';
     });
     cy.task<Laboratorio>('prepararLaboratorio', numero).then((preparado) => {
@@ -274,6 +315,16 @@ function recorrer(numero: string): void {
         expect(simulador.ramas, 'ramas').to.deep.equal(git.ramas);
         expect(simulador.posicion, 'posicion').to.equal(git.posicion);
         expect(pendientesDe(simulador), 'archivos').to.deep.equal(pendientesDe(git));
+      });
+    });
+
+    // Y el directorio completo, no solo lo que tiene algo pendiente.
+    cy.task<readonly string[]>('directorioDeGit', lab).then((git) => {
+      directorioDelSimulador().then((simulador) => {
+        expect(
+          simulador,
+          `directorio de trabajo al abrir el laboratorio ${numero}`,
+        ).to.deep.equal([...git]);
       });
     });
 
@@ -416,6 +467,22 @@ function recorrer(numero: string): void {
               piezas: dibujo.piezas,
             });
           });
+
+          // Y el directorio de trabajo entero, **incluido lo que esta limpio**.
+          //
+          // Comparar solo lo pendiente dejo pasar un directorio completo
+          // equivocado: sobre la rama `mexicana`, abierta tres confirmaciones
+          // atras, el simulador seguia mostrando recetas que ahi no existian, y
+          // todas estaban limpias. Va al final porque la sonda escribe `ls` y
+          // despues retrocede: lo demas se lee antes de tocar nada.
+          cy.task<readonly string[]>('directorioDeGit', lab).then((enDisco) => {
+            directorioDelSimulador().then((enPantalla) => {
+              expect(
+                enPantalla,
+                `directorio de trabajo tras «${orden.texto}» (enunciado, linea ${orden.linea})`,
+              ).to.deep.equal([...enDisco]);
+            });
+          });
         });
       }
     });
@@ -453,7 +520,7 @@ function recorrer(numero: string): void {
       const cuenta = resumen(ordenes);
       const declaradas = ordenes.filter((orden) => orden.clase === 'declarada');
       cy.log(
-        `lab-${numero}: ${cuenta.comparadas} comparadas, ${cuenta.declaradas} declaradas, ${cuenta.omitidas} con marcador`,
+        `lab-${numero}: ${cuenta.comparadas} comparadas, ${cuenta.declaradas} declaradas, ${cuenta.omitidas} con marcador, ${cuenta.enTerminal} en terminal`,
       );
       cy.task('anotarCobertura', {
         laboratorio: numero,
@@ -461,6 +528,10 @@ function recorrer(numero: string): void {
         comparadas: cuenta.comparadas,
         declaradas: cuenta.declaradas,
         conMarcador: cuenta.omitidas,
+        // Las que el enunciado saca del simulador a proposito, y el porcentaje
+        // del guion que queda en pantalla.
+        enTerminal: cuenta.enTerminal,
+        enPantalla: `${cuenta.enPantalla} %`,
       });
       // eslint-disable-next-line no-console
       console.table(

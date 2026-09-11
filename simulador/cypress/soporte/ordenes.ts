@@ -20,12 +20,31 @@
  * `src/core/contrato.ts`, que es el unico lugar donde vive el contrato, y este
  * modulo lo consulta. Tener dos listas fue lo que dejo al extractor creyendo
  * que `git config --list` no estaba implementado cuando si lo estaba.
+ *
+ * **Y el arnes no hace nada por el participante.** La configuracion de Git, los
+ * alias incluidos, sale del enunciado del laboratorio 01, que es donde el
+ * participante la deja puesta. El arnes la escribia a mano, o sea le resolvia
+ * al recorrido algo que el participante tiene que hacer: si el laboratorio 01
+ * dejara de configurar `git lg`, los cinco recorridos habrian seguido en verde
+ * mientras el participante se topaba con `git: 'lg' is not a git command`. Es
+ * la misma forma del defecto del SPEC 011, donde el arnes escribia la
+ * direccion del simulador.
  */
 
 import { ORDENES_GIT, ORDENES_INTERPRETE } from '../../src/core';
 import { tokenizar } from '../../src/core/analizador';
 import { formaSinSoporte, opcionesNoReconocidas } from '../../src/core/contrato';
-import { ALIAS_DEL_TALLER, declaracionPorId } from '../../src/escenarios';
+import { declaracionPorId } from '../../src/escenarios';
+import { bloquesDe, enTerminal, tramosDeTerminal } from './enunciado';
+
+export {
+  aliasDelTaller,
+  bloquesDe,
+  configuracionDelTaller,
+  enTerminal,
+  tramosDeTerminal,
+} from './enunciado';
+export type { Configuracion } from './enunciado';
 
 /** Que hacer con una linea del enunciado. */
 export type Clase =
@@ -43,7 +62,16 @@ export interface OrdenDelEnunciado {
   readonly motivo: string;
   /** Numero de linea del enunciado, para que un fallo se pueda ubicar. */
   readonly linea: number;
+  /**
+   * El enunciado manda hacer esta orden en la terminal, no en el simulador.
+   *
+   * Se sigue ejecutando y comparando en los dos lados, porque en los dos hace
+   * lo mismo. Lo que cambia es la cuenta: no se puede contar como cubierta por
+   * el simulador una orden que el enunciado saca del simulador.
+   */
+  readonly terminal: boolean;
 }
+
 
 /**
  * Reemplaza `git lg` por la orden larga que abrevia.
@@ -52,12 +80,16 @@ export interface OrdenDelEnunciado {
  * el laboratorio 01 y desde ahi los escribe en todos los demas. Clasificar
  * `git lg` sin expandirlo diria que el motor no la conoce, cuando lo que hay
  * que preguntarse es si conoce `git log` con esas opciones.
+ *
+ * La tabla llega desde afuera y no se lee de `ALIAS_DEL_TALLER`: si el
+ * enunciado del laboratorio 01 deja de configurar uno, aqui deja de expandirse
+ * y el recorrido lo nota.
  */
-export function expandirAlias(texto: string): string {
+export function expandirAlias(texto: string, alias: Readonly<Record<string, string>>): string {
   const piezas = texto.split(/\s+/);
   if (piezas[0] !== 'git') return texto;
   const sub = piezas[1] ?? '';
-  const valor = (ALIAS_DEL_TALLER as Readonly<Record<string, string>>)[sub];
+  const valor = alias[sub];
   if (valor === undefined) return texto;
   return ['git', valor, ...piezas.slice(2)].join(' ');
 }
@@ -68,8 +100,8 @@ export function expandirAlias(texto: string): string {
  * Se le pregunta al propio motor en vez de mantener una lista a mano: el dia
  * que aprenda una orden nueva, la prueba la recoge sola.
  */
-function verboConocido(texto: string): boolean {
-  const piezas = expandirAlias(texto).split(/\s+/);
+function verboConocido(texto: string, alias: Readonly<Record<string, string>>): boolean {
+  const piezas = expandirAlias(texto, alias).split(/\s+/);
   const primera = piezas[0] ?? '';
   if (primera !== 'git') return Object.hasOwn(ORDENES_INTERPRETE, primera);
   const sub = piezas[1] ?? '';
@@ -82,8 +114,11 @@ function verboConocido(texto: string): boolean {
  * Devuelve el motivo cuando la declara no soportada, y `null` cuando se
  * compromete a ejecutarla entera.
  */
-export function motivoDeclarado(texto: string): string | null {
-  const expandida = expandirAlias(texto);
+export function motivoDeclarado(
+  texto: string,
+  alias: Readonly<Record<string, string>>,
+): string | null {
+  const expandida = expandirAlias(texto, alias);
   const forma = formaSinSoporte(expandida);
   if (forma !== undefined) return forma.motivo;
 
@@ -121,50 +156,31 @@ function pareceOrden(linea: string): boolean {
     primera.startsWith('./');
 }
 
-/** Saca los bloques cercados del enunciado, en orden, con su numero de linea. */
-export function bloquesDe(enunciado: string): readonly { linea: number; contenido: string }[] {
-  const bloques: { linea: number; contenido: string }[] = [];
-  const lineas = enunciado.split('\n');
-  let dentro = false;
-  let inicio = 0;
-  let acumulado: string[] = [];
-
-  lineas.forEach((linea, indice) => {
-    if (linea.trimEnd() === '```') {
-      if (dentro) {
-        bloques.push({ linea: inicio + 1, contenido: acumulado.join('\n') });
-        acumulado = [];
-      } else {
-        inicio = indice + 1;
-      }
-      dentro = !dentro;
-      return;
-    }
-    if (dentro) acumulado.push(linea);
-  });
-  return bloques;
-}
 
 /** Clasifica una linea de orden segun lo que el motor se compromete a hacer con ella. */
-function clasificar(texto: string, linea: number): OrdenDelEnunciado {
+function clasificar(
+  texto: string,
+  linea: number,
+  alias: Readonly<Record<string, string>>,
+): OrdenDelEnunciado {
   const noEjecutable = NO_EJECUTABLES.find((regla) => regla.patron.test(texto));
   if (noEjecutable !== undefined) {
-    return { texto, clase: 'omitida', motivo: noEjecutable.motivo, linea };
+    return { texto, clase: 'omitida', motivo: noEjecutable.motivo, linea, terminal: false };
   }
 
-  const declarado = motivoDeclarado(texto);
+  const declarado = motivoDeclarado(texto, alias);
   if (declarado !== null) {
-    return { texto, clase: 'declarada', motivo: declarado, linea };
+    return { texto, clase: 'declarada', motivo: declarado, linea, terminal: false };
   }
 
-  if (!verboConocido(texto)) {
+  if (!verboConocido(texto, alias)) {
     const verbo = texto.startsWith('git ')
       ? texto.split(/\s+/).slice(0, 2).join(' ')
       : (texto.split(/\s+/)[0] ?? texto);
-    return { texto, clase: 'declarada', motivo: `el verbo «${verbo}»`, linea };
+    return { texto, clase: 'declarada', motivo: `el verbo «${verbo}»`, linea, terminal: false };
   }
 
-  return { texto, clase: 'comparada', motivo: '', linea };
+  return { texto, clase: 'comparada', motivo: '', linea, terminal: false };
 }
 
 /**
@@ -184,7 +200,10 @@ function clasificar(texto: string, linea: number): OrdenDelEnunciado {
  * (seccion 25 de docs/arquitectura.md) y el simulador no versiona contenido.
  * Lo que importa es que el archivo exista en los dos lados con el mismo nombre.
  */
-function creacionesDeArchivo(enunciado: string): readonly OrdenDelEnunciado[] {
+function creacionesDeArchivo(
+  enunciado: string,
+  alias: Readonly<Record<string, string>>,
+): readonly OrdenDelEnunciado[] {
   const lineas = enunciado.split('\n');
   const bloques = bloquesDe(enunciado);
   const ordenes: OrdenDelEnunciado[] = [];
@@ -200,36 +219,40 @@ function creacionesDeArchivo(enunciado: string): readonly OrdenDelEnunciado[] {
     if (contenido === undefined || contenido.linea > indice + 6) return;
 
     const carpeta = ruta.includes('/') ? ruta.slice(0, ruta.lastIndexOf('/')) : '';
-    if (carpeta !== '') ordenes.push(clasificar(`mkdir -p ${carpeta}`, indice + 1));
+    if (carpeta !== '') ordenes.push(clasificar(`mkdir -p ${carpeta}`, indice + 1, alias));
     // El contenido es una linea neutra y no el del enunciado, por dos razones.
     // El motor no versiona contenido (restriccion R4), asi que ningun lado lo
     // compara; y copiar el contenido de verdad encenderia efectos que el motor
     // no modela, como que un `.gitignore` con `*.tmp` filtre en Git y no en el
     // simulador. Escribir el nombre del archivo tampoco sirve: un `.gitignore`
     // que se nombra a si mismo se ignora, y Git deja de mostrarlo.
-    ordenes.push(clasificar(`echo "contenido de ejemplo" > ${ruta}`, indice + 1));
+    ordenes.push(clasificar(`echo "contenido de ejemplo" > ${ruta}`, indice + 1, alias));
   });
 
   return ordenes;
 }
 
 /** Clasifica cada linea de orden del enunciado, en el orden en que aparece. */
-export function ordenesDe(enunciado: string): readonly OrdenDelEnunciado[] {
+export function ordenesDe(
+  enunciado: string,
+  alias: Readonly<Record<string, string>>,
+): readonly OrdenDelEnunciado[] {
   const ordenes: OrdenDelEnunciado[] = [];
 
   for (const bloque of bloquesDe(enunciado)) {
     bloque.contenido.split('\n').forEach((cruda, desplazamiento) => {
       const texto = cruda.trim();
       if (texto === '' || !pareceOrden(texto)) return;
-      ordenes.push(clasificar(texto, bloque.linea + desplazamiento));
+      ordenes.push(clasificar(texto, bloque.linea + desplazamiento, alias));
     });
   }
 
   // Los archivos que el enunciado manda crear entran en el lugar del guion
   // donde el enunciado los pide, que es antes del `git add` que los prepara.
-  return [...ordenes, ...creacionesDeArchivo(enunciado)].sort(
-    (una, otra) => una.linea - otra.linea,
-  );
+  const tramos = tramosDeTerminal(enunciado);
+  return [...ordenes, ...creacionesDeArchivo(enunciado, alias)]
+    .sort((una, otra) => una.linea - otra.linea)
+    .map((orden) => ({ ...orden, terminal: enTerminal(tramos, orden.linea) }));
 }
 
 /**
@@ -240,7 +263,10 @@ export function ordenesDe(enunciado: string): readonly OrdenDelEnunciado[] {
  * recorrido no las ejecute: varias solo tienen sentido sobre un repositorio en
  * un estado que el guion no produce.
  */
-export function ordenesEnProsa(enunciado: string): readonly OrdenDelEnunciado[] {
+export function ordenesEnProsa(
+  enunciado: string,
+  alias: Readonly<Record<string, string>>,
+): readonly OrdenDelEnunciado[] {
   const lineas = enunciado.split('\n');
   const inicio = lineas.findIndex((linea) => /^##\s+Si algo sali/.test(linea));
   if (inicio < 0) return [];
@@ -255,7 +281,7 @@ export function ordenesEnProsa(enunciado: string): readonly OrdenDelEnunciado[] 
       const texto = (coincidencia[1] ?? '').trim();
       if (!pareceOrden(texto) || vistas.has(texto)) continue;
       vistas.add(texto);
-      ordenes.push(clasificar(texto, indice + 1));
+      ordenes.push(clasificar(texto, indice + 1, alias));
     }
   }
   return ordenes;
@@ -267,12 +293,22 @@ export function resumen(ordenes: readonly OrdenDelEnunciado[]): {
   readonly comparadas: number;
   readonly declaradas: number;
   readonly omitidas: number;
+  /** Las que el enunciado manda hacer en la terminal y no en el simulador. */
+  readonly enTerminal: number;
+  /** Porcentaje del guion que el participante puede seguir en la pantalla. */
+  readonly enPantalla: number;
 } {
+  const total = ordenes.length;
+  const terminal = ordenes.filter((orden) => orden.terminal).length;
+  const fuera =
+    ordenes.filter((orden) => orden.clase !== 'comparada' || orden.terminal).length;
   return {
-    total: ordenes.length,
+    total,
     comparadas: ordenes.filter((orden) => orden.clase === 'comparada').length,
     declaradas: ordenes.filter((orden) => orden.clase === 'declarada').length,
     omitidas: ordenes.filter((orden) => orden.clase === 'omitida').length,
+    enTerminal: terminal,
+    enPantalla: total === 0 ? 0 : Math.round(((total - fuera) / total) * 100),
   };
 }
 
@@ -295,6 +331,7 @@ export function resumen(ordenes: readonly OrdenDelEnunciado[]): {
 export function resolverMarcadores(
   ordenes: readonly OrdenDelEnunciado[],
   numeroDeLaboratorio: string,
+  alias: Readonly<Record<string, string>>,
 ): readonly OrdenDelEnunciado[] {
   const declaracion = declaracionPorId(`lab-${numeroDeLaboratorio}`);
   if (declaracion === undefined) return ordenes;
@@ -311,7 +348,7 @@ export function resolverMarcadores(
     if (orden.clase !== 'omitida') return orden;
     const sustitucion = sustituciones.find((candidata) => candidata.patron.test(orden.texto));
     if (sustitucion === undefined || sustitucion.valor === undefined) return orden;
-    return clasificar(orden.texto.replace('<archivo>', sustitucion.valor), orden.linea);
+    return clasificar(orden.texto.replace('<archivo>', sustitucion.valor), orden.linea, alias);
   });
 }
 

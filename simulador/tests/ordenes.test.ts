@@ -782,8 +782,13 @@ describe('git merge', () => {
   });
 
   it('--abort devuelve los archivos al estado previo', () => {
-    const partida = repoConRamaDesdeMain();
-    const despues = correr(partida, 'git merge tailandesa', 'git merge --abort');
+    // Con una fusion que no choca no hay nada que abortar, y la prueba pasaba
+    // sin ejercitar el aborto. `andina` choca sobre platos.md.
+    const partida = repoConRamas();
+    const enConflicto = correr(partida, 'git merge andina');
+    expect(enConflicto.fusion).not.toBeNull();
+
+    const despues = correr(enConflicto, 'git merge --abort');
 
     expect(despues.fusion).toBeNull();
     expect(despues.archivos).toEqual(partida.archivos);

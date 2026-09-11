@@ -11,12 +11,15 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { ORDENES_GIT } from '../src/core';
 import { ejecutar } from '../src/core/motor';
 import { EQUIVALENTES, OPCIONES } from '../src/core/contrato';
-import { escenarioPorId } from '../src/escenarios';
+import { ALIAS_DEL_TALLER, escenarioPorId } from '../src/escenarios';
 import {
   bloquesDe,
   motivoDeclarado,
+  aliasDelTaller,
+  configuracionDelTaller,
   ordenesDe,
   ordenesEnProsa,
   resolverMarcadores,
@@ -29,6 +32,14 @@ const MOTOR = fileURLToPath(new URL('../src/core', import.meta.url));
 const LABS = fileURLToPath(new URL('../../labs', import.meta.url));
 const enunciado = (numero: string): string =>
   readFileSync(`${LABS}/lab-${numero}/README.md`, 'utf8');
+
+/**
+ * Los alias del taller, sacados del enunciado del laboratorio 01.
+ *
+ * No se escriben aqui: es donde el participante los configura, y es la unica
+ * fuente desde el SPEC 011.
+ */
+const ALIAS = aliasDelTaller(enunciado('01'));
 
 describe('los bloques salen del enunciado, en orden', () => {
   it('toma solo lo que va entre cercas', () => {
@@ -43,7 +54,7 @@ describe('los bloques salen del enunciado, en orden', () => {
 
   it('deja fuera lo que no es una orden', () => {
     // Los enunciados muestran el contenido de los archivos en bloques iguales.
-    const ordenes = ordenesDe('```\n# Platos\n\n- cazuela\n- curanto\n```\n');
+    const ordenes = ordenesDe('```\n# Platos\n\n- cazuela\n- curanto\n```\n', ALIAS);
     expect(ordenes).toEqual([]);
   });
 });
@@ -51,7 +62,7 @@ describe('los bloques salen del enunciado, en orden', () => {
 describe('la clasificacion no salta nada en silencio', () => {
   it('cada orden saltada lleva su motivo', () => {
     for (const numero of ['01', '02', '03']) {
-      for (const orden of ordenesDe(enunciado(numero))) {
+      for (const orden of ordenesDe(enunciado(numero), ALIAS)) {
         if (orden.clase === 'comparada') continue;
         expect(orden.motivo, `${numero}: ${orden.texto}`).to.not.equal('');
       }
@@ -59,7 +70,7 @@ describe('la clasificacion no salta nada en silencio', () => {
   });
 
   it('lo que lleva un marcador de posicion no se ejecuta a ciegas', () => {
-    const ordenes = ordenesDe('```\ngit show <identificador>\n```\n');
+    const ordenes = ordenesDe('```\ngit show <identificador>\n```\n', ALIAS);
     expect(ordenes[0]?.clase).toBe('omitida');
     expect(ordenes[0]?.motivo).toContain('marcador de posicion');
   });
@@ -67,14 +78,14 @@ describe('la clasificacion no salta nada en silencio', () => {
   it('lo que el motor no conoce se marca para correrse solo en Git', () => {
     // El verbo se consulta contra la tabla de ordenes del propio motor: el dia
     // que aprenda una orden nueva, la prueba la recoge sola.
-    const ordenes = ordenesDe('```\ngit bisect start\ngit status\n```\n');
+    const ordenes = ordenesDe('```\ngit bisect start\ngit status\n```\n', ALIAS);
     expect(ordenes[0]?.clase).toBe('declarada');
     expect(ordenes[0]?.motivo).toContain('git bisect');
     expect(ordenes[1]?.clase).toBe('comparada');
   });
 
   it('mirar dentro de la carpeta oculta se corre solo en Git', () => {
-    const ordenes = ordenesDe('```\ncat .git/HEAD\n```\n');
+    const ordenes = ordenesDe('```\ncat .git/HEAD\n```\n', ALIAS);
     expect(ordenes[0]?.clase).toBe('declarada');
     expect(ordenes[0]?.motivo).toContain('carpeta oculta');
   });
@@ -84,7 +95,7 @@ describe('los marcadores que si se pueden resolver salen del escenario', () => {
   it('el archivo a descartar y el archivo a sacar de la preparacion', () => {
     // No se escriben a mano: se leen de la declaracion del escenario, que es
     // la unica fuente de la forma del laboratorio (SPEC 007).
-    const ordenes = resolverMarcadores(ordenesDe(enunciado('02')), '02');
+    const ordenes = resolverMarcadores(ordenesDe(enunciado('02'), ALIAS), '02', ALIAS);
     const textos = ordenes.map((orden) => orden.texto);
     expect(textos).toContain('git restore ingredientes.md');
     expect(textos).toContain('git restore --staged cocineros.md');
@@ -92,8 +103,8 @@ describe('los marcadores que si se pueden resolver salen del escenario', () => {
   });
 
   it('resolverlos convierte dos pasos centrales en comparados', () => {
-    const antes = resumen(ordenesDe(enunciado('02')));
-    const despues = resumen(resolverMarcadores(ordenesDe(enunciado('02')), '02'));
+    const antes = resumen(ordenesDe(enunciado('02'), ALIAS));
+    const despues = resumen(resolverMarcadores(ordenesDe(enunciado('02'), ALIAS), '02', ALIAS));
     expect(despues.comparadas).toBe(antes.comparadas + 2);
     expect(despues.omitidas).toBe(antes.omitidas - 2);
   });
@@ -101,7 +112,7 @@ describe('los marcadores que si se pueden resolver salen del escenario', () => {
   it('los que nombran un identificador se quedan sin resolver', () => {
     // Los identificadores del simulador y los de Git no coinciden por diseño:
     // no hay un unico valor que sirva en los dos lados.
-    const ordenes = resolverMarcadores(ordenesDe(enunciado('03')), '03');
+    const ordenes = resolverMarcadores(ordenesDe(enunciado('03'), ALIAS), '03', ALIAS);
     expect(ordenes.filter((orden) => orden.texto.includes('<')).length).toBeGreaterThan(0);
   });
 });
@@ -115,7 +126,7 @@ describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
 
   function guionDe(numero: string): readonly OrdenDelEnunciado[] {
     const texto = enunciado(numero);
-    return [...resolverMarcadores(ordenesDe(texto), numero), ...ordenesEnProsa(texto)];
+    return [...resolverMarcadores(ordenesDe(texto, ALIAS), numero, ALIAS), ...ordenesEnProsa(texto, ALIAS)];
   }
 
   it('cada orden del guion cae en una de las tres respuestas, con motivo escrito', () => {
@@ -171,7 +182,7 @@ describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
     for (const numero of LABORATORIOS) {
       for (const orden of guionDe(numero)) {
         if (orden.clase !== 'comparada') continue;
-        expect(motivoDeclarado(orden.texto), `lab-${numero}: ${orden.texto}`).toBeNull();
+        expect(motivoDeclarado(orden.texto, ALIAS), `lab-${numero}: ${orden.texto}`).toBeNull();
       }
     }
   });
@@ -185,7 +196,7 @@ describe('lo que queda declarado, y por que', () => {
     const conMarcador: string[] = [];
     for (const numero of ['01', '02', '03', '04', '05', '06']) {
       const texto = enunciado(numero);
-      for (const orden of resolverMarcadores(ordenesDe(texto), numero)) {
+      for (const orden of resolverMarcadores(ordenesDe(texto, ALIAS), numero, ALIAS)) {
         if (orden.clase === 'omitida' && orden.motivo.includes('marcador')) {
           conMarcador.push(`${numero}: ${orden.texto}`);
         }
@@ -198,7 +209,7 @@ describe('lo que queda declarado, y por que', () => {
     const familias = new Set<string>();
     for (const numero of ['01', '02', '03', '04', '05', '06']) {
       const texto = enunciado(numero);
-      for (const orden of [...resolverMarcadores(ordenesDe(texto), numero), ...ordenesEnProsa(texto)]) {
+      for (const orden of [...resolverMarcadores(ordenesDe(texto, ALIAS), numero, ALIAS), ...ordenesEnProsa(texto, ALIAS)]) {
         if (orden.clase !== 'declarada') continue;
         familias.add(orden.motivo);
       }
@@ -206,5 +217,50 @@ describe('lo que queda declarado, y por que', () => {
     // Cada motivo distinto es una decision tomada y escrita en el contrato.
     for (const motivo of familias) expect(motivo.length).toBeGreaterThan(10);
     expect(familias.size).toBeLessThanOrEqual(10);
+  });
+});
+
+/**
+ * La configuracion del taller tiene una sola fuente (SPEC 011, punto 2 del
+ * encargo posterior).
+ *
+ * El arnes de punta a punta escribia la identidad y los dos alias a mano, o sea
+ * hacia por el participante lo que el participante tiene que hacer en el
+ * laboratorio 01. Con esa copia puesta, el laboratorio 01 podia dejar de
+ * configurar `git lg` y los cinco recorridos seguian en verde mientras el
+ * participante se topaba con `git: 'lg' is not a git command`.
+ */
+describe('la configuracion del taller sale del enunciado del laboratorio 01', () => {
+  it('el enunciado deja puesta una identidad, sin la cual Git no confirma', () => {
+    const puesta = new Map(configuracionDelTaller(enunciado('01')));
+
+    expect(puesta.get('user.name'), 'user.name').toBeTypeOf('string');
+    expect(puesta.get('user.email'), 'user.email').toBeTypeOf('string');
+  });
+
+  it('los alias que declara el simulador son los que configura el enunciado', () => {
+    // Si esta prueba falla, las dos fuentes se separaron: o el enunciado dejo
+    // de configurar un alias que el simulador cree puesto, o al reves.
+    expect(aliasDelTaller(enunciado('01'))).toEqual({ ...ALIAS_DEL_TALLER });
+  });
+
+  it('todo alias que algun enunciado usa lo configura el laboratorio 01', () => {
+    const configurados = Object.keys(ALIAS);
+
+    for (const numero of ['01', '02', '03', '04', '05', '06']) {
+      for (const orden of ordenesDe(enunciado(numero), ALIAS)) {
+        const piezas = orden.texto.split(/\s+/);
+        if (piezas[0] !== 'git') continue;
+        const sub = piezas[1] ?? '';
+        // `git --version` no nombra una suborden, nombra una opcion de Git.
+        if (sub.startsWith('-')) continue;
+        // Un verbo que el motor no conoce y que tampoco esta configurado como
+        // alias solo puede ser un alias que nadie dejo puesto.
+        if (Object.hasOwn(ORDENES_GIT, sub) || configurados.includes(sub)) continue;
+        expect.fail(
+          `lab-${numero} usa «git ${sub}», que ni es una orden de Git ni un alias que el laboratorio 01 configure`,
+        );
+      }
+    }
   });
 });
