@@ -12,8 +12,15 @@
  * `cypress/soporte/ordenes.ts`.
  */
 
-import { ordenesDe, resolverMarcadores, resumen } from '../soporte/ordenes';
+import {
+  direccionDelSimulador,
+  ordenesDe,
+  resolverMarcadores,
+  resumen,
+} from '../soporte/ordenes';
 import type { OrdenDelEnunciado } from '../soporte/ordenes';
+import { cabeDentro, dibujoDelGrafo, nodosSolidosPintados, PIEZAS } from '../soporte/dibujo';
+import type { Pieza } from '../soporte/dibujo';
 
 interface EstadoComparable {
   readonly historia: readonly string[];
@@ -175,6 +182,28 @@ function limiteEnElSimulador(): Cypress.Chainable<boolean> {
   });
 }
 
+/**
+ * Guarda la pantalla completa despues de una orden (punto 3 del SPEC 011).
+ *
+ * El nombre lleva el laboratorio, el numero de paso y la orden, de modo que la
+ * secuencia se sigue ordenando los archivos y sin abrir ningun indice. Se
+ * captura la pagina entera y no el panel del grafo: si el problema fuera de
+ * disposicion, o de que el dibujo quedara fuera de la vista, recortar el panel
+ * lo escondería.
+ *
+ * Son unas trescientas imagenes por corrida, a proposito: el punto 3.1 pide el
+ * recorrido completo y no una muestra. Van a `docs/capturas-recorrido`, que
+ * queda fuera del seguimiento.
+ */
+function capturar(laboratorio: string, paso: number, orden: string): void {
+  const limpia = orden
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70);
+  const nombre = `lab-${laboratorio}/paso-${String(paso).padStart(3, '0')}-${limpia}`;
+  cy.screenshot(nombre, { capture: 'fullPage', overwrite: true, log: false });
+}
+
 /** Escribe la orden en la consola y la ejecuta, como lo haria el participante. */
 function ejecutarEnElSimulador(orden: string): void {
   // Con retardo cero el campo controlado por React llega a perder el primer
@@ -204,18 +233,41 @@ function ejecutarEnElSimulador(orden: string): void {
 function recorrer(numero: string): void {
   let lab: Laboratorio;
   let ordenes: readonly OrdenDelEnunciado[] = [];
+  /**
+   * La direccion sale del enunciado, no de aqui.
+   *
+   * Hasta el SPEC 011 el arnes escribia `?lab=NN` a mano en cada `cy.visit`, y
+   * con eso le resolvia al recorrido lo unico que el participante tiene que
+   * acertar solo. El enunciado no lo decia en ninguna parte y nadie se entero.
+   */
+  let direccion = '';
+  /** Lo pintado y lo que Git decia tras la orden anterior, para saber si se movio. */
+  let dibujadoAnterior: string | null = null;
+  let gitAnterior = '';
+  /** Que pieza se movio en cada paso, para el informe del punto 4.1. */
+  const movimiento: { paso: number; orden: string; piezas: Readonly<Record<Pieza, string>> }[] = [];
 
   before(() => {
     cy.task<string>('leerEnunciado', numero).then((enunciado) => {
       ordenes = resolverMarcadores(ordenesDe(enunciado), numero);
+      direccion = direccionDelSimulador(enunciado, numero) ?? '';
     });
     cy.task<Laboratorio>('prepararLaboratorio', numero).then((preparado) => {
       lab = preparado;
     });
   });
 
+  it('el enunciado dice con que direccion se abre el simulador', () => {
+    cy.then(() => {
+      expect(
+        direccion,
+        `el enunciado del laboratorio ${numero} tiene que decir «SIMULADOR.html?lab=${numero}»: sin eso el participante abre el simulador con doble clic y cae en el escenario del laboratorio 01`,
+      ).to.equal(`/SIMULADOR.html?lab=${numero}`);
+    });
+  });
+
   it('el punto de partida es el mismo en los dos lados', () => {
-    cy.visit(`/SIMULADOR.html?lab=${numero}`);
+    cy.visit(direccion);
     cy.task<EstadoComparable>('estadoDeGit', lab).then((git) => {
       estadoDelSimulador().then((simulador) => {
         expect(simulador.historia, 'historia').to.deep.equal([...git.historia].sort());
@@ -224,16 +276,52 @@ function recorrer(numero: string): void {
         expect(pendientesDe(simulador), 'archivos').to.deep.equal(pendientesDe(git));
       });
     });
+
+    // Y lo que de verdad se pinta. Que el documento lleve los atributos no
+    // significa que el participante vea nada: el defecto del SPEC 011 tenia
+    // todos los atributos en su sitio, porque no habia ni un solo nodo.
+    cy.task<EstadoComparable>('estadoDeGit', lab).then((git) => {
+      dibujoDelGrafo().then((dibujo) => {
+        expect(
+          dibujo.hay,
+          `el panel del grafo tiene que dibujar el SVG al abrir el laboratorio ${numero}; muestra «${dibujo.leyendaVacia ?? ''}»`,
+        ).to.equal(true);
+        const pintados = nodosSolidosPintados(dibujo);
+        // El grafo dibuja el repositorio entero y `git log` solo lo alcanzable
+        // desde donde esta parado el participante, asi que en un laboratorio
+        // con ramas paralelas el grafo tiene mas nodos. Lo que se exige es que
+        // no falte ninguna: toda confirmacion que la terminal muestra tiene que
+        // estar pintada.
+        expect(
+          pintados.map((nodo) => nodo.mensaje),
+          `confirmaciones pintadas al abrir el laboratorio ${numero}`,
+        ).to.include.members([...git.historia]);
+        for (const nodo of pintados) {
+          expect(nodo.visible, `la confirmacion «${nodo.mensaje}» se pinta`).to.equal(true);
+          expect(
+            cabeDentro(nodo.caja, dibujo.panel ?? nodo.caja),
+            `la confirmacion «${nodo.mensaje}» se pinta dentro del panel del grafo`,
+          ).to.equal(true);
+        }
+      });
+    });
   });
 
   it('cada orden del enunciado deja los dos lados en el mismo estado', () => {
-    cy.visit(`/SIMULADOR.html?lab=${numero}`);
+    cy.visit(direccion);
+    capturar(numero, 0, 'estado inicial');
 
     cy.then(() => {
+      let paso = 0;
       for (const orden of ordenes) {
         if (orden.clase === 'omitida') continue;
+        paso += 1;
+        const numeroDePaso = paso;
 
         ejecutarEnElSimulador(orden.texto);
+        // La captura va aqui, despues de cada orden y antes de comparar: si la
+        // comparacion falla, la imagen del momento ya quedo guardada.
+        capturar(numero, numeroDePaso, orden.texto);
         cy.task<{ salida: string; fallo: boolean; cambio: boolean }>('ejecutarEnGit', {
           lab,
           orden: orden.texto,
@@ -282,8 +370,81 @@ function recorrer(numero: string): void {
               git.guardados.length,
             );
           });
+
+          // Y ahora lo que el navegador pinto (SPEC 011).
+          //
+          // Comparar los dos modelos no dice nada sobre el dibujo: el defecto
+          // que abrio este spec tenia los dos lados coincidiendo en que no
+          // habia ninguna confirmacion, y era verdad, y la pantalla estaba
+          // vacia de punta a punta.
+          //
+          // La regla es simple y no admite categorias: si la parte del estado
+          // de Git que el grafo dibuja cambio, el dibujo tiene que haber
+          // cambiado; y si no cambio, el dibujo tampoco.
+          dibujoDelGrafo().then((dibujo) => {
+            const donde = `«${orden.texto}» (enunciado, linea ${orden.linea})`;
+            const dibujado = `${dibujo.piezas.nodos}||${dibujo.piezas.ramas}||${dibujo.piezas.puntero}`;
+            const enGit = JSON.stringify([git.historia, git.ramas, git.posicion, git.etiquetas]);
+
+            expect(
+              dibujo.hay,
+              `el panel del grafo tiene que seguir dibujando tras ${donde}; muestra «${dibujo.leyendaVacia ?? ''}»`,
+            ).to.equal(true);
+            for (const nodo of nodosSolidosPintados(dibujo)) {
+              expect(
+                nodo.visible,
+                `la confirmacion «${nodo.mensaje}» se pinta tras ${donde}`,
+              ).to.equal(true);
+            }
+            // Se afirma en una sola direccion, a proposito: si lo que Git
+            // cambio es de lo que el grafo dibuja, el dibujo tiene que haber
+            // cambiado. La direccion contraria no se afirma porque el dibujo
+            // tiene motivos legitimos para moverse sin que esos cuatro campos
+            // cambien, como que un guardado temporal deje de ser huerfana una
+            // confirmacion.
+            if (dibujadoAnterior !== null && enGit !== gitAnterior) {
+              expect(
+                dibujado,
+                `el grafo tenia que moverse tras ${donde}, porque Git cambio lo que el grafo dibuja`,
+              ).to.not.equal(dibujadoAnterior);
+            }
+            dibujadoAnterior = dibujado;
+            gitAnterior = enGit;
+            movimiento.push({
+              paso: numeroDePaso,
+              orden: orden.texto,
+              piezas: dibujo.piezas,
+            });
+          });
         });
       }
+    });
+  });
+
+  it('el recorrido mueve las piezas que le tocan', () => {
+    // El informe de que se movio despues de cada orden, pieza por pieza (punto
+    // 4.1 del SPEC 011). Se escribe **antes** de afirmar nada, para que quede
+    // aunque la afirmacion falle: es justo cuando falla cuando hace falta.
+    cy.task('anotarMovimiento', { laboratorio: numero, pasos: movimiento }).then(() => {
+      // Las cinco piezas que todo laboratorio del taller mueve. Una que se
+      // queda quieta el recorrido entero es una que el guion no llega a
+      // ejercitar, y entonces el recorrido no prueba lo que el laboratorio
+      // enseña. `previsualizacion` y `guardado` no entran: la primera solo se
+      // ve mientras se escribe y la segunda solo en los laboratorios que usan
+      // el guardado temporal.
+      const moviles = PIEZAS.filter((pieza) =>
+        movimiento.some(
+          (paso, indice) =>
+            indice > 0 && paso.piezas[pieza] !== movimiento[indice - 1]?.piezas[pieza],
+        ),
+      );
+      expect(moviles, `piezas que se movieron en el laboratorio ${numero}`).to.include.members([
+        'nodos',
+        'ramas',
+        'puntero',
+        'areas',
+        'tiempo',
+      ]);
     });
   });
 

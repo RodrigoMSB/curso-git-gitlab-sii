@@ -40,6 +40,7 @@ export {
   idActual,
   ramaActual,
   ramaPorNombre,
+  sinSeguimientoAgrupado,
   valorConfig,
 } from './estado';
 

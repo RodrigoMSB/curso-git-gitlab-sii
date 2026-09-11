@@ -23,6 +23,7 @@ import {
   idActual,
   moverPosicionActual,
   ramaActual,
+  sincronizarDirectorio,
   transformarArchivos,
 } from '../estado';
 import { archivosCambiados, esAntepasado, exclusivasDe } from '../grafo';
@@ -89,6 +90,10 @@ export const ordenReset: Manejador = (estado, argumentos) => {
         ? { ...archivo, estado: 'limpio' }
         : archivo,
     );
+    // `--hard` es el unico de los tres que reemplaza el directorio de trabajo:
+    // lo que las confirmaciones deshechas estrenaron desaparece del disco. Sin
+    // esto quedaba en la lista, limpio, como si siguiera versionado.
+    siguiente = sincronizarDirectorio(siguiente);
   } else {
     if (modo === 'mixed') {
       siguiente = transformarArchivos(siguiente, (archivo) =>

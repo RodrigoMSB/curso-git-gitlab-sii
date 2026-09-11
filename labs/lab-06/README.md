@@ -41,6 +41,17 @@ cat ~/historial-original.txt
 
 Lo vas a necesitar para comparar.
 
+### Abre el simulador en el escenario de este laboratorio
+
+El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+
+Llévalo al escenario de este laboratorio, que es **Lab 06 · Retroceder, revertir y etiquetar**, de cualquiera de estas dos formas.
+
+- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 06`.
+- O abre el archivo con la dirección `SIMULADOR.html?lab=06`, pegándola en la barra de direcciones del navegador.
+
+Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 06`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+
 ---
 
 ## Parte 1 · Los tres modos de retroceso

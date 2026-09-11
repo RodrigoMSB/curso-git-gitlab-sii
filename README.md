@@ -30,6 +30,13 @@ Eso es todo. No hay que instalar, ni construir, ni descargar nada mas. El
 archivo lleva el simulador completo adentro, asi que tambien puedes copiarlo a
 un pendrive o mandarlo por correo y sigue funcionando igual.
 
+**Elige el escenario del laboratorio que estas haciendo.** Abierto con doble
+clic, el simulador parte siempre en el del laboratorio 01, donde todavia no hay
+repositorio: ahi las ordenes de cualquier otro laboratorio responden
+`fatal: not a git repository` y el grafo no dibuja nada. En la barra de arriba
+hay un selector que dice **escenario**; eligelo ahi. Cada enunciado te lo
+recuerda en su Preparacion.
+
 ### Hacer los laboratorios
 
 Los enunciados estan en [`labs/`](labs/README.md), una carpeta por laboratorio.
@@ -161,8 +168,8 @@ Ejecuta las pruebas y mide la cobertura del motor, de los escenarios, del
 calculo de posiciones y del modelo de vista. La orden falla si la cobertura de
 lineas baja del 90 por ciento, que es el minimo que fija el SPEC 001.
 
-Estado actual: 506 pruebas de unidad e integracion, mas 41 de punta a punta
-contra el navegador. 98 por ciento de cobertura de lineas. Las de las
+Estado actual: 548 pruebas de unidad e integracion, mas 48 de punta a punta
+contra el navegador. 94 por ciento de cobertura de lineas. Las de las
 semillas y las de los laboratorios ejecutan Git de verdad y se llevan la mayor
 parte del minuto que tarda la suite.
 
@@ -179,8 +186,19 @@ npm run e2e
 ```
 
 Construye el artefacto y lo prueba en un navegador de verdad, recorriendo los
-seis laboratorios que tienen preparacion. Toma alrededor de cinco minutos. Con `npm run e2e:abrir` se abre la ventana de Cypress, que sirve para
-mirar paso a paso por que algo no calza.
+cinco laboratorios que tienen preparacion. Toma alrededor de cinco minutos. Con
+`npm run e2e:abrir` se abre la ventana de Cypress, que sirve para mirar paso a
+paso por que algo no calza.
+
+Lo que se compara no es solo el modelo: se mide con el navegador lo que el grafo
+**pinta** despues de cada orden, y si lo que Git cambio es de lo que el grafo
+dibuja, el dibujo tiene que haber cambiado. La razon esta en la seccion 37 de
+[`docs/arquitectura.md`](docs/arquitectura.md).
+
+De paso guarda una captura de la pantalla completa despues de cada orden, unas
+doscientas ochenta, en `docs/capturas-recorrido/`, junto con un informe por
+laboratorio de que pieza de la pantalla se movio en cada paso. Esa carpeta no va
+al repositorio: se rehace cuando haga falta.
 
 Si el simulador le enseña al participante algo distinto de lo que va a ver en su
 terminal, estas pruebas fallan y dicen en que orden ocurrio, que mostro cada
@@ -188,7 +206,9 @@ lado y en que linea del enunciado esta esa orden.
 
 Las ordenes salen del enunciado de cada laboratorio, no de una lista escrita
 aparte: si alguien corrige un paso del enunciado, la prueba corre el paso
-corregido.
+corregido. **La direccion con que se abre el simulador tambien sale del
+enunciado**, por la misma razon: mientras el arnes la escribia a mano, ningun
+enunciado decia en que escenario abrirlo y nadie se enteraba.
 
 Cypress es herramienta de desarrollo. El participante nunca la necesita.
 

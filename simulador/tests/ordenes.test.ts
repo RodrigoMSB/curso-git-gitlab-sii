@@ -13,6 +13,7 @@ import {
   idActual,
   ramaActual,
   ramaPorNombre,
+  sinSeguimientoAgrupado,
   valorConfig,
 } from '../src/core/estado';
 import { escenarioPorId } from '../src/escenarios';
@@ -202,6 +203,61 @@ describe('alias', () => {
   });
 });
 
+/**
+ * Al cambiar de posicion, Git reemplaza el directorio de trabajo por el arbol
+ * del destino. El simulador arrastraba la lista de archivos entera, de modo que
+ * en la rama abierta tres confirmaciones atras seguian figurando archivos que
+ * ahi todavia no existian. Lo destaparon las capturas del SPEC 011.
+ */
+describe('el directorio de trabajo sigue al arbol', () => {
+  it('al abrir una rama atras desaparece lo que ahi no existia', () => {
+    const antes = escenarioPorId('lab-04');
+    expect(antes.archivos.map((archivo) => archivo.nombre)).toContain(
+      'recetas/pastel-de-choclo.md',
+    );
+
+    const despues = correr(antes, 'git switch -c mexicana HEAD~3');
+
+    expect(despues.archivos.map((archivo) => archivo.nombre)).not.toContain(
+      'recetas/pastel-de-choclo.md',
+    );
+    expect(texto(ejecutar(despues, 'ls'))).not.toContain('recetas/');
+  });
+
+  it('al volver reaparece', () => {
+    const estado = correr(
+      escenarioPorId('lab-04'),
+      'git switch -c mexicana HEAD~3',
+      'git switch main',
+    );
+    expect(estado.archivos.map((archivo) => archivo.nombre)).toContain(
+      'recetas/pastel-de-choclo.md',
+    );
+  });
+
+  it('reset --hard se lleva lo que la confirmacion deshecha habia estrenado', () => {
+    const estado = correr(
+      repoLineal(),
+      'echo "x" > nuevo.md',
+      'git add nuevo.md',
+      'git commit -m "se agrega algo"',
+      'git reset --hard HEAD~1',
+    );
+
+    expect(archivoPorNombre(estado, 'nuevo.md')).toBeUndefined();
+    expect(texto(ejecutar(estado, 'ls'))).not.toContain('nuevo.md');
+  });
+
+  it('el trabajo pendiente viaja con el participante', () => {
+    const estado = correr(
+      escenarioPorId('lab-04'),
+      'echo "x" > pendiente.md',
+      'git switch -c mexicana HEAD~3',
+    );
+    expect(archivoPorNombre(estado, 'pendiente.md')?.estado).toBe('sin-seguimiento');
+  });
+});
+
 describe('git status', () => {
   it('en la forma larga distingue preparados, modificados y sin seguimiento', () => {
     const estado = correr(conEstorbos(repoConRamaDesdeMain()), 'git add notas.tmp', 'echo "x" >> platos.md');
@@ -213,6 +269,34 @@ describe('git status', () => {
     expect(salida).toContain('Changes not staged for commit:');
     expect(salida).toContain('modified:');
     expect(salida).toContain('Untracked files:');
+  });
+
+  /**
+   * Git no abre una carpeta cuyo contenido esta entero sin seguir: muestra la
+   * carpeta. El simulador listaba cada archivo, que es otra cosa de la que el
+   * participante va a ver en su terminal. Lo destaparon las capturas del
+   * SPEC 011, sobre el laboratorio 04.
+   */
+  it('agrupa por carpeta lo que esta entero sin seguimiento, como Git', () => {
+    // `borradores/` no existe en el escenario, asi que queda entera sin seguir.
+    const estado = correr(
+      repoLineal(),
+      'mkdir -p borradores',
+      'echo "x" > borradores/tacos.md',
+    );
+
+    expect(texto(ejecutar(estado, 'git status'))).toContain('\tborradores/');
+    expect(texto(ejecutar(estado, 'git status'))).not.toContain('borradores/tacos.md');
+    expect(texto(ejecutar(estado, 'git status -s'))).toContain('?? borradores/');
+    expect(sinSeguimientoAgrupado(estado)).toEqual(['borradores/']);
+  });
+
+  it('no agrupa la carpeta que ya tiene algo versionado adentro', () => {
+    // `recetas/` ya trae recetas versionadas: ahi Git nombra el archivo nuevo.
+    const estado = correr(repoLineal(), 'echo "x" > recetas/tacos.md');
+
+    expect(sinSeguimientoAgrupado(estado)).toEqual(['recetas/tacos.md']);
+    expect(texto(ejecutar(estado, 'git status -s'))).toContain('?? recetas/tacos.md');
   });
 
   it('anuncia que no hay confirmaciones en un repositorio recien creado', () => {

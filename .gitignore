@@ -45,3 +45,16 @@ recetario/
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Capturas del recorrido de punta a punta (punto 3.3 del SPEC 011).
+#
+# `npm run e2e` guarda una imagen despues de cada orden de cada laboratorio, que
+# son unas trescientas por corrida. Sirven para mirar el recorrido, no para
+# guardarlo: quedan fuera del seguimiento y se rehacen cuando hagan falta.
+#
+# Lo que si va versionado es lo que documenta un defecto, que vive en
+# `docs/capturas-recorrido/defecto/` y esta exceptuado mas abajo, junto con los
+# informes de que se movio despues de cada orden.
+docs/capturas-recorrido/*
+!docs/capturas-recorrido/defecto/
+!docs/capturas-recorrido/*.md

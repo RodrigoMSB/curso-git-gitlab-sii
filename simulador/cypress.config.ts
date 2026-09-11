@@ -12,16 +12,24 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { createReadStream, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createReadStream, cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { extname, join, normalize } from 'node:path';
+import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'cypress';
 
 const SIMULADOR = fileURLToPath(new URL('.', import.meta.url));
 const CLON = fileURLToPath(new URL('..', import.meta.url));
 const PUERTO = 5733;
+
+/**
+ * Carpeta propia de las capturas del recorrido (punto 3.3 del SPEC 011).
+ *
+ * Son unas trescientas por corrida y no van al repositorio: `.gitignore` las
+ * deja fuera y solo se confirman las que documentan un defecto.
+ */
+const CAPTURAS = join(CLON, 'docs', 'capturas-recorrido');
 
 const TIPOS: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
@@ -279,10 +287,29 @@ export default defineConfig({
     fixturesFolder: false,
     video: false,
     screenshotOnRunFailure: false,
+    // Las capturas del recorrido van a su propia carpeta, fuera del seguimiento.
+    screenshotsFolder: CAPTURAS,
+    trashAssetsBeforeRuns: false,
     viewportWidth: 1600,
     viewportHeight: 1000,
     setupNodeEvents(on) {
       levantarServidor();
+
+      /**
+       * Deja cada captura en `docs/capturas-recorrido/lab-NN/paso-PPP-orden.png`.
+       *
+       * Cypress, por su cuenta, la guardaria bajo una carpeta con el nombre del
+       * archivo de la prueba. El punto 3.2 pide que el nombre baste para seguir
+       * la secuencia sin abrir ningun indice, asi que se mueve al sitio que el
+       * propio nombre describe.
+       */
+      on('after:screenshot', (detalles) => {
+        if (!detalles.name) return { path: detalles.path };
+        const destino = join(CAPTURAS, `${detalles.name}.png`);
+        mkdirSync(dirname(destino), { recursive: true });
+        renameSync(detalles.path, destino);
+        return { path: destino };
+      });
 
       on('task', {
         prepararLaboratorio: (numero: string) => prepararLaboratorio(numero),
@@ -296,6 +323,47 @@ export default defineConfig({
         // La cobertura de cada laboratorio, tal como salio de la corrida.
         anotarCobertura: (dato: Record<string, unknown>) => {
           cobertura.push(dato);
+          return null;
+        },
+        /**
+         * Que se movio en la pantalla despues de cada orden (punto 4.1 del
+         * SPEC 011).
+         *
+         * Va junto a las capturas, en texto: trescientas imagenes se revisan,
+         * pero lo que se puede afirmar sobre ellas conviene tenerlo medido y no
+         * recordado. El archivo dice, por paso, cuales de las siete piezas
+         * cambiaron respecto de la orden anterior.
+         */
+        anotarMovimiento: (dato: {
+          laboratorio: string;
+          pasos: { paso: number; orden: string; piezas: Record<string, string> }[];
+        }) => {
+          mkdirSync(CAPTURAS, { recursive: true });
+          const lineas = [
+            `# Laboratorio ${dato.laboratorio} · que se movio despues de cada orden`,
+            '',
+            'Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.',
+            '',
+            '| paso | orden | se movio |',
+            '|---|---|---|',
+          ];
+          let anterior: Record<string, string> | null = null;
+          for (const paso of dato.pasos) {
+            const movidas =
+              anterior === null
+                ? ['(primer paso)']
+                : Object.keys(paso.piezas).filter((pieza) => paso.piezas[pieza] !== anterior?.[pieza]);
+            lineas.push(
+              `| ${String(paso.paso).padStart(3, '0')} | \`${paso.orden.replace(/\|/g, '\\|')}\` | ${
+                movidas.length === 0 ? 'nada' : movidas.join(', ')
+              } |`,
+            );
+            anterior = paso.piezas;
+          }
+          writeFileSync(
+            join(CAPTURAS, `lab-${dato.laboratorio}-movimiento.md`),
+            `${lineas.join('\n')}\n`,
+          );
           return null;
         },
         limpiar: () => {

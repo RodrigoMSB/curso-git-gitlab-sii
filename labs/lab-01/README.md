@@ -22,6 +22,14 @@ git --version
 
 Si no responde, avisa antes de seguir. Todo lo que viene depende de eso.
 
+### Abre el simulador en el escenario de este laboratorio
+
+En la carpeta que clonaste hay un archivo llamado `SIMULADOR.html`. Haz doble clic sobre él: se abre en el navegador y funciona sin conexión.
+
+Abierto así parte en **Lab 01 · El recetario nace**, que es justo el escenario de este laboratorio. Compruébalo en la barra de arriba.
+
+**El simulador no adivina en qué laboratorio estás.** En los laboratorios que vienen después vas a tener que llevarlo al escenario que corresponda, con el selector que dice **escenario** en esa misma barra, o abriéndolo con una dirección como `SIMULADOR.html?lab=02`. Cada enunciado te lo recuerda.
+
 ---
 
 ## Parte 1 · Configuración

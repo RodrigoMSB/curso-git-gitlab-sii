@@ -42,6 +42,18 @@ del clon del curso.**
 Al terminar el taller se borra `taller-git-trabajo` de una vez y no queda nada
 suelto.
 
+## El simulador no adivina en que laboratorio estas
+
+Abierto con doble clic, `SIMULADOR.html` parte siempre en el escenario del
+laboratorio 01, donde todavia no hay repositorio. Si haces cualquier otro
+laboratorio sin cambiar de escenario, todas tus ordenes responden
+`fatal: not a git repository` y el grafo no dibuja nada.
+
+Cada enunciado, en su Preparacion, dice a que escenario llevarlo y como: con el
+selector que dice **escenario** en la barra de arriba, o abriendo el archivo con
+una direccion como `SIMULADOR.html?lab=04`. El `preparar.sh` lo repite al
+terminar.
+
 ## Correr el verificador
 
 Se corre sin argumentos desde la carpeta del laboratorio y no recibe la ruta de

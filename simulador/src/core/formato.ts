@@ -7,7 +7,7 @@
  * conserva la forma del original y avisa que es una simulacion.
  */
 
-import { estaSeguido, idActual, ramaActual } from './estado';
+import { estaSeguido, idActual, ramaActual, sinSeguimientoAgrupado } from './estado';
 import { decoracionesDe } from './referencias';
 import type { Confirmacion, EstadoRepositorio } from './tipos';
 
@@ -40,9 +40,9 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
   const preparados = estado.archivos.filter((archivo) => archivo.estado === 'preparado');
   const enConflicto = estado.archivos.filter((archivo) => archivo.estado === 'en-conflicto');
   const modificados = estado.archivos.filter((archivo) => archivo.estado === 'modificado');
-  const sinSeguimiento = estado.archivos.filter(
-    (archivo) => archivo.estado === 'sin-seguimiento',
-  );
+  // Agrupado como lo agrupa Git: una carpeta cuyo contenido esta entero sin
+  // seguir se muestra como carpeta y no se abre.
+  const sinSeguimiento = sinSeguimientoAgrupado(estado);
 
   if (preparados.length > 0 || estado.borrados.length > 0) {
     filas.push('');
@@ -93,8 +93,8 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
     filas.push('');
     filas.push('Untracked files:');
     filas.push('  (use "git add <file>..." to include in what will be committed)');
-    for (const archivo of sinSeguimiento) {
-      filas.push(`${SANGRIA}${archivo.nombre}`);
+    for (const entrada of sinSeguimiento) {
+      filas.push(`${SANGRIA}${entrada}`);
     }
   }
 
@@ -134,14 +134,16 @@ export function formatearEstadoCorto(estado: EstadoRepositorio): readonly string
       case 'modificado':
         return [` M ${archivo.nombre}`];
       case 'sin-seguimiento':
-        return [`?? ${archivo.nombre}`];
+        // Lo no seguido se emite aparte, ya agrupado por carpeta.
+        return [];
       case 'en-conflicto':
         return [`UU ${archivo.nombre}`];
       case 'limpio':
         return [];
     }
   });
-  return [...borrados, ...resto];
+  const sinSeguimiento = sinSeguimientoAgrupado(estado).map((entrada) => `?? ${entrada}`);
+  return [...borrados, ...resto, ...sinSeguimiento];
 }
 
 export interface OpcionesHistorial {

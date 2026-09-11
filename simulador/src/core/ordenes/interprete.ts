@@ -8,8 +8,8 @@
 
 import { esOperador, posicionales, tieneOpcion } from '../analizador';
 import { archivoPorNombre, establecerArchivo, estaSeguido } from '../estado';
-import { fallo, lineas, ok, sinRepositorio } from '../salida';
-import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
+import { fallo, lineaLimite, lineas, ok, sinRepositorio } from '../salida';
+import type { EstadoRepositorio, LineaSalida, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
 
 /** `pwd` */
@@ -219,6 +219,30 @@ export const ordenRm: Manejador = (estado, argumentos) => {
 };
 
 /**
+ * Aviso que acompaña a la creacion de un archivo de exclusiones.
+ *
+ * El motor no versiona contenido (restriccion R4), de modo que **no puede leer
+ * las reglas de `.gitignore`**: el archivo queda creado, pero nada se filtra.
+ * Antes eso ocurria en silencio, y la parte 3 del laboratorio 03 esta armada
+ * sobre que si filtra: el participante escribia `echo "prueba" > temporal.tmp`,
+ * el enunciado le decia «no aparece» y el simulador se lo mostraba.
+ *
+ * Aceptar y descartar en silencio es justo la cuarta respuesta que la seccion 6
+ * del SPEC 010 elimina. Aqui se usa la segunda: se dice que no se implementa y
+ * que en la terminal si funciona.
+ */
+const AVISO_EXCLUSIONES: readonly LineaSalida[] = [
+  lineaLimite('el simulador no aplica las reglas de .gitignore: no versiona contenido,'),
+  lineaLimite('asi que no puede leerlas. El archivo queda creado, pero nada se filtra.'),
+  lineaLimite('En tu terminal si funciona: esa parte del laboratorio hazla ahi.'),
+];
+
+/** Si la ruta es un archivo de exclusiones, en la raiz o en una carpeta. */
+function esExclusiones(ruta: string): boolean {
+  return ruta === '.gitignore' || ruta.endsWith('/.gitignore');
+}
+
+/**
  * `echo`, con redireccion de anexion sobre un archivo.
  *
  * Escribir sobre un archivo lo marca como modificado, que es la manera de
@@ -236,14 +260,16 @@ export const ordenEcho: Manejador = (estado, argumentos) => {
     return fallo(estado, 'bash: syntax error near unexpected token `newline\'');
   }
 
+  const aviso = esExclusiones(destino) ? AVISO_EXCLUSIONES : [];
+
   const existente = archivoPorNombre(estado, destino);
   if (existente === undefined) {
-    return ok(establecerArchivo(estado, destino, 'sin-seguimiento'));
+    return ok(establecerArchivo(estado, destino, 'sin-seguimiento'), aviso);
   }
   if (existente.estado === 'limpio') {
-    return ok(establecerArchivo(estado, destino, 'modificado'));
+    return ok(establecerArchivo(estado, destino, 'modificado'), aviso);
   }
-  return ok(estado);
+  return ok(estado, aviso);
 };
 
 /** `git remote`, con `-v` y `add`. */

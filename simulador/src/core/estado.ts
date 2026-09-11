@@ -268,3 +268,100 @@ export function archivosEn(
 ): readonly Archivo[] {
   return estado.archivos.filter((archivo) => estados.includes(archivo.estado));
 }
+
+/**
+ * Lo no seguido, agrupado como lo agrupa Git.
+ *
+ * Git **no lista los archivos de una carpeta cuyo contenido esta entero sin
+ * seguir**: muestra la carpeta, con la barra al final, y no entra. Solo baja a
+ * los archivos cuando dentro de la carpeta hay algo que si conoce.
+ *
+ *     $ mkdir recetas && echo x > recetas/tacos.md
+ *     $ git status --short
+ *     ?? recetas/
+ *
+ * El simulador listaba `recetas/tacos.md`, o sea le mostraba al participante
+ * algo distinto de lo que su terminal iba a decirle. Lo destaparon las capturas
+ * del SPEC 011, en el laboratorio 04, donde la rama `mexicana` nace tres
+ * confirmaciones atras y ahi la carpeta `recetas` todavia no existe.
+ *
+ * Devuelve las entradas en el orden en que aparecen los archivos, sin repetir
+ * carpeta.
+ */
+export function sinSeguimientoAgrupado(estado: EstadoRepositorio): readonly string[] {
+  // Todo lo que Git ya conoce: cualquier archivo que no sea de los sin seguir,
+  // mas las rutas con la baja anotada, que siguen siendo rutas conocidas.
+  const conocidos = [
+    ...estado.archivos
+      .filter((archivo) => archivo.estado !== 'sin-seguimiento')
+      .map((archivo) => archivo.nombre),
+    ...estado.borrados,
+    ...estado.borradosSinPreparar,
+  ];
+
+  const entradas: string[] = [];
+  for (const archivo of estado.archivos) {
+    if (archivo.estado !== 'sin-seguimiento') continue;
+
+    // De la carpeta mas alta hacia abajo: la primera que no contenga nada
+    // conocido es la que Git muestra.
+    const partes = archivo.nombre.split('/');
+    let entrada = archivo.nombre;
+    for (let hasta = 1; hasta < partes.length; hasta += 1) {
+      const carpeta = partes.slice(0, hasta).join('/');
+      if (conocidos.some((nombre) => nombre.startsWith(`${carpeta}/`))) continue;
+      entrada = `${carpeta}/`;
+      break;
+    }
+    if (!entradas.includes(entrada)) entradas.push(entrada);
+  }
+  return entradas;
+}
+
+/**
+ * Deja el directorio de trabajo como corresponde a donde quedo la posicion.
+ *
+ * Al cambiar de rama o de confirmacion, Git **reemplaza el directorio de
+ * trabajo** por el arbol del destino: los archivos que ahi no existen
+ * desaparecen y los que si existen aparecen. Lo que no toca es el trabajo
+ * pendiente, que viaja con el participante.
+ *
+ * El simulador no lo hacia: `estado.archivos` era una lista plana que se
+ * arrastraba entera de una rama a otra, de modo que en el laboratorio 04, sobre
+ * la rama `mexicana` abierta tres confirmaciones atras, seguian figurando las
+ * recetas que todavia no existian. La comparacion de punta a punta no lo veia
+ * porque solo mira los archivos con algo pendiente, y esos estaban limpios.
+ *
+ * Solo se llama donde el arbol de verdad cambia: `switch`, `checkout` y
+ * `reset --hard`. Un `reset --soft` o `--mixed` mueve la posicion y deja el
+ * directorio como estaba, y ahi esta funcion no interviene.
+ */
+export function sincronizarDirectorio(estado: EstadoRepositorio): EstadoRepositorio {
+  const seguidos = archivosSeguidos(estado);
+
+  // Lo que el participante tiene a medias viaja con el, este o no versionado en
+  // el destino. Lo limpio es lo que se reemplaza.
+  const pendientes = estado.archivos.filter((archivo) => archivo.estado !== 'limpio');
+  const conPendiente = new Set(pendientes.map((archivo) => archivo.nombre));
+
+  const limpios: Archivo[] = [...seguidos]
+    .filter((nombre) => !conPendiente.has(nombre))
+    .map((nombre) => ({ nombre, estado: 'limpio' as const }));
+
+  // Se conserva el orden que ya tenian los que siguen versionados, para que la
+  // pantalla no reordene la lista al cambiar de rama.
+  const orden = new Map(estado.archivos.map((archivo, indice) => [archivo.nombre, indice]));
+  limpios.sort(
+    (una, otra) =>
+      (orden.get(una.nombre) ?? Number.MAX_SAFE_INTEGER) -
+      (orden.get(otra.nombre) ?? Number.MAX_SAFE_INTEGER),
+  );
+
+  return {
+    ...estado,
+    archivos: [...limpios, ...pendientes],
+    // Un archivo versionado que ya no esta en el directorio deja de faltar
+    // cuando el destino tampoco lo versiona.
+    borradosSinPreparar: estado.borradosSinPreparar.filter((nombre) => seguidos.has(nombre)),
+  };
+}

@@ -7,7 +7,7 @@
  * (restriccion R6 y criterio CA7 del SPEC 002).
  */
 
-import { archivosEn, cadenaDeObjetos, ramaActual } from '../core';
+import { archivosEn, cadenaDeObjetos, ramaActual, sinSeguimientoAgrupado } from '../core';
 import type { CadenaDeObjetos } from '../core';
 import type { EstadoRepositorio } from '../core/tipos';
 import { disponer } from '../grafico/disposicion';
@@ -124,7 +124,7 @@ const TONO_POR_ESTADO = {
 
 /** Las cuatro columnas fijas de la zona D. */
 export function columnasDeAreas(estado: EstadoRepositorio): readonly ColumnaArea[] {
-  const enTrabajo = archivosEn(estado, 'modificado', 'sin-seguimiento', 'en-conflicto');
+  const enTrabajo = archivosEn(estado, 'modificado', 'en-conflicto');
   const preparados = archivosEn(estado, 'preparado');
   const rama = ramaActual(estado);
 
@@ -137,6 +137,13 @@ export function columnasDeAreas(estado: EstadoRepositorio): readonly ColumnaArea
         ...enTrabajo.map((archivo) => ({
           texto: archivo.nombre,
           tono: TONO_POR_ESTADO[archivo.estado],
+        })),
+        // Lo no seguido va agrupado por carpeta, como lo agrupa `git status`:
+        // una carpeta cuyo contenido esta entero sin seguir se muestra como
+        // carpeta y no se abre.
+        ...sinSeguimientoAgrupado(estado).map((entrada) => ({
+          texto: entrada,
+          tono: 'nuevo' as const,
         })),
         // Un archivo versionado que ya no esta tambien es un cambio pendiente,
         // y Git lo muestra como tal. Sin dibujarlo, la pantalla diria que no

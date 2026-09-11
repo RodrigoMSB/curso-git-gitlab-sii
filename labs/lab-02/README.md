@@ -34,6 +34,17 @@ git status
 
 Cinco confirmaciones. Un archivo modificado sin preparar y otro preparado. Toma nota de cuáles son, los vas a necesitar en la parte 3.
 
+### Abre el simulador en el escenario de este laboratorio
+
+El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+
+Llévalo al escenario de este laboratorio, que es **Lab 02 · Leer la historia y abrir la caja**, de cualquiera de estas dos formas.
+
+- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 02`.
+- O abre el archivo con la dirección `SIMULADOR.html?lab=02`, pegándola en la barra de direcciones del navegador.
+
+Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 02`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+
 ---
 
 ## Parte 1 · Leer la historia

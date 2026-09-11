@@ -2380,3 +2380,262 @@ Cada una responde con el mismo formato: que no hace, y que en la terminal si
 funciona. La consola las pinta **distinto de un reclamo de Git**, porque un
 reclamo de Git es una falla del participante y esto es un limite de la
 herramienta.
+
+---
+
+# SPEC 011 · El grafo no se movía
+
+## 36. El defecto, y por qué no estaba en el dibujo
+
+El product owner abrió el simulador construido, recorrió el laboratorio 02
+escribiendo órdenes en la consola y el grafo no se movió nunca.
+
+No se movió porque **no había nada que dibujar**. El simulador abierto con doble
+clic arranca en el escenario del laboratorio 01, donde todavía no hay
+repositorio, y **ningún enunciado de los seis decía que había que llevarlo al
+escenario del laboratorio que se está haciendo**. Comprobado sobre `file://`,
+con Chrome y las cincuenta órdenes del enunciado: las cincuenta respondieron
+`fatal: not a git repository`, el panel del grafo mostró «Todavía no hay
+confirmaciones» de la primera a la última, y en ningún momento existió un solo
+nodo en el documento.
+
+El dibujo estaba bien. Lo que faltaba era el camino del participante hasta el
+escenario correcto.
+
+### Por qué las pruebas no lo vieron
+
+Por la misma razón de siempre, y esta es la cuarta vez.
+
+El arnés escribía la dirección a mano: `cy.visit('/SIMULADOR.html?lab=NN')`, con
+el número interpolado en el propio archivo de pruebas. O sea **le daba resuelto
+al recorrido lo único que el participante tiene que acertar por su cuenta**. Una
+prueba que suple lo que el usuario tiene que hacer solo no puede ver al usuario
+equivocarse.
+
+Es exactamente la forma del hallazgo de la sección 32, donde el extractor
+mantenía su propia copia de lo no soportado, y de la sección 27, donde el lector
+del estado de Git tenía su propio error. El patrón, dicho una vez:
+
+> **El arnés guarda una copia de algo que debería salir del guion, y la copia es
+> correcta. La prueba pasa comprobando la copia contra sí misma.**
+
+### Qué cambió
+
+**La dirección sale del enunciado.** `direccionDelSimulador` la busca en el
+`README.md` del laboratorio y el recorrido visita esa. Si el enunciado no nombra
+`SIMULADOR.html?lab=NN`, con el número de su propio laboratorio, la prueba falla
+con ese mensaje. No hay categoría intermedia: es un defecto del enunciado.
+
+**Los seis enunciados lo dicen.** Del 02 al 06, dentro de la Preparación, con
+las dos formas de llegar: el selector de la barra o la dirección. El 01 lo dice
+al revés, que abierto con doble clic ya cae donde corresponde y que en los demás
+habrá que moverlo.
+
+**Los cinco `preparar.sh` lo dicen también.** Es el último texto que el
+participante ve antes de empezar a escribir, y la sección 17 ya dejó dicho que
+advertir en el enunciado no alcanza: quien se equivoca es precisamente quien no
+está leyendo.
+
+## 37. Las pruebas miran lo que el navegador pinta
+
+Hasta aquí el recorrido leía el estado de los atributos `data-` del documento.
+Es mejor que leer el modelo, pero **un atributo está igual de presente si el
+dibujo mide cero, si quedó fuera del panel, si está escondido o si el panel no
+llegó a dibujarse**. El defecto de este spec tenía todos los atributos en su
+sitio: no había ninguno, porque no había confirmaciones, y los dos lados
+coincidían en que no las había.
+
+`cypress/soporte/dibujo.ts` mide con `getBoundingClientRect` y
+`getComputedStyle`, que es lo que el navegador resolvió después de aplicar la
+hoja de estilos y la disposición. Con eso el recorrido afirma tres cosas más
+después de cada orden:
+
+- El SVG del grafo existe y está dibujado.
+- Cada confirmación pintada mide más de cero, no está oculta y cae dentro del
+  panel del grafo.
+- **Si lo que Git cambió es de lo que el grafo dibuja, el dibujo cambió.** Se
+  afirma en una sola dirección a propósito: el dibujo tiene motivos legítimos
+  para moverse sin que la historia, las ramas, la posición ni las etiquetas
+  cambien.
+
+La huella del dibujo se mide **dentro del SVG y no en la pantalla**. Medida en
+coordenadas de pantalla, el grafo entero se corre unos píxeles cada vez que la
+página cambia de alto y aparece o desaparece la barra de desplazamiento; eso es
+cierto y no es que el grafo se haya movido.
+
+## 38. Las capturas del recorrido
+
+`npm run e2e` guarda ahora **una imagen de la pantalla completa después de cada
+orden**, en los cinco laboratorios que se recorren. Son unas doscientas ochenta.
+
+```
+docs/capturas-recorrido/
+├── lab-02/paso-003-git-status.png     una por orden, con su número y su orden
+├── lab-02-movimiento.md               qué se movió después de cada orden
+├── ...
+└── defecto/                           las que documentan un defecto, versionadas
+```
+
+El nombre lleva el laboratorio, el número de paso y la orden, de modo que la
+secuencia se sigue ordenando los archivos y sin abrir ningún índice. Se captura
+la página entera y no el panel del grafo: si el problema fuera de disposición, o
+de que el dibujo quedara fuera de la vista, recortar el panel lo escondería.
+
+La carpeta está fuera del seguimiento. Lo único versionado es `defecto/`, con su
+propio `README.md`.
+
+### El informe de movimiento
+
+Trescientas imágenes se revisan, pero lo que se afirma sobre ellas conviene
+tenerlo medido y no recordado. Cada laboratorio deja un `lab-NN-movimiento.md`
+que dice, paso por paso, cuáles de las siete piezas de la pantalla cambiaron
+respecto de la orden anterior: nodos, etiquetas de rama, puntero de posición,
+previsualización, áreas, guardado temporal y línea de tiempo.
+
+Lo que dicen los cinco informes, ya arreglado el defecto:
+
+| Pieza | Qué se ve en el recorrido |
+|---|---|
+| Línea de tiempo | Se mueve en las ciento noventa órdenes, sin excepción |
+| Áreas | Se mueven con cada cambio de archivo, y solo ahí |
+| Nodos | Veintiocho movimientos, todos sobre órdenes que crean o descartan confirmaciones |
+| Ramas y puntero | Se mueven con los nodos, y además solos al cambiar de rama o crear una |
+| Previsualización | Solo en el laboratorio 05, cuatro veces, que es la unión comprometida por la fusión con conflicto (punto 7.3) |
+| Guardado temporal | **Nunca.** Ningún laboratorio del 01 al 06 usa `git stash` |
+
+La última fila es un hueco conocido y no un defecto: el panel de guardado
+temporal no lo ejercita ningún recorrido, porque el laboratorio que lo enseña es
+el 07 y todavía no tiene `preparar.sh`.
+
+## 39. Los otros cuatro defectos que aparecieron al mirar
+
+El punto 4.3 del spec pide arreglarlos todos y reportarlos por separado.
+
+### 39.1 El recorrido del laboratorio 04 no creaba ni una confirmación
+
+El enunciado dice «Crea `recetas/pad-thai.md`» y muestra el contenido en un
+bloque. El extractor descartaba ese bloque entero por no ser órdenes, y con él
+descartaba **el archivo**. Sin archivo, el `git add` siguiente fallaba y el
+`git commit` no encontraba nada que confirmar. En los dos lados. Los dos
+coincidían en no haber hecho nada, la comparación daba verde, y el informe
+declaraba el guion entero cubierto.
+
+Sesenta y cinco órdenes del laboratorio que enseña a ramificar y confirmar, sin
+una sola confirmación creada.
+
+Ahora el extractor convierte esos pasos en órdenes, `mkdir -p` y `echo`, y el
+recorrido crea las cinco confirmaciones del laboratorio 04 y el `.gitignore` del
+03. El contenido no se copia: ninguno de los dos lados lo compara y el motor no
+versiona contenido. Escribir el nombre del archivo dentro tampoco sirve, porque
+un `.gitignore` que se nombra a sí mismo se ignora y Git deja de mostrarlo.
+
+### 39.2 El directorio de trabajo no seguía al árbol
+
+Descubierto por lo anterior. Al cambiar de rama o de confirmación, Git reemplaza
+el directorio de trabajo por el árbol del destino. El simulador arrastraba
+`estado.archivos` entera, de modo que sobre la rama `mexicana`, abierta tres
+confirmaciones atrás, seguían figurando recetas que ahí todavía no existían.
+
+El enunciado del laboratorio 04 dice, en ese punto exacto: «Los archivos
+cambiaron. Estás parado tres confirmaciones atrás, así que ves el proyecto como
+estaba en ese momento.» No los veía.
+
+La comparación no lo detectaba por dos razones sumadas: solo mira los archivos
+con algo pendiente, y esos estaban limpios; y de `ls` compara que no falle, no
+lo que imprime, que es la misma lección de la sección 28.
+
+`sincronizarDirectorio` deja el directorio como el destino lo tiene, y el
+trabajo pendiente viaja con el participante. Se llama solo donde el árbol de
+verdad cambia: `switch`, `checkout` y `reset --hard`. Los otros dos modos de
+`reset` mueven la posición y dejan el directorio como estaba, así que ahí no
+interviene.
+
+En `reset --hard` estaba el mismo hueco, buscado a propósito después de
+encontrar el primero: un archivo que la confirmación deshecha había estrenado se
+quedaba en la lista, limpio, como si siguiera versionado. En Git desaparece del
+disco.
+
+### 39.3 Lo no seguido no se agrupaba por carpeta
+
+Git no abre una carpeta cuyo contenido está entero sin seguir: muestra la
+carpeta, con la barra al final, y no entra.
+
+```
+$ mkdir recetas && echo x > recetas/tacos.md
+$ git status --short
+?? recetas/
+```
+
+El simulador listaba `recetas/tacos.md`. `sinSeguimientoAgrupado` lo agrupa
+ahora, en las dos formas de `git status` y en el panel de áreas.
+
+### 39.4 El archivo de exclusiones se aceptaba en silencio
+
+La parte 3 del laboratorio 03 está armada sobre que `.gitignore` filtra: el
+participante escribe `echo "prueba" > temporal.tmp`, el enunciado le dice «no
+aparece» y el simulador se lo mostraba.
+
+**Esto no se arregla, y no se puede.** El motor no versiona contenido
+(restricción R4 del SPEC 001), así que no tiene cómo leer las reglas del
+archivo. Lo que sí era un defecto es que ocurriera en silencio, que es la cuarta
+respuesta que la sección 32 eliminó.
+
+Ahora, al crear un `.gitignore`, la consola dice que no aplica las reglas, por
+qué, y que en la terminal sí funciona. El enunciado del laboratorio 03 manda
+hacer esa parte en la terminal.
+
+Implementar el filtrado de verdad pide modelar el contenido de un archivo, que
+contradice R4. **Es decisión del product owner**, no de este spec.
+
+## 40. La cobertura del motor estaba roja desde el SPEC 010
+
+Medida sobre el árbol tal como llegó, sin ningún cambio de este spec:
+
+```
+Lines 83.09%   Statements 80.64%   Functions 82.49%   Branches 71.70%
+```
+
+Los umbrales del proyecto son 90, 90, 90 y 80. O sea `npm test` fallaba antes de
+empezar. La causa: el SPEC 010 agregó dos archivos de motor, `ordenes/archivos.ts`
+y `ordenes/inspeccion.ts`, trescientas sesenta y cinco líneas entre los dos, y
+los dejó cubiertos **solo por el recorrido de Cypress**. Estaban al cuatro por
+ciento.
+
+Un motor probado solo por un arnés que tarda cinco minutos es un motor cuya
+suite rápida ya no dice la verdad sobre lo que está probado. `git mv`, `git rm`,
+`git ls-files`, `git show`, `git rev-parse`, `git merge-base`, `git cat-file -t`
+y el `mv` y el `rm` del intérprete tienen ahora sus pruebas de unidad.
+
+```
+Lines 93.87%   Statements 90.61%   Functions 90.51%   Branches 81.94%
+```
+
+## 41. Lo que hace probable un quinto hallazgo
+
+El spec lo pregunta y la respuesta es que sí, y se puede nombrar dónde.
+
+**Primero, lo que la comparación decide no mirar.** Hoy compara historia, ramas,
+posición, etiquetas, archivos pendientes y guardados. Todo lo demás pasa sin que
+nadie lo lea: la salida de `ls`, la de `cat`, la de `git log` y la de `git show`
+solo se miran para saber si empiezan con `fatal:`. El hallazgo 39.2 vivió
+justamente ahí, y la sección 28 ya había dicho lo mismo de `git log`. **Mientras
+la comparación mire el estado y no lo impreso, va a seguir habiendo órdenes que
+enseñan algo distinto sin que nadie se entere.**
+
+**Segundo, los archivos limpios.** `pendientesDe` descarta todo lo que está en
+orden, y por eso un directorio de trabajo entero equivocado pasó inadvertido.
+Comparar también lo limpio es barato y cierra ese hueco.
+
+**Tercero, lo que el recorrido no toca.** El guardado temporal no lo ejercita
+ningún laboratorio, el modo relator no aparece en ningún recorrido, y los
+laboratorios 07 en adelante no tienen `preparar.sh`. De esas tres zonas no hay
+nada que afirmar hoy.
+
+**Cuarto, y es el de fondo: el arnés todavía tiene cosas escritas a mano.** La
+dirección era una y ya no lo es. Quedan la lista de piezas que se comparan, los
+marcadores de posición que se resuelven desde la declaración del escenario, y la
+configuración de Git que el arnés escribe por el participante en
+`prepararLaboratorio`, alias incluidos. Esa última es la misma forma exacta del
+defecto de este spec: **el arnés hace por el participante algo que el
+participante tiene que hacer en el laboratorio 01**. Si un día el laboratorio 01
+deja de configurar los alias, los cinco recorridos van a seguir en verde.

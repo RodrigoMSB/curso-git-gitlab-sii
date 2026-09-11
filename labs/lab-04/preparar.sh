@@ -196,3 +196,10 @@ echo "  Y desde ahi, para ubicarte:"
 echo "      git log --oneline"
 echo "      git branch"
 echo
+echo "  Y en el simulador, elige el escenario de este laboratorio:"
+echo "      Lab 04, en el selector que dice «escenario»"
+echo "      o abrelo con la direccion SIMULADOR.html?lab=04"
+echo
+echo "  Abierto con doble clic parte en el del laboratorio 01, que"
+echo "  todavia no tiene repositorio: ahi el grafo no dibuja nada."
+echo

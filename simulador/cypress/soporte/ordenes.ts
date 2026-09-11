@@ -167,6 +167,52 @@ function clasificar(texto: string, linea: number): OrdenDelEnunciado {
   return { texto, clase: 'comparada', motivo: '', linea };
 }
 
+/**
+ * Los archivos que el enunciado manda crear, convertidos en ordenes.
+ *
+ * El enunciado dice «Crea `recetas/pad-thai.md`.» y a continuacion muestra el
+ * contenido en un bloque. Ese bloque no son ordenes, asi que el extractor lo
+ * descartaba entero, y con el descartaba **el archivo**. La consecuencia la
+ * destaparon las capturas del SPEC 011: en el laboratorio 04 el `git add` de
+ * ese archivo fallaba, el `git commit` siguiente no encontraba nada que
+ * confirmar, y los dos lados coincidian en no haber hecho nada. El recorrido
+ * del laboratorio que enseña a ramificar y confirmar no creo ni una sola
+ * confirmacion, y el informe lo daba por cubierto.
+ *
+ * El paso se ejecuta con `echo`, que es como el simulador genera trabajo
+ * pendiente. El contenido no se copia: ninguno de los dos lados lo compara
+ * (seccion 25 de docs/arquitectura.md) y el simulador no versiona contenido.
+ * Lo que importa es que el archivo exista en los dos lados con el mismo nombre.
+ */
+function creacionesDeArchivo(enunciado: string): readonly OrdenDelEnunciado[] {
+  const lineas = enunciado.split('\n');
+  const bloques = bloquesDe(enunciado);
+  const ordenes: OrdenDelEnunciado[] = [];
+
+  lineas.forEach((linea, indice) => {
+    const nombrado = linea.match(/Crea(?: el archivo)? `([^`]+)`/);
+    const ruta = nombrado?.[1];
+    // Solo un nombre de archivo: sin espacios y con punto o barra, de modo que
+    // `.gitignore` y `recetas/pad-thai.md` entren y un nombre de rama no.
+    if (ruta === undefined || !/^[\w./-]+$/.test(ruta) || !/[./]/.test(ruta)) return;
+    // El bloque que sigue es el contenido. Sin bloque no hay archivo que crear.
+    const contenido = bloques.find((bloque) => bloque.linea > indice + 1);
+    if (contenido === undefined || contenido.linea > indice + 6) return;
+
+    const carpeta = ruta.includes('/') ? ruta.slice(0, ruta.lastIndexOf('/')) : '';
+    if (carpeta !== '') ordenes.push(clasificar(`mkdir -p ${carpeta}`, indice + 1));
+    // El contenido es una linea neutra y no el del enunciado, por dos razones.
+    // El motor no versiona contenido (restriccion R4), asi que ningun lado lo
+    // compara; y copiar el contenido de verdad encenderia efectos que el motor
+    // no modela, como que un `.gitignore` con `*.tmp` filtre en Git y no en el
+    // simulador. Escribir el nombre del archivo tampoco sirve: un `.gitignore`
+    // que se nombra a si mismo se ignora, y Git deja de mostrarlo.
+    ordenes.push(clasificar(`echo "contenido de ejemplo" > ${ruta}`, indice + 1));
+  });
+
+  return ordenes;
+}
+
 /** Clasifica cada linea de orden del enunciado, en el orden en que aparece. */
 export function ordenesDe(enunciado: string): readonly OrdenDelEnunciado[] {
   const ordenes: OrdenDelEnunciado[] = [];
@@ -178,7 +224,12 @@ export function ordenesDe(enunciado: string): readonly OrdenDelEnunciado[] {
       ordenes.push(clasificar(texto, bloque.linea + desplazamiento));
     });
   }
-  return ordenes;
+
+  // Los archivos que el enunciado manda crear entran en el lugar del guion
+  // donde el enunciado los pide, que es antes del `git add` que los prepara.
+  return [...ordenes, ...creacionesDeArchivo(enunciado)].sort(
+    (una, otra) => una.linea - otra.linea,
+  );
 }
 
 /**
@@ -262,4 +313,30 @@ export function resolverMarcadores(
     if (sustitucion === undefined || sustitucion.valor === undefined) return orden;
     return clasificar(orden.texto.replace('<archivo>', sustitucion.valor), orden.linea);
   });
+}
+
+/**
+ * Direccion con la que el enunciado manda abrir el simulador.
+ *
+ * **La direccion no se escribe aqui.** Sale del enunciado, por la misma razon
+ * que las ordenes (SPEC 008): el arnes tenia su propia copia, `?lab=NN` escrito
+ * a mano en cada `cy.visit`, y con eso le daba resuelto al recorrido lo unico
+ * que el participante tiene que acertar por su cuenta. Esa copia es lo que dejo
+ * pasar el defecto del SPEC 011: el enunciado no decia en que escenario abrir
+ * el simulador, el participante abria el que sale por doble clic, y el
+ * recorrido entero ocurria sobre un repositorio que no existe.
+ *
+ * Devuelve `null` cuando el enunciado no nombra el escenario de **su** propio
+ * laboratorio, que es un defecto del enunciado y no una categoria: el recorrido
+ * falla. Se busca el numero del laboratorio y no la primera direccion que
+ * aparezca, porque un enunciado puede nombrar la de otro: el del 01 cita
+ * `?lab=02` al explicar que en los laboratorios siguientes hay que cambiar de
+ * escenario.
+ */
+export function direccionDelSimulador(
+  enunciado: string,
+  numeroDeLaboratorio: string,
+): string | null {
+  const buscada = `SIMULADOR.html?lab=${numeroDeLaboratorio}`;
+  return enunciado.includes(buscada) ? `/${buscada}` : null;
 }

@@ -34,6 +34,17 @@ git status
 
 Toma nota de los tres archivos que sobran. Están confirmados en la historia, no son basura suelta en tu directorio.
 
+### Abre el simulador en el escenario de este laboratorio
+
+El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+
+Llévalo al escenario de este laboratorio, que es **Lab 03 · Ordenar el recetario**, de cualquiera de estas dos formas.
+
+- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 03`.
+- O abre el archivo con la dirección `SIMULADOR.html?lab=03`, pegándola en la barra de direcciones del navegador.
+
+Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 03`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+
 ---
 
 ## Parte 1 · Mover y borrar con Git
@@ -180,6 +191,8 @@ Crea `.gitignore` con este contenido.
 *.bak
 credenciales.txt
 ```
+
+**De aquí en adelante, hasta el final de la parte 3, trabaja en tu terminal y no en el simulador.** El simulador no lee el contenido de los archivos, así que no puede aplicar las reglas de exclusión: te crea el `.gitignore` y te lo dice, pero no filtra nada. Lo que las reglas tapan solo se ve de verdad en Git.
 
 Y mira el estado.
 

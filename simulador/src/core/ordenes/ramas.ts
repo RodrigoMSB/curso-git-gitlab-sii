@@ -23,6 +23,7 @@ import {
   ramaActual,
   ramaPorNombre,
   renombrarCarril,
+  sincronizarDirectorio,
 } from '../estado';
 import { formatearEstadisticas } from '../formato';
 import { antepasados, archivosCambiados, baseComun, esAntepasado } from '../grafo';
@@ -178,8 +179,11 @@ function cambiarA(
   const rama = ramaPorNombre(estado, destino);
 
   if (rama !== undefined) {
+    // El directorio de trabajo sigue al arbol del destino, como en Git.
     const siguiente = anotarReflog(
-      asignarCarril({ ...estado, puntero: { tipo: 'rama', rama: destino } }, destino),
+      sincronizarDirectorio(
+        asignarCarril({ ...estado, puntero: { tipo: 'rama', rama: destino } }, destino),
+      ),
       {
         ref: 'HEAD',
         id: rama.id,
@@ -199,7 +203,7 @@ function cambiarA(
 
   const confirmacion = confirmacionPorId(estado, id);
   const siguiente = anotarReflog(
-    { ...estado, puntero: { tipo: 'confirmacion', id } },
+    sincronizarDirectorio({ ...estado, puntero: { tipo: 'confirmacion', id } }),
     {
       ref: 'HEAD',
       id,
