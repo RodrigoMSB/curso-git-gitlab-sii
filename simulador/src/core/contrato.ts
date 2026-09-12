@@ -177,7 +177,7 @@ export const EQUIVALENTES: Readonly<Record<string, string>> = {
   '-p': 'git show y git diff ya muestran el parche; es la forma por omision',
   '--patch': 'git show y git diff ya muestran el parche; es la forma por omision',
   '--no-decorate': 'no se puede apagar la decoracion: el grafo la necesita para explicarse',
-  '--date-order': 'la historia ya se recorre por fecha',
+  '--date-order': 'la historia ya se recorre por fecha, de la mas reciente a la mas antigua',
   '--long': 'es la forma larga de git status, que es la de por omision',
   '--worktree': 'es el ambito por omision de git restore',
   '--quiet': 'el simulador no tiene ruido que callar',

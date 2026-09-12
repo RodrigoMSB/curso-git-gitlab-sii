@@ -44,6 +44,23 @@ export function generarId(semilla: string, usados: ReadonlySet<string>): string 
 const EPOCA = Date.UTC(2026, 2, 2, 12, 0, 0) / 1000;
 const SEGUNDOS_POR_HORA = 3600;
 
+/**
+ * La zona en la que se escriben las fechas: Chile continental, `-0300`.
+ *
+ * Es la misma que `preparar.sh` le pasa a Git en `GIT_AUTHOR_DATE`, con la
+ * forma `@1772453640 -0300`. Git guarda el instante y el desplazamiento, y
+ * **muestra la hora en el desplazamiento guardado**, no en UTC.
+ *
+ * El simulador rotulaba `-0300` y escribia la hora de UTC, tres horas mas
+ * adelante: el participante veia `13:25` donde su terminal decia `10:25`, y el
+ * laboratorio 02 pone las dos salidas una al lado de la otra. El
+ * desplazamiento es fijo a proposito, igual que en el disco: el horario de
+ * verano de Chile movería las fechas de los escenarios segun el mes y
+ * rompería la comparacion contra el repositorio que el participante tiene.
+ */
+const DESPLAZAMIENTO = '-0300';
+const SEGUNDOS_DE_DESPLAZAMIENTO = -3 * SEGUNDOS_POR_HORA;
+
 const DIAS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const MESES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -69,20 +86,33 @@ export function epocaDeterminista(contador: number): number {
  * hace posible filtrar el historial por fecha.
  */
 export function fechaDeEpoca(epoca: number): string {
-  return fechaDeInstante(new Date(epoca * 1000));
+  return fechaDeInstante(enLaZona(epoca));
 }
 
 /** La misma fecha en la forma corta que pide `git log --date=short`. */
 export function fechaCorta(epoca: number): string {
-  return new Date(epoca * 1000).toISOString().slice(0, 10);
+  return enLaZona(epoca).toISOString().slice(0, 10);
+}
+
+/**
+ * El instante desplazado a la zona en que se escribe.
+ *
+ * Se corre el reloj y despues se lee con los metodos UTC: es la unica forma de
+ * que el resultado no dependa de la zona de la maquina donde corre el motor,
+ * que es codigo puro (restriccion R3) y tiene que dar lo mismo en Santiago que
+ * en cualquier otra parte.
+ */
+function enLaZona(epoca: number): Date {
+  return new Date((epoca + SEGUNDOS_DE_DESPLAZAMIENTO) * 1000);
 }
 
 function fechaDeInstante(instante: Date): string {
   const dia = DIAS[instante.getUTCDay()] ?? 'Mon';
   const mes = MESES[instante.getUTCMonth()] ?? 'Jan';
-  const numero = String(instante.getUTCDate()).padStart(2, ' ');
+  // El dia va sin rellenar: Git escribe «Jul 2», no «Jul  2».
+  const numero = String(instante.getUTCDate());
   const hora = String(instante.getUTCHours()).padStart(2, '0');
   const minuto = String(instante.getUTCMinutes()).padStart(2, '0');
   const segundo = String(instante.getUTCSeconds()).padStart(2, '0');
-  return `${dia} ${mes} ${numero} ${hora}:${minuto}:${segundo} ${instante.getUTCFullYear()} -0300`;
+  return `${dia} ${mes} ${numero} ${hora}:${minuto}:${segundo} ${instante.getUTCFullYear()} ${DESPLAZAMIENTO}`;
 }

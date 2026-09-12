@@ -232,8 +232,13 @@ function creacionesDeArchivo(
     // El contenido del bloque, linea por linea: la primera con `>`, que
     // reemplaza, y las demas con `>>`, que anexan. Son las dos formas que el
     // simulador entiende y las dos que el participante escribe.
-    const filas = contenido.contenido.split('\n').filter((fila) => fila.trim() !== '');
-    const escritas = filas.length === 0 ? ['contenido de ejemplo'] : filas;
+    // Las lineas en blanco entran: `echo "" >> archivo` escribe una linea
+    // vacia, en el simulador y en la terminal, y los archivos del recetario
+    // separan sus secciones con una. Saltarselas dejaba a los dos lados con un
+    // archivo que no es el que el enunciado muestra.
+    const filas = contenido.contenido.split('\n');
+    const sinElUltimoVacio = filas.at(-1) === '' ? filas.slice(0, -1) : filas;
+    const escritas = sinElUltimoVacio.length === 0 ? ['contenido de ejemplo'] : sinElUltimoVacio;
     escritas.forEach((fila, orden) => {
       const flecha = orden === 0 ? '>' : '>>';
       ordenes.push(clasificar(`echo "${fila}" ${flecha} ${ruta}`, indice + 1, alias));

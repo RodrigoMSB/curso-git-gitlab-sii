@@ -2891,24 +2891,18 @@ guarda su instante en segundos desde la época, y los escenarios declaran fechas
 concretas de 2024 escritas por tres autores distintos. El supuesto que sostenía
 4.7 —«al no haber reloj real»— dejó de cumplirse hace dos specs y nadie lo miró.
 
-Hoy no muerde, porque en los ocho escenarios el orden de creación coincide con
-el cronológico. **Muerde el día que un escenario declare una confirmación con
-fecha anterior a la de su padre**, que es lo normal en una rama que se abrió
-antes y se confirmó después: `git log` los ordenaría por fecha y el simulador
-por orden de declaración. No se cambia aquí, por la regla del punto 7.3.
+> **Cambiada por el product owner**, junto con el desfase de hora de más abajo.
+> El detalle de los dos cambios está en la sección 53.
 
 ### Y un defecto que apareció al mirar, que no es una decisión
 
-**La fecha se escribe en UTC y se rotula `-0300`.** `fechaDeInstante` formatea
-con `getUTCHours` y pega el desplazamiento de Chile al final. El participante ve
-`Tue Jul  2 13:25:00 2024 -0300` donde su terminal dice `Tue Jul 2 10:25:00 2024
--0300`: tres horas de diferencia y un espacio de más en el día. El laboratorio
-02 pone las dos salidas una al lado de la otra.
+**La fecha se escribía en UTC y se rotulaba `-0300`.** `fechaDeInstante`
+formateaba con `getUTCHours` y pegaba el desplazamiento de Chile al final. El
+participante veía `Tue Jul  2 13:25:00 2024 -0300` donde su terminal dice
+`Tue Jul 2 10:25:00 2024 -0300`: tres horas de diferencia y un espacio de más en
+el día. El laboratorio 02 pone las dos salidas una al lado de la otra.
 
-Es un defecto, no una decisión, y por eso no está en el cuadro de arriba. **No
-se corrige en este spec** porque cambiaría la fecha de todas las confirmaciones
-de los ocho escenarios, y eso toca las pruebas y las capturas del recorrido: es
-un cambio de su propio tamaño y no un arreglo al paso.
+> **Corregido por el product owner.** Sección 53.
 
 ## 48. Lo que queda declarado como no soportado
 
@@ -2996,6 +2990,9 @@ dos ramas tocaron el mismo archivo, hay conflicto.
 
 ### La detección por línea, como trabajo posterior
 
+> **Hecha después, a pedido del product owner.** La sección 54 la describe, y
+> corrige de paso una afirmación equivocada de lo que sigue.
+
 Queda anotada, con la mejora que traería y con una consecuencia que sólo se vio
 al implementar los marcadores.
 
@@ -3022,7 +3019,7 @@ informe que deja cada corrida de Cypress.
 |---|---|---|
 | 02 · leer la historia y abrir la caja | 70 % | **70 %** |
 | 03 · ordenar el recetario | 77 % | **95 %** |
-| 04 · tres cocinas en paralelo | 91 % | **91 %** |
+| 04 · tres cocinas en paralelo | 91 % | **92 %** |
 | 05 · fusionar y resolver | 87 % | **96 %** |
 | 06 · retroceder, revertir y etiquetar | 82 % | **88 %** |
 
@@ -3036,6 +3033,12 @@ salían a la terminal volvió todo menos uno.
 El **05** sube porque `cat platos.md` pasó a mostrar los marcadores de
 conflicto, que es el paso 3.3 del enunciado, y porque `git show --stat`
 funciona. El **06**, porque `git log -S` encuentra el ingrediente que sobra.
+
+El **04** sube un punto por una razón distinta y vale la pena decirla: no
+implementó nada nuevo, sino que **el recorrido creció**. El arnés escribe ahora
+el contenido de los archivos línea por línea, líneas en blanco incluidas, así
+que ese laboratorio pasó de 80 órdenes recorridas a 85. Las cinco nuevas se
+comparan en los dos lados.
 
 ### El artefacto
 
@@ -3172,11 +3175,10 @@ opciones cortas agrupadas: `grep -rn` es una palabra y son dos opciones. Se
 agregó `letrasCortas` para las órdenes del intérprete, donde el enunciado las
 escribe pegadas.
 
-### La fecha se escribe en UTC y se rotula `-0300`
+### La fecha se escribía en UTC y se rotulaba `-0300`
 
-Está en la sección 47, con el resto de la revisión. Es un defecto anterior a
-este spec y se deja anotado, no corregido: cambiarlo mueve la fecha de todas las
-confirmaciones de los ocho escenarios y con ellas las pruebas y las capturas.
+Está en la sección 47, con el resto de la revisión, y se corrigió después. El
+detalle está en la sección 53.
 
 ### Diferencias con Git, actualizadas
 
@@ -3189,7 +3191,7 @@ diferencias con Git que quedan son tres, y las tres están declaradas:
 |---|---|
 | La línea `index` del parche lleva huellas del simulador, no de Git | Declarada desde el SPEC 007: los identificadores no coinciden por diseño |
 | `git add` sobre un archivo tapado no imprime la segunda línea de consejo de Git, la que enseña a apagar el aviso | Nombra `git config set`, que no está en el contrato |
-| La detección de conflictos es por archivo y los marcadores por línea | Sección 49; el punto 5.4 pide expresamente no tocar la detección |
+| ~~La detección de conflictos es por archivo y los marcadores por línea~~ | **Cerrada**: la detección pasó a ser por línea, sección 54 |
 
 Y una que **no se tocó y ahora sería barata**, porque es anterior a este spec y
 más ancha que él: el resumen que `git commit` imprime dice ` 1 file changed`
@@ -3211,6 +3213,10 @@ Sobre el repositorio que `preparar.sh` deja en el disco, no razonado:
 | Los marcadores de conflicto del laboratorio 05 | Idénticos, carácter por carácter |
 | El tramo de exclusiones del laboratorio 03 entero | Idénticos, incluido el reclamo de `git add` |
 | Dónde imprime Git `create mode` y dónde no | Comprobado en las cinco órdenes que resumen |
+| La fecha larga y la corta de los laboratorios 02 y 05 | Idénticas, sección 53 |
+| El orden de `git log --all` con las ocho fechas del laboratorio 07 | Idéntico, sección 53 |
+| Una fusión del mismo archivo en líneas distintas | Idéntica: los dos fusionan solos, sección 54 |
+| Una fusión con un archivo limpio y otro en conflicto | Idéntica, incluido el orden de los avisos |
 
 ## 52. Qué laboratorio podría entrar al simulador, y cuál no
 
@@ -3241,9 +3247,155 @@ contenido con el de la fusión habría juntado dos riesgos.
 
 Pero ahora está a un paso. `fusionarTresVias` ya calcula si dos ramas chocan de
 verdad, y devuelve ese dato en su campo `choco`. La detección por archivo de
-`ordenMerge` podría preguntárselo en vez de comparar listas de nombres. Lo que
-se gana es concreto: **el laboratorio 05 podría mostrar su tercer caso de
-fusión**, el de dos ramas que tocaron el mismo archivo sin chocar, que hoy el
-simulador declara en conflicto donde Git fusiona solo. Y de paso desaparece el
-desajuste de la sección 49, el archivo declarado en conflicto que sale sin
-marcadores.
+`ordenMerge` podría preguntárselo en vez de comparar listas de nombres. Y de
+paso desaparece el desajuste de la sección 49, el archivo declarado en conflicto
+que sale sin marcadores.
+
+> **Corrección.** Este párrafo decía además que «el laboratorio 05 podría
+> mostrar su tercer caso de fusión, el de dos ramas que tocaron el mismo archivo
+> sin chocar». Es falso, y salió de repetir la frase del punto 5.3 del SPEC 012
+> sin contrastarla contra el enunciado. Los tres casos del laboratorio 05 son
+> avance rápido con `tailandesa`, confirmación de unión con `azteca` —que toca
+> **otro archivo**, `recetas/guacamole.md`— y conflicto con `andina`. El
+> segundo ya funcionaba. La sección 54 lo explica.
+
+---
+
+# SPEC 012 · cierre
+
+## 53. El reloj: la zona y el orden
+
+Los dos los pidió el product owner después del informe, y los dos son la misma
+cosa vista de dos maneras: el motor había aprendido a llevar la hora en el
+SPEC 010 y nadie había vuelto a mirar lo que hacía con ella.
+
+### La hora se escribe en el desplazamiento que declara
+
+Git guarda **el instante y el desplazamiento**, y muestra la hora en el
+desplazamiento guardado. `preparar.sh` le pasa `@1719915900 -0300`, así que el
+disco dice `Tue Jul 2 10:25:00 2024 -0300`.
+
+El simulador rotulaba `-0300` y escribía la hora de UTC, tres horas más
+adelante. Ahora corre el instante al desplazamiento y **después** lo lee con los
+métodos UTC, que es la única forma de que el resultado no dependa de la zona de
+la máquina donde corre el motor: es código puro (restricción R3) y tiene que dar
+lo mismo en Santiago que en cualquier otra parte. Una prueba exige que el módulo
+no llame a `getHours`, `toLocaleString` ni `getTimezoneOffset`.
+
+**El desplazamiento es fijo a propósito**, igual que en el disco. Chile tiene
+horario de verano; aplicarlo movería las fechas de los escenarios según el mes y
+rompería la comparación contra el repositorio que el participante tiene delante.
+
+De paso se fue el relleno del día: Git escribe `Jul 2`, no `Jul  2`.
+
+**Lo que este defecto enseña no es el defecto.** Es que la fecha de las
+confirmaciones **no tenía ninguna prueba que la fijara**. Ni una. Por eso pudo
+quedarse mal desde el SPEC 010 sin que nada se pusiera rojo, y por eso el
+arreglo llegó con cuatro pruebas que la clavan contra la salida de Git.
+
+### El historial se ordena por fecha
+
+Es la decisión 4.7, que decía «al no haber reloj real, el historial se ordena
+por el orden en que las confirmaciones entraron al modelo». El SPEC 010 le puso
+reloj y la razón caducó ahí.
+
+`historia` ordena ahora por instante, de la más reciente a la más antigua, que
+es lo que hace `git log`. Ante un empate se conserva el orden de creación
+invertido: no hay nada mejor con qué desempatar, y así el cambio no altera lo
+que ya estaba bien.
+
+**Y sí mordía, al revés de lo que decía el informe.** En una sola rama los dos
+órdenes coinciden y no se nota. Donde se nota es en `git log --all` sobre un
+escenario cuyas ramas se cruzan en el tiempo, y el **laboratorio 07 es
+exactamente eso**: declara primero las cuatro confirmaciones de `main` y después
+las cuatro de la rama de trabajo, que ocurrieron entre medio.
+
+| Orden | Resultado |
+|---|---|
+| Git, comprobado | cocineros, pastel, arreglos, mas cambios, cambios, wip, platos, README |
+| El simulador, antes | arreglos, mas cambios, cambios, wip, cocineros, pastel, platos, README |
+| El simulador, ahora | el de Git |
+
+Comprobado contra Git sobre un repositorio construido con **las ocho fechas
+exactas del laboratorio 07**, no sobre un caso parecido. El `git lg` de ese
+enunciado mostraba las dos ramas en dos bloques donde Git las intercala.
+
+El orden por fecha no rompe la relación entre padres e hijos porque en los ocho
+escenarios ninguna confirmación es anterior a su padre, y hay una prueba que
+recorre los ocho y lo exige: el día que un escenario declare una fecha al revés,
+lo dice.
+
+`--date-order` estaba declarada en `EQUIVALENTES` con el motivo «la historia ya
+se recorre por fecha». Era falso cuando se escribió y ahora es verdad.
+
+## 54. La detección de conflictos, por línea
+
+El punto 5.4 del SPEC 012 pidió no tocar la detección mientras se introducía el
+modelo de contenido, para no juntar dos riesgos. Hecho eso, el product owner
+pidió el cambio.
+
+### Qué cambió
+
+`ordenMerge` declaraba conflicto cuando las dos ramas habían tocado el mismo
+archivo. Ahora esos archivos son **candidatos**: se pasan por
+`fusionarTresVias`, que ya existía para escribir los marcadores, y sólo son
+conflicto los que devuelven `choco`. Los demás quedan fusionados y preparados,
+como los deja Git.
+
+El árbol de la unión se arma con la misma función, de modo que **lo que el
+participante ve en el directorio y lo que queda en la confirmación son el mismo
+texto**, sin dos caminos que puedan separarse.
+
+La salida se ajustó a la de Git, comprobada con un archivo de cada clase: una
+línea `Auto-merging` por cada archivo que hubo que fusionar, **en orden de
+ruta**, y el `CONFLICT` pegado justo debajo del que chocó. Antes se imprimían
+todos los `Auto-merging` juntos y después todos los `CONFLICT`, y sólo para los
+archivos en conflicto.
+
+### Qué se gana, y qué no
+
+Comprobado contra Git sobre repositorios con la misma forma, dos ramas que tocan
+`platos.md` —una sumando un fondo arriba y la otra una entrada al final— ahora
+se fusionan solas en los dos lados, con la misma salida y el mismo archivo
+resultante. Antes el simulador declaraba conflicto.
+
+**Lo que no se gana es el tercer caso del laboratorio 05**, y aquí hay que
+corregir lo que este documento decía. Sus tres casos son:
+
+| Parte | Rama | Qué enseña |
+|---|---|---|
+| 1 | `tailandesa` | avance rápido |
+| 2 | `azteca` | confirmación de unión, tocando **otro archivo** |
+| 3 | `andina` | conflicto sobre `platos.md` |
+
+El segundo caso **ya funcionaba**: `azteca` toca `recetas/guacamole.md`, que
+`main` no toca, así que nunca fue candidato a conflicto. La frase del punto 5.3
+del spec —«una de ellas es la fusión automática de dos ramas que tocaron el
+mismo archivo sin chocar»— describe algo que el enunciado no hace, y este
+documento la repitió sin contrastarla.
+
+Lo que el cambio sí hace es quitar una mentira que estaba latente: **cualquier
+participante que tanteara** abriendo una rama y tocando un archivo que `main`
+también tocó recibía un conflicto donde Git no lo da. No está en el guion, y el
+guion no es el límite de lo que el participante escribe.
+
+Y desaparece el desajuste de la sección 49: ya no puede haber un archivo
+declarado `both modified:` cuyo contenido salga fusionado y sin marcadores,
+porque las dos cosas las decide ahora la misma función.
+
+**Mostrar el tercer caso en el laboratorio 05 pide cambiar el escenario**, para
+que una rama toque `platos.md` en otra región, con su `preparar.sh` y su
+enunciado. No se hizo: cambia el laboratorio, no el motor.
+
+### El `echo` de la línea en blanco
+
+Apareció al construir el caso de prueba. `echo "" >> archivo` escribía **nada**
+donde bash escribe una línea vacía: el texto se normalizaba antes de pegarle el
+salto, y el vacío normalizado es el vacío.
+
+Importa más de lo que parece. Los archivos del recetario separan sus secciones
+con una línea en blanco, y `echo` es la única forma de escribir dentro del
+simulador: un participante que rehiciera `platos.md` obtenía un archivo sin
+ninguna separación. El arnés del recorrido las saltaba por la misma razón, así
+que los dos lados coincidían en un archivo que no era el que el enunciado
+muestra; ahora las escribe y coinciden en el que sí.

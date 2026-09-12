@@ -91,15 +91,39 @@ export function baseComun(
 }
 
 /**
- * Confirmaciones alcanzables desde las referencias dadas, de la mas reciente a
- * la mas antigua segun el orden de creacion.
+ * Confirmaciones alcanzables desde las referencias dadas, **de la mas reciente
+ * a la mas antigua por fecha**, que es como las ordena `git log`.
+ *
+ * Antes se ordenaban por orden de creacion (decision 4.7), y la razon escrita
+ * era «al no haber reloj real». El SPEC 010 le puso reloj: desde entonces cada
+ * confirmacion guarda su instante en segundos y los escenarios declaran fechas
+ * concretas. El supuesto caduco ahi y nadie lo miro hasta el SPEC 012.
+ *
+ * En una sola rama los dos ordenes coinciden y el cambio no se nota. Donde si
+ * se nota es en `git log --all` sobre un escenario cuyas ramas se cruzan en el
+ * tiempo: el laboratorio 07 declara primero las cuatro confirmaciones de `main`
+ * y despues las cuatro de la rama de trabajo, que ocurrieron **entre medio**.
+ * Con el orden de creacion el simulador mostraba las cuatro de la rama arriba
+ * y las de main debajo; Git las intercala por fecha. Comprobado contra Git
+ * sobre un repositorio con esa misma forma.
+ *
+ * Ante dos confirmaciones del mismo instante se conserva el orden de creacion
+ * invertido, que es lo que el motor hacia antes: no hay nada mejor con que
+ * desempatar y asi el cambio no altera lo que ya estaba bien.
  */
 export function historia(
   estado: EstadoRepositorio,
   desde: readonly string[],
 ): readonly Confirmacion[] {
   const alcanzables = antepasadosDeVarias(estado, desde);
-  return estado.confirmaciones.filter((confirmacion) => alcanzables.has(confirmacion.id)).reverse();
+  const creacion = new Map(estado.confirmaciones.map((confirmacion, indice) => [confirmacion.id, indice]));
+  return estado.confirmaciones
+    .filter((confirmacion) => alcanzables.has(confirmacion.id))
+    .sort(
+      (una, otra) =>
+        otra.epoca - una.epoca ||
+        (creacion.get(otra.id) ?? 0) - (creacion.get(una.id) ?? 0),
+    );
 }
 
 /**

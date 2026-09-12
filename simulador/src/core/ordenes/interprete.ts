@@ -369,7 +369,10 @@ export const ordenEcho: Manejador = (estado, argumentos) => {
     return fallo(estado, 'bash: syntax error near unexpected token `newline\'');
   }
 
-  const escrito = normalizar(argumentos.slice(0, corte).join(' '));
+  // El salto va pegado antes de normalizar: `echo "" > archivo` escribe una
+  // linea en blanco, no un archivo vacio, y las listas del recetario llevan
+  // lineas en blanco entre sus secciones.
+  const escrito = normalizar(`${argumentos.slice(0, corte).join(' ')}\n`);
   const existente = archivoPorNombre(estado, destino);
   const previo = anexa ? (textoDeTrabajo(estado, destino) ?? '') : '';
   const texto = `${previo}${escrito}`;

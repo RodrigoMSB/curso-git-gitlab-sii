@@ -10,6 +10,8 @@
  * spec exige. Lo que esta escrito en los `expect` es lo que Git imprime.
  */
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   arbolDe,
@@ -27,9 +29,9 @@ import {
   formatearParche,
   fusionarTresVias,
 } from '../src/core/diferencias';
-import { idActual } from '../src/core/estado';
+import { archivoPorNombre, idActual } from '../src/core/estado';
 import { ejecutar } from '../src/core/motor';
-import { escenarioPorId } from '../src/escenarios';
+import { ESCENARIOS, escenarioPorId } from '../src/escenarios';
 import { correr, correrHasta, repoConRamas, repoLimpio, repoLineal, texto } from './ayudas';
 
 describe('el texto se normaliza al entrar', () => {
@@ -586,5 +588,243 @@ describe('las ordenes que el contenido desbloqueo', () => {
       'platos.md',
     ]);
     expect(cambios.every((uno) => uno.antes === null)).toBe(true);
+  });
+});
+
+/**
+ * Las dos decisiones que el SPEC 010 dejo caducadas y el SPEC 012 encontro al
+ * revisarlas: la zona en que se escribe la fecha y el orden del historial.
+ *
+ * Las dos estaban sin ninguna prueba que las fijara, que es exactamente por lo
+ * que pudieron quedarse mal sin que nadie se enterara. Lo que estos `expect`
+ * escriben es lo que imprime Git, comprobado sobre el repositorio que
+ * `preparar.sh` deja en el disco.
+ */
+describe('la fecha se escribe en la zona que declara', () => {
+  /** La punta de `main` en el laboratorio 05, que es la que Git imprime arriba. */
+  const puntaDelCinco = (): string => {
+    const estado = escenarioPorId('lab-05');
+    const cabeza = idActual(estado);
+    return estado.confirmaciones.find((una) => una.id === cabeza)?.fecha ?? '';
+  };
+
+  it('la hora es la de -0300, y no la de UTC', () => {
+    // Git imprime esto para ese instante. El motor rotulaba -0300 y escribia
+    // las 13:25, que son las de UTC: tres horas de diferencia con la terminal.
+    expect(puntaDelCinco()).toBe('Tue Jul 2 10:25:00 2024 -0300');
+  });
+
+  it('el dia va sin rellenar, como lo escribe Git', () => {
+    // «Jul 2», no «Jul  2»: Git no alinea el numero del dia.
+    expect(puntaDelCinco()).not.toContain('  2 ');
+  });
+
+  it('la fecha corta tambien sale en la zona declarada', () => {
+    const salida = texto(
+      ejecutar(escenarioPorId('lab-02'), 'git log --format="%ad" --date=short'),
+    );
+
+    expect(salida.split('\n')).toEqual([
+      '2024-09-30',
+      '2024-07-18',
+      '2024-04-09',
+      '2024-02-27',
+      '2024-01-15',
+    ]);
+  });
+
+  it('no depende de la zona horaria de la maquina', () => {
+    // El motor es codigo puro (restriccion R3): la fecha se calcula corriendo
+    // el instante y leyendolo en UTC, no preguntandole la zona al sistema.
+    const fuente = readFileSync(
+      fileURLToPath(new URL('../src/core/identificadores.ts', import.meta.url)),
+      'utf8',
+    );
+
+    expect(fuente).not.toContain('getHours');
+    expect(fuente).not.toContain('toLocaleString');
+    expect(fuente).not.toContain('getTimezoneOffset');
+  });
+});
+
+describe('el historial se ordena por fecha, como git log', () => {
+  /** Los mensajes de `git log --oneline`, sin el identificador ni la decoracion. */
+  const mensajesDe = (salida: string): readonly string[] =>
+    salida
+      .split('\n')
+      .map((fila) => fila.replace(/^\S+ /, '').replace(/^\([^)]*\) /, ''));
+
+  it('en una sola rama no cambia nada', () => {
+    const salida = texto(ejecutar(escenarioPorId('lab-02'), 'git log --oneline'));
+
+    expect(mensajesDe(salida)).toEqual([
+      'se docuemnta la reseta del pastel de choclo',
+      'se suma la lista de cocineros',
+      'se agregan los ingredientes base',
+      'se agregan los platos chilenos',
+      'se inicia el recetario',
+    ]);
+  });
+
+  it('con --all intercala las ramas que se cruzan en el tiempo', () => {
+    // El laboratorio 07 declara primero las cuatro confirmaciones de main y
+    // despues las cuatro de la rama de trabajo, que ocurrieron entre medio.
+    // Git las intercala por fecha; el orden de creacion las mostraba en dos
+    // bloques. Comprobado contra Git sobre un repositorio de esa misma forma.
+    const salida = texto(ejecutar(escenarioPorId('lab-07'), 'git log --oneline --all'));
+
+    expect(mensajesDe(salida)).toEqual([
+      'Agrega la tabla de cocineros',
+      'Agrega la receta del pastel de choclo',
+      'arreglos',
+      'mas cambios',
+      'cambios',
+      'wip',
+      'Agrega platos e ingredientes',
+      'Agrega el README del recetario',
+    ]);
+  });
+
+  it('el orden por fecha no rompe la relacion entre padres e hijos del guion', () => {
+    // En los ocho escenarios ninguna confirmacion es anterior a su padre, de
+    // modo que el orden por fecha tambien respeta el grafo. Si algun escenario
+    // declarara una fecha al reves, esta prueba lo dice.
+    for (const declaracion of ESCENARIOS) {
+      const estado = escenarioPorId(declaracion.id);
+      for (const confirmacion of estado.confirmaciones) {
+        for (const idPadre of confirmacion.padres) {
+          const padre = estado.confirmaciones.find((una) => una.id === idPadre);
+          expect(
+            confirmacion.epoca >= (padre?.epoca ?? 0),
+            `${declaracion.id}: «${confirmacion.mensaje}» es anterior a su padre`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+});
+
+/**
+ * La deteccion de conflictos por linea (punto 5.6 del SPEC 012, hecho despues).
+ *
+ * El punto 5.4 pidio no tocar la deteccion mientras se introducia el modelo de
+ * contenido, para no juntar dos riesgos. Hecho eso, la deteccion pasa a
+ * preguntarle a la fusion de tres vias si los dos cambios se pisan de verdad,
+ * en vez de mirar si las dos ramas tocaron el mismo archivo.
+ *
+ * Todo lo que estos `expect` fijan se comprobo contra Git de verdad, sobre
+ * repositorios construidos con la misma forma.
+ */
+describe('la fusion detecta el conflicto por linea', () => {
+  /** Reescribe `platos.md` sumando un fondo, que es un cambio lejos del final. */
+  const SUMA_UN_FONDO = [
+    'echo "# Platos" > platos.md',
+    'echo "" >> platos.md',
+    'echo "## Fondos" >> platos.md',
+    'echo "" >> platos.md',
+    'echo "- pastel de choclo" >> platos.md',
+    'echo "- cazuela con chuchoca" >> platos.md',
+    'echo "- curanto" >> platos.md',
+    'echo "- charquican" >> platos.md',
+    'echo "" >> platos.md',
+    'echo "## Entradas" >> platos.md',
+    'echo "" >> platos.md',
+    'echo "- empanadas de pino" >> platos.md',
+  ];
+
+  it('dos ramas que tocan el mismo archivo en lineas distintas se fusionan solas', () => {
+    const partida = correr(
+      repoConRamas(),
+      'git switch -c postres',
+      'echo "- sopaipillas" >> platos.md',
+      'git add platos.md',
+      'git commit -m "Agrega las sopaipillas"',
+      'git switch main',
+      ...SUMA_UN_FONDO,
+      'git add platos.md',
+      'git commit -m "Suma el charquican a los fondos"',
+    );
+
+    const resultado = correrHasta(partida, 'git merge postres');
+
+    // Git no declara conflicto aqui, y el simulador lo declaraba: es el único
+    // punto en que le enseñaba algo falso al participante.
+    expect(resultado.estado.fusion).toBeNull();
+    expect(texto(resultado)).toContain('Auto-merging platos.md');
+    expect(texto(resultado)).toContain("Merge made by the 'ort' strategy.");
+    expect(texto(resultado)).not.toContain('CONFLICT');
+
+    // Y el archivo queda con los dos cambios, sin marcadores.
+    const platos = textoDeTrabajo(resultado.estado, 'platos.md') ?? '';
+    expect(platos).toContain('- charquican');
+    expect(platos).toContain('- sopaipillas');
+    expect(platos).not.toContain('<<<<<<<');
+
+    // El arbol de la union guarda lo mismo que el directorio.
+    expect(textoEnCabeza(resultado.estado, 'platos.md')).toBe(platos);
+  });
+
+  it('dos ramas que tocan la misma linea siguen chocando', () => {
+    // Es el caso del laboratorio 05 con `andina`, que no cambia.
+    const resultado = correrHasta(repoConRamas(), 'git merge andina');
+
+    expect(resultado.estado.fusion?.conflictos).toEqual(['platos.md']);
+    expect(texto(resultado)).toContain('CONFLICT (content): Merge conflict in platos.md');
+    expect(textoDeTrabajo(resultado.estado, 'platos.md')).toContain('<<<<<<< HEAD');
+  });
+
+  it('con un archivo de cada clase, Git los nombra por ruta y pega el reclamo al que choco', () => {
+    const partida = correr(
+      repoConRamas(),
+      'git switch -c mixta',
+      'echo "- sal marina" >> ingredientes.md',
+      'echo "- sopaipillas" >> platos.md',
+      'git add .',
+      'git commit -m "Suma sal marina y sopaipillas"',
+      'git switch main',
+      'echo "- oregano" >> ingredientes.md',
+      ...SUMA_UN_FONDO,
+      'git add .',
+      'git commit -m "Suma oregano y charquican"',
+    );
+
+    const resultado = correrHasta(partida, 'git merge mixta');
+
+    // Comprobado contra Git: una linea por archivo, en orden de ruta, y el
+    // reclamo justo debajo del que choco.
+    expect(texto(resultado).split('\n')).toEqual([
+      'Auto-merging ingredientes.md',
+      'CONFLICT (content): Merge conflict in ingredientes.md',
+      'Auto-merging platos.md',
+      'Automatic merge failed; fix conflicts and then commit the result.',
+    ]);
+
+    // El que choco queda sin fusionar; el que no, preparado.
+    expect(resultado.estado.fusion?.conflictos).toEqual(['ingredientes.md']);
+    expect(archivoPorNombre(resultado.estado, 'ingredientes.md')?.estado).toBe('en-conflicto');
+    expect(archivoPorNombre(resultado.estado, 'platos.md')?.estado).toBe('preparado');
+    expect(textoDeTrabajo(resultado.estado, 'platos.md')).not.toContain('<<<<<<<');
+  });
+
+  it('abortar sigue devolviendo el directorio a como estaba', () => {
+    const partida = repoConRamas();
+    const despues = correr(partida, 'git merge andina', 'git merge --abort');
+
+    expect(despues).toEqual(partida);
+  });
+});
+
+describe('echo escribe la linea en blanco', () => {
+  it('con la cadena vacia agrega una linea, no nada', () => {
+    // `echo "" >> archivo` escribe un salto, en bash y ahora en el simulador.
+    // Los archivos del recetario separan sus secciones con una linea vacia.
+    const estado = correr(
+      repoConRamas(),
+      'echo "uno" > nuevo.md',
+      'echo "" >> nuevo.md',
+      'echo "dos" >> nuevo.md',
+    );
+
+    expect(textoDeTrabajo(estado, 'nuevo.md')).toBe('uno\n\ndos\n');
   });
 });

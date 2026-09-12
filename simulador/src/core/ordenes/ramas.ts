@@ -434,13 +434,56 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
   const base = baseComun(estado, cabeza, idOtro);
   const aqui = archivosCambiados(estado, base, cabeza);
   const alla = archivosCambiados(estado, base, idOtro);
-  const conflictos = [...alla].filter((archivo) => aqui.has(archivo));
   const idPrevisto = reservarId(estado, `merge:${cabeza}:${idOtro}`);
 
+  // **La deteccion de conflictos es por linea** (punto 5.6 del SPEC 012).
+  //
+  // Los archivos que las dos ramas tocaron son candidatos, no conflictos: Git
+  // los fusiona linea por linea y solo declara conflicto cuando los dos
+  // cambios se pisan. Antes bastaba con que las dos hubieran tocado el mismo
+  // archivo, y el simulador declaraba conflicto donde Git fusiona solo.
+  //
+  // Se ordenan por ruta porque es el orden en que Git los nombra.
+  const candidatos = [...alla].filter((archivo) => aqui.has(archivo)).sort();
+
+  // El nombre con que Git rotula cada lado de los marcadores: el tuyo es
+  // siempre `HEAD` y el otro es la referencia que nombraste al fusionar.
+  const fusionados = new Map(
+    candidatos.map((archivo) => [
+      archivo,
+      fusionarTresVias(
+        textoEnConfirmacion(estado, base, archivo) ?? '',
+        textoEnConfirmacion(estado, cabeza, archivo) ?? '',
+        textoEnConfirmacion(estado, idOtro, archivo) ?? '',
+        'HEAD',
+        objetivo,
+      ),
+    ]),
+  );
+  const conflictos = candidatos.filter((archivo) => fusionados.get(archivo)?.choco === true);
+
+  /**
+   * El texto con que cada archivo queda tras la fusion.
+   *
+   * Los tres casos, en el orden en que se preguntan: lo que las dos ramas
+   * tocaron sale de la fusion de tres vias —con marcadores dentro si choco—,
+   * lo que solo toco la otra entra tal cual, y lo nuestro se queda.
+   */
+  const textoFusionado = (ruta: string): string => {
+    const fusionado = fusionados.get(ruta);
+    if (fusionado !== undefined) return fusionado.texto;
+    return textoEnConfirmacion(estado, alla.has(ruta) ? idOtro : cabeza, ruta) ?? '';
+  };
+
+  // Git nombra cada archivo que tuvo que fusionar, y pega el reclamo justo
+  // debajo del que choco. Comprobado contra Git con un archivo de cada clase.
+  const avisosDeFusion = candidatos.flatMap((archivo) =>
+    conflictos.includes(archivo)
+      ? [`Auto-merging ${archivo}`, `CONFLICT (content): Merge conflict in ${archivo}`]
+      : [`Auto-merging ${archivo}`],
+  );
+
   if (conflictos.length > 0) {
-    // El nombre con que Git rotula cada lado de los marcadores: el tuyo es
-    // siempre `HEAD` y el otro es la referencia que nombraste al fusionar.
-    const rotuloAqui = 'HEAD';
     let siguiente = estado;
     for (const archivo of alla) {
       siguiente = establecerArchivo(
@@ -448,30 +491,11 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
         archivo,
         conflictos.includes(archivo) ? 'en-conflicto' : 'preparado',
       );
-      if (conflictos.includes(archivo)) {
-        // El archivo en conflicto queda con las dos versiones dentro, entre
-        // marcadores, como lo deja Git. El laboratorio 05 le pide al
-        // participante leerlos, compararlos y borrarlos a mano, y sin el texto
-        // de verdad eran tres lineas de forma que no decian nada.
-        siguiente = establecerContenido(
-          siguiente,
-          archivo,
-          fusionarTresVias(
-            textoEnConfirmacion(estado, base, archivo) ?? '',
-            textoEnConfirmacion(estado, cabeza, archivo) ?? '',
-            textoEnConfirmacion(estado, idOtro, archivo) ?? '',
-            rotuloAqui,
-            objetivo,
-          ).texto,
-        );
-        continue;
-      }
-      // Lo que la otra rama trae sin chocar entra tal cual, ya preparado.
-      siguiente = establecerContenido(
-        siguiente,
-        archivo,
-        textoEnConfirmacion(estado, idOtro, archivo) ?? '',
-      );
+      // El archivo en conflicto queda con las dos versiones dentro, entre
+      // marcadores, como lo deja Git. El laboratorio 05 le pide al
+      // participante leerlos, compararlos y borrarlos a mano, y sin el texto
+      // de verdad eran tres lineas de forma que no decian nada.
+      siguiente = establecerContenido(siguiente, archivo, textoFusionado(archivo));
     }
     siguiente = {
       ...siguiente,
@@ -487,8 +511,7 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
     return {
       estado: siguiente,
       salida: lineas(
-        ...conflictos.map((archivo) => `Auto-merging ${archivo}`),
-        ...conflictos.map((archivo) => `CONFLICT (content): Merge conflict in ${archivo}`),
+        ...avisosDeFusion,
         'Automatic merge failed; fix conflicts and then commit the result.',
       ),
       error: false,
@@ -499,17 +522,13 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
     };
   }
 
-  // El arbol de la union: se parte del nuestro y se toma **el texto de la otra
-  // rama en los archivos que ella cambio**. Aqui no hay conflicto, de modo que
-  // los que ella toco no los tocamos nosotros y al reves.
-  //
-  // Sin esto, la union registraba los archivos que la otra rama traia con el
-  // texto vacio: no estan en nuestro directorio de trabajo ni en nuestra
-  // confirmacion, asi que el area de preparacion no tenia nada que darle.
+  // El arbol de la union: se parte del nuestro y se reemplaza lo que la fusion
+  // resolvio. Sin esto, la union registraba los archivos que la otra rama
+  // traia con el texto vacio: no estan en nuestro directorio de trabajo ni en
+  // nuestra confirmacion, asi que el area de preparacion no tenia que darle.
   const textosDeLaUnion: Record<string, string> = {};
   for (const ruta of traidos) {
-    const desde = alla.has(ruta) ? idOtro : cabeza;
-    textosDeLaUnion[ruta] = textoEnConfirmacion(estado, desde, ruta) ?? '';
+    textosDeLaUnion[ruta] = textoFusionado(ruta);
   }
 
   const mensaje = valorDeOpcion(argumentos, '-m') ?? `Merge branch '${objetivo}'`;
@@ -536,6 +555,7 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
   return ok(
     siguiente,
     lineas(
+      ...avisosDeFusion,
       `Merge made by the 'ort' strategy.`,
       // Contra `creado.estado` y no contra `estado`: la union acaba de nacer y
       // en el estado anterior no existe, de modo que su arbol saldria vacio.
