@@ -541,13 +541,22 @@ export const LAB04: EscenarioDeclarado = {
 // ---------------------------------------------------------------------------
 
 /**
- * Tres ramas con destinos distintos a proposito, uno por cada caso de fusion.
+ * Cuatro ramas con destinos distintos a proposito, una por cada caso de fusion.
  *
  *   tailandesa  nace de la punta de main, que no avanzo despues, de modo que
  *               su fusion es un avance rapido y no crea confirmacion de union.
  *   azteca      nace antes y toca otros archivos: la fusion une sin chocar.
+ *   criolla     nace antes y **toca el mismo archivo que main**, en otra
+ *               seccion: la fusion une sin chocar igual. Es el caso que
+ *               desarma la creencia de que tocar el mismo archivo es conflicto
+ *               seguro, y el unico que el simulador no podia mostrar hasta que
+ *               la deteccion paso a ser por linea (seccion 54).
  *   andina      toca la misma linea de platos.md que toco main despues, de
  *               modo que su fusion choca.
+ *
+ * `criolla` y `andina` son deliberadamente parecidas: las dos nacen del mismo
+ * punto, las dos cambian `platos.md` y las dos agregan una receta. La unica
+ * diferencia es que linea de `platos.md` tocan, y de eso depende todo.
  */
 /** La lista de platos por secciones, tal como la deja la segunda confirmacion. */
 const PLATOS_SECCIONES = `# Platos
@@ -569,6 +578,23 @@ const PLATOS_CHUCHOCA = PLATOS_SECCIONES.replace('- cazuela', '- cazuela con chu
 /** Lo que la rama andina pone en esa misma linea. */
 const PLATOS_LOMO = PLATOS_SECCIONES.replace('- cazuela', '- lomo saltado');
 
+/**
+ * Lo que la rama criolla le suma, **al final y en la otra seccion**.
+ *
+ * Es el cuarto caso de fusion del laboratorio 05, y el que desarma la creencia
+ * de que tocar el mismo archivo es conflicto seguro: `criolla` y `andina` tocan
+ * las dos `platos.md` y las dos agregan una receta, y la unica diferencia es
+ * **que linea** cambian. La de criolla queda a cuatro lineas de la que cambio
+ * main, con `## Entradas` y la empanada entre medio, asi que la fusion de tres
+ * vias las resuelve sola. Comprobado contra Git.
+ */
+const PLATOS_SOPAIPILLAS = `${PLATOS_SECCIONES}- sopaipillas\n`;
+
+const SOPAIPILLAS_LAB05 = `# Sopaipillas
+
+Masa de zapallo y harina, fritas, con pebre o chancaca.
+`;
+
 const GUACAMOLE = `# Guacamole
 
 Palta, cebolla morada, cilantro y limon de pica.
@@ -585,7 +611,7 @@ export const LAB05: EscenarioDeclarado = {
   sesion: 4,
   titulo: 'Fusionar y resolver',
   proposito:
-    'Reconocer cual de los tres casos de fusion se tiene delante antes de escribir la orden, y saber que hacer cuando choca.',
+    'Reconocer cual de los cuatro casos de fusion se tiene delante antes de escribir la orden, y saber que hacer cuando choca.',
   directorio: directorioDe(5),
   configuracion: CONFIGURACION_PUESTA,
   confirmaciones: [
@@ -654,6 +680,22 @@ export const LAB05: EscenarioDeclarado = {
       ...SOFIA,
       epoca: cuando(7, 16, 9, 50),
     },
+    // criolla nace en el mismo punto que andina y toca el mismo archivo, pero
+    // en la otra seccion: su fusion es automatica y no choca. Es el caso que
+    // desarma la creencia de que tocar el mismo archivo es conflicto seguro.
+    {
+      clave: 'r1',
+      mensaje: 'Suma las sopaipillas a las entradas',
+      archivos: ['platos.md', 'recetas/sopaipillas.md'],
+      contenido: {
+        'platos.md': PLATOS_SOPAIPILLAS,
+        'recetas/sopaipillas.md': SOPAIPILLAS_LAB05,
+      },
+      padres: ['c3'],
+      carril: 3,
+      ...JUANA,
+      epoca: cuando(7, 18, 14, 20),
+    },
     // andina nace en el mismo punto y cambia la misma linea de platos.md que
     // cambio main: su fusion choca.
     {
@@ -665,7 +707,7 @@ export const LAB05: EscenarioDeclarado = {
         'recetas/lomo-saltado.md': LOMO_SALTADO,
       },
       padres: ['c3'],
-      carril: 3,
+      carril: 4,
       ...MARCO,
       epoca: cuando(7, 23, 16, 30),
     },
@@ -674,7 +716,8 @@ export const LAB05: EscenarioDeclarado = {
     { nombre: 'main', en: 'c4', carril: 0 },
     { nombre: 'tailandesa', en: 't1', carril: 1 },
     { nombre: 'azteca', en: 'a1', carril: 2 },
-    { nombre: 'andina', en: 'n1', carril: 3 },
+    { nombre: 'criolla', en: 'r1', carril: 3 },
+    { nombre: 'andina', en: 'n1', carril: 4 },
   ],
   etiquetas: [],
   posicion: 'main',

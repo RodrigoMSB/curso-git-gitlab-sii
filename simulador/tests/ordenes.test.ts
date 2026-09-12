@@ -757,7 +757,8 @@ describe('git merge', () => {
     expect(resultado.estado.fusion?.conflictos).toEqual(['platos.md']);
     expect(archivoPorNombre(resultado.estado, 'platos.md')?.estado).toBe('en-conflicto');
     expect(archivoPorNombre(resultado.estado, 'recetas/lomo-saltado.md')?.estado).toBe('preparado');
-    expect(resultado.estado.confirmaciones).toHaveLength(7);
+    // La fusion que choca no crea confirmacion: el grafo queda como estaba.
+    expect(resultado.estado.confirmaciones).toHaveLength(repoConRamas().confirmaciones.length);
   });
 
   it('no deja confirmar mientras queden archivos en conflicto', () => {

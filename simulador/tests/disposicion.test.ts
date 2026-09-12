@@ -34,17 +34,21 @@ describe('CA6 · casos que el calculo de posiciones debe cubrir', () => {
     }
   });
 
-  it('dos ramas divergentes: cada linea ocupa su propia columna', () => {
+  it('cuatro ramas divergentes: cada linea ocupa su propia columna', () => {
     const estado = repoConRamas();
     const { nodos, aristas } = disponer(estado);
 
-    expect(nodos).toHaveLength(7);
+    expect(nodos).toHaveLength(estado.confirmaciones.length);
+    // Una columna por rama, en el orden en que el enunciado las fusiona.
     expect(carrilDe(estado, 'main')).toBe(0);
-    expect(carrilDe(estado, 'andina')).toBe(3);
-    // Tres lineas vuelven a la misma base: main, azteca y andina nacen todas
-    // de la tercera confirmacion.
+    expect(carrilDe(estado, 'tailandesa')).toBe(1);
+    expect(carrilDe(estado, 'azteca')).toBe(2);
+    expect(carrilDe(estado, 'criolla')).toBe(3);
+    expect(carrilDe(estado, 'andina')).toBe(4);
+    // Cuatro lineas vuelven a la misma base: main, azteca, criolla y andina
+    // nacen todas de la tercera confirmacion.
     const base = estado.confirmaciones[2]?.id ?? '';
-    expect(aristas.filter((arista) => arista.hasta === base)).toHaveLength(3);
+    expect(aristas.filter((arista) => arista.hasta === base)).toHaveLength(4);
   });
 
   it('fusion: la union se marca como tal y sale de sus dos padres', () => {

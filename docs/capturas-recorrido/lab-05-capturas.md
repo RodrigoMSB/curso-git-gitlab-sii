@@ -27,30 +27,39 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 019 | movio | tiempo |
 | 020 | movio | nodos, ramas, areas, tiempo |
 | 021 | movio | tiempo |
-| 022 | movio | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 022 | movio | tiempo |
 | 023 | movio | tiempo |
-| 024 | movio | tiempo |
-| 025 | movio | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 024 | movio | nodos, ramas, puntero, areas, tiempo |
+| 025 | movio | tiempo |
 | 026 | movio | tiempo |
 | 027 | movio | tiempo |
-| 028 | movio | tiempo |
-| 029 | movio | nodos, ramas, puntero, previsualizacion, areas, tiempo |
-| 030 | movio | tiempo |
+| 028 | movio | nodos, ramas, areas, tiempo |
+| 029 | movio | tiempo |
+| 030 | movio | nodos, ramas, puntero, previsualizacion, areas, tiempo |
 | 031 | movio | tiempo |
-| 032 | movio | areas, tiempo |
-| 033 | movio | tiempo |
-| 034 | movio | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 032 | movio | tiempo |
+| 033 | movio | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 034 | movio | tiempo |
 | 035 | movio | tiempo |
 | 036 | movio | tiempo |
-| 037 | movio | tiempo |
-| 038 | movio | ramas, areas, tiempo |
+| 037 | movio | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 038 | movio | tiempo |
 | 039 | movio | tiempo |
-| 040 | movio | tiempo |
+| 040 | movio | areas, tiempo |
 | 041 | movio | tiempo |
-| 042 | movio | tiempo |
+| 042 | movio | nodos, ramas, puntero, previsualizacion, areas, tiempo |
 | 043 | movio | tiempo |
 | 044 | movio | tiempo |
 | 045 | movio | tiempo |
-| 046 | movio | nodos, ramas, puntero, areas, tiempo |
+| 046 | movio | ramas, areas, tiempo |
+| 047 | movio | tiempo |
+| 048 | movio | tiempo |
+| 049 | movio | tiempo |
+| 050 | movio | tiempo |
+| 051 | movio | tiempo |
+| 052 | movio | tiempo |
+| 053 | movio | tiempo |
+| 054 | movio | tiempo |
+| 055 | movio | nodos, ramas, puntero, areas, tiempo |
 
 Ningun paso quedo sin pintar: todo lo que se movio se ve en la imagen.

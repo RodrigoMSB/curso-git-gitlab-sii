@@ -23,29 +23,38 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 018 | `git log --oneline -1` | tiempo |
 | 019 | `git show --stat HEAD` | tiempo |
 | 020 | `git branch -d azteca` | nodos, ramas, areas, tiempo |
-| 021 | `git diff main andina -- platos.md` | tiempo |
-| 022 | `git merge andina` | nodos, ramas, puntero, previsualizacion, areas, tiempo |
-| 023 | `git status` | tiempo |
-| 024 | `cat platos.md` | tiempo |
-| 025 | `git merge --abort` | nodos, ramas, puntero, previsualizacion, areas, tiempo |
-| 026 | `git status` | tiempo |
-| 027 | `cat platos.md` | tiempo |
-| 028 | `git lg` | tiempo |
-| 029 | `git merge andina` | nodos, ramas, puntero, previsualizacion, areas, tiempo |
-| 030 | `git status` | tiempo |
-| 031 | `grep -n "<<<<<<<\\|=======\\|>>>>>>>" platos.md` | tiempo |
-| 032 | `git add platos.md` | areas, tiempo |
-| 033 | `git status` | tiempo |
-| 034 | `git commit` | nodos, ramas, puntero, previsualizacion, areas, tiempo |
-| 035 | `git lg` | tiempo |
-| 036 | `cat platos.md` | tiempo |
-| 037 | `git log --oneline -1` | tiempo |
-| 038 | `git branch -d andina` | ramas, areas, tiempo |
-| 039 | `git branch` | tiempo |
-| 040 | `git log --oneline` | tiempo |
-| 041 | `git lg` | tiempo |
-| 042 | `grep -rn "<<<<<<<" .` | tiempo |
-| 043 | `git status` | tiempo |
-| 044 | `git restore --staged platos.md` | tiempo |
-| 045 | `git add platos.md` | tiempo |
-| 046 | `git commit --amend --no-edit` | nodos, ramas, puntero, areas, tiempo |
+| 021 | `git show criolla` | tiempo |
+| 022 | `git show andina` | tiempo |
+| 023 | `cat platos.md` | tiempo |
+| 024 | `git merge criolla` | nodos, ramas, puntero, areas, tiempo |
+| 025 | `cat platos.md` | tiempo |
+| 026 | `git lg` | tiempo |
+| 027 | `git log --oneline -1` | tiempo |
+| 028 | `git branch -d criolla` | nodos, ramas, areas, tiempo |
+| 029 | `git diff main andina -- platos.md` | tiempo |
+| 030 | `git merge andina` | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 031 | `git status` | tiempo |
+| 032 | `cat platos.md` | tiempo |
+| 033 | `git merge --abort` | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 034 | `git status` | tiempo |
+| 035 | `cat platos.md` | tiempo |
+| 036 | `git lg` | tiempo |
+| 037 | `git merge andina` | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 038 | `git status` | tiempo |
+| 039 | `grep -n "<<<<<<<\\|=======\\|>>>>>>>" platos.md` | tiempo |
+| 040 | `git add platos.md` | areas, tiempo |
+| 041 | `git status` | tiempo |
+| 042 | `git commit` | nodos, ramas, puntero, previsualizacion, areas, tiempo |
+| 043 | `git lg` | tiempo |
+| 044 | `cat platos.md` | tiempo |
+| 045 | `git log --oneline -1` | tiempo |
+| 046 | `git branch -d andina` | ramas, areas, tiempo |
+| 047 | `git branch` | tiempo |
+| 048 | `git log --oneline` | tiempo |
+| 049 | `git lg` | tiempo |
+| 050 | `cat platos.md` | tiempo |
+| 051 | `grep -rn "<<<<<<<" .` | tiempo |
+| 052 | `git status` | tiempo |
+| 053 | `git restore --staged platos.md` | tiempo |
+| 054 | `git add platos.md` | tiempo |
+| 055 | `git commit --amend --no-edit` | nodos, ramas, puntero, areas, tiempo |

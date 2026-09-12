@@ -162,6 +162,24 @@ export function posicionales(
   return resultado;
 }
 
+/**
+ * Los argumentos anteriores al separador `--`, que son los que nombran
+ * referencias, y los posteriores, que son rutas.
+ *
+ * Git usa `--` para deshacer la ambiguedad entre un nombre de rama y un nombre
+ * de archivo. Las dos mitades las necesitan `git log` y `git diff`, y tenerlas
+ * aqui evita que cada una lleve su propia copia.
+ */
+export function antesDelSeparador(argumentos: readonly string[]): readonly string[] {
+  const corte = argumentos.indexOf('--');
+  return corte < 0 ? argumentos : argumentos.slice(0, corte);
+}
+
+export function trasElSeparador(argumentos: readonly string[]): readonly string[] {
+  const corte = argumentos.indexOf('--');
+  return corte < 0 ? [] : argumentos.slice(corte + 1);
+}
+
 /** Opciones desconocidas, para poder reproducir el reclamo de Git. */
 export function opcionesFuera(
   argumentos: readonly string[],

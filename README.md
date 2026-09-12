@@ -287,7 +287,7 @@ laboratorio tiene su escenario.
 | Lab 02 | 2 | Cinco confirmaciones de tres autores, un cambio sin preparar y otro preparado por error |
 | Lab 03 | 3 | Cinco confirmaciones, con tres archivos que nunca debieron entrar al historial |
 | Lab 04 | 3 | Seis confirmaciones en `main`, cada una tocando un archivo distinto |
-| Lab 05 | 4 | `tailandesa` avanza rapido, `azteca` une sin chocar y `andina` choca sobre la misma linea |
+| Lab 05 | 4 | Los cuatro casos de fusion: `tailandesa` avanza rapido, `azteca` une sin chocar, `criolla` toca el mismo archivo que main y se fusiona sola, y `andina` choca sobre la misma linea |
 | Lab 06 | 4 | Siete confirmaciones, con un error tres confirmaciones atras |
 | Lab 07 | 5 | Rama de trabajo con mensajes que no dicen nada y algo a medias encima |
 | Lab 09 | 6 | Ocho confirmaciones, archivo de exclusiones y una version etiquetada |

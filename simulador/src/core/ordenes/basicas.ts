@@ -3,12 +3,24 @@
  * `diff`.
  */
 
-import { posicionales, tieneOpcion } from '../analizador';
-import { textoDeTrabajo, textoEnCabeza, textoPreparado } from '../contenido';
+import {
+  antesDelSeparador,
+  posicionales,
+  tieneOpcion,
+  trasElSeparador,
+} from '../analizador';
+import {
+  arbolDe,
+  comparacionesEntre,
+  textoDeTrabajo,
+  textoEnCabeza,
+  textoPreparado,
+} from '../contenido';
 import { type Comparacion, formatearEstadisticasDe, formatearParches } from '../diferencias';
 import { archivosEn, establecerArchivo, establecerContenido, estaSeguido } from '../estado';
 import { estaExcluida, exclusionesDe, patronesFuera } from '../exclusiones';
 import { formatearEstadoCorto, formatearEstadoLargo } from '../formato';
+import { resolverReferencia } from '../referencias';
 import { fallo, lineaLimite, lineas, ok, sinRepositorio } from '../salida';
 import type { Archivo, EstadoRepositorio, ResultadoOrden } from '../tipos';
 
@@ -294,6 +306,18 @@ export const ordenDiff: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
   const preparado = tieneOpcion(argumentos, '--staged', '--cached');
 
+  // `git diff <referencia> [<referencia>]` compara dos puntos de la historia,
+  // o uno contra el directorio de trabajo. Es lo que el laboratorio 05 usa
+  // para mirar por que dos ramas van a chocar, y hasta ahora el simulador la
+  // aceptaba y **no imprimia nada**: la cuarta respuesta que el contrato del
+  // SPEC 010 no admite, en el paso 3.1 de ese enunciado.
+  const referencias = posicionales(antesDelSeparador(argumentos));
+  if (referencias.length > 0) {
+    const entreRevisiones = compararRevisiones(estado, referencias);
+    if (typeof entreRevisiones === 'string') return fallo(estado, entreRevisiones);
+    return escribirDiff(estado, limitarARutas(entreRevisiones, trasElSeparador(argumentos)), argumentos);
+  }
+
   const comparaciones: Comparacion[] = preparado
     ? [
         // Las bajas preparadas van primero, como las ordena `git status`.
@@ -323,9 +347,20 @@ export const ordenDiff: Manejador = (estado, argumentos) => {
         })),
       ];
 
-  // `--stat` resume en vez de mostrar el parche, con las lineas contadas de
-  // verdad. Esta en la carta de opciones, asi que tiene que hacer algo: una
-  // opcion aceptada y descartada es lo unico que el contrato no admite.
+  return escribirDiff(estado, limitarARutas(comparaciones, trasElSeparador(argumentos)), argumentos);
+};
+
+/**
+ * Escribe el parche o el resumen, segun lo que se pidio.
+ *
+ * `--stat` esta en la carta de opciones, asi que tiene que hacer algo: una
+ * opcion aceptada y descartada es lo unico que el contrato no admite.
+ */
+function escribirDiff(
+  estado: EstadoRepositorio,
+  comparaciones: readonly Comparacion[],
+  argumentos: readonly string[],
+): ResultadoOrden {
   const resumir = tieneOpcion(argumentos, '--stat');
   return ok(
     estado,
@@ -335,4 +370,57 @@ export const ordenDiff: Manejador = (estado, argumentos) => {
         : formatearParches(comparaciones)),
     ),
   );
-};
+}
+
+/** Deja solo las comparaciones de las rutas pedidas detras del `--`. */
+function limitarARutas(
+  comparaciones: readonly Comparacion[],
+  rutas: readonly string[],
+): readonly Comparacion[] {
+  if (rutas.length === 0) return comparaciones;
+  return comparaciones.filter((comparacion) =>
+    rutas.some(
+      (ruta) => comparacion.ruta === ruta || comparacion.ruta.startsWith(`${ruta}/`),
+    ),
+  );
+}
+
+/**
+ * Las comparaciones de `git diff <referencia> [<referencia>]`.
+ *
+ * Con dos referencias se comparan los dos arboles. Con una, ese arbol contra
+ * el directorio de trabajo, que es lo que hace Git. Devuelve el texto del
+ * reclamo cuando alguna referencia no existe.
+ */
+function compararRevisiones(
+  estado: EstadoRepositorio,
+  referencias: readonly string[],
+): readonly Comparacion[] | string {
+  const primera = referencias[0] ?? '';
+  const idUna = resolverReferencia(estado, primera);
+  if (idUna === null) {
+    return `fatal: ambiguous argument '${primera}': unknown revision or path not in the working tree.`;
+  }
+
+  const segunda = referencias[1];
+  if (segunda !== undefined) {
+    const idOtra = resolverReferencia(estado, segunda);
+    if (idOtra === null) {
+      return `fatal: ambiguous argument '${segunda}': unknown revision or path not in the working tree.`;
+    }
+    return comparacionesEntre(estado, idUna, idOtra);
+  }
+
+  // Una sola referencia: ese arbol contra lo que hay en el disco ahora.
+  const arbol = arbolDe(estado, idUna);
+  const rutas = [
+    ...new Set([...Object.keys(arbol), ...estado.archivos.map((archivo) => archivo.nombre)]),
+  ].sort();
+  return rutas
+    .map((ruta) => ({
+      ruta,
+      antes: arbol[ruta] ?? null,
+      despues: textoDeTrabajo(estado, ruta),
+    }))
+    .filter((comparacion) => comparacion.antes !== comparacion.despues);
+}

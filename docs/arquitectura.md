@@ -2034,7 +2034,7 @@ de ellos no calzaban.**
 | Laboratorio | Lo que decia la semilla | Lo que pide el enunciado |
 |---|---|---|
 | 04 | recetas de cazuela y charquican | **leche asada y mote con huesillo**, que son las que el enunciado separa en la carpeta de postres |
-| 06 | dos ramas, `mexicana` y `peruana` | **tres ramas**, `tailandesa`, `azteca` y `andina`, una por cada caso de fusion |
+| 06 | dos ramas, `mexicana` y `peruana` | **tres ramas**, `tailandesa`, `azteca` y `andina`, una por cada caso de fusion (hoy son cuatro: seccion 55) |
 | 07 | el error era una unidad de compra mal puesta | el error es **«sal marina en polvo»**, que es lo que el enunciado hace buscar por contenido |
 
 El caso del 06 es el mas serio. El enunciado dice, en su primera linea, que se
@@ -3387,6 +3387,9 @@ porque las dos cosas las decide ahora la misma función.
 que una rama toque `platos.md` en otra región, con su `preparar.sh` y su
 enunciado. No se hizo: cambia el laboratorio, no el motor.
 
+> **Se hizo después, a pedido del product owner.** El laboratorio 05 tiene
+> ahora cuatro casos de fusión y la rama `criolla`. Sección 55.
+
 ### El `echo` de la línea en blanco
 
 Apareció al construir el caso de prueba. `echo "" >> archivo` escribía **nada**
@@ -3399,3 +3402,101 @@ simulador: un participante que rehiciera `platos.md` obtenía un archivo sin
 ninguna separación. El arnés del recorrido las saltaba por la misma razón, así
 que los dos lados coincidían en un archivo que no era el que el enunciado
 muestra; ahora las escribe y coinciden en el que sí.
+
+## 55. El cuarto caso de fusión del laboratorio 05
+
+La sección 54 cerró la detección por línea y dejó anotado que mostrar el caso
+en el enunciado pedía cambiar el escenario. El product owner lo pidió.
+
+### La rama nueva es el gemelo de `andina`
+
+`criolla` nace **del mismo punto** que `andina`, cambia **el mismo archivo**
+—`platos.md`— y agrega **una receta**, igual que ella. La única diferencia es
+qué línea de `platos.md` toca: `andina` reemplaza la de la cazuela, que es justo
+la que `main` cambió después; `criolla` agrega una entrada al final, a cuatro
+líneas de distancia, con `## Entradas` y la empanada entre medio.
+
+El paralelo es deliberado y es lo que convierte la predicción en un ejercicio y
+no en una adivinanza: **el participante no puede decidir mirando qué archivos
+toca cada rama, porque son los mismos.** Tiene que mirar las líneas.
+
+Los cuatro casos, y qué enseña cada uno:
+
+| Parte | Rama | Resultado | Lo que desarma |
+|---|---|---|---|
+| 1 | `tailandesa` | avance rápido | que fusionar siempre crea algo |
+| 2 | `azteca` | unión, otro archivo | que haya que resolver algo a mano |
+| 3 | `criolla` | unión, **mismo archivo**, automática | **que tocar el mismo archivo sea conflicto seguro** |
+| 4 | `andina` | conflicto | — |
+
+El tercero es el que el product owner señaló como el que importa, y tiene razón
+en por qué: es la creencia que hace que la gente evite ramas por miedo a
+conflictos que no van a ocurrir.
+
+### La predicción va antes de la orden
+
+El punto 3.1 hace mirar `git show criolla` y `git show andina`. Las dos ramas
+son una sola confirmación sobre la base común, así que **el parche de cada una
+es exactamente lo que cambió respecto de la base**, que es lo que decide la
+fusión. No hace falta ningún `merge-base` ni sustitución de órdenes.
+
+El 3.2 pide contestar por escrito cuál va a chocar y por qué la otra no, antes
+de ejecutar. El 3.3 fusiona `criolla` y la salida contradice a quien predijo
+conflicto. La sorpresa es el ejercicio.
+
+### El verificador comprueba las dos mitades de la premisa
+
+Un escenario donde `criolla` **no** tocara `platos.md` sería el mismo caso que
+`azteca` y la Parte 3 se quedaría sin ejercicio, en silencio. Así que el
+verificador exige las dos cosas:
+
+- que `criolla` cambie `platos.md` desde la base común, como `main`;
+- y que los dos cambios **no se pisen**, fusionando los tres textos de verdad
+  con `git merge-file`, que devuelve cero cuando no queda ningún conflicto.
+
+Se usa `merge-file` y no `merge-tree --write-tree` porque la segunda pide Git
+2.38 y el proyecto se compromete con 2.28 (punto de `preparar.sh`).
+
+En el estado final el verificador espera ahora **tres** confirmaciones de unión
+en vez de dos, y las cuatro ramas de trabajo borradas.
+
+### `git diff` entre revisiones, que estaba mintiendo
+
+El paso 3.1 del enunciado viejo ya decía `git diff main andina -- platos.md`, y
+el simulador **la aceptaba y no imprimía nada**. Es la cuarta respuesta que el
+SPEC 010 eliminó, en el paso donde el participante tiene que entender por qué
+dos ramas van a chocar, y llevaba ahí desde que el laboratorio existe.
+
+Ahora compara dos árboles, o uno contra el directorio de trabajo cuando se
+nombra una sola referencia, y limita a las rutas que van detrás del `--`.
+Comprobado contra Git: idéntico salvo la línea `index`, como el resto de los
+parches.
+
+De paso, `antesDelSeparador` y `trasElSeparador` dejaron de estar duplicadas en
+`git log` y pasaron al analizador, que es de donde son.
+
+### El tiempo
+
+El laboratorio suma **70 minutos**, los mismos que antes y los mismos que el
+encabezado declara. La parte nueva se pagó recortando las dos primeras:
+
+| Parte | Antes | Ahora | Por qué |
+|---|---|---|---|
+| 1 · avance rápido | 20 | **10** | Son nueve órdenes y ninguna sorpresa: el caso más simple estaba sobrepresupuestado |
+| 2 · unión con otro archivo | 20 | **15** | Lo único lento es aceptar el mensaje en el editor |
+| 3 · mismo archivo, sin chocar | — | **15** | Nueva: mirar, predecir, fusionar y leer el resultado |
+| 4 · conflicto | 30 | **30** | Intacta. Es la más cara y la que no conviene apretar: lleva el aborto, la resolución a mano y el editor |
+
+El 4.1 quedó además más corto que el 3.1 viejo: ya no tiene que descubrir por
+qué va a chocar, sino confirmar la predicción comparándola con la fusión limpia
+que el participante acaba de ver.
+
+### La cobertura
+
+El laboratorio pasó de **47 órdenes recorridas a 56** y se queda en **96 por
+ciento en pantalla**: las nueve nuevas se comparan todas en los dos lados. La
+única que sigue fuera es el `cd` de la Preparación, que es de alcance.
+
+Sube porque `git diff` entre revisiones dejó de mentir: antes esa orden del
+paso 3.1 contaba como comparada —no fallaba en ninguno de los dos lados— y lo
+que devolvía era nada.

@@ -21,6 +21,7 @@ import {
   normalizar,
   textoDeTrabajo,
   textoEnCabeza,
+  textoEnConfirmacion,
   textoPreparado,
 } from '../src/core/contenido';
 import {
@@ -29,7 +30,8 @@ import {
   formatearParche,
   fusionarTresVias,
 } from '../src/core/diferencias';
-import { archivoPorNombre, idActual } from '../src/core/estado';
+import { archivoPorNombre, idActual, ramaPorNombre } from '../src/core/estado';
+import { baseComun } from '../src/core/grafo';
 import { ejecutar } from '../src/core/motor';
 import { ESCENARIOS, escenarioPorId } from '../src/escenarios';
 import { correr, correrHasta, repoConRamas, repoLimpio, repoLineal, texto } from './ayudas';
@@ -826,5 +828,196 @@ describe('echo escribe la linea en blanco', () => {
     );
 
     expect(textoDeTrabajo(estado, 'nuevo.md')).toBe('uno\n\ndos\n');
+  });
+});
+
+/**
+ * Los cuatro casos de fusion del laboratorio 05.
+ *
+ * El escenario existe para mostrarlos, y cada rama esta puesta ahi para uno.
+ * Si alguien mueve una fecha, un archivo o una linea y alguna rama deja de
+ * hacer lo suyo, el laboratorio pierde su ejercicio y nadie se enteraria: por
+ * eso los cuatro estan fijados aqui, en el orden en que el enunciado los
+ * recorre. Todo lo que se afirma se comprobo contra Git sobre el repositorio
+ * que `preparar.sh` deja en el disco.
+ */
+describe('el laboratorio 05 muestra los cuatro casos de fusion', () => {
+  it('las cuatro ramas estan, y main es donde arranca el participante', () => {
+    const estado = repoConRamas();
+
+    expect(texto(ejecutar(estado, 'git branch')).split('\n')).toEqual([
+      '  andina',
+      '  azteca',
+      '  criolla',
+      '* main',
+      '  tailandesa',
+    ]);
+  });
+
+  it('1 · tailandesa avanza el puntero y no crea nada', () => {
+    const antes = repoConRamas();
+    const resultado = correrHasta(antes, 'git merge tailandesa');
+
+    expect(texto(resultado)).toContain('Fast-forward');
+    expect(resultado.estado.confirmaciones).toHaveLength(antes.confirmaciones.length);
+  });
+
+  it('2 · azteca crea una union, tocando otro archivo', () => {
+    const resultado = correrHasta(repoConRamas(), 'git merge azteca');
+
+    expect(texto(resultado)).toContain("Merge made by the 'ort' strategy.");
+    // No hubo que fusionar ningun archivo: nadie mas lo habia tocado.
+    expect(texto(resultado)).not.toContain('Auto-merging');
+    expect(resultado.estado.fusion).toBeNull();
+  });
+
+  it('3 · criolla toca el MISMO archivo que main y se fusiona sola', () => {
+    // Es el caso que desarma la creencia de que tocar el mismo archivo es
+    // conflicto seguro, y el unico que el escenario no tenia.
+    const partida = repoConRamas();
+    const cabeza = idActual(partida);
+    const base = baseComun(partida, cabeza ?? '', ramaPorNombre(partida, 'criolla')?.id ?? '');
+
+    // Las dos mitades de la premisa: main cambio platos.md desde la base...
+    expect(textoEnConfirmacion(partida, base, 'platos.md')).not.toBe(
+      textoEnConfirmacion(partida, cabeza, 'platos.md'),
+    );
+    // ...y criolla tambien.
+    expect(textoEnConfirmacion(partida, base, 'platos.md')).not.toBe(
+      textoEnConfirmacion(partida, ramaPorNombre(partida, 'criolla')?.id ?? '', 'platos.md'),
+    );
+
+    const resultado = correrHasta(partida, 'git merge criolla');
+
+    expect(texto(resultado)).toContain('Auto-merging platos.md');
+    expect(texto(resultado)).toContain("Merge made by the 'ort' strategy.");
+    expect(texto(resultado)).not.toContain('CONFLICT');
+    expect(resultado.estado.fusion).toBeNull();
+
+    // Y el archivo queda con los dos cambios y sin marcadores.
+    const platos = textoDeTrabajo(resultado.estado, 'platos.md') ?? '';
+    expect(platos).toContain('- cazuela con chuchoca');
+    expect(platos).toContain('- sopaipillas');
+    expect(platos).not.toContain('<<<<<<<');
+  });
+
+  it('4 · andina toca la MISMA LINEA que main y choca', () => {
+    const resultado = correrHasta(repoConRamas(), 'git merge andina');
+
+    expect(texto(resultado)).toContain('CONFLICT (content): Merge conflict in platos.md');
+    expect(resultado.estado.fusion?.conflictos).toEqual(['platos.md']);
+  });
+
+  it('criolla y andina solo se diferencian en que linea de platos.md tocan', () => {
+    // El paralelo es deliberado: las dos nacen del mismo punto, las dos
+    // cambian platos.md y las dos agregan una receta. Es lo que hace que la
+    // prediccion del enunciado sea un ejercicio y no una adivinanza.
+    const estado = repoConRamas();
+    const criolla = estado.confirmaciones.find(
+      (una) => una.id === ramaPorNombre(estado, 'criolla')?.id,
+    );
+    const andina = estado.confirmaciones.find(
+      (una) => una.id === ramaPorNombre(estado, 'andina')?.id,
+    );
+
+    expect(criolla?.padres).toEqual(andina?.padres);
+    expect(criolla?.archivos).toEqual(['platos.md', 'recetas/sopaipillas.md']);
+    expect(andina?.archivos).toEqual(['platos.md', 'recetas/lomo-saltado.md']);
+  });
+
+  it('las cuatro fusiones seguidas dejan tres uniones y el archivo completo', () => {
+    // El recorrido entero del enunciado, con la resolucion del conflicto al
+    // final. Es lo que el verificador exige en su estado final.
+    const estado = correr(
+      repoConRamas(),
+      'git merge tailandesa',
+      'git branch -d tailandesa',
+      'git merge azteca',
+      'git branch -d azteca',
+      'git merge criolla',
+      'git branch -d criolla',
+      'git merge andina',
+      // Se resuelve dejando los dos platos, que es lo que el enunciado pide.
+      'echo "# Platos" > platos.md',
+      'echo "" >> platos.md',
+      'echo "## Fondos" >> platos.md',
+      'echo "" >> platos.md',
+      'echo "- pastel de choclo" >> platos.md',
+      'echo "- cazuela con chuchoca" >> platos.md',
+      'echo "- lomo saltado" >> platos.md',
+      'echo "- curanto" >> platos.md',
+      'echo "" >> platos.md',
+      'echo "## Entradas" >> platos.md',
+      'echo "" >> platos.md',
+      'echo "- empanadas de pino" >> platos.md',
+      'echo "- sopaipillas" >> platos.md',
+      'git add platos.md',
+      'git commit -m "Merge branch \'andina\'"',
+      'git branch -d andina',
+    );
+
+    expect(estado.ramas.map((rama) => rama.nombre)).toEqual(['main']);
+    expect(estado.confirmaciones.filter((una) => una.padres.length > 1)).toHaveLength(3);
+    expect(textoDeTrabajo(estado, 'platos.md')).not.toContain('<<<<<<<');
+    expect(texto(correrHasta(estado, 'git status'))).toContain('working tree clean');
+
+    // Las cuatro recetas de las cuatro ramas estan en el proyecto.
+    const seguidos = texto(correrHasta(estado, 'git ls-files'));
+    for (const receta of ['pad-thai', 'guacamole', 'sopaipillas', 'lomo-saltado']) {
+      expect(seguidos).toContain(`recetas/${receta}.md`);
+    }
+  });
+});
+
+/**
+ * `git diff` entre dos puntos de la historia.
+ *
+ * Estaba en el paso 3.1 del enunciado del laboratorio 05 desde que ese
+ * laboratorio existe, y el simulador **la aceptaba y no imprimia nada**: la
+ * cuarta respuesta que el contrato del SPEC 010 no admite, en el mismo paso
+ * donde el participante tiene que entender por que dos ramas van a chocar.
+ * Salio al escribir el cuarto caso de fusion.
+ */
+describe('git diff entre revisiones', () => {
+  it('compara dos referencias, y con -- se limita a una ruta', () => {
+    const salida = texto(correrHasta(repoConRamas(), 'git diff main andina -- platos.md'));
+
+    expect(salida).toContain('diff --git a/platos.md b/platos.md');
+    expect(salida).toContain('-- cazuela con chuchoca');
+    expect(salida).toContain('+- lomo saltado');
+    // La ruta limita: la receta que andina agrega no sale.
+    expect(salida).not.toContain('lomo-saltado.md');
+  });
+
+  it('sin ruta trae todo lo que cambio entre las dos', () => {
+    const salida = texto(correrHasta(repoConRamas(), 'git diff main andina'));
+
+    expect(salida).toContain('diff --git a/platos.md b/platos.md');
+    expect(salida).toContain('diff --git a/recetas/lomo-saltado.md b/recetas/lomo-saltado.md');
+    expect(salida).toContain('new file mode 100644');
+  });
+
+  it('una sola referencia compara contra el directorio de trabajo', () => {
+    const estado = correr(repoConRamas(), 'echo "- charquican" >> platos.md');
+    const salida = texto(correrHasta(estado, 'git diff main'));
+
+    expect(salida).toContain('+- charquican');
+  });
+
+  it('una referencia que no existe reclama como Git, en vez de callarse', () => {
+    const resultado = correrHasta(repoConRamas(), 'git diff fantasma main');
+
+    expect(resultado.error).toBe(true);
+    expect(texto(resultado)).toContain("ambiguous argument 'fantasma'");
+  });
+
+  it('el diff de criolla y el de andina se diferencian en que linea tocan', () => {
+    // Es lo que el participante compara en el paso 3.1 para predecir.
+    const conCriolla = texto(correrHasta(repoConRamas(), 'git diff main criolla -- platos.md'));
+    const conAndina = texto(correrHasta(repoConRamas(), 'git diff main andina -- platos.md'));
+
+    expect(conCriolla).toContain('+- sopaipillas');
+    expect(conAndina).toContain('+- lomo saltado');
+    expect(conAndina).not.toContain('sopaipillas');
   });
 });

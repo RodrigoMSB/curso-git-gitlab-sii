@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { ejecutar } from '../src/core/motor';
 import { analizar, tokenizar } from '../src/core/analizador';
-import { archivoPorNombre, estadoVacio } from '../src/core/estado';
+import { archivoPorNombre, estadoVacio, ramaPorNombre } from '../src/core/estado';
 import { resolverReferencia } from '../src/core/referencias';
 import { huella } from '../src/core/identificadores';
 import { correr, repoConRamas, repoLimpio, repoLineal, repoVacio, texto } from './ayudas';
@@ -71,13 +71,17 @@ describe('resolucion de referencias', () => {
   });
 
   it('el segundo padre de una union se alcanza con ^2', () => {
+    const partida = repoConRamas();
+    // La punta de la rama que se fusiona, tomada antes de fusionarla: es el
+    // segundo padre de la union que va a nacer.
+    const puntaDeAndina = ramaPorNombre(partida, 'andina')?.id;
     const estado = correr(
-      repoConRamas(),
+      partida,
       'git merge andina',
       'git add platos.md',
       'git commit -m "Fusiona la cocina andina"',
     );
-    expect(resolverReferencia(estado, 'HEAD^2')).toBe(estado.confirmaciones[6]?.id);
+    expect(resolverReferencia(estado, 'HEAD^2')).toBe(puntaDeAndina);
   });
 
   it('devuelve nulo ante referencias que no existen o que se salen del grafo', () => {

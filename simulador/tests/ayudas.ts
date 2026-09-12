@@ -65,9 +65,11 @@ export function repoLimpio(): EstadoRepositorio {
 }
 
 /**
- * Tres ramas con destinos distintos (lab 05): `tailandesa` cuelga de la punta
- * de main y se fusiona por avance rapido, `azteca` nace antes y toca otros
- * archivos, y `andina` nace ahi mismo y choca sobre platos.md.
+ * Cuatro ramas con destinos distintos (lab 05), una por cada caso de fusion:
+ * `tailandesa` cuelga de la punta de main y se fusiona por avance rapido,
+ * `azteca` nace antes y toca otros archivos, `criolla` nace ahi mismo y toca
+ * **el mismo archivo que main** en otra seccion, de modo que la fusion es
+ * automatica, y `andina` toca la misma linea y choca.
  */
 export function repoConRamas(): EstadoRepositorio {
   return escenarioPorId('lab-05');

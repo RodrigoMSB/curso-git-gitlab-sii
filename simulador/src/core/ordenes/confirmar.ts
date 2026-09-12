@@ -2,7 +2,14 @@
  * Ordenes que crean y consultan confirmaciones: `commit` y `log`.
  */
 
-import { posicionales, tieneOpcion, valorDeOpcion, valorDeOpcionPegado } from '../analizador';
+import {
+  antesDelSeparador,
+  posicionales,
+  tieneOpcion,
+  trasElSeparador,
+  valorDeOpcion,
+  valorDeOpcionPegado,
+} from '../analizador';
 import { agregarConfirmacion, resumenArchivos } from '../confirmaciones';
 import {
   archivosEn,
@@ -268,15 +275,7 @@ function limitePedido(argumentos: readonly string[]): number | null {
  * a un archivo o a una carpeta.
  */
 function rutaFiltrada(argumentos: readonly string[]): string | null {
-  const corte = argumentos.indexOf('--');
-  if (corte < 0) return null;
-  return argumentos[corte + 1] ?? null;
-}
-
-/** Argumentos anteriores al separador `--`: los que nombran referencias. */
-function antesDelSeparador(argumentos: readonly string[]): readonly string[] {
-  const corte = argumentos.indexOf('--');
-  return corte < 0 ? argumentos : argumentos.slice(0, corte);
+  return trasElSeparador(argumentos)[0] ?? null;
 }
 
 /**

@@ -2,6 +2,9 @@
 # Preparacion del escenario del laboratorio 05 (forma de la seccion 18 de
 # docs/arquitectura.md).
 #
+# Cuatro ramas de trabajo, una por cada caso de fusion: avance rapido,
+# union con archivos distintos, union del mismo archivo sin chocar, y conflicto.
+#
 # Tres ramas con destinos distintos a proposito, que es lo que el enunciado
 # necesita para mostrar los tres casos de fusion:
 #
@@ -204,6 +207,33 @@ cat > recetas/guacamole.md <<'ARCHIVO'
 Palta, cebolla morada, cilantro y limon de pica.
 ARCHIVO
 confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1721134200 'Agrega la receta del guacamole'
+
+# La rama que toca el mismo archivo que main y **no** choca: nace en el mismo
+# punto que andina y le suma una entrada al final, lejos de la linea de la
+# cazuela. Es el cuarto caso de fusion del laboratorio, y el que desarma la
+# creencia de que tocar el mismo archivo es conflicto seguro.
+git switch -q -c criolla "$BASE"
+cat > platos.md <<'ARCHIVO'
+# Platos
+
+## Fondos
+
+- pastel de choclo
+- cazuela
+- curanto
+
+## Entradas
+
+- empanadas de pino
+- sopaipillas
+ARCHIVO
+mkdir -p recetas
+cat > recetas/sopaipillas.md <<'ARCHIVO'
+# Sopaipillas
+
+Masa de zapallo y harina, fritas, con pebre o chancaca.
+ARCHIVO
+confirmar 'Juana Perez' "$CORREO_JUANA" 1721323200 'Suma las sopaipillas a las entradas'
 
 # La rama que choca: nace en el mismo punto y cambia la misma linea de la
 # cazuela que acaba de cambiar main.
