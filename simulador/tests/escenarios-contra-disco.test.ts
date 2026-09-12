@@ -381,7 +381,6 @@ describe('los escenarios que todavia no tienen preparacion en el disco', () => {
     // solo a la comparacion de arriba y tiene que calzar con lo declarado.
     expect(SIN_PREPARACION.map((declaracion) => declaracion.id)).toEqual([
       'lab-01',
-      'lab-07',
       'lab-09',
     ]);
   });
@@ -393,6 +392,7 @@ describe('los escenarios que todavia no tienen preparacion en el disco', () => {
       'lab-04',
       'lab-05',
       'lab-06',
+      'lab-07',
     ]);
   });
 });

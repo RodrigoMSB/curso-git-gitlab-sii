@@ -3500,3 +3500,176 @@ ciento en pantalla**: las nueve nuevas se comparan todas en los dos lados. La
 Sube porque `git diff` entre revisiones dejó de mentir: antes esa orden del
 paso 3.1 contaba como comparada —no fallaba en ninguno de los dos lados— y lo
 que devolvía era nada.
+
+---
+
+# Laboratorios 07 y 08 armados
+
+## 56. Los dos últimos de la sesión 5
+
+Se copiaron desde el material del arquitecto —`LAB-08` y `LAB-09` de la
+numeración vieja— con los mismos cambios que se le hicieron a los del 02 al 06,
+comprobados diffeando los originales contra los ya copiados en vez de confiar en
+la memoria:
+
+1. El número del título y el encabezado sin `· repositorio semilla lab-NN`.
+2. La ruta: `labs/lab-NN/preparar.sh` y `cd ../taller-git-trabajo/lab-NN/recetario`.
+3. La sección que dice a qué escenario llevar el simulador. **En el 08 no**:
+   ahí va en su lugar el aviso de que ese laboratorio entero se hace en la
+   terminal.
+4. Las referencias cruzadas a otros laboratorios, renumeradas según la tabla de
+   la sección 31. Es lo que se hizo en el 04, comprobado en su diff.
+5. «Prepara la semilla otra vez» pasa a «Vuelve a ejecutar `preparar.sh`».
+
+**El 07 entra a la comparación contra el disco.** Su `preparar.sh` se escribió
+contra la declaración del escenario y la suite lo comparó árbol por árbol y
+archivo por archivo: pasó a la primera. Los escenarios sin `preparar.sh` quedan
+en uno solo, el del laboratorio 09.
+
+**El 08 no lleva escenario ni recorrido comparado**, por el acuerdo de la
+sección 24. Su `preparar.sh` arma dos repositorios —el recetario con su remoto y
+el de condimentos— y los deja empaquetados al lado, sin invocar nada de
+`semillas/`, que sigue sin uso.
+
+## 57. Los desajustes entre enunciado y escenario
+
+Ninguno se corrigió: se reportan, y decide el arquitecto. Van de mayor a menor.
+
+### 57.1 · El 07 nombra `trabajo` y el escenario nombra `tailandesa`
+
+**Bloqueante.** El enunciado escribe `git switch trabajo`,
+`git log --oneline main..trabajo` y seis usos más. El escenario declarado —y por
+lo tanto el `preparar.sh` que sale de él— crea la rama `tailandesa`.
+
+El origen es anterior a este trabajo: la descripción de la semilla del SPEC 003
+ya decía `tailandesa`, y la declaración del simulador la siguió. El enunciado
+nunca dijo eso.
+
+Mientras no se resuelva, **el laboratorio 07 no se puede hacer**: el
+participante se estrella en el punto 1.5. Por eso tampoco se agregó al recorrido
+comparado, que fallaría entero.
+
+El verificador acepta las dos, la que exista, y lo dice en su comentario.
+
+### 57.2 · El 07 guarda temporalmente algo que `git stash` no guarda
+
+**Bloqueante, y comprobado contra Git.** El escenario deja
+`recetas/curry-massaman.md` **sin seguimiento**. Con eso:
+
+| Paso del enunciado | Lo que dice | Lo que hace Git |
+|---|---|---|
+| 1.2 `git switch main` | «Git se niega y te explica por qué» | Cambia de rama sin reclamar: un archivo sin seguimiento que no choca no impide nada |
+| 1.3 `git stash push -m ...` | «Tu directorio quedó limpio y la receta desapareció» | `No local changes to save`. La pila queda vacía y la receta sigue ahí |
+
+`git stash` sin `-u` no toca lo que no está en seguimiento. Como la única
+suciedad del escenario es un archivo nuevo, **la Parte 1 entera —45 minutos, del
+1.3 al 1.12— se queda sin materia**.
+
+Las dos salidas posibles son del arquitecto: que la receta sea un archivo
+**seguido y modificado**, o que el enunciado use `git stash push -u`. La
+descripción de la semilla dice «sin seguimiento», así que el desajuste está
+entre esa descripción y el enunciado, no en la declaración del simulador.
+
+### 57.3 · El 07 hace `rebase -i` y el motor lo acepta sin hacer nada
+
+**`-i` y `--interactive` están declaradas en `OPCIONES` de `rebase` y no las lee
+nadie**: aparecen únicamente dentro de `contrato.ts`. Es una opción aceptada y
+descartada, que es lo único que el contrato del SPEC 010 no admite.
+
+En la práctica, `git rebase -i HEAD~4` responde
+`Current branch tailandesa is up to date.` y no hace nada, donde Git reescribe
+las cuatro confirmaciones. **La Parte 3 entera —25 minutos, `reword` y
+`squash`— no ocurre en el simulador.**
+
+La prueba que debería haberlo detectado no lo hace porque busca el texto de la
+opción en todo `src/core`, y `contrato.ts` está dentro: una opción declarada y
+nunca leída se encuentra a sí misma. El agujero es de la prueba, no del
+contrato.
+
+### 57.4 · El 08 apunta los dos remotos al mismo paquete
+
+**Bloqueante.** El enunciado agrega `upstream` como «el proyecto original» y
+espera que traiga cosas que `main` no tiene. La semilla hace que `origin` y
+`upstream` sean **el mismo paquete**, así que:
+
+- 1.4 «Aparecieron ramas nuevas, las de `upstream`» — aparecen, pero son las
+  mismas.
+- 1.5 `git log --oneline main..upstream/main` — vacío.
+- 1.6 `git merge upstream/main` — `Already up to date.`, donde el enunciado dice
+  «Ahora sí vas a mover tu rama».
+
+Comprobado contra Git con los paquetes de la semilla y con los que arma el
+`preparar.sh` nuevo. Qué debe traer `upstream` de más es una decisión del
+arquitecto, así que el `preparar.sh` reproduce la semilla tal cual y no lo
+inventa.
+
+### 57.5 · El submódulo del 08 no funciona en ningún Git actual
+
+**Bloqueante, y no es culpa del enunciado.** `git submodule add <ruta local>`
+responde:
+
+```
+fatal: transport 'file' not allowed
+```
+
+Git bloquea el transporte `file` para submódulos **desde la versión 2.38.1**, de
+octubre de 2022, por la CVE-2022-39253. Comprobado con Git 2.54.
+
+Afecta a la Parte 2 entera, 25 minutos, y afectaría igual al enunciado original
+con las rutas de `semillas/paquetes/`. Se arregla con
+`git -c protocol.file.allow=always submodule add ...` o poniendo esa
+configuración en el repositorio desde `preparar.sh`; las dos cambian lo que el
+participante escribe o lo que el escenario trae, así que ninguna se tomó.
+
+### 57.6 · Diferencias del simulador en el tramo de guardado temporal
+
+Ese tramo nunca se había recorrido comparado, y aparecieron seis. Ninguna
+bloquea, todas se ven.
+
+| Forma | Git | El simulador |
+|---|---|---|
+| `git stash pop` que choca | Se niega, conserva la entrada y lo dice: «The stash entry is kept in case you need it again» | **Aplica y borra la entrada**. El punto 1.10, que es «la parte que sorprende», no ocurre |
+| `git stash drop` | Imprime el identificador **de la entrada** | Imprime el de la confirmación sobre la que se guardó: dos entradas distintas informan el mismo |
+| `git stash show` | ` 1 file changed, 1 insertion(+)` | ` 1 file changed`, sin contar líneas |
+| `git stash list --stat` | Una línea en blanco entre cada entrada y su resumen | Sin la línea en blanco |
+| `git stash show -p` | El parche | Declarada no implementada. Está en el punto 1.7 del enunciado |
+| `git switch` a la rama en que ya estás | `Already on 'x'` | `Switched to branch 'x'` |
+
+Y una que no es del simulador: **el punto 1.10 tampoco hace lo que dice en Git**.
+El enunciado espera marcadores de conflicto al recuperar sobre un archivo
+modificado a mano; Git se niega antes, con
+`error: Your local changes to the following files would be overwritten by merge`.
+Para que salgan marcadores hace falta otra situación.
+
+### 57.7 · El rebase del 07, en lo que se ve
+
+`git rebase main` sí funciona y deja la historia recta con identificadores
+nuevos, que es lo que la Parte 2 viene a enseñar. Dos diferencias menores:
+
+- Git imprime `Rebasing (1/4)`…`(4/4)`; el simulador solo la línea final.
+- El registro de referencias de Git anota `rebase (start)`, cuatro
+  `rebase (pick)` y `rebase (finish)`; el simulador anota un `checkout` y el
+  `rebase (finish)`. **Las confirmaciones originales sí quedan en la bitácora**,
+  que es lo que el punto 2.4 hace comprobar, así que ese paso se sostiene.
+
+### 57.8 · La tabla de renumeración tiene dos títulos corridos
+
+La tabla de la sección 31 dice:
+
+| Antes | Ahora | Título que dice | Título que es |
+|---|---|---|---|
+| 09 | 08 | Conectar y publicar | **Dos remotos, un submódulo y un gancho** |
+| 10 | 09 | Etiquetas, versiones y limpieza | **Conectar y publicar** |
+
+El material del arquitecto tiene `LAB-09-dos-remotos-un-submodulo-y-un-gancho` y
+`LAB-10-conectar-y-publicar`, y no tiene ningún «Etiquetas, versiones y
+limpieza». Los números de la tabla son correctos; los dos títulos, no. La
+declaración del simulador para el 09 dice «Conectar y publicar», que es lo
+correcto.
+
+### 57.9 · Dos formas distintas de escribir la Preparación
+
+Los enunciados 03, 04 y 06 dicen `labs/lab-NN/preparar.sh` desde la raíz del
+clon, y explican dónde pararse. El 02 y el 05 dicen `./preparar.sh` con un
+`cd ../../../`. Los dos funcionan; son dos formas para lo mismo. El 07 y el 08
+siguen la de los tres, que es la que explica dónde está parado el participante.

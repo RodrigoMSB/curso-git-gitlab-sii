@@ -822,7 +822,7 @@ describe('el laboratorio 02 comprueba lo que su parte 4 hace mirar', () => {
 
 describe('la renumeracion quedo consistente', () => {
   const LABS = fileURLToPath(new URL('../../labs', import.meta.url));
-  const armados = ['01', '02', '03', '04', '05', '06'];
+  const armados = ['01', '02', '03', '04', '05', '06', '07', '08'];
 
   it('estan los laboratorios armados y ninguno mas', () => {
     const carpetas = readdirSync(LABS)
