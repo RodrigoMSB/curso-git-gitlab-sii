@@ -1,14 +1,15 @@
 /**
  * Ordenes de mirar sin tocar: `git show`, `git rev-parse`, `git merge-base` y
- * `git cat-file -t` (punto 4.5 del SPEC 010).
+ * `git cat-file` (punto 4.5 del SPEC 010, ampliado por el SPEC 012).
  *
- * Ninguna cambia el estado. Todas responden preguntas sobre el grafo, que es
- * exactamente lo que el motor modela, con una excepcion declarada: la parte de
- * parche de `git show`, que necesitaria el contenido de los archivos y por eso
- * queda fuera (punto 5.1).
+ * Ninguna cambia el estado. Todas responden preguntas sobre el grafo, y desde
+ * el SPEC 012 tambien sobre el contenido: `git show` trae su parche y
+ * `git cat-file -p` muestra lo que hay dentro de un objeto.
  */
 
 import { posicionales, tieneOpcion } from '../analizador';
+import { arbolDe, comparacionesEntre, lineasDe, textoEnConfirmacion } from '../contenido';
+import { formatearEstadisticasDe, formatearParches } from '../diferencias';
 import {
   confirmacionPorId,
   etiquetaPorNombre,
@@ -17,22 +18,58 @@ import {
   ramaPorNombre,
 } from '../estado';
 import { baseComun } from '../grafo';
+import { cadenaDeObjetos } from '../objetos';
 import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
-import type { EstadoRepositorio } from '../tipos';
+import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
 
 /**
- * `git show` sobre una confirmacion o sobre una etiqueta.
+ * Referencia que nombra un archivo dentro de una confirmacion, `HEAD:ruta`.
  *
- * Muestra la cabecera y los archivos que la confirmacion registro. El parche
- * no se muestra: esta declarado como no soportado en el contrato, junto con
- * `--stat`, porque los dos se calculan sobre el contenido.
+ * Es la forma con la que Git pregunta por el contenido de un archivo tal como
+ * quedo en un punto de la historia, y la que `git show` y `git cat-file -p`
+ * comparten.
+ */
+function partirRuta(referencia: string): { revision: string; ruta: string } | null {
+  const corte = referencia.indexOf(':');
+  if (corte <= 0) return null;
+  return { revision: referencia.slice(0, corte), ruta: referencia.slice(corte + 1) };
+}
+
+/**
+ * `git show` sobre una confirmacion, una etiqueta o un archivo de una
+ * confirmacion.
+ *
+ * Muestra la cabecera y, detras, **el parche de verdad** (punto 3.4 del
+ * SPEC 012). Es lo que el punto 2.6 del laboratorio 03 le pide mirar al
+ * participante para que vea la credencial completa dentro de la historia: sin
+ * el parche, ese paso mostraba una lista de nombres de archivo y el laboratorio
+ * se quedaba sin su remate.
+ *
+ * Con `-s` o `--no-patch` se calla el parche, y con `--stat` se resume.
  */
 export const ordenShow: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
   const referencia = posicionales(argumentos, ['--format', '--pretty'])[0] ?? 'HEAD';
+
+  // `git show HEAD:platos.md` no muestra una confirmacion, muestra un archivo.
+  const enRuta = partirRuta(referencia);
+  if (enRuta !== null) {
+    const idRuta = resolverReferencia(estado, enRuta.revision);
+    if (idRuta === null) {
+      return fallo(estado, `fatal: invalid object name '${enRuta.revision}'.`);
+    }
+    const texto = textoEnConfirmacion(estado, idRuta, enRuta.ruta);
+    if (texto === null) {
+      return fallo(
+        estado,
+        `fatal: path '${enRuta.ruta}' does not exist in '${enRuta.revision}'`,
+      );
+    }
+    return ok(estado, lineas(...lineasDe(texto)));
+  }
 
   const etiqueta = etiquetaPorNombre(estado, referencia);
   const filas: string[] = [];
@@ -63,8 +100,31 @@ export const ordenShow: Manejador = (estado, argumentos) => {
   filas.push('');
   filas.push(`    ${confirmacion.mensaje}`);
   filas.push('');
-  for (const nombre of confirmacion.archivos) filas.push(`    ${nombre}`);
-  for (const nombre of confirmacion.borrados) filas.push(`    ${nombre} (retirado)`);
+
+  const cambios = comparacionesEntre(estado, confirmacion.padres[0] ?? null, confirmacion.id);
+
+  // **Una union no lleva parche, y si lleva resumen.** Comprobado contra Git:
+  // `git show <union>` imprime la cabecera y nada mas, porque una union tiene
+  // dos padres y «el cambio» no es uno solo; `git show --stat <union>` si
+  // resume, que es lo que el punto 2.3 del laboratorio 05 hace mirar.
+  const esUnion = confirmacion.padres.length > 1;
+  if (esUnion && !tieneOpcion(argumentos, '--stat')) {
+    return ok(estado, lineas(...filas));
+  }
+
+  if (tieneOpcion(argumentos, '-s', '--no-patch')) {
+    // Sin parche, se enumeran los archivos: es lo que el simulador mostraba
+    // antes de tener contenido y sigue siendo util para leer el grafo.
+    for (const nombre of confirmacion.archivos) filas.push(`    ${nombre}`);
+    for (const nombre of confirmacion.borrados) filas.push(`    ${nombre} (retirado)`);
+    return ok(estado, lineas(...filas));
+  }
+
+  filas.push(
+    ...(tieneOpcion(argumentos, '--stat')
+      ? formatearEstadisticasDe(cambios)
+      : formatearParches(cambios)),
+  );
 
   return ok(estado, lineas(...filas));
 };
@@ -157,18 +217,23 @@ export const ordenMergeBase: Manejador = (estado, argumentos) => {
 };
 
 /**
- * `git cat-file -t`.
+ * `git cat-file`, con `-t` y con `-p` (punto 3.5 del SPEC 012).
  *
- * Dice de que tipo es un objeto. Es lo que el laboratorio 06 usa para mostrar
- * que una etiqueta simple apunta directo a la confirmacion mientras que una
- * anotada es un objeto propio. Con `-p`, que muestra el contenido, el contrato
- * responde que no lo implementa.
+ * Con `-t` dice de que tipo es un objeto, que es lo que el laboratorio 06 usa
+ * para mostrar que una etiqueta simple apunta directo a la confirmacion
+ * mientras que una anotada es un objeto propio.
+ *
+ * Con `-p` muestra lo que hay dentro. La cadena de objetos que alimenta el
+ * panel de estructuras internas es la misma que se imprime aqui, de modo que
+ * la pantalla y la orden no puedan contar cosas distintas.
  */
 export const ordenCatFile: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
+  if (tieneOpcion(argumentos, '-p')) return mostrarObjeto(estado, argumentos);
+
   if (!tieneOpcion(argumentos, '-t')) {
-    return fallo(estado, 'usage: git cat-file -t <objeto>');
+    return fallo(estado, 'usage: git cat-file (-t | -p) <objeto>');
   }
   const referencia = posicionales(argumentos)[0];
   if (referencia === undefined) return fallo(estado, 'usage: git cat-file -t <objeto>');
@@ -185,3 +250,86 @@ export const ordenCatFile: Manejador = (estado, argumentos) => {
   }
   return fallo(estado, `fatal: Not a valid object name ${referencia}`);
 };
+
+/**
+ * `git cat-file -p`: lo que hay dentro de un objeto.
+ *
+ * Se aceptan las tres formas que el taller puede necesitar: la confirmacion,
+ * su arbol y un archivo nombrado con `HEAD:ruta`. Los identificadores de arbol
+ * y de elemento son los que el panel de estructuras internas ya mostraba, y
+ * salen del mismo modulo: si difirieran, la pantalla y la orden estarian
+ * describiendo dos repositorios.
+ */
+function mostrarObjeto(
+  estado: EstadoRepositorio,
+  argumentos: readonly string[],
+): ResultadoOrden {
+  const referencia = posicionales(argumentos)[0];
+  if (referencia === undefined) return fallo(estado, 'usage: git cat-file -p <objeto>');
+
+  const enRuta = partirRuta(referencia);
+  if (enRuta !== null) {
+    const id = resolverReferencia(estado, enRuta.revision);
+    const texto = id === null ? null : textoEnConfirmacion(estado, id, enRuta.ruta);
+    if (texto === null) {
+      return fallo(estado, `fatal: Not a valid object name ${referencia}`);
+    }
+    return ok(estado, lineas(...lineasDe(texto)));
+  }
+
+  const etiqueta = etiquetaPorNombre(estado, referencia);
+  if (etiqueta !== undefined && etiqueta.tipo === 'anotada') {
+    const apuntada = etiqueta.id;
+    return ok(
+      estado,
+      lineas(
+        `object ${apuntada}`,
+        'type commit',
+        `tag ${etiqueta.nombre}`,
+        '',
+        etiqueta.mensaje ?? '',
+      ),
+    );
+  }
+
+  const id = resolverReferencia(estado, referencia);
+  const cadena = id === null ? null : cadenaDeObjetos(estado, id);
+  if (id !== null && cadena !== null) {
+    return ok(
+      estado,
+      lineas(
+        ...cadena.confirmacion.campos.map((campo) => `${campo.clave} ${campo.valor}`),
+        '',
+        cadena.confirmacion.nombre,
+      ),
+    );
+  }
+
+  // Un arbol se nombra por el identificador que la propia cadena de objetos
+  // publica, que es el que el panel de estructuras internas muestra.
+  for (const confirmacion of estado.confirmaciones) {
+    const suya = cadenaDeObjetos(estado, confirmacion.id);
+    if (suya === null) continue;
+    if (suya.arbol.id === referencia) {
+      const arbol = arbolDe(estado, confirmacion.id);
+      return ok(
+        estado,
+        lineas(
+          ...Object.keys(arbol)
+            .sort()
+            .map((ruta) => {
+              const elemento = suya.elementos.find((uno) => uno.nombre === ruta);
+              return `100644 blob ${elemento?.id ?? '0000000'}\t${ruta}`;
+            }),
+        ),
+      );
+    }
+    const elemento = suya.elementos.find((uno) => uno.id === referencia);
+    if (elemento !== undefined) {
+      const texto = textoEnConfirmacion(estado, confirmacion.id, elemento.nombre);
+      if (texto !== null) return ok(estado, lineas(...lineasDe(texto)));
+    }
+  }
+
+  return fallo(estado, `fatal: Not a valid object name ${referencia}`);
+}

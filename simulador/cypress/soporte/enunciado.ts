@@ -69,10 +69,10 @@ export function aliasDelTaller(enunciadoDelPrimero: string): Readonly<Record<str
 /**
  * Tramos que el enunciado manda hacer en la terminal y no en el simulador.
  *
- * El laboratorio 03 tiene dos: la seccion 2.2, donde se comprueba lo que las
- * exclusiones tapan, y la parte 3 entera. El motor no versiona contenido
- * (restriccion R4), asi que no puede leer las reglas de `.gitignore`, y el
- * enunciado lo dice donde corresponde.
+ * El laboratorio 03 tenia dos, por las exclusiones que el motor no sabia leer.
+ * El SPEC 012 los devolvio a la pantalla y le queda uno solo, el
+ * `cat .git/info/exclude` de su punto 3.3, que sigue fuera por la razon de
+ * siempre: la carpeta oculta se mira en la terminal a proposito.
  *
  * Se leen del enunciado y no de una lista aparte, por la misma razon de
  * siempre. El marcador es la frase «en tu terminal» en negrita, y el tramo

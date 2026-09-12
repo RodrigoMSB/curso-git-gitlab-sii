@@ -12,13 +12,36 @@
  * desincronizarian, y el participante veria dos repositorios distintos sin
  * entender por que.
  *
- * Lo que la declaracion NO lleva es el contenido de los archivos. El simulador
- * no modela contenido (restriccion R4 del SPEC 001) y no tendria donde
- * mostrarlo; los bytes viven en `preparar.sh`, que es quien los necesita. La
- * razon esta en la seccion 23 de docs/arquitectura.md.
+ * **Desde el SPEC 012 la declaracion lleva tambien el contenido de los
+ * archivos**, y es su unica fuente. Antes los bytes vivian solo en
+ * `preparar.sh`, porque el simulador no modelaba contenido y cargarlos en el
+ * artefacto habria sido llevarlos para no mostrarlos nunca. Esa razon se fue
+ * con la restriccion que la sostenia.
+ *
+ * `preparar.sh` los sigue escribiendo a mano, como escribe a mano todo lo
+ * demas, y `tests/escenarios-contra-disco.test.ts` compara los dos textos
+ * caracter por caracter. Es el mismo trato que el SPEC 007 eligio para la
+ * forma: la declaracion manda y la prueba impide que el disco se separe. La
+ * razon esta en la seccion 46 de docs/arquitectura.md.
  */
 
-import type { Archivo, Remoto, TipoEtiqueta } from '../core/tipos';
+import type { EstadoArchivo, Remoto, TipoEtiqueta } from '../core/tipos';
+
+/**
+ * Archivo del directorio de trabajo, tal como lo declara un escenario.
+ *
+ * El contenido se declara **solo cuando difiere del de la confirmacion
+ * actual**, que es el caso de lo modificado, lo preparado y lo que todavia no
+ * esta versionado. Un archivo limpio no lo lleva, y no por ahorro: su texto es
+ * el del arbol, y declararlo aparte abriria la puerta a que los dos digan
+ * cosas distintas.
+ */
+export interface ArchivoDeclarado {
+  readonly nombre: string;
+  readonly estado: EstadoArchivo;
+  readonly contenido?: string;
+  readonly renombradoDe?: string;
+}
 
 /** Confirmacion declarada. Los padres se nombran por clave interna, no por identificador. */
 export interface ConfirmacionDeclarada {
@@ -27,6 +50,13 @@ export interface ConfirmacionDeclarada {
   readonly mensaje: string;
   /** Archivos que la confirmacion registro. */
   readonly archivos: readonly string[];
+  /**
+   * El texto con que cada uno de esos archivos queda. Lleva una entrada por
+   * cada nombre de `archivos`, ni una mas ni una menos, y el constructor lo
+   * exige: un archivo registrado sin texto seria una confirmacion que cambia
+   * algo sin decir que.
+   */
+  readonly contenido: Readonly<Record<string, string>>;
   readonly padres: readonly string[];
   readonly carril: number;
   /** Quien firma. Sin declarar, la firma el participante del taller. */
@@ -56,7 +86,7 @@ export interface EtiquetaDeclarada {
 /** Entrada del guardado temporal declarada. */
 export interface GuardadoDeclarado {
   readonly mensaje: string;
-  readonly archivos: readonly Archivo[];
+  readonly archivos: readonly ArchivoDeclarado[];
   readonly rama: string;
   /** Clave de la confirmacion sobre la que se guardo. */
   readonly sobre: string;
@@ -84,7 +114,7 @@ export interface EscenarioDeclarado {
   readonly etiquetas: readonly EtiquetaDeclarada[];
   /** Nombre de la rama sobre la que arranca el participante. */
   readonly posicion: string;
-  readonly archivos: readonly Archivo[];
+  readonly archivos: readonly ArchivoDeclarado[];
   readonly remotos: readonly Remoto[];
   readonly guardados?: readonly GuardadoDeclarado[];
   /**

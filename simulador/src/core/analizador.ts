@@ -90,6 +90,23 @@ export function tieneOpcion(
   return argumentos.some((argumento) => nombres.includes(argumento));
 }
 
+/**
+ * Las letras de las opciones cortas, incluidas las que vienen agrupadas.
+ *
+ * `grep -rn` es una sola palabra y son dos opciones. `tieneOpcion` compara
+ * palabras enteras y no las separa, que esta bien para las de Git —donde
+ * agrupar no es costumbre— y no para las del interprete, donde el enunciado
+ * las escribe pegadas.
+ */
+export function letrasCortas(argumentos: readonly string[]): ReadonlySet<string> {
+  const letras = new Set<string>();
+  for (const argumento of argumentos) {
+    if (!/^-[a-zA-Z]+$/.test(argumento)) continue;
+    for (const letra of argumento.slice(1)) letras.add(letra);
+  }
+  return letras;
+}
+
 /** Valor que sigue a una opcion, o `null` si la opcion no aparece o va sin valor. */
 export function valorDeOpcion(
   argumentos: readonly string[],

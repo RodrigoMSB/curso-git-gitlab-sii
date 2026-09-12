@@ -36,12 +36,14 @@ import {
   ordenClear,
   ordenDesconocida,
   ordenEcho,
+  ordenGrep,
   ordenLs,
   ordenMkdir,
   ordenMv as ordenMvInterprete,
   ordenPwd,
   ordenRm as ordenRmInterprete,
   ordenRemote,
+  ordenWc,
 } from './interprete';
 import {
   ordenBranch,
@@ -91,6 +93,8 @@ export const ORDENES_INTERPRETE: Readonly<Record<string, Manejador>> = {
   clear: ordenClear,
   cat: ordenCat,
   echo: ordenEcho,
+  wc: ordenWc,
+  grep: ordenGrep,
 };
 
 /**

@@ -6,10 +6,12 @@
  */
 
 import { tieneOpcion, valorDeOpcion } from '../analizador';
+import { textoDeTrabajo } from '../contenido';
 import {
   archivosEn,
   confirmacionPorId,
   establecerArchivo,
+  establecerContenido,
   idActual,
   ramaActual,
 } from '../estado';
@@ -55,16 +57,27 @@ function guardar(estado: EstadoRepositorio, argumentos: readonly string[]): Resu
       ? `WIP on ${rama}: ${idBase} ${cabeza?.mensaje ?? ''}`.trimEnd()
       : `On ${rama}: ${explicito}`;
 
+  // El guardado se lleva el texto, no solo el estado: es lo que permite que al
+  // devolverlo aparezca el mismo trabajo y no un archivo marcado como
+  // modificado sin ninguna modificacion dentro.
   const entrada: EntradaGuardado = {
     mensaje: descriptor,
-    archivos: pendientes.map((archivo) => ({ ...archivo })),
+    archivos: pendientes.map((archivo) => ({
+      ...archivo,
+      contenido: textoDeTrabajo(estado, archivo.nombre) ?? '',
+    })),
     rama,
     idBase,
   };
 
   let siguiente: EstadoRepositorio = { ...estado, guardados: [entrada, ...estado.guardados] };
   for (const archivo of pendientes) {
-    siguiente = establecerArchivo(siguiente, archivo.nombre, 'limpio');
+    siguiente = establecerContenido(
+      establecerArchivo(siguiente, archivo.nombre, 'limpio'),
+      archivo.nombre,
+      // El directorio queda como la confirmacion, que es lo que el `null` dice.
+      null,
+    );
   }
 
   return ok(siguiente, lineas(`Saved working directory and index state ${descriptor}`));
@@ -86,6 +99,7 @@ function aplicar(
       archivo.nombre,
       conIndice ? archivo.estado : 'modificado',
     );
+    siguiente = establecerContenido(siguiente, archivo.nombre, archivo.contenido);
   }
   return ok(siguiente, lineas(...formatearEstadoLargo(siguiente)));
 }

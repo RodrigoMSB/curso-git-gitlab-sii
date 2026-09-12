@@ -61,6 +61,7 @@ function confirmacionProyectada(
     fecha: '',
     archivos: [],
     borrados: [],
+    arbol: {},
   };
 }
 

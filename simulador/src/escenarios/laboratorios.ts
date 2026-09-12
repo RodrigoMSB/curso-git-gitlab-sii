@@ -15,8 +15,7 @@
  * de eso se encarga la prueba de `tests/escenarios-contra-disco.test.ts`.
  */
 
-import type { Archivo } from '../core/tipos';
-import type { EscenarioDeclarado } from './tipos';
+import type { ArchivoDeclarado, EscenarioDeclarado } from './tipos';
 
 /** Donde vive el repositorio del participante, que es una carpeta por laboratorio. */
 const directorioDe = (laboratorio: number): string =>
@@ -53,8 +52,99 @@ const CONFIGURACION_PUESTA = {
   'alias.lg': ALIAS_DEL_TALLER.lg,
 } as const;
 
-/** Archivos limpios, que es el caso corriente. */
-const limpios = (...nombres: readonly string[]): readonly Archivo[] =>
+// ---------------------------------------------------------------------------
+// El contenido de los archivos (SPEC 012)
+// ---------------------------------------------------------------------------
+//
+// **Esta es la unica fuente del texto de los archivos del recetario.** El
+// `preparar.sh` de cada laboratorio escribe estos mismos bytes en el disco del
+// participante, y `tests/escenarios-contra-disco.test.ts` compara los dos lados
+// caracter por caracter: si alguien cambia uno y no el otro, la suite se
+// detiene. La razon de haber elegido este reparto esta en la seccion 46 de
+// docs/arquitectura.md.
+//
+// Los textos que varios laboratorios comparten se declaran una sola vez. No es
+// ahorro de espacio: son el mismo archivo del mismo recetario, y dos copias que
+// se pudieran separar serian dos recetarios distintos.
+
+/** La presentacion del recetario, igual en los ocho escenarios. */
+const README_RECETARIO = `# Recetario COMIDA CHILENA
+
+Recopilacion de platos, ingredientes y cocineros.
+Proyecto del taller de Git y GitLab.
+`;
+
+/** La lista de platos en su forma simple, sin secciones. */
+const PLATOS_CURANTO = `# Platos
+
+- pastel de choclo
+- empanadas de pino
+- cazuela
+- curanto
+`;
+
+/** Los cuatro ingredientes de partida. */
+const INGREDIENTES_BASE = `# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+`;
+
+/** Los dos primeros cocineros. */
+const COCINEROS_DOS = `# Cocineros
+
+- Juana Perez, especialidad pastel de choclo
+- Marco Diaz, especialidad empanadas
+`;
+
+/** Los tres cocineros, con Sofia ya sumada. */
+const COCINEROS_TRES = `# Cocineros
+
+- Juana Perez, especialidad pastel de choclo
+- Marco Diaz, especialidad empanadas
+- Sofia Rojas, especialidad cazuela
+`;
+
+const PASTEL_DE_CHOCLO = `# Pastel de choclo
+
+Preparacion del pino, molienda del choclo, horneado en greda.
+`;
+
+const EMPANADAS = `# Empanadas de pino
+
+Masa, pino frio, huevo duro, aceituna, doblado y horno.
+`;
+
+const CAZUELA = `# Cazuela
+
+Presa de vacuno, zapallo, papa y choclo en caldo largo.
+`;
+
+const LECHE_ASADA = `# Leche asada
+
+Leche, huevos y azucar al horno, con caramelo en el molde.
+`;
+
+const MOTE_CON_HUESILLO = `# Mote con huesillo
+
+Huesillos cocidos con canela y azucar rubia, mote de trigo aparte.
+`;
+
+const PAD_THAI = `# Pad thai
+
+Fideos de arroz, tamarindo, mani y salsa de pescado.
+`;
+
+/**
+ * Archivos limpios, que es el caso corriente.
+ *
+ * No llevan contenido declarado a proposito: el texto de un archivo limpio es
+ * el de la confirmacion en la que esta, y declararlo aparte seria abrir la
+ * puerta a que los dos digan cosas distintas.
+ */
+const limpios = (...nombres: readonly string[]): readonly ArchivoDeclarado[] =>
   nombres.map((nombre) => ({ nombre, estado: 'limpio' as const }));
 
 // ---------------------------------------------------------------------------
@@ -85,13 +175,20 @@ export const LAB01: EscenarioDeclarado = {
   ramas: [],
   etiquetas: [],
   posicion: 'main',
+  // Los textos son los que el enunciado le hace escribir en su Parte 3, uno
+  // por uno. Aqui estan todos desde el principio, que es la licencia anotada
+  // en `sinReflejar`, pero el contenido es el mismo que va a tener en su disco.
   archivos: [
-    { nombre: 'README.md', estado: 'sin-seguimiento' },
-    { nombre: 'platos.md', estado: 'sin-seguimiento' },
-    { nombre: 'ingredientes.md', estado: 'sin-seguimiento' },
-    { nombre: 'cocineros.md', estado: 'sin-seguimiento' },
-    { nombre: 'recetas/pastel-de-choclo.md', estado: 'sin-seguimiento' },
-    { nombre: 'recetas/empanadas.md', estado: 'sin-seguimiento' },
+    { nombre: 'README.md', estado: 'sin-seguimiento', contenido: README_RECETARIO },
+    { nombre: 'platos.md', estado: 'sin-seguimiento', contenido: PLATOS_CURANTO },
+    { nombre: 'ingredientes.md', estado: 'sin-seguimiento', contenido: INGREDIENTES_BASE },
+    { nombre: 'cocineros.md', estado: 'sin-seguimiento', contenido: COCINEROS_DOS },
+    {
+      nombre: 'recetas/pastel-de-choclo.md',
+      estado: 'sin-seguimiento',
+      contenido: PASTEL_DE_CHOCLO,
+    },
+    { nombre: 'recetas/empanadas.md', estado: 'sin-seguimiento', contenido: EMPANADAS },
   ],
   remotos: [],
   sinReflejar: [
@@ -104,6 +201,33 @@ export const LAB01: EscenarioDeclarado = {
 // ---------------------------------------------------------------------------
 
 /** Corresponde a `labs/lab-02/preparar.sh`, confirmacion por confirmacion. */
+/** La lista de platos del laboratorio 02: es donde vive la palabra «curanto». */
+const PLATOS_LAB02 = PLATOS_CURANTO;
+
+/** Los ingredientes con la albahaca que el cambio descartado se lleva. */
+const INGREDIENTES_LAB02 = `# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+- albahaca
+`;
+
+/**
+ * El cambio que no sirve, sin preparar: se borro una linea buena y se dejaron
+ * dos de basura, de modo que descartarlo tenga sentido a la vista.
+ */
+const INGREDIENTES_SUCIOS = `# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- albahaca
+asdf probando
+TODO borrar esto antes de confirmar
+`;
+
 export const LAB02: EscenarioDeclarado = {
   id: 'lab-02',
   laboratorio: 2,
@@ -118,6 +242,7 @@ export const LAB02: EscenarioDeclarado = {
       clave: 'c1',
       mensaje: 'se inicia el recetario',
       archivos: ['README.md'],
+      contenido: { 'README.md': README_RECETARIO },
       padres: [],
       carril: 0,
       ...JUANA,
@@ -127,6 +252,7 @@ export const LAB02: EscenarioDeclarado = {
       clave: 'c2',
       mensaje: 'se agregan los platos chilenos',
       archivos: ['platos.md'],
+      contenido: { 'platos.md': PLATOS_LAB02 },
       padres: ['c1'],
       carril: 0,
       ...MARCO,
@@ -136,6 +262,7 @@ export const LAB02: EscenarioDeclarado = {
       clave: 'c3',
       mensaje: 'se agregan los ingredientes base',
       archivos: ['ingredientes.md'],
+      contenido: { 'ingredientes.md': INGREDIENTES_LAB02 },
       padres: ['c2'],
       carril: 0,
       ...JUANA,
@@ -145,6 +272,7 @@ export const LAB02: EscenarioDeclarado = {
       clave: 'c4',
       mensaje: 'se suma la lista de cocineros',
       archivos: ['cocineros.md'],
+      contenido: { 'cocineros.md': COCINEROS_DOS },
       padres: ['c3'],
       carril: 0,
       ...SOFIA,
@@ -154,6 +282,7 @@ export const LAB02: EscenarioDeclarado = {
       clave: 'c5',
       mensaje: 'se docuemnta la reseta del pastel de choclo',
       archivos: ['recetas/pastel-de-choclo.md'],
+      contenido: { 'recetas/pastel-de-choclo.md': PASTEL_DE_CHOCLO },
       padres: ['c4'],
       carril: 0,
       ...MARCO,
@@ -167,9 +296,9 @@ export const LAB02: EscenarioDeclarado = {
     { nombre: 'README.md', estado: 'limpio' },
     { nombre: 'platos.md', estado: 'limpio' },
     // El cambio que sobra, que el participante descarta con `git restore`.
-    { nombre: 'ingredientes.md', estado: 'modificado' },
+    { nombre: 'ingredientes.md', estado: 'modificado', contenido: INGREDIENTES_SUCIOS },
     // Preparado por error, que el participante saca con `git restore --staged`.
-    { nombre: 'cocineros.md', estado: 'preparado' },
+    { nombre: 'cocineros.md', estado: 'preparado', contenido: COCINEROS_TRES },
     { nombre: 'recetas/pastel-de-choclo.md', estado: 'limpio' },
   ],
   remotos: [],
@@ -185,6 +314,38 @@ export const LAB02: EscenarioDeclarado = {
  * ignorar un archivo y sacarlo del seguimiento, que es el punto del ejercicio.
  * No hay archivo de exclusiones: lo escribe el participante.
  */
+/** La lista de platos del laboratorio 03, con los dos postres que se separan. */
+const PLATOS_LAB03 = `# Platos
+
+- pastel de choclo
+- empanadas de pino
+- leche asada
+- mote con huesillo
+`;
+
+const NOTAS_TMP = `Reunion de cocina del martes.
+Pendiente: definir el menu de septiembre.
+`;
+
+const RESPALDO_BAK = `Respaldo automatico del listado de platos.
+`;
+
+/** La credencial, que es el punto del laboratorio 03. */
+const CREDENCIALES = `usuario: casino_recetario
+clave: 4lm3ndr4s-2024
+servidor: casino.interno.cl
+`;
+
+const INGREDIENTES_LAB03 = `# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+- leche
+- huesillos
+`;
+
 export const LAB03: EscenarioDeclarado = {
   id: 'lab-03',
   laboratorio: 3,
@@ -199,6 +360,10 @@ export const LAB03: EscenarioDeclarado = {
       clave: 'c1',
       mensaje: 'Agrega el README y la lista de platos',
       archivos: ['README.md', 'platos.md'],
+      contenido: {
+        'README.md': README_RECETARIO,
+        'platos.md': PLATOS_LAB03,
+      },
       padres: [],
       carril: 0,
       ...JUANA,
@@ -214,6 +379,12 @@ export const LAB03: EscenarioDeclarado = {
         'recetas/leche-asada.md',
         'recetas/mote-con-huesillo.md',
       ],
+      contenido: {
+        'recetas/pastel-de-choclo.md': PASTEL_DE_CHOCLO,
+        'recetas/empanadas.md': EMPANADAS,
+        'recetas/leche-asada.md': LECHE_ASADA,
+        'recetas/mote-con-huesillo.md': MOTE_CON_HUESILLO,
+      },
       padres: ['c1'],
       carril: 0,
       ...MARCO,
@@ -223,6 +394,10 @@ export const LAB03: EscenarioDeclarado = {
       clave: 'c3',
       mensaje: 'Guarda notas de la reunion de cocina',
       archivos: ['notas.tmp', 'respaldo.bak'],
+      contenido: {
+        'notas.tmp': NOTAS_TMP,
+        'respaldo.bak': RESPALDO_BAK,
+      },
       padres: ['c2'],
       carril: 0,
       ...SOFIA,
@@ -232,6 +407,7 @@ export const LAB03: EscenarioDeclarado = {
       clave: 'c4',
       mensaje: 'Agrega el acceso al sistema del casino',
       archivos: ['credenciales.txt'],
+      contenido: { 'credenciales.txt': CREDENCIALES },
       padres: ['c3'],
       carril: 0,
       ...SOFIA,
@@ -241,6 +417,7 @@ export const LAB03: EscenarioDeclarado = {
       clave: 'c5',
       mensaje: 'Completa la lista de ingredientes',
       archivos: ['ingredientes.md'],
+      contenido: { 'ingredientes.md': INGREDIENTES_LAB03 },
       padres: ['c4'],
       carril: 0,
       ...JUANA,
@@ -288,6 +465,7 @@ export const LAB04: EscenarioDeclarado = {
       clave: 'c1',
       mensaje: 'Agrega el README del recetario',
       archivos: ['README.md'],
+      contenido: { 'README.md': README_RECETARIO },
       padres: [],
       carril: 0,
       ...JUANA,
@@ -297,6 +475,7 @@ export const LAB04: EscenarioDeclarado = {
       clave: 'c2',
       mensaje: 'Agrega la lista de platos',
       archivos: ['platos.md'],
+      contenido: { 'platos.md': PLATOS_CURANTO },
       padres: ['c1'],
       carril: 0,
       ...MARCO,
@@ -306,6 +485,7 @@ export const LAB04: EscenarioDeclarado = {
       clave: 'c3',
       mensaje: 'Agrega los ingredientes base',
       archivos: ['ingredientes.md'],
+      contenido: { 'ingredientes.md': INGREDIENTES_BASE },
       padres: ['c2'],
       carril: 0,
       ...JUANA,
@@ -315,6 +495,7 @@ export const LAB04: EscenarioDeclarado = {
       clave: 'c4',
       mensaje: 'Agrega la receta del pastel de choclo',
       archivos: ['recetas/pastel-de-choclo.md'],
+      contenido: { 'recetas/pastel-de-choclo.md': PASTEL_DE_CHOCLO },
       padres: ['c3'],
       carril: 0,
       ...MARCO,
@@ -324,6 +505,7 @@ export const LAB04: EscenarioDeclarado = {
       clave: 'c5',
       mensaje: 'Agrega la receta de la cazuela',
       archivos: ['recetas/cazuela.md'],
+      contenido: { 'recetas/cazuela.md': CAZUELA },
       padres: ['c4'],
       carril: 0,
       ...SOFIA,
@@ -333,6 +515,7 @@ export const LAB04: EscenarioDeclarado = {
       clave: 'c6',
       mensaje: 'Agrega la tabla de cocineros',
       archivos: ['cocineros.md'],
+      contenido: { 'cocineros.md': COCINEROS_TRES },
       padres: ['c5'],
       carril: 0,
       ...JUANA,
@@ -366,6 +549,36 @@ export const LAB04: EscenarioDeclarado = {
  *   andina      toca la misma linea de platos.md que toco main despues, de
  *               modo que su fusion choca.
  */
+/** La lista de platos por secciones, tal como la deja la segunda confirmacion. */
+const PLATOS_SECCIONES = `# Platos
+
+## Fondos
+
+- pastel de choclo
+- cazuela
+- curanto
+
+## Entradas
+
+- empanadas de pino
+`;
+
+/** Lo que main precisa sobre la cazuela: es la linea que despues choca. */
+const PLATOS_CHUCHOCA = PLATOS_SECCIONES.replace('- cazuela', '- cazuela con chuchoca');
+
+/** Lo que la rama andina pone en esa misma linea. */
+const PLATOS_LOMO = PLATOS_SECCIONES.replace('- cazuela', '- lomo saltado');
+
+const GUACAMOLE = `# Guacamole
+
+Palta, cebolla morada, cilantro y limon de pica.
+`;
+
+const LOMO_SALTADO = `# Lomo saltado
+
+Lomo en tiras, cebolla, tomate y papas fritas, al wok.
+`;
+
 export const LAB05: EscenarioDeclarado = {
   id: 'lab-05',
   laboratorio: 5,
@@ -380,6 +593,7 @@ export const LAB05: EscenarioDeclarado = {
       clave: 'c1',
       mensaje: 'Agrega el README del recetario',
       archivos: ['README.md'],
+      contenido: { 'README.md': README_RECETARIO },
       padres: [],
       carril: 0,
       ...JUANA,
@@ -389,6 +603,7 @@ export const LAB05: EscenarioDeclarado = {
       clave: 'c2',
       mensaje: 'Agrega la lista de platos',
       archivos: ['platos.md'],
+      contenido: { 'platos.md': PLATOS_SECCIONES },
       padres: ['c1'],
       carril: 0,
       ...MARCO,
@@ -398,6 +613,7 @@ export const LAB05: EscenarioDeclarado = {
       clave: 'c3',
       mensaje: 'Agrega los ingredientes base',
       archivos: ['ingredientes.md'],
+      contenido: { 'ingredientes.md': INGREDIENTES_BASE },
       padres: ['c2'],
       carril: 0,
       ...JUANA,
@@ -408,6 +624,7 @@ export const LAB05: EscenarioDeclarado = {
       clave: 'c4',
       mensaje: 'Precisa que la cazuela lleva chuchoca',
       archivos: ['platos.md'],
+      contenido: { 'platos.md': PLATOS_CHUCHOCA },
       padres: ['c3'],
       carril: 0,
       ...SOFIA,
@@ -419,6 +636,7 @@ export const LAB05: EscenarioDeclarado = {
       clave: 't1',
       mensaje: 'Agrega la receta del pad thai',
       archivos: ['recetas/pad-thai.md'],
+      contenido: { 'recetas/pad-thai.md': PAD_THAI },
       padres: ['c4'],
       carril: 1,
       ...MARCO,
@@ -430,6 +648,7 @@ export const LAB05: EscenarioDeclarado = {
       clave: 'a1',
       mensaje: 'Agrega la receta del guacamole',
       archivos: ['recetas/guacamole.md'],
+      contenido: { 'recetas/guacamole.md': GUACAMOLE },
       padres: ['c3'],
       carril: 2,
       ...SOFIA,
@@ -441,6 +660,10 @@ export const LAB05: EscenarioDeclarado = {
       clave: 'n1',
       mensaje: 'Reemplaza la cazuela por el lomo saltado',
       archivos: ['platos.md', 'recetas/lomo-saltado.md'],
+      contenido: {
+        'platos.md': PLATOS_LOMO,
+        'recetas/lomo-saltado.md': LOMO_SALTADO,
+      },
       padres: ['c3'],
       carril: 3,
       ...MARCO,
@@ -468,6 +691,16 @@ export const LAB05: EscenarioDeclarado = {
  * ingredientes y quedan tres confirmaciones encima. El enunciado la trata como
  * ya publicada, que es lo que hace preferible revertir antes que retroceder.
  */
+/** El error que el participante revierte: un ingrediente que no existe. */
+const INGREDIENTES_CON_SAL = `# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+- sal marina en polvo
+`;
+
 export const LAB06: EscenarioDeclarado = {
   id: 'lab-06',
   laboratorio: 6,
@@ -482,6 +715,7 @@ export const LAB06: EscenarioDeclarado = {
       clave: 'c1',
       mensaje: 'Agrega el README del recetario',
       archivos: ['README.md'],
+      contenido: { 'README.md': README_RECETARIO },
       padres: [],
       carril: 0,
       ...JUANA,
@@ -491,6 +725,7 @@ export const LAB06: EscenarioDeclarado = {
       clave: 'c2',
       mensaje: 'Agrega la lista de platos',
       archivos: ['platos.md'],
+      contenido: { 'platos.md': PLATOS_CURANTO },
       padres: ['c1'],
       carril: 0,
       ...MARCO,
@@ -500,6 +735,7 @@ export const LAB06: EscenarioDeclarado = {
       clave: 'c3',
       mensaje: 'Agrega los ingredientes base',
       archivos: ['ingredientes.md'],
+      contenido: { 'ingredientes.md': INGREDIENTES_BASE },
       padres: ['c2'],
       carril: 0,
       ...JUANA,
@@ -512,6 +748,7 @@ export const LAB06: EscenarioDeclarado = {
       clave: 'c4',
       mensaje: 'Suma un ingrediente a la lista base',
       archivos: ['ingredientes.md'],
+      contenido: { 'ingredientes.md': INGREDIENTES_CON_SAL },
       padres: ['c3'],
       carril: 0,
       ...SOFIA,
@@ -521,6 +758,7 @@ export const LAB06: EscenarioDeclarado = {
       clave: 'c5',
       mensaje: 'Agrega la receta del pastel de choclo',
       archivos: ['recetas/pastel-de-choclo.md'],
+      contenido: { 'recetas/pastel-de-choclo.md': PASTEL_DE_CHOCLO },
       padres: ['c4'],
       carril: 0,
       ...MARCO,
@@ -530,6 +768,7 @@ export const LAB06: EscenarioDeclarado = {
       clave: 'c6',
       mensaje: 'Agrega la receta de la cazuela',
       archivos: ['recetas/cazuela.md'],
+      contenido: { 'recetas/cazuela.md': CAZUELA },
       padres: ['c5'],
       carril: 0,
       ...MARCO,
@@ -539,6 +778,7 @@ export const LAB06: EscenarioDeclarado = {
       clave: 'c7',
       mensaje: 'Agrega la tabla de cocineros',
       archivos: ['cocineros.md'],
+      contenido: { 'cocineros.md': COCINEROS_TRES },
       padres: ['c6'],
       carril: 0,
       ...JUANA,
@@ -568,6 +808,37 @@ export const LAB06: EscenarioDeclarado = {
  * nada, y `main` avanzo dos por su cuenta. El participante arranca parado en la
  * rama de trabajo, con un archivo sin seguimiento encima.
  */
+const INGREDIENTES_LAB07 = INGREDIENTES_BASE;
+
+/** La lista de platos antes de que la rama de trabajo la toque. */
+const PLATOS_LAB07 = PLATOS_CURANTO;
+
+/** Lo que la rama tailandesa le agrega a la lista. */
+const PLATOS_TAILANDESES = `# Platos
+
+- pastel de choclo
+- empanadas de pino
+- cazuela
+- curanto
+- pad thai
+`;
+
+/** El pad thai a medio escribir, tal como lo dejo la primera confirmacion. */
+const PAD_THAI_BORRADOR = `# Pad thai
+
+Fideos de arroz y salsa de pescado.
+`;
+
+const CURRY_VERDE = `# Curry verde
+
+Pasta verde, leche de coco, albahaca tailandesa y berenjena.
+`;
+
+const CURRY_MASSAMAN = `# Curry massaman
+
+Pasta massaman, leche de coco, papa y mani tostado.
+`;
+
 export const LAB07: EscenarioDeclarado = {
   id: 'lab-07',
   laboratorio: 7,
@@ -582,6 +853,7 @@ export const LAB07: EscenarioDeclarado = {
       clave: 'c1',
       mensaje: 'Agrega el README del recetario',
       archivos: ['README.md'],
+      contenido: { 'README.md': README_RECETARIO },
       padres: [],
       carril: 0,
       ...JUANA,
@@ -591,6 +863,10 @@ export const LAB07: EscenarioDeclarado = {
       clave: 'c2',
       mensaje: 'Agrega platos e ingredientes',
       archivos: ['platos.md', 'ingredientes.md'],
+      contenido: {
+        'platos.md': PLATOS_LAB07,
+        'ingredientes.md': INGREDIENTES_LAB07,
+      },
       padres: ['c1'],
       carril: 0,
       ...MARCO,
@@ -601,6 +877,7 @@ export const LAB07: EscenarioDeclarado = {
       clave: 'c3',
       mensaje: 'Agrega la receta del pastel de choclo',
       archivos: ['recetas/pastel-de-choclo.md'],
+      contenido: { 'recetas/pastel-de-choclo.md': PASTEL_DE_CHOCLO },
       padres: ['c2'],
       carril: 0,
       ...MARCO,
@@ -610,6 +887,7 @@ export const LAB07: EscenarioDeclarado = {
       clave: 'c4',
       mensaje: 'Agrega la tabla de cocineros',
       archivos: ['cocineros.md'],
+      contenido: { 'cocineros.md': COCINEROS_TRES },
       padres: ['c3'],
       carril: 0,
       ...JUANA,
@@ -620,6 +898,7 @@ export const LAB07: EscenarioDeclarado = {
       clave: 't1',
       mensaje: 'wip',
       archivos: ['recetas/pad-thai.md'],
+      contenido: { 'recetas/pad-thai.md': PAD_THAI_BORRADOR },
       padres: ['c2'],
       carril: 1,
       epoca: cuando(6, 25, 17, 5),
@@ -628,6 +907,7 @@ export const LAB07: EscenarioDeclarado = {
       clave: 't2',
       mensaje: 'cambios',
       archivos: ['recetas/pad-thai.md'],
+      contenido: { 'recetas/pad-thai.md': PAD_THAI },
       padres: ['t1'],
       carril: 1,
       epoca: cuando(6, 26, 9, 30),
@@ -636,6 +916,7 @@ export const LAB07: EscenarioDeclarado = {
       clave: 't3',
       mensaje: 'mas cambios',
       archivos: ['platos.md'],
+      contenido: { 'platos.md': PLATOS_TAILANDESES },
       padres: ['t2'],
       carril: 1,
       epoca: cuando(6, 27, 14, 50),
@@ -644,6 +925,7 @@ export const LAB07: EscenarioDeclarado = {
       clave: 't4',
       mensaje: 'arreglos',
       archivos: ['recetas/curry-verde.md'],
+      contenido: { 'recetas/curry-verde.md': CURRY_VERDE },
       padres: ['t3'],
       carril: 1,
       epoca: cuando(7, 2, 16, 40),
@@ -664,7 +946,11 @@ export const LAB07: EscenarioDeclarado = {
       'recetas/curry-verde.md',
     ),
     // Lo que el participante tenia a medias cuando lo interrumpieron.
-    { nombre: 'recetas/curry-massaman.md', estado: 'sin-seguimiento' },
+    {
+      nombre: 'recetas/curry-massaman.md',
+      estado: 'sin-seguimiento',
+      contenido: CURRY_MASSAMAN,
+    },
   ],
   remotos: [],
 };
@@ -687,6 +973,47 @@ export const LAB07: EscenarioDeclarado = {
 // ---------------------------------------------------------------------------
 
 /** Ocho confirmaciones, archivo de exclusiones ya escrito y una version etiquetada. */
+const CHARQUICAN = `# Charquican
+
+Zapallo, papa, choclo y charqui deshilachado, con huevo frito encima.
+`;
+
+const SOPAIPILLAS = `# Sopaipillas
+
+Masa de zapallo y harina, fritas, con pebre o chancaca.
+`;
+
+/** Los platos ya completos, con entradas y postres. */
+const PLATOS_COMPLETOS = `# Platos
+
+## Fondos
+
+- pastel de choclo
+- cazuela
+- charquican
+
+## Entradas
+
+- empanadas de pino
+- sopaipillas
+`;
+
+const INGREDIENTES_COMPLETOS = `# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+- zapallo
+- harina
+`;
+
+/** El archivo de exclusiones que el laboratorio 09 trae ya confirmado. */
+const EXCLUSIONES_LAB09 = `*.tmp
+*.bak
+credenciales.txt
+`;
+
 export const LAB09: EscenarioDeclarado = {
   id: 'lab-09',
   laboratorio: 9,
@@ -701,6 +1028,7 @@ export const LAB09: EscenarioDeclarado = {
       clave: 'c1',
       mensaje: 'Agrega el README del recetario',
       archivos: ['README.md'],
+      contenido: { 'README.md': README_RECETARIO },
       padres: [],
       carril: 0,
       ...JUANA,
@@ -710,6 +1038,7 @@ export const LAB09: EscenarioDeclarado = {
       clave: 'c2',
       mensaje: 'Agrega la lista de platos',
       archivos: ['platos.md'],
+      contenido: { 'platos.md': PLATOS_CURANTO },
       padres: ['c1'],
       carril: 0,
       ...MARCO,
@@ -719,6 +1048,7 @@ export const LAB09: EscenarioDeclarado = {
       clave: 'c3',
       mensaje: 'Agrega los ingredientes base',
       archivos: ['ingredientes.md'],
+      contenido: { 'ingredientes.md': INGREDIENTES_BASE },
       padres: ['c2'],
       carril: 0,
       ...JUANA,
@@ -728,6 +1058,10 @@ export const LAB09: EscenarioDeclarado = {
       clave: 'c4',
       mensaje: 'Agrega las dos primeras recetas',
       archivos: ['recetas/pastel-de-choclo.md', 'recetas/empanadas.md'],
+      contenido: {
+        'recetas/pastel-de-choclo.md': PASTEL_DE_CHOCLO,
+        'recetas/empanadas.md': EMPANADAS,
+      },
       padres: ['c3'],
       carril: 0,
       ...MARCO,
@@ -737,6 +1071,10 @@ export const LAB09: EscenarioDeclarado = {
       clave: 'c5',
       mensaje: 'Agrega la cazuela y el charquican',
       archivos: ['recetas/cazuela.md', 'recetas/charquican.md'],
+      contenido: {
+        'recetas/cazuela.md': CAZUELA,
+        'recetas/charquican.md': CHARQUICAN,
+      },
       padres: ['c4'],
       carril: 0,
       ...SOFIA,
@@ -746,6 +1084,11 @@ export const LAB09: EscenarioDeclarado = {
       clave: 'c6',
       mensaje: 'Completa el listado con entradas y postres',
       archivos: ['recetas/sopaipillas.md', 'platos.md', 'ingredientes.md'],
+      contenido: {
+        'recetas/sopaipillas.md': SOPAIPILLAS,
+        'platos.md': PLATOS_COMPLETOS,
+        'ingredientes.md': INGREDIENTES_COMPLETOS,
+      },
       padres: ['c5'],
       carril: 0,
       ...SOFIA,
@@ -755,6 +1098,7 @@ export const LAB09: EscenarioDeclarado = {
       clave: 'c7',
       mensaje: 'Actualiza la tabla de cocineros',
       archivos: ['cocineros.md'],
+      contenido: { 'cocineros.md': COCINEROS_TRES },
       padres: ['c6'],
       carril: 0,
       ...JUANA,
@@ -764,6 +1108,7 @@ export const LAB09: EscenarioDeclarado = {
       clave: 'c8',
       mensaje: 'Agrega el archivo de exclusiones',
       archivos: ['.gitignore'],
+      contenido: { '.gitignore': EXCLUSIONES_LAB09 },
       padres: ['c7'],
       carril: 0,
       ...MARCO,

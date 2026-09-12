@@ -5,6 +5,7 @@
  * devuelven uno nuevo.
  */
 
+import { estaExcluida, exclusionesDe } from './exclusiones';
 import { antepasados } from './grafo';
 import type {
   Archivo,
@@ -250,8 +251,27 @@ export function establecerArchivo(
           ? { ...archivo, nombre, estado: nuevoEstado }
           : archivo,
       )
-    : [...estado.archivos, { nombre, estado: nuevoEstado }];
+    : [...estado.archivos, { nombre, estado: nuevoEstado, contenido: null }];
   return { ...estado, archivos };
+}
+
+/**
+ * Fija el texto que un archivo tiene en el directorio de trabajo.
+ *
+ * `null` quiere decir «lo mismo que la confirmacion actual», que es como queda
+ * un archivo limpio.
+ */
+export function establecerContenido(
+  estado: EstadoRepositorio,
+  nombre: string,
+  contenido: string | null,
+): EstadoRepositorio {
+  return {
+    ...estado,
+    archivos: estado.archivos.map((archivo) =>
+      archivo.nombre === nombre ? { ...archivo, contenido } : archivo,
+    ),
+  };
 }
 
 /** Aplica una transformacion a cada archivo del directorio de trabajo. */
@@ -287,8 +307,14 @@ export function archivosEn(
  *
  * Devuelve las entradas en el orden en que aparecen los archivos, sin repetir
  * carpeta.
+ *
+ * **Lo que el archivo de exclusiones tapa no se lista** (punto 3.1 del
+ * SPEC 012). Solo alcanza a lo que no esta en seguimiento, que es justo la
+ * distincion que el laboratorio 03 viene a enseñar: un archivo ya versionado
+ * sigue apareciendo aunque una regla lo nombre.
  */
 export function sinSeguimientoAgrupado(estado: EstadoRepositorio): readonly string[] {
+  const exclusiones = exclusionesDe(estado);
   // Todo lo que Git ya conoce: cualquier archivo que no sea de los sin seguir,
   // mas las rutas con la baja anotada, que siguen siendo rutas conocidas.
   const conocidos = [
@@ -302,6 +328,7 @@ export function sinSeguimientoAgrupado(estado: EstadoRepositorio): readonly stri
   const entradas: string[] = [];
   for (const archivo of estado.archivos) {
     if (archivo.estado !== 'sin-seguimiento') continue;
+    if (estaExcluida(exclusiones, archivo.nombre)) continue;
 
     // De la carpeta mas alta hacia abajo: la primera que no contenga nada
     // conocido es la que Git muestra.
@@ -344,9 +371,12 @@ export function sincronizarDirectorio(estado: EstadoRepositorio): EstadoReposito
   const pendientes = estado.archivos.filter((archivo) => archivo.estado !== 'limpio');
   const conPendiente = new Set(pendientes.map((archivo) => archivo.nombre));
 
+  // Los limpios no llevan copia del texto: su contenido es el del arbol al que
+  // acaba de llegar la posicion. Guardar una copia aqui es lo que dejaria al
+  // participante viendo en una rama el texto de la otra.
   const limpios: Archivo[] = [...seguidos]
     .filter((nombre) => !conPendiente.has(nombre))
-    .map((nombre) => ({ nombre, estado: 'limpio' as const }));
+    .map((nombre) => ({ nombre, estado: 'limpio' as const, contenido: null }));
 
   // Se conserva el orden que ya tenian los que siguen versionados, para que la
   // pantalla no reordene la lista al cambiar de rama.

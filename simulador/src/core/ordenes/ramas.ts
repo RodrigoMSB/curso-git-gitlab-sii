@@ -15,6 +15,7 @@ import {
   asignarCarril,
   confirmacionPorId,
   establecerArchivo,
+  establecerContenido,
   establecerRama,
   etiquetaPorNombre,
   idActual,
@@ -25,7 +26,8 @@ import {
   renombrarCarril,
   sincronizarDirectorio,
 } from '../estado';
-import { formatearEstadisticas } from '../formato';
+import { comparacionesEntre, textoEnConfirmacion } from '../contenido';
+import { formatearEstadisticasDe, fusionarTresVias } from '../diferencias';
 import { antepasados, archivosCambiados, baseComun, esAntepasado } from '../grafo';
 import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
@@ -423,7 +425,7 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
       lineas(
         `Updating ${cabeza}..${idOtro}`,
         'Fast-forward',
-        ...formatearEstadisticas(traidos),
+        ...formatearEstadisticasDe(comparacionesEntre(estado, cabeza, idOtro), true),
       ),
     );
   }
@@ -436,12 +438,39 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
   const idPrevisto = reservarId(estado, `merge:${cabeza}:${idOtro}`);
 
   if (conflictos.length > 0) {
+    // El nombre con que Git rotula cada lado de los marcadores: el tuyo es
+    // siempre `HEAD` y el otro es la referencia que nombraste al fusionar.
+    const rotuloAqui = 'HEAD';
     let siguiente = estado;
     for (const archivo of alla) {
       siguiente = establecerArchivo(
         siguiente,
         archivo,
         conflictos.includes(archivo) ? 'en-conflicto' : 'preparado',
+      );
+      if (conflictos.includes(archivo)) {
+        // El archivo en conflicto queda con las dos versiones dentro, entre
+        // marcadores, como lo deja Git. El laboratorio 05 le pide al
+        // participante leerlos, compararlos y borrarlos a mano, y sin el texto
+        // de verdad eran tres lineas de forma que no decian nada.
+        siguiente = establecerContenido(
+          siguiente,
+          archivo,
+          fusionarTresVias(
+            textoEnConfirmacion(estado, base, archivo) ?? '',
+            textoEnConfirmacion(estado, cabeza, archivo) ?? '',
+            textoEnConfirmacion(estado, idOtro, archivo) ?? '',
+            rotuloAqui,
+            objetivo,
+          ).texto,
+        );
+        continue;
+      }
+      // Lo que la otra rama trae sin chocar entra tal cual, ya preparado.
+      siguiente = establecerContenido(
+        siguiente,
+        archivo,
+        textoEnConfirmacion(estado, idOtro, archivo) ?? '',
       );
     }
     siguiente = {
@@ -470,11 +499,25 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
     };
   }
 
+  // El arbol de la union: se parte del nuestro y se toma **el texto de la otra
+  // rama en los archivos que ella cambio**. Aqui no hay conflicto, de modo que
+  // los que ella toco no los tocamos nosotros y al reves.
+  //
+  // Sin esto, la union registraba los archivos que la otra rama traia con el
+  // texto vacio: no estan en nuestro directorio de trabajo ni en nuestra
+  // confirmacion, asi que el area de preparacion no tenia nada que darle.
+  const textosDeLaUnion: Record<string, string> = {};
+  for (const ruta of traidos) {
+    const desde = alla.has(ruta) ? idOtro : cabeza;
+    textosDeLaUnion[ruta] = textoEnConfirmacion(estado, desde, ruta) ?? '';
+  }
+
   const mensaje = valorDeOpcion(argumentos, '-m') ?? `Merge branch '${objetivo}'`;
   const creado = agregarConfirmacion(estado, {
     mensaje,
     padres: [cabeza, idOtro],
     archivos: traidos,
+    contenidos: textosDeLaUnion,
     carril: confirmacionPorId(estado, cabeza)?.carril ?? 0,
     idForzado: idPrevisto,
   });
@@ -492,7 +535,15 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
 
   return ok(
     siguiente,
-    lineas(`Merge made by the 'ort' strategy.`, ...formatearEstadisticas(traidos)),
+    lineas(
+      `Merge made by the 'ort' strategy.`,
+      // Contra `creado.estado` y no contra `estado`: la union acaba de nacer y
+      // en el estado anterior no existe, de modo que su arbol saldria vacio.
+      ...formatearEstadisticasDe(
+        comparacionesEntre(creado.estado, cabeza, creado.confirmacion.id),
+        true,
+      ),
+    ),
   );
 };
 

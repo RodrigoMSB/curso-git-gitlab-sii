@@ -13,6 +13,8 @@
 import { describe, expect, it } from 'vitest';
 import { ejecutar } from '../src/core/motor';
 import { archivoPorNombre, idActual, ramaPorNombre } from '../src/core/estado';
+import { estaExcluida, leerExclusiones } from '../src/core/exclusiones';
+import type { EstadoRepositorio } from '../src/core/tipos';
 import { correr, correrHasta, repoConRamas, repoLimpio, repoVacio, texto } from './ayudas';
 
 describe('git rm', () => {
@@ -306,27 +308,154 @@ describe('mv y rm del interprete', () => {
 });
 
 /**
- * El archivo de exclusiones, que el motor no puede leer.
+ * El archivo de exclusiones, que ahora filtra de verdad (SPEC 012, CA2).
  *
- * La restriccion R4 dice que el motor no versiona contenido, asi que no tiene
- * como saber que reglas lleva `.gitignore`. Lo que el SPEC 011 corrige no es
- * eso, que sigue siendo cierto, sino que ocurriera **en silencio**: la parte 3
- * del laboratorio 03 esta armada sobre que las exclusiones filtran, y el
- * simulador mostraba lo contrario sin decir por que.
+ * Es la razon del spec. El laboratorio 03 enseña que ignorar un archivo y
+ * sacarlo del seguimiento son cosas distintas, y hasta el SPEC 011 el
+ * simulador no podia mostrar la primera mitad: el participante escribia las
+ * reglas, pedia el estado, y la pantalla le decia que no sabia leerlas.
+ *
+ * Las pruebas recorren el camino del enunciado, de su punto 2.2 al 3.2.
  */
 describe('.gitignore', () => {
-  it('al crearlo, el simulador dice que no aplica las reglas', () => {
+  /** Lo que el punto 2.2 del laboratorio 03 hace escribir, linea por linea. */
+  const escribirExclusiones = (estado: EstadoRepositorio): EstadoRepositorio =>
+    correr(
+      estado,
+      'echo "*.tmp" > .gitignore',
+      'echo "*.bak" >> .gitignore',
+      'echo "credenciales.txt" >> .gitignore',
+    );
+
+  it('crearlo ya no trae ningun aviso de limite', () => {
     const resultado = correrHasta(repoLimpio(), 'echo "*.tmp" > .gitignore');
 
-    expect(resultado.salida.some((linea) => linea.tipo === 'limite')).toBe(true);
-    expect(texto(resultado)).toContain('no aplica las reglas de .gitignore');
-    expect(texto(resultado)).toContain('En tu terminal si funciona');
-    // El archivo se crea igual: eso si es cierto y `git status` lo muestra.
+    expect(resultado.salida.some((linea) => linea.tipo === 'limite')).toBe(false);
     expect(archivoPorNombre(resultado.estado, '.gitignore')?.estado).toBe('sin-seguimiento');
   });
 
-  it('cualquier otro archivo se crea sin decir nada', () => {
-    const resultado = correrHasta(repoLimpio(), 'echo "x" > suelto.md');
-    expect(resultado.salida.some((linea) => linea.tipo === 'limite')).toBe(false);
+  it('tapa lo que todavia no esta en seguimiento', () => {
+    // El escenario trae los tres archivos ya confirmados, asi que primero hay
+    // que sacarlos del seguimiento: es el orden del propio enunciado.
+    const estado = escribirExclusiones(
+      correr(
+        repoLimpio(),
+        'git rm --cached notas.tmp',
+        'git rm --cached respaldo.bak',
+        'git rm credenciales.txt',
+      ),
+    );
+
+    // Siguen anotados como bajas preparadas, que es correcto: lo que las
+    // reglas tapan es su reaparicion como archivos sin seguimiento.
+    const sinSeguir = texto(correrHasta(estado, 'git status')).split('Untracked files:')[1] ?? '';
+    expect(sinSeguir).not.toContain('notas.tmp');
+    expect(sinSeguir).not.toContain('respaldo.bak');
+    // El archivo de exclusiones si aparece: no se tapa a si mismo.
+    expect(sinSeguir).toContain('.gitignore');
+  });
+
+  it('no toca lo que ya esta en seguimiento, que es el punto del laboratorio', () => {
+    const estado = escribirExclusiones(repoLimpio());
+
+    // Los tres siguen versionados, por mucho que las reglas los nombren.
+    const enumerados = texto(correrHasta(estado, 'git ls-files'));
+    expect(enumerados).toContain('notas.tmp');
+    expect(enumerados).toContain('respaldo.bak');
+    expect(enumerados).toContain('credenciales.txt');
+  });
+
+  it('un archivo nuevo que cae bajo una regla no aparece en el estado', () => {
+    const estado = correr(escribirExclusiones(repoLimpio()), 'echo "prueba" > temporal.tmp');
+
+    expect(texto(correrHasta(estado, 'git status'))).not.toContain('temporal.tmp');
+    expect(texto(correrHasta(estado, 'git status -s'))).not.toContain('temporal.tmp');
+  });
+
+  it('nombrarlo a mano en git add es un error que dice como insistir', () => {
+    const estado = correr(escribirExclusiones(repoLimpio()), 'echo "esta si va" > importante.tmp');
+
+    const resultado = correrHasta(estado, 'git add importante.tmp');
+    expect(resultado.error).toBe(true);
+    expect(texto(resultado)).toContain('ignored by one of your .gitignore files');
+    expect(texto(resultado)).toContain('Use -f if you really want to add them');
+  });
+
+  it('con -f entra igual', () => {
+    const estado = correr(escribirExclusiones(repoLimpio()), 'echo "esta si va" > importante.tmp');
+
+    const resultado = correrHasta(estado, 'git add -f importante.tmp');
+    expect(resultado.error).toBe(false);
+    expect(archivoPorNombre(resultado.estado, 'importante.tmp')?.estado).toBe('preparado');
+  });
+
+  it('barrer con git add . se salta lo tapado sin decir nada', () => {
+    const estado = correr(
+      escribirExclusiones(repoLimpio()),
+      'echo "prueba" > temporal.tmp',
+      'git add .',
+    );
+
+    expect(archivoPorNombre(estado, 'temporal.tmp')?.estado).toBe('sin-seguimiento');
+    expect(archivoPorNombre(estado, '.gitignore')?.estado).toBe('preparado');
+  });
+
+  it('una carpeta con barra al final tapa todo lo que cuelga de ella', () => {
+    const estado = correr(
+      repoLimpio(),
+      'echo "construido/" > .gitignore',
+      'echo "x" > construido/salida.txt',
+    );
+
+    const salida = texto(correrHasta(estado, 'git status'));
+    expect(salida).not.toContain('construido');
+  });
+
+  it('lo que la sintaxis cubierta no alcanza se declara en vez de callarse', () => {
+    const exclusiones = leerExclusiones('*.tmp\n!importante.tmp\n');
+
+    expect(exclusiones.fuera).toEqual(['!importante.tmp']);
+    expect(estaExcluida(exclusiones, 'notas.tmp')).toBe(true);
+    // La negacion no se aplica: el patron que la lleva no entra en las reglas.
+    expect(estaExcluida(exclusiones, 'importante.tmp')).toBe(true);
+  });
+
+  it('y git status lo dice, que es donde el participante lo espera', () => {
+    const estado = correr(
+      repoLimpio(),
+      'echo "*.tmp" > .gitignore',
+      'echo "!importante.tmp" >> .gitignore',
+    );
+
+    const resultado = correrHasta(estado, 'git status');
+    expect(resultado.salida.some((linea) => linea.tipo === 'limite')).toBe(true);
+    expect(texto(resultado)).toContain('«!importante.tmp»');
+    expect(texto(resultado)).toContain('En tu terminal si funciona');
+  });
+
+  it('con las reglas que si cubre, git status no dice nada de mas', () => {
+    const estado = correr(repoLimpio(), 'echo "*.tmp" > .gitignore');
+
+    expect(
+      correrHasta(estado, 'git status').salida.some((linea) => linea.tipo === 'limite'),
+    ).toBe(false);
+  });
+
+  it('los comentarios y las lineas en blanco no son reglas', () => {
+    const exclusiones = leerExclusiones('# lo que no va\n\n*.bak\n');
+
+    expect(exclusiones.reglas).toHaveLength(1);
+    expect(estaExcluida(exclusiones, 'respaldo.bak')).toBe(true);
+    expect(estaExcluida(exclusiones, 'respaldo.md')).toBe(false);
+  });
+
+  it('un patron sin barras tapa en cualquier nivel, y uno anclado solo en la raiz', () => {
+    const suelto = leerExclusiones('*.tmp\n');
+    expect(estaExcluida(suelto, 'notas.tmp')).toBe(true);
+    expect(estaExcluida(suelto, 'recetas/notas.tmp')).toBe(true);
+
+    const anclado = leerExclusiones('/notas.tmp\n');
+    expect(estaExcluida(anclado, 'notas.tmp')).toBe(true);
+    expect(estaExcluida(anclado, 'recetas/notas.tmp')).toBe(false);
   });
 });

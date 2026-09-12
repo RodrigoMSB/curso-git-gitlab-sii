@@ -215,7 +215,14 @@ describe('escenarios de laboratorio', () => {
       construirEscenario({
         ...declaracion('lab-02'),
         confirmaciones: [
-          { clave: 'x', mensaje: 'Suelta', archivos: [], padres: ['inexistente'], carril: 0 },
+          {
+            clave: 'x',
+            mensaje: 'Suelta',
+            archivos: [],
+            contenido: {},
+            padres: ['inexistente'],
+            carril: 0,
+          },
         ],
         ramas: [{ nombre: 'main', en: 'x', carril: 0 }],
       }),

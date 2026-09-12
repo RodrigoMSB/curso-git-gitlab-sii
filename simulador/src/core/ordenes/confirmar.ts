@@ -14,6 +14,8 @@ import {
   ramaActual,
   transformarArchivos,
 } from '../estado';
+import { arbolDe, comparacionesEntre } from '../contenido';
+import { formatearEstadisticasDe, formatearParches } from '../diferencias';
 import { formatearEstadoLargo, formatearHistorial } from '../formato';
 import { historia } from '../grafo';
 import {
@@ -126,7 +128,7 @@ function enmendar(estado: EstadoRepositorio, mensajePedido: string | null): Resu
   let siguiente = moverPosicionActual(creado.estado, creado.confirmacion.id);
   siguiente = transformarArchivos(siguiente, (archivo) =>
     archivo.estado === 'preparado'
-      ? { nombre: archivo.nombre, estado: 'limpio' as const }
+      ? { nombre: archivo.nombre, estado: 'limpio' as const, contenido: null }
       : archivo,
   );
   siguiente = { ...siguiente, borrados: [] };
@@ -187,7 +189,7 @@ export const ordenCommit: Manejador = (estado, argumentos) => {
   let siguiente = moverPosicionActual(creado.estado, creado.confirmacion.id);
   siguiente = transformarArchivos(siguiente, (archivo) =>
     archivo.estado === 'preparado'
-      ? { nombre: archivo.nombre, estado: 'limpio' as const }
+      ? { nombre: archivo.nombre, estado: 'limpio' as const, contenido: null }
       : archivo,
   );
   siguiente = { ...siguiente, borrados: [] };
@@ -236,6 +238,15 @@ function nombresAnteriores(estado: EstadoRepositorio): readonly string[] {
     .map((archivo) => archivo.renombradoDe as string);
 }
 
+/** La cadena de `git log -S`, escrita suelta o pegada a la opcion. */
+function cadenaBuscada(argumentos: readonly string[]): string | null {
+  const pegada = argumentos.find(
+    (argumento) => argumento.startsWith('-S') && argumento.length > 2,
+  );
+  if (pegada !== undefined) return pegada.slice(2);
+  return valorDeOpcion(argumentos, '-S');
+}
+
 /** Limite de confirmaciones pedido con `-n 3` o con `-3`. */
 function limitePedido(argumentos: readonly string[]): number | null {
   const explicito = valorDeOpcion(argumentos, '-n', '--max-count');
@@ -280,7 +291,7 @@ function puntasPedidas(
 ): { puntas: readonly string[]; excluidas: readonly string[] } | string {
   const referencias = posicionales(
     antesDelSeparador(argumentos),
-    ['-n', '--max-count', '--author', '--since', '--after', '--until', '--before', '--format', '--pretty', '--date'],
+    ['-n', '--max-count', '--author', '--since', '--after', '--until', '--before', '--format', '--pretty', '--date', '-S'],
   );
 
   if (tieneOpcion(argumentos, '--all')) {
@@ -351,7 +362,16 @@ function filtrosPedidos(
     if (hasta === null) return `fatal: no puedo interpretar la fecha '${hastaTexto}'`;
   }
 
-  return { ...SIN_FILTROS, autor, desde, hasta, archivo: rutaFiltrada(argumentos) };
+  return {
+    ...SIN_FILTROS,
+    autor,
+    desde,
+    hasta,
+    archivo: rutaFiltrada(argumentos),
+    // Git acepta `-S "texto"` y `-S"texto"` pegado; las dos aparecen en el
+    // guion segun quien escriba el enunciado.
+    cadena: cadenaBuscada(argumentos),
+  };
 }
 
 /**
@@ -378,7 +398,7 @@ export const ordenLog: Manejador = (estado, argumentos) => {
   const alcanzadas = historia(estado, pedido.puntas).filter(
     (confirmacion) => !fuera.has(confirmacion.id),
   );
-  const confirmaciones = aplicarFiltros(alcanzadas, filtros);
+  const confirmaciones = aplicarFiltros(alcanzadas, filtros, (id) => arbolDe(estado, id));
 
   const formato = formatoPedido(argumentos);
   if (formato !== null) {
@@ -397,16 +417,35 @@ export const ordenLog: Manejador = (estado, argumentos) => {
     );
   }
 
-  return ok(
-    estado,
-    lineas(
-      ...formatearHistorial(estado, confirmaciones, {
+  const cuerpo = formatearHistorial(estado, confirmaciones, {
+    unaLinea: tieneOpcion(argumentos, '--oneline'),
+    grafo: tieneOpcion(argumentos, '--graph'),
+    limite: limitePedido(argumentos),
+  });
+
+  // Con `--stat` o con `--patch`, cada confirmacion lleva detras el resumen o
+  // el parche de lo que cambio respecto de su primer padre. Se intercalan
+  // rehaciendo el recorrido, porque el formateador del historial no los conoce.
+  const conStat = tieneOpcion(argumentos, '--stat');
+  const conParche = tieneOpcion(argumentos, '-p', '--patch');
+  if (!conStat && !conParche) return ok(estado, lineas(...cuerpo));
+
+  const limitadas = recortar(confirmaciones, limitePedido(argumentos));
+  const filas: string[] = [];
+  for (const confirmacion of limitadas) {
+    filas.push(
+      ...formatearHistorial(estado, [confirmacion], {
         unaLinea: tieneOpcion(argumentos, '--oneline'),
         grafo: tieneOpcion(argumentos, '--graph'),
-        limite: limitePedido(argumentos),
+        limite: null,
       }),
-    ),
-  );
+    );
+    const cambios = comparacionesEntre(estado, confirmacion.padres[0] ?? null, confirmacion.id);
+    filas.push(...(conStat ? formatearEstadisticasDe(cambios) : formatearParches(cambios)));
+    filas.push('');
+  }
+  if (filas.at(-1) === '') filas.pop();
+  return ok(estado, lineas(...filas));
 };
 
 function recortar(

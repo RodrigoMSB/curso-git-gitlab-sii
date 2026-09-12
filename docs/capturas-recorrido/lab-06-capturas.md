@@ -10,7 +10,7 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 002 | movio | — |
 | 003 | movio | tiempo |
 | 004 | movio | — |
-| 005 | movio | — |
+| 005 | movio | tiempo |
 | 006 | movio | tiempo |
 | 007 | movio | nodos, ramas, puntero, areas, tiempo |
 | 008 | movio | tiempo |
@@ -34,7 +34,7 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 026 | movio | tiempo |
 | 027 | movio | — |
 | 028 | movio | tiempo |
-| 029 | movio | — |
+| 029 | movio | tiempo |
 | 030 | movio | tiempo |
 | 031 | movio | tiempo |
 | 032 | movio | tiempo |
@@ -51,7 +51,7 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 043 | movio | tiempo |
 | 044 | movio | tiempo |
 | 045 | movio | tiempo |
-| 046 | movio | — |
+| 046 | movio | tiempo |
 | 047 | movio | tiempo |
 | 048 | movio | nodos, ramas, puntero, areas, tiempo |
 

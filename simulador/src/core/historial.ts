@@ -25,6 +25,12 @@ export interface FiltrosHistorial {
   readonly hasta: number | null;
   /** Ruta o carpeta que la confirmacion tiene que haber tocado. */
   readonly archivo: string | null;
+  /**
+   * Cadena cuya cantidad de apariciones tiene que haber cambiado, que es lo
+   * que hace `git log -S`: encuentra la confirmacion donde el texto entro o
+   * salio, y no las que simplemente lo tenian delante.
+   */
+  readonly cadena: string | null;
 }
 
 export const SIN_FILTROS: FiltrosHistorial = {
@@ -32,7 +38,45 @@ export const SIN_FILTROS: FiltrosHistorial = {
   desde: null,
   hasta: null,
   archivo: null,
+  cadena: null,
 };
+
+/** Cuantas veces aparece la cadena en el texto. */
+function apariciones(texto: string, cadena: string): number {
+  if (cadena === '') return 0;
+  let cuenta = 0;
+  let desde = texto.indexOf(cadena);
+  while (desde >= 0) {
+    cuenta += 1;
+    desde = texto.indexOf(cadena, desde + cadena.length);
+  }
+  return cuenta;
+}
+
+/** Todo el texto de un arbol, pegado, para contar apariciones sobre el. */
+function textoDelArbol(arbol: Readonly<Record<string, string>>): string {
+  return Object.values(arbol).join('\n');
+}
+
+/**
+ * Si la confirmacion cambio cuantas veces aparece la cadena.
+ *
+ * Es la definicion de `git log -S`: se cuenta en el arbol de la confirmacion y
+ * en el de su primer padre, y entra si los dos numeros difieren. Una
+ * confirmacion que toco otro archivo, con la cadena quieta, no entra.
+ */
+function mueveLaCadena(
+  confirmacion: Confirmacion,
+  cadena: string,
+  arbolDelPadre: (id: string | null) => Readonly<Record<string, string>>,
+): boolean {
+  const aqui = apariciones(textoDelArbol(confirmacion.arbol), cadena);
+  const antes = apariciones(
+    textoDelArbol(arbolDelPadre(confirmacion.padres[0] ?? null)),
+    cadena,
+  );
+  return aqui !== antes;
+}
 
 /** Si la confirmacion registro ese archivo, o algo dentro de esa carpeta. */
 function tocaElArchivo(confirmacion: Confirmacion, ruta: string): boolean {
@@ -45,6 +89,7 @@ function tocaElArchivo(confirmacion: Confirmacion, ruta: string): boolean {
 export function aplicarFiltros(
   confirmaciones: readonly Confirmacion[],
   filtros: FiltrosHistorial,
+  arbolDelPadre: (id: string | null) => Readonly<Record<string, string>> = () => ({}),
 ): readonly Confirmacion[] {
   return confirmaciones.filter((confirmacion) => {
     if (filtros.autor !== null) {
@@ -55,6 +100,9 @@ export function aplicarFiltros(
     if (filtros.desde !== null && confirmacion.epoca < filtros.desde) return false;
     if (filtros.hasta !== null && confirmacion.epoca > filtros.hasta) return false;
     if (filtros.archivo !== null && !tocaElArchivo(confirmacion, filtros.archivo)) return false;
+    if (filtros.cadena !== null && !mueveLaCadena(confirmacion, filtros.cadena, arbolDelPadre)) {
+      return false;
+    }
     return true;
   });
 }

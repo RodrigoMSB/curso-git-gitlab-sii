@@ -192,8 +192,6 @@ Crea `.gitignore` con este contenido.
 credenciales.txt
 ```
 
-**Esta sección compruébala en tu terminal.** El simulador no lee el contenido de los archivos, así que no puede aplicar las reglas de exclusión: te crea el `.gitignore` y te lo dice, pero no filtra nada. Lo que sigue de la sección 2.2 solo se ve de verdad en Git. De la 2.3 en adelante vuelves al simulador, que sí hace todo lo demás.
-
 Y mira el estado.
 
 ```
@@ -223,7 +221,7 @@ git status
 ls
 ```
 
-Lee las dos cosas. En el estado aparecen como borrados y además como archivos sin seguimiento, porque el archivo de exclusiones todavía no está confirmado. Y en tu carpeta siguen ahí, intactos.
+Lee las dos cosas. En el estado aparecen como borrados del seguimiento, y **no** reaparecen como archivos sin seguimiento: en cuanto salieron del área de preparación, la regla `*.tmp` y la regla `*.bak` empezaron a taparlos. El archivo de exclusiones actúa desde que está escrito en tu carpeta, sin esperar a que lo confirmes. Y en tu carpeta los dos siguen ahí, intactos.
 
 La opción `--cached` es la diferencia. Sin ella, `git rm` borra el archivo del disco también.
 
@@ -279,8 +277,6 @@ Quédate con la regla. La credencial que entró a un repositorio compartido est�
 
 **Tiempo sugerido, 15 minutos.**
 
-**Esta parte entera va en tu terminal.** Trata de lo que las exclusiones tapan, y el simulador no las aplica: te diría que los archivos aparecen cuando en Git no aparecen.
-
 ### 3.1 Comprueba que las exclusiones funcionan
 
 ```
@@ -319,6 +315,8 @@ rm importante.tmp
 `.gitignore` va dentro del repositorio y viaja con él. Así todo el equipo comparte las mismas reglas y nadie sube por accidente lo que los demás están ignorando.
 
 Si tienes exclusiones que son solo tuyas, van en `.git/info/exclude`, que es local y no se comparte.
+
+**Esta orden hazla en tu terminal.** Mira dentro de la carpeta `.git`, y esa el simulador no la modela a propósito: es la misma razón por la que el laboratorio 02 abre la caja en la consola de verdad.
 
 ```
 cat .git/info/exclude

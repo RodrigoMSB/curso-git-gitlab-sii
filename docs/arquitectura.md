@@ -177,6 +177,11 @@ comparar (restriccion R4). En vez de inventar lineas que el participante podria
 tomar por reales, se emite el encabezado del diff y un cuerpo que declara que el
 detalle es simulado. `cat` sigue el mismo criterio.
 
+> **Agotada por el SPEC 012.** El motor modela el contenido y `git diff` muestra
+> el texto de verdad, con el formato de Git. `cat` tambien. Queda como registro
+> de lo que se decidio entonces, no como descripcion del estado actual: el
+> detalle esta en la seccion 46.
+
 **4.6 `--graph` esta simplificado.** Se marca cada confirmacion con `*` y se
 abre `|\` bajo las de union, sin dibujar los carriles cruzados. El dibujo del
 grafo es tarea de la capa visual del SPEC 002, que recibe el carril de cada
@@ -386,6 +391,12 @@ confirmacion, su arbol y un elemento por archivo. Como no hay contenido que
 resumir (restriccion R4), los identificadores del arbol y de los elementos se
 derivan de forma determinista del identificador de la confirmacion y de los
 nombres de archivo.
+
+> **Corregida por el SPEC 012.** Los identificadores ahora se derivan **del
+> contenido**, como en Git, y el arbol enumera el proyecto entero y no solo lo
+> que la confirmacion toco. Con la derivacion vieja, el panel de estructuras
+> internas enseñaba algo falso: un archivo que no cambio salia con un
+> identificador distinto en cada confirmacion.
 
 **9.3** Ya ocurria. El identificador reservado vive dentro del estado de la
 fusion, de modo que anularlo al abortar lo libera. Queda cubierto por una
@@ -1549,6 +1560,11 @@ fecha distinta, un archivo con otro estado y una rama que apunta a otro lado.
 
 ### Donde vive el contenido de los archivos
 
+> **Invertida por el SPEC 012.** Hoy el contenido vive **en la declaracion**, y
+> `preparar.sh` escribe los mismos bytes a mano con una prueba que los compara.
+> Lo que sigue es el razonamiento de entonces, que era correcto mientras el
+> motor no modelara contenido. La razon del cambio esta en la seccion 46.
+
 **En `preparar.sh`, no en la declaracion.**
 
 El simulador no modela contenido (restriccion R4 del SPEC 001): un archivo es un
@@ -1928,7 +1944,8 @@ Hay tres huecos mas en la misma orden:
 - `git log --oneline -- platos.md` falla con
   `fatal: ambiguous argument 'platos.md'`: no hay filtrado por archivo.
 - `git log -S "curanto"` falla igual: el motor no versiona contenido, asi que no
-  tiene donde buscar.
+  tiene donde buscar. **Implementado por el SPEC 012**, junto con el filtrado
+  por archivo de la linea anterior.
 
 **Esto es exactamente lo que la Parte 1 del laboratorio 02 enseña**, punto por
 punto: filtrar por autor, por fecha, por archivo y por contenido. Un participante
@@ -2356,6 +2373,10 @@ El motor reproduce las tres situaciones, comprobadas contra Git una por una.
 
 ## 35. Lo que no se implementa, y por que
 
+> **Media lista se implemento en el SPEC 012.** Todo lo del primer cuadro, que
+> caia por no modelar contenido, hoy funciona. La lista vigente y completa esta
+> en la seccion 48.
+
 Todo lo de esta lista cae por la misma razon de fondo: **el motor modela nodos y
 punteros, no contenido de archivos**. Es la restriccion R4 del SPEC 001 y el
 punto 5.2 del SPEC 010 la confirma.
@@ -2580,6 +2601,11 @@ aparece» y el simulador se lo mostraba.
 archivo. Lo que sí era un defecto es que ocurriera en silencio, que es la cuarta
 respuesta que la sección 32 eliminó.
 
+> **Se arregló en el SPEC 012, y sí se podía.** El «no se puede» era cierto bajo
+> R4 y R4 dejó de tener razón de ser cuando el SPEC 010 acotó el motor al guion.
+> Esa es la revisión que faltó hacer entonces y que la sección 47 registra. El
+> archivo de exclusiones filtra de verdad y el aviso se fue con su motivo.
+
 Ahora, al crear un `.gitignore`, la consola dice que no aplica las reglas, por
 qué, y que en la terminal sí funciona. El enunciado del laboratorio 03 manda
 hacer esa parte en la terminal.
@@ -2731,6 +2757,493 @@ depende de que las exclusiones filtren.
 del resto del taller, y lo que enseña de verdad, la diferencia entre ignorar y
 sacar del seguimiento, ocurre entero en pantalla.
 
+> **Con el SPEC 012 quedó en 95 por ciento.** De los doce tramos que salían a la
+> terminal volvió todo menos uno, el `cat .git/info/exclude` de su punto 3.3,
+> que sigue fuera porque mira dentro de la carpeta oculta. Las cifras nuevas
+> están en la sección 49.
+
 La cifra es medida y no narrada: el enunciado marca sus tramos de terminal con
 la frase en negrita, `tramosDeTerminal` los lee, y el informe de cobertura de
 cada corrida trae la columna `enPantalla`.
+
+---
+
+# SPEC 012 · Contenido de archivos, acotado al guion
+
+## 46. El contenido de los archivos, y dónde vive
+
+Hasta el SPEC 011 el motor modelaba nombres y estados, y nada de lo que los
+archivos tenían escrito. Desde el SPEC 012 modela **el texto**, como texto
+plano. No modela binarios, permisos, enlaces simbólicos ni marcas de tiempo:
+nada de eso aparece en el guion.
+
+### La fuente única es la declaración
+
+El SPEC 007 dejó el contenido en `preparar.sh` por una razón concreta: *meter
+los bytes en la declaración los cargaría en el artefacto que el participante
+abre, para no mostrarlos nunca*. Esa razón se fue con la restricción que la
+sostenía, y el reparto se invirtió.
+
+**El texto vive en `simulador/src/escenarios/laboratorios.ts`.** Cada
+confirmación declarada lleva un `contenido` con una entrada por cada archivo que
+registra, ni una más ni una menos, y el constructor rechaza el escenario que no
+cumpla eso: un archivo registrado sin texto es una confirmación que dice haber
+cambiado algo sin decir qué.
+
+`preparar.sh` sigue escribiendo los bytes a mano, como escribe a mano todo lo
+demás, y **`tests/escenarios-contra-disco.test.ts` compara los dos lados
+carácter por carácter**, árbol por árbol y archivo por archivo del directorio de
+trabajo. Es el mismo trato que el SPEC 007 eligió para la forma, extendido al
+contenido: la declaración manda y la prueba impide que el disco se separe.
+
+Se descartaron los otros dos caminos, y no por comodidad:
+
+- **Generar `preparar.sh` desde la declaración** es lo que el SPEC 007 descartó
+  con razones que siguen vigentes: `.sh` generados y versionados, con el
+  problema de sincronía que el SPEC 006 acababa de resolver para el artefacto.
+- **Que la declaración lea los bytes de `preparar.sh`** obliga a que la
+  construcción de TypeScript analice sintaxis de Bash, y deja sin contenido a
+  los laboratorios 01, 07 y 09, que tienen escenario y no tienen script.
+
+La prueba **se vio fallar en las dos direcciones**, que es lo que el criterio
+CA1 pide. Cambiando una línea en `labs/lab-04/preparar.sh` la suite se detiene
+en dos pruebas de ese laboratorio, nombrando el archivo; y hay dos pruebas
+escritas que alteran la declaración sin tocar el script y exigen que la
+comparación lo note. La segunda de esas dos comprueba además que la forma sigue
+calzando, de modo que se sepa que lo que falló fue el contenido y no otra cosa.
+
+**Los finales de línea se normalizan al entrar**, a `\n` y con salto final. Es
+el mismo criterio que el SPEC 003 aplicó a los identificadores fijando
+`core.autocrlf false` y `core.eol lf` en el repositorio generado, y es lo que
+hace que la comparación no dependa del sistema donde se corra.
+
+### Las tres versiones de un archivo
+
+Git tiene tres y la diferencia entre ellas es lo que el taller enseña. El
+modelo las reparte así:
+
+| Versión | Dónde vive |
+|---|---|
+| La confirmación | `Confirmacion.arbol`, una foto completa del proyecto |
+| El área de preparación | **Se deduce**: lo preparado tiene lo del directorio; lo demás, lo de HEAD |
+| El directorio de trabajo | `Archivo.contenido` |
+
+**El árbol es una foto y no un parche**, igual que en Git. No cuesta lo que
+parece: se arma copiando el del padre y reemplazando lo que cambió, de modo que
+los textos que no cambiaron son la misma cadena compartida.
+
+**Un archivo limpio no guarda copia del texto**: su `contenido` es `null`, que
+quiere decir «lo mismo que la confirmación actual». No es una ausencia, es una
+referencia. Guardar una copia la dejaría vieja al cambiar de rama, que es
+exactamente el defecto que la sección 39 corrigió para los nombres y que habría
+vuelto a aparecer con los bytes.
+
+**Deducir el índice tiene un límite, y está declarado.** Un archivo preparado y
+vuelto a modificar después aparece sólo como preparado; Git lo mostraría en las
+dos secciones a la vez. Es un límite que el modelo ya tenía antes de este spec,
+porque el estado de un archivo es un único valor de una enumeración, y el guion
+no lo ejercita.
+
+## 47. La revisión que faltó hacer hace dos specs
+
+El SPEC 010 acotó el motor al guion y **nadie volvió a mirar las decisiones que
+se habían tomado bajo el alcance anterior**. Esta sección es esa revisión.
+
+### Las que se tomaron por ser un Git de propósito general
+
+| Decisión | Estado |
+|---|---|
+| **R4 · no se modela contenido** (SPEC 001) | **Sin razón de ser.** El SPEC 012 la levanta. Nació cuando modelar contenido era modelar un sistema de archivos entero; con el guion como contrato son cinco archivos de diez líneas escritos por nosotros |
+| **4.5 · `git diff` muestra la forma** | Caída con R4 |
+| **9.2 · los objetos internos no resumen contenido** | Caída con R4, y además enseñaba algo falso |
+| **23 · el contenido vive en `preparar.sh`** | Invertida, sección 46 |
+| **35 · lo que no se implementa** | Su primer cuadro tenía cinco formas, las cinco por no modelar contenido. Cuatro cayeron; la quinta, el `diff` del sistema, se queda **por otra razón**: necesita la carpeta personal y la sustitución de procesos del intérprete. El segundo cuadro, el de alcance, sigue entero |
+| **39.4 · «esto no se arregla, y no se puede»** | El «no se puede» era cierto bajo R4 y dejó de serlo dos specs antes de que alguien lo mirara |
+| **`wc -c`, descartado por no tener consumidor** | Implementado. El consumidor no era la orden del guion, que mira dentro de `.git`: era **no mentir**. Sin manejador, el simulador respondía `bash: wc: command not found`, que es falso |
+
+### La afirmación que hay que reformular, y que no se reformuló
+
+**«El simulador es una simulación, no una implementación de Git.»** Sigue siendo
+cierta y conviene que lo siga siendo. Lo que cambió es el argumento con que se
+sostenía.
+
+Antes se sostenía con *«no hay archivos reales ni contenido versionado: hay
+nodos, punteros y estados de archivo declarados»*. Eso ya no es verdad, y
+dejarlo escrito sería mentirle al participante que va a ver el texto de sus
+archivos en la pantalla. El `README.md` se corrigió en esa frase, y **sólo en
+esa frase**: decir en qué sigue siendo una simulación es una decisión del
+arquitecto y queda anotada aquí como pendiente.
+
+Lo que hoy la hace una simulación, y no una implementación, es otra cosa: los
+identificadores se generan con una huella propia y no con SHA-1 sobre el objeto;
+no hay carpeta `.git` que abrir; no hay red, ni submódulos, ni ganchos; y el
+contrato del SPEC 010 se compromete con el guion y no con Git. Ninguna de esas
+cuatro depende de si hay contenido.
+
+### La pregunta del punto 7.4 · qué otra decisión descansa sobre un supuesto caído
+
+Recorridas las cuarenta y cinco secciones anteriores, **hay una**, y no es de
+contenido.
+
+**La decisión 4.7: «el orden del historial es el de creación», tomada porque no
+había reloj real.** El SPEC 010 le puso reloj: desde entonces cada confirmación
+guarda su instante en segundos desde la época, y los escenarios declaran fechas
+concretas de 2024 escritas por tres autores distintos. El supuesto que sostenía
+4.7 —«al no haber reloj real»— dejó de cumplirse hace dos specs y nadie lo miró.
+
+Hoy no muerde, porque en los ocho escenarios el orden de creación coincide con
+el cronológico. **Muerde el día que un escenario declare una confirmación con
+fecha anterior a la de su padre**, que es lo normal en una rama que se abrió
+antes y se confirmó después: `git log` los ordenaría por fecha y el simulador
+por orden de declaración. No se cambia aquí, por la regla del punto 7.3.
+
+### Y un defecto que apareció al mirar, que no es una decisión
+
+**La fecha se escribe en UTC y se rotula `-0300`.** `fechaDeInstante` formatea
+con `getUTCHours` y pega el desplazamiento de Chile al final. El participante ve
+`Tue Jul  2 13:25:00 2024 -0300` donde su terminal dice `Tue Jul 2 10:25:00 2024
+-0300`: tres horas de diferencia y un espacio de más en el día. El laboratorio
+02 pone las dos salidas una al lado de la otra.
+
+Es un defecto, no una decisión, y por eso no está en el cuadro de arriba. **No
+se corrige en este spec** porque cambiaría la fecha de todas las confirmaciones
+de los ocho escenarios, y eso toca las pruebas y las capturas del recorrido: es
+un cambio de su propio tamaño y no un arreglo al paso.
+
+## 48. Lo que queda declarado como no soportado
+
+La lista completa y vigente, después de que el contenido se llevara la mitad de
+la anterior. **Ninguna de las cinco que quedan es por contenido.**
+
+| Forma | Por qué |
+|---|---|
+| `cat`, `ls`, `wc` sobre `.git` | El tramo de la carpeta oculta se hace en la terminal **a propósito**. Es la sección 6.1 del SPEC 012 y la razón es pedagógica, no técnica: ese tramo termina diciéndole al participante que nada de esto es magia, que es texto en archivos y que lo acaba de leer con sus propios ojos. Un `.git` fabricado enseña exactamente lo contrario |
+| `cd` | El simulador es este repositorio, no el disco del participante |
+| `mkdir` fuera del repositorio, redirección a `~` o a `/` | Lo mismo |
+| `diff` del sistema | El laboratorio 06 la usa sobre un archivo de la carpeta personal y con sustitución de procesos. `git diff` sí funciona |
+| `git --version` | No es una instalación de Git, es un modelo de cómo funciona |
+
+Y lo que sigue fuera del simulador entero: **el laboratorio 08**, con sus dos
+remotos, su submódulo y su gancho (sección 24).
+
+### Lo que el archivo de exclusiones cubre, y lo que no
+
+Se cubre lo que el guion usa: comodín sobre la extensión (`*.tmp`), nombre
+literal, carpeta con barra al final, ruta anclada con barra adelante,
+comentarios y líneas en blanco.
+
+**No se cubre el resto de la sintaxis de Git**: negaciones con `!`, comodines
+dobles `**`, clases de caracteres `[abc]`, el comodín de un carácter `?` y el
+escape con `\`. Un patrón que use algo de eso **no se aplica en silencio**:
+`git status` lo nombra, con el mensaje de límite y no con uno de error, y dice
+que en la terminal sí funciona. Se dice ahí y no al escribir el archivo porque
+ese es el momento en que el participante espera que el filtrado haya ocurrido.
+Aceptar una regla y no aplicarla es justo la cuarta respuesta que el SPEC 010
+eliminó.
+
+Tampoco se leen los `.gitignore` de las subcarpetas ni `.git/info/exclude`, que
+vive dentro de la carpeta oculta.
+
+### Lo que `grep` cubre, y lo que no
+
+Texto literal, la alternancia `\|` de las expresiones regulares básicas, `-n` y
+`-r`. Es lo que el laboratorio 05 escribe. **No se cubre el resto de la sintaxis
+de expresiones regulares**, ni `-i`, ni `-v`, ni `-c`: una opción que no esté en
+la lista se responde como no implementada, con su nombre, en vez de ejecutarse a
+medias.
+
+## 49. La comparación de diferencias y los conflictos
+
+### El algoritmo no es el de Git, y el resultado sí
+
+Git usa Myers con heurísticas de histograma y de anclaje. `diferencias.ts` usa
+la subsecuencia común más larga, que en una tabla de dos dimensiones es corta y
+se revisa de un vistazo. **Los archivos del guion tienen diez líneas**: el coste
+cuadrático no es un problema y la claridad sí es una ventaja.
+
+Lo que coincide es lo que el participante ve. Comprobado contra Git sobre los
+escenarios, `git diff` y `git diff --staged` del laboratorio 02 salen
+**idénticos línea por línea**, cabecera de trozo incluida, con una sola
+diferencia: la línea `index`, cuyas huellas son las del simulador y no las de
+Git. Se escribe igual, porque la forma de la salida importa y que los
+identificadores no coincidan ya está declarado desde el SPEC 007.
+
+Donde los dos algoritmos podrían separarse es **al repartir un empate**: cuando
+hay dos formas igual de cortas de explicar el mismo cambio, Myers y la
+subsecuencia común más larga pueden elegir distinta y las mismas líneas salen
+agrupadas de otra manera. Con archivos de diez líneas y cambios de una o dos el
+caso no aparece. Queda anotado porque es la única puerta por la que este módulo
+podría separarse de Git.
+
+### Los marcadores de conflicto llevan el texto, y sólo el tramo que choca
+
+El punto 5.5 pide que los marcadores lleven el contenido real. La primera
+versión envolvía **el archivo entero** entre marcadores, y estaba mal: Git marca
+sólo el tramo que choca y deja fuera lo que las dos ramas dejaron igual. La
+diferencia importa para el laboratorio 05, donde el participante tiene que leer
+las dos versiones, elegir y borrar tres líneas. Con el archivo entero adentro no
+hay nada que elegir: hay que rehacerlo todo.
+
+`fusionarTresVias` alinea cada rama contra la base común y decide por tramo: si
+sólo una lo tocó, se toma el suyo; si las dos escribieron lo mismo, se toma una
+vez; si las dos lo cambiaron distinto, van los marcadores. El resultado del
+laboratorio 05 es **idéntico al de Git**, comprobado sobre el repositorio que
+`preparar.sh` deja en el disco.
+
+**Esto no cambia qué archivos entran en conflicto**, que es lo que el punto 5.4
+pide no tocar. La detección sigue siendo por archivo, en `ordenMerge`: si las
+dos ramas tocaron el mismo archivo, hay conflicto.
+
+### La detección por línea, como trabajo posterior
+
+Queda anotada, con la mejora que traería y con una consecuencia que sólo se vio
+al implementar los marcadores.
+
+El laboratorio 05 enseña las tres formas de fusión, y una de ellas es la fusión
+automática de dos ramas que tocaron el mismo archivo sin chocar. **Hoy eso no se
+puede mostrar**: el simulador declararía conflicto donde Git fusiona solo.
+
+Y ahora hay un segundo motivo, más fino. Desde que los marcadores los escribe
+una fusión de tres vías, existe un caso posible que antes no existía: dos ramas
+que tocan el mismo archivo en líneas distintas quedan declaradas en conflicto
+—porque la detección es por archivo— y su contenido sale **fusionado y sin
+marcadores**, porque la fusión de tres vías no encontró nada que chocara. El
+participante vería `both modified:` en un archivo limpio. No ocurre en el guion,
+y es exactamente el desajuste que la detección por línea eliminaría.
+
+## 50. Las cifras
+
+### La cobertura de cada laboratorio
+
+Medida en la corrida comparada, no estimada. Es la columna `enPantalla` del
+informe que deja cada corrida de Cypress.
+
+| Laboratorio | Antes | Después |
+|---|---|---|
+| 02 · leer la historia y abrir la caja | 70 % | **70 %** |
+| 03 · ordenar el recetario | 77 % | **95 %** |
+| 04 · tres cocinas en paralelo | 91 % | **91 %** |
+| 05 · fusionar y resolver | 87 % | **96 %** |
+| 06 · retroceder, revertir y etiquetar | 82 % | **88 %** |
+
+El **02 no se mueve, y está bien**: lo que lo baja es abrir la carpeta oculta,
+que se deja fuera a propósito. De sus quince órdenes declaradas, catorce son
+`cat .git/...` y `ls .git/...`.
+
+El **03 es la razón del spec** y es el que más sube. De los doce tramos que
+salían a la terminal volvió todo menos uno.
+
+El **05** sube porque `cat platos.md` pasó a mostrar los marcadores de
+conflicto, que es el paso 3.3 del enunciado, y porque `git show --stat`
+funciona. El **06**, porque `git log -S` encuentra el ingrediente que sobra.
+
+### El artefacto
+
+| | Bytes |
+|---|---|
+| Antes | 290 739 |
+| Después | 306 219 |
+| Creció | **15 480, un 5,3 %** |
+
+Sigue siendo un archivo único, se abre con doble clic y no pide nada a la red.
+El contenido incrustado son los ocho escenarios completos.
+
+### El arnés escribe el contenido de verdad
+
+El extractor del recorrido escribía `echo "contenido de ejemplo" > ruta` a
+propósito, porque copiar el contenido real habría encendido efectos que el motor
+no modelaba —«como que un `.gitignore` con `*.tmp` filtre en Git y no en el
+simulador», decía el comentario—. Ahora filtra en los dos, así que copia el
+texto del enunciado línea por línea. Sin ese cambio, el recorrido del
+laboratorio 03 habría pasado en verde sin ejercitar lo único que este spec vino
+a desbloquear.
+
+Y eso destapó un defecto del contrato que el participante tenía delante desde
+siempre. Está en la sección 51.
+
+## 51. Lo que apareció al implementar
+
+Ninguna salió de revisar: salieron de escribir el contenido y mirar qué se
+rompía. Es la misma lección de la sección 27 y de la 28.
+
+### El contenido tiene que seguir a las órdenes que mueven la posición
+
+Modelar el texto no es agregar un campo: es que **cada orden que mueve la
+historia sepa qué texto deja**. Cinco no lo sabían, y las cinco se arreglaron
+al escribir su prueba.
+
+- **`git revert` devolvía el archivo a su texto actual**, o sea a ninguno. Ahora
+  lo devuelve al que tenía *antes* de la confirmación revertida, y si esa
+  confirmación había **creado** el archivo, revertirla lo retira, como en Git.
+  Esa es la razón de que el laboratorio 06 pueda mostrar el ingrediente que
+  sobra desapareciendo.
+- **El rebase copiaba el mensaje y no el texto.** Cada copia lleva ahora el
+  texto que su original dejó, apoyado sobre el árbol de la base nueva, que es
+  lo que hace que la rama reordenada conserve lo que main traía por su cuenta.
+- **`git stash` guardaba el estado y no el trabajo.** Devolvía un archivo
+  marcado como modificado sin ninguna modificación dentro.
+- **`git reset --soft` y `--mixed` resolvían el texto contra la confirmación
+  nueva**, de modo que el directorio aparecía ya retrocedido y `git diff` no
+  decía nada. Git no toca el directorio: ahora el texto se fija antes de mover
+  la posición.
+- **La fusión sin conflicto registraba vacíos los archivos que la otra rama
+  traía.** No están en nuestro directorio de trabajo ni en nuestra
+  confirmación, así que el área de preparación no tenía de dónde sacarlos. El
+  árbol de la unión se arma ahora tomando el texto de la rama que cambió cada
+  archivo. Lo destapó escribir la prueba de `git show --stat` sobre una unión,
+  que devolvía `recetas/guacamole.md | 0`.
+
+### El enunciado del laboratorio 03 explicaba mal su propio paso 2.3
+
+Decía, después de `git rm --cached notas.tmp`:
+
+> «En el estado aparecen como borrados y además como archivos sin seguimiento,
+> **porque el archivo de exclusiones todavía no está confirmado**.»
+
+Es falso, y se pudo comprobar recién ahora. **Git aplica `.gitignore` desde que
+está escrito en el directorio**, sin esperar a que se confirme: en cuanto los
+dos archivos salen del área de preparación, las reglas `*.tmp` y `*.bak`
+empiezan a taparlos y no reaparecen como archivos sin seguimiento. Comprobado
+contra Git sobre un repositorio hecho para la ocasión.
+
+El párrafo se escribió cuando el simulador no filtraba y nadie tenía con qué
+contrastarlo. Ahora el simulador y Git dicen lo mismo, y los dos contradecían al
+enunciado. Se corrigió, con el precedente de la sección 34b: cuando la
+comparación demuestra que un paso está mal explicado, el enunciado se arregla.
+
+### `git status` no ordenaba las bajas por ruta
+
+Git ordena las rutas dentro de cada sección de `git status`; el simulador las
+llevaba en el orden en que ocurrieron. Antes casi no se notaba, porque cada
+archivo retirado aparecía dos veces —como baja y como archivo sin seguimiento—
+y las dos listas se leían mezcladas. Con las exclusiones tapando la segunda
+mitad, el paso 2.5 del laboratorio 03 deja **tres bajas seguidas**, y ahí la
+diferencia con la terminal se lee de inmediato.
+
+Se ordena al escribir y no en el modelo: la zona de áreas necesita el orden en
+que ocurrieron para no reordenarse al cambiar de rama.
+
+Queda sin comprobar si el orden de lo modificado y lo no seguido coincide con
+el de Git en todos los casos del guion. El recorrido comparado no lo mira,
+porque compara estado y no texto.
+
+### Y una más, de fidelidad
+
+Encontrada al comparar contra Git la salida de la unión: **`git show` sobre una
+unión no lleva parche y sí lleva resumen.** Git imprime la cabecera y nada más, porque una unión tiene dos
+padres y «el cambio» no es uno solo; con `--stat` sí resume. El punto 2.3 del
+laboratorio 05 hace exactamente `git show --stat HEAD` sobre una unión.
+
+### El contrato leía `- lomo saltado` como una opción
+
+`echo "- lomo saltado" >> platos.md` respondía que el simulador no implementa la
+opción «- lomo saltado». El argumento empieza con guion y `opcionesNoReconocidas`
+lo tomaba por una opción.
+
+**La mitad de las líneas de cualquier lista del recetario empieza con guion**,
+así que el participante se topaba con esto al escribir. Lo destapó hacer que el
+arnés copiara el contenido de verdad de los enunciados; con la línea neutra que
+escribía antes, no aparecía.
+
+Se arregló con dos reglas: `echo` no tiene opciones, todo lo que va detrás es
+texto; y **una opción nunca lleva espacios**, que además cubre el mensaje de un
+`git commit -m "- se quita la cazuela"`.
+
+### `grep`, que no estaba en el encargo y entró igual
+
+No está en la lista de la sección 3 del spec. Entró por la regla que gobierna el
+contrato: **la pantalla nunca dice que una orden no existe cuando existe**. El
+simulador respondía `bash: grep: command not found`, que es la tercera respuesta
+del SPEC 010 usada donde no corresponde.
+
+Hasta ahora no se notaba, porque el paso del enunciado que la usa era
+inalcanzable. El laboratorio 05 la escribe dos veces, en su punto 3.5 y en su
+Comprobación, para asegurarse de que no quedaron marcadores de conflicto dentro
+de un archivo, y **ese paso se volvió alcanzable con este spec**, en cuanto
+`cat platos.md` pasó a mostrar los marcadores.
+
+Se cubre lo que el guion usa: texto literal, la alternancia `\|` de las
+expresiones regulares básicas, `-n` y `-r`. No se cubre el resto de la sintaxis
+de expresiones regulares, y lo que no se reconozca se responde como no
+implementado, con su nombre.
+
+De paso apareció que `tieneOpcion` compara palabras enteras y no separa las
+opciones cortas agrupadas: `grep -rn` es una palabra y son dos opciones. Se
+agregó `letrasCortas` para las órdenes del intérprete, donde el enunciado las
+escribe pegadas.
+
+### La fecha se escribe en UTC y se rotula `-0300`
+
+Está en la sección 47, con el resto de la revisión. Es un defecto anterior a
+este spec y se deja anotado, no corregido: cambiarlo mueve la fecha de todas las
+confirmaciones de los ocho escenarios y con ellas las pruebas y las capturas.
+
+### Diferencias con Git, actualizadas
+
+La lista de lo no soportado queda en **cinco familias**, todas de alcance y
+ninguna de contenido (sección 48). De las que la sección 35 atribuía a no
+modelar contenido no queda ninguna. Sobre lo implementado en este spec, las
+diferencias con Git que quedan son tres, y las tres están declaradas:
+
+| Diferencia | Estado |
+|---|---|
+| La línea `index` del parche lleva huellas del simulador, no de Git | Declarada desde el SPEC 007: los identificadores no coinciden por diseño |
+| `git add` sobre un archivo tapado no imprime la segunda línea de consejo de Git, la que enseña a apagar el aviso | Nombra `git config set`, que no está en el contrato |
+| La detección de conflictos es por archivo y los marcadores por línea | Sección 49; el punto 5.4 pide expresamente no tocar la detección |
+
+Y una que **no se tocó y ahora sería barata**, porque es anterior a este spec y
+más ancha que él: el resumen que `git commit` imprime dice ` 1 file changed`
+donde Git dice ` 1 file changed, 3 insertions(+)` y agrega la línea
+`create mode`. Es la salida más vista del taller entero. `git merge` sí las
+lleva desde este spec, porque ahí el resumen se rehízo para contar líneas de
+verdad; `git commit` sigue con el suyo, que cuenta archivos. Queda anotado.
+
+### Lo que se comprobó contra Git, orden por orden
+
+Sobre el repositorio que `preparar.sh` deja en el disco, no razonado:
+
+| Orden | Resultado |
+|---|---|
+| `git diff` y `git diff --staged` del laboratorio 02 | Idénticos salvo la línea `index` |
+| `git show --stat` de una confirmación normal y de una unión | Idénticos |
+| `git show` de una unión, sin opciones | Idénticos: ninguno de los dos imprime parche |
+| `git merge` por avance rápido y con unión | Idénticos, con sus `create mode` |
+| Los marcadores de conflicto del laboratorio 05 | Idénticos, carácter por carácter |
+| El tramo de exclusiones del laboratorio 03 entero | Idénticos, incluido el reclamo de `git add` |
+| Dónde imprime Git `create mode` y dónde no | Comprobado en las cinco órdenes que resumen |
+
+## 52. Qué laboratorio podría entrar al simulador, y cuál no
+
+La pregunta del punto 10 del spec. La respuesta corta es **ninguno, y no es una
+mala noticia**: los que están fuera lo están por razones que el contenido no
+toca.
+
+| Fuera | Por qué, y si el contenido cambia algo |
+|---|---|
+| **08** · remotos, submódulo y gancho | Necesita ramas de seguimiento remoto, órdenes de red, submódulos y ganchos. **El contenido no aporta nada.** Sigue siendo un spec propio, el mismo que la sección 24 describe |
+| **10, 11, 13, 14** · plataforma | Ocurren en GitLab. No hay repositorio local que reflejar |
+| **12** · integración continua | Lo mismo |
+| El tramo de la carpeta oculta del **02** | Se deja fuera **a propósito**, y la razón es pedagógica: ese tramo termina diciéndole al participante que lo que acaba de leer es texto en archivos de verdad. Un `.git` fabricado enseña lo contrario. Es la sección 6.1 del spec y no cambió |
+
+Lo que el contenido sí abrió no es un laboratorio nuevo, es **una parte de uno
+que estaba a ciegas**. La Parte 3 del laboratorio 05, resolver el conflicto, se
+puede seguir entera en la pantalla por primera vez: leer los marcadores con
+`cat`, rehacer el archivo con `echo`, comprobar con `grep` que no quedó ninguno,
+marcar resuelto con `git add` y cerrar con `git commit`. Antes el participante
+llegaba a `git merge`, veía el conflicto declarado y de ahí en adelante tenía
+que irse a la terminal.
+
+### Lo que sí conviene hacer después, y ahora sale barato
+
+**La detección de conflictos por línea** (punto 5.6). El punto 5.4 pidió no
+tocarla en este spec y fue la decisión correcta: mezclar el cambio del modelo de
+contenido con el de la fusión habría juntado dos riesgos.
+
+Pero ahora está a un paso. `fusionarTresVias` ya calcula si dos ramas chocan de
+verdad, y devuelve ese dato en su campo `choco`. La detección por archivo de
+`ordenMerge` podría preguntárselo en vez de comparar listas de nombres. Lo que
+se gana es concreto: **el laboratorio 05 podría mostrar su tercer caso de
+fusión**, el de dos ramas que tocaron el mismo archivo sin chocar, que hoy el
+simulador declara en conflicto donde Git fusiona solo. Y de paso desaparece el
+desajuste de la sección 49, el archivo declarado en conflicto que sale sin
+marcadores.

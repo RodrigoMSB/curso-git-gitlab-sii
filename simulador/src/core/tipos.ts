@@ -5,8 +5,13 @@
  * y no produce efectos de entorno (restriccion R3 del SPEC 001). El estado es
  * inmutable, de modo que cada orden recibe un estado y devuelve uno nuevo.
  *
- * No se versiona contenido de archivos (restriccion R4). Un archivo es un
- * nombre y un estado declarado, nada mas.
+ * Desde el SPEC 012 el modelo **si lleva el contenido de los archivos**, como
+ * texto plano. La restriccion R4 del SPEC 001 nacio cuando el simulador
+ * pretendia ser un Git de proposito general, donde modelar contenido era
+ * modelar un sistema de archivos entero; con el guion como contrato (SPEC 010)
+ * lo que hay que representar son cinco archivos de diez lineas escritos por
+ * nosotros. No se modelan binarios, permisos, enlaces ni marcas de tiempo:
+ * nada de eso aparece en el guion.
  */
 
 /**
@@ -23,10 +28,20 @@ export type EstadoArchivo =
   | 'sin-seguimiento'
   | 'en-conflicto';
 
-/** Archivo del directorio de trabajo. Nombre y estado, sin contenido. */
+/** Archivo del directorio de trabajo. */
 export interface Archivo {
   readonly nombre: string;
   readonly estado: EstadoArchivo;
+  /**
+   * Texto que hay en el directorio de trabajo, o `null` cuando es el mismo que
+   * el de la confirmacion actual.
+   *
+   * El `null` no es una ausencia de contenido: es la forma de decir «lo que
+   * diga HEAD». Un archivo limpio no guarda una copia del texto, porque esa
+   * copia se quedaria vieja al cambiar de rama, que es justo el defecto que
+   * `sincronizarDirectorio` vino a corregir para los nombres.
+   */
+  readonly contenido: string | null;
   /**
    * Nombre anterior, cuando el archivo llego aqui por un renombrado que
    * todavia no se confirma. Es lo que permite que `git status` diga
@@ -54,6 +69,16 @@ export interface Confirmacion {
   readonly fecha: string;
   /** Nombres de los archivos que la confirmacion registro. */
   readonly archivos: readonly string[];
+  /**
+   * El arbol: el texto de **todos** los archivos versionados en este punto de
+   * la historia, no solo los que la confirmacion toco. Es como lo guarda Git,
+   * donde una confirmacion apunta a una foto completa y no a un parche.
+   *
+   * No cuesta lo que parece: el arbol se arma copiando el del padre y
+   * reemplazando lo que cambio, de modo que los textos que no cambiaron son la
+   * misma cadena compartida y no una copia.
+   */
+  readonly arbol: Readonly<Record<string, string>>;
   /**
    * Nombres que la confirmacion saco del seguimiento. Sin esto no se puede
    * distinguir un archivo que sigue versionado de uno que se retiro con

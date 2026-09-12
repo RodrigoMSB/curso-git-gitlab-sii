@@ -36,38 +36,40 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 028 | movio | nodos, ramas, puntero, areas, tiempo |
 | 029 | movio | tiempo |
 | 030 | movio | tiempo |
-| 031 | movio | — |
+| 031 | movio | tiempo |
 | 032 | movio | tiempo |
 | 033 | movio | areas, tiempo |
 | 034 | movio | tiempo |
 | 035 | movio | tiempo |
-| 036 | movio | areas, tiempo |
-| 037 | movio | areas, tiempo |
-| 038 | movio | tiempo |
-| 039 | movio | tiempo |
-| 040 | movio | areas, tiempo |
+| 036 | movio | tiempo |
+| 037 | movio | tiempo |
+| 038 | movio | areas, tiempo |
+| 039 | movio | areas, tiempo |
+| 040 | movio | tiempo |
 | 041 | movio | tiempo |
-| 042 | movio | tiempo |
-| 043 | movio | areas, tiempo |
+| 042 | movio | areas, tiempo |
+| 043 | movio | tiempo |
 | 044 | movio | tiempo |
-| 045 | movio | nodos, ramas, puntero, areas, tiempo |
+| 045 | movio | areas, tiempo |
 | 046 | movio | tiempo |
-| 047 | movio | tiempo |
+| 047 | movio | nodos, ramas, puntero, areas, tiempo |
 | 048 | movio | tiempo |
-| 049 | movio | areas, tiempo |
+| 049 | movio | tiempo |
 | 050 | movio | tiempo |
-| 051 | movio | areas, tiempo |
-| 052 | movio | areas, tiempo |
+| 051 | movio | tiempo |
+| 052 | movio | tiempo |
 | 053 | movio | tiempo |
-| 054 | movio | areas, tiempo |
+| 054 | movio | tiempo |
 | 055 | movio | tiempo |
 | 056 | movio | areas, tiempo |
-| 057 | movio | areas, tiempo |
-| 058 | movio | — |
+| 057 | movio | tiempo |
+| 058 | movio | areas, tiempo |
 | 059 | movio | tiempo |
-| 060 | movio | tiempo |
+| 060 | movio | — |
 | 061 | movio | tiempo |
 | 062 | movio | tiempo |
-| 063 | movio | areas, tiempo |
+| 063 | movio | tiempo |
+| 064 | movio | tiempo |
+| 065 | movio | areas, tiempo |
 
 Ningun paso quedo sin pintar: todo lo que se movio se ve en la imagen.

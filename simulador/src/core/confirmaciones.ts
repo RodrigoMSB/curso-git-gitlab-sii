@@ -6,6 +6,7 @@
  * rebase, la reversion o la fusion.
  */
 
+import { arbolCon, arbolDe, textosPreparados } from './contenido';
 import { autorActual, idsUsados } from './estado';
 import { epocaDeterminista, fechaDeEpoca, generarId } from './identificadores';
 import type { Confirmacion, EstadoRepositorio } from './tipos';
@@ -31,6 +32,20 @@ export interface DatosConfirmacion {
   readonly correo?: string;
   /** Instante en segundos desde la epoca. Sin declarar, lo pone el contador. */
   readonly epoca?: number;
+  /**
+   * Texto con el que cada archivo registrado queda en el arbol.
+   *
+   * Sin declarar se toma del area de preparacion, que es lo que hace
+   * `git commit`. Lo declaran las ordenes que confirman algo que no esta en el
+   * directorio de trabajo: la reversion, que registra el texto anterior al
+   * error, y el rebase, que copia el texto de la confirmacion original.
+   */
+  readonly contenidos?: Readonly<Record<string, string>>;
+  /**
+   * Arbol del que parte esta confirmacion. Sin declarar, el del primer padre.
+   * Lo declara el rebase, que apoya cada copia sobre la base nueva.
+   */
+  readonly arbolBase?: Readonly<Record<string, string>>;
 }
 
 export function agregarConfirmacion(
@@ -50,6 +65,13 @@ export function agregarConfirmacion(
 
   const epoca = datos.epoca ?? epocaDeterminista(estado.contador);
 
+  // El arbol es una foto completa, como en Git: se copia el del padre y se
+  // reemplaza lo que esta confirmacion cambio. Los textos que no cambiaron
+  // siguen siendo la misma cadena, de modo que la foto no cuesta memoria.
+  const base = datos.arbolBase ?? arbolDe(estado, datos.padres[0] ?? null);
+  const contenidos = datos.contenidos ?? textosPreparados(estado, datos.archivos);
+  const arbol = arbolCon(base, contenidos, datos.borrados ?? []);
+
   const confirmacion: Confirmacion = {
     id,
     mensaje: datos.mensaje,
@@ -61,6 +83,7 @@ export function agregarConfirmacion(
     fecha: fechaDeEpoca(epoca),
     archivos: datos.archivos,
     borrados: datos.borrados ?? [],
+    arbol,
   };
 
   return {

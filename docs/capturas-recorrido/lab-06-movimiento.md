@@ -6,6 +6,7 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 |---|---|---|
 | 002 | `git log --oneline` | (primer paso) |
 | 003 | `git lg` | tiempo |
+| 005 | `cat ~/historial-original.txt` | tiempo |
 | 006 | `git log --oneline -3` | tiempo |
 | 007 | `git reset --soft HEAD~1` | nodos, ramas, puntero, areas, tiempo |
 | 008 | `git log --oneline -3` | tiempo |
@@ -28,6 +29,7 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 025 | `git log --oneline -3` | tiempo |
 | 026 | `ls` | tiempo |
 | 028 | `git log --oneline` | tiempo |
+| 029 | `git log -S "sal marina en polvo" --oneline` | tiempo |
 | 030 | `git log --oneline -3` | tiempo |
 | 031 | `git lg` | tiempo |
 | 032 | `git show HEAD` | tiempo |
@@ -44,5 +46,6 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 043 | `git log --oneline` | tiempo |
 | 044 | `git tag` | tiempo |
 | 045 | `git show v1.0` | tiempo |
+| 046 | `git log -S "sal marina en polvo" --oneline` | tiempo |
 | 047 | `git status` | tiempo |
 | 048 | `git revert HEAD` | nodos, ramas, puntero, areas, tiempo |

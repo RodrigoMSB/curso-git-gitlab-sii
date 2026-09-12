@@ -21,7 +21,7 @@ describe('9.1 · confirmaciones huerfanas del estado actual', () => {
 });
 
 describe('9.2 · cadena de objetos de una confirmacion', () => {
-  it('devuelve la confirmacion, su arbol y un elemento por archivo', () => {
+  it('devuelve la confirmacion, su arbol y un elemento por archivo del arbol', () => {
     const estado = repoLineal();
     const id = estado.confirmaciones[3]?.id ?? '';
     const cadena = cadenaDeObjetos(estado, id);
@@ -29,8 +29,31 @@ describe('9.2 · cadena de objetos de una confirmacion', () => {
     expect(cadena?.confirmacion.tipo).toBe('confirmacion');
     expect(cadena?.confirmacion.id).toBe(id);
     expect(cadena?.arbol.tipo).toBe('arbol');
-    expect(cadena?.elementos).toHaveLength(1);
-    expect(cadena?.elementos[0]?.nombre).toBe('cocineros.md');
+    // El arbol es una foto completa, no un parche: la cuarta confirmacion
+    // registro solo `cocineros.md` y su arbol lleva los cuatro archivos que
+    // habia en el proyecto en ese momento (SPEC 012).
+    expect(cadena?.elementos.map((elemento) => elemento.nombre)).toEqual([
+      'README.md',
+      'cocineros.md',
+      'ingredientes.md',
+      'platos.md',
+    ]);
+  });
+
+  it('el identificador de un elemento sale de su contenido, como en Git', () => {
+    const estado = repoLineal();
+    const cadena = cadenaDeObjetos(estado, estado.confirmaciones[3]?.id ?? '');
+    const siguiente = cadenaDeObjetos(estado, estado.confirmaciones[4]?.id ?? '');
+
+    const platosAqui = cadena?.elementos.find((uno) => uno.nombre === 'platos.md');
+    const platosAlla = siguiente?.elementos.find((uno) => uno.nombre === 'platos.md');
+
+    // `platos.md` no cambio entre las dos: es el mismo objeto, con el mismo
+    // identificador. Es la propiedad que el panel de estructuras internas
+    // viene a enseñar, y con identificadores derivados del nombre era falsa.
+    expect(platosAqui?.id).toBe(platosAlla?.id);
+    // El arbol si cambio, porque la quinta confirmacion agrega una receta.
+    expect(cadena?.arbol.id).not.toBe(siguiente?.arbol.id);
   });
 
   it('la confirmacion apunta a su arbol y el arbol a sus elementos', () => {

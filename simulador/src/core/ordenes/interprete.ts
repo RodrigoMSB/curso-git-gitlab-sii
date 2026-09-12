@@ -6,10 +6,16 @@
  * de prepararlo.
  */
 
-import { esOperador, posicionales, tieneOpcion } from '../analizador';
-import { archivoPorNombre, establecerArchivo, estaSeguido } from '../estado';
-import { fallo, lineaLimite, lineas, ok, sinRepositorio } from '../salida';
-import type { EstadoRepositorio, LineaSalida, ResultadoOrden } from '../tipos';
+import { esOperador, letrasCortas, posicionales, tieneOpcion } from '../analizador';
+import { bytesDe, lineasDe, normalizar, textoDeTrabajo } from '../contenido';
+import {
+  archivoPorNombre,
+  establecerArchivo,
+  establecerContenido,
+  estaSeguido,
+} from '../estado';
+import { fallo, lineas, ok, sinRepositorio } from '../salida';
+import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
 
 /** `pwd` */
@@ -111,18 +117,127 @@ function existeCarpeta(estado: EstadoRepositorio, ruta: string): boolean {
 }
 
 /**
- * `cat`.
+ * `cat` sobre un archivo del proyecto (punto 3.2 del SPEC 012).
  *
- * Mostrar el contenido de un archivo esta declarado como no soportado en el
- * contrato, de modo que el despachador responde antes de llegar aqui y este
- * manejador solo ve el `cat` sin argumentos. El verbo se mantiene registrado a
- * proposito: si no lo estuviera, el simulador diria que la orden no existe, y
- * `cat` si existe. Lo que no existe es el contenido.
+ * Desde que el motor modela contenido, esta orden muestra el texto de verdad.
+ * `cat` sobre la carpeta oculta sigue declarado como no soportado en el
+ * contrato, y el despachador responde antes de llegar aqui: ese tramo del
+ * laboratorio 02 se hace en la terminal a proposito.
  */
 export const ordenCat: Manejador = (estado, argumentos) => {
   const rutas = posicionales(argumentos);
   if (rutas.length === 0) return fallo(estado, 'cat: falta el nombre del archivo');
-  return fallo(estado, `cat: ${rutas[0]}: No such file or directory`);
+
+  const filas: string[] = [];
+  for (const ruta of rutas) {
+    const texto = textoDeTrabajo(estado, ruta);
+    if (texto === null) return fallo(estado, `cat: ${ruta}: No such file or directory`);
+    filas.push(...lineasDe(texto));
+  }
+  return ok(estado, lineas(...filas));
+};
+
+/**
+ * `grep`, con `-n` y `-r`.
+ *
+ * No esta en la lista de la seccion 3 del SPEC 012, y entra igual por la regla
+ * que gobierna el contrato: **la pantalla nunca dice que una orden no existe
+ * cuando existe**. `grep` existe en la terminal del participante, y el
+ * simulador respondia `bash: grep: command not found`, que es la tercera
+ * respuesta del SPEC 010 usada donde no corresponde.
+ *
+ * Hasta ahora eso no se notaba, porque sin contenido el paso del enunciado que
+ * la usa era inalcanzable. El laboratorio 05 la escribe dos veces —en su punto
+ * 3.5 y en su Comprobacion— para asegurarse de que no quedaron marcadores de
+ * conflicto dentro de un archivo, y ese paso **se volvio alcanzable con este
+ * spec**, en cuanto `cat platos.md` paso a mostrar los marcadores.
+ *
+ * Se cubre lo que el guion usa: texto literal, la alternancia `\|` de las
+ * expresiones regulares basicas, `-n` para numerar y `-r` para recorrer el
+ * proyecto entero. **No se cubre el resto de la sintaxis** de expresiones
+ * regulares, ni `-i`, ni `-v`, ni `-c`: lo que no se reconozca se responde como
+ * no implementado, con su nombre, y no a medias.
+ */
+export const ordenGrep: Manejador = (estado, argumentos) => {
+  const partes = posicionales(argumentos);
+  const patron = partes[0];
+  if (patron === undefined) return fallo(estado, 'usage: grep [-n] [-r] <patron> <archivo>...');
+
+  // `grep -rn` es una sola palabra con dos opciones dentro, que es como el
+  // enunciado las escribe.
+  const cortas = letrasCortas(argumentos);
+  const numerar = cortas.has('n');
+  const recursivo = cortas.has('r') || cortas.has('R');
+  const rutas = partes.slice(1);
+
+  // La alternancia de las expresiones regulares basicas, que es lo unico de
+  // su sintaxis que el guion usa. Lo demas se busca como texto literal.
+  const agujas = patron.split('\\|').filter((aguja) => aguja !== '');
+
+  const objetivo = recursivo
+    ? estado.archivos.map((archivo) => archivo.nombre)
+    : rutas;
+  if (objetivo.length === 0) {
+    return fallo(estado, 'usage: grep [-n] [-r] <patron> <archivo>...');
+  }
+
+  const filas: string[] = [];
+  for (const ruta of objetivo) {
+    const contenido = textoDeTrabajo(estado, ruta);
+    if (contenido === null) {
+      if (recursivo) continue;
+      return fallo(estado, `grep: ${ruta}: No such file or directory`);
+    }
+    lineasDe(contenido).forEach((linea, indice) => {
+      if (!agujas.some((aguja) => linea.includes(aguja))) return;
+      // Con varios archivos, y siempre con -r, Git Bash antepone la ruta.
+      const prefijo = recursivo ? `${ruta.startsWith('./') ? ruta : `./${ruta}`}:` : '';
+      const numero = numerar ? `${indice + 1}:` : '';
+      filas.push(`${prefijo}${numero}${linea}`);
+    });
+  }
+
+  // `grep` sin coincidencias sale con codigo distinto de cero y no dice nada.
+  // Aqui basta con no imprimir: la consola no muestra codigos de salida.
+  return ok(estado, lineas(...filas));
+};
+
+/**
+ * `wc`, con `-c`, `-l` y `-w` (punto 3.6 del SPEC 012).
+ *
+ * Quedo fuera del SPEC 010 por no tener consumidor: la unica aparicion en el
+ * guion es `wc -c .git/refs/heads/main`, y esa cae bajo la carpeta oculta, que
+ * se mira en la terminal a proposito. Con contenido si tiene sentido sobre un
+ * archivo del proyecto, y sobre todo **tiene sentido que no mienta**: sin esta
+ * orden el simulador respondia `bash: wc: command not found`, que era falso
+ * desde el momento en que `wc` existe y lo que no habia era contenido.
+ */
+export const ordenWc: Manejador = (estado, argumentos) => {
+  const rutas = posicionales(argumentos);
+  if (rutas.length === 0) return fallo(estado, 'usage: wc [-c|-l|-w] <archivo>...');
+
+  const cortas = letrasCortas(argumentos);
+  const pedidas = {
+    lineas: cortas.has('l'),
+    palabras: cortas.has('w'),
+    bytes: cortas.has('c'),
+  };
+  // Sin opciones, `wc` imprime las tres columnas, en este orden.
+  const todas = !pedidas.lineas && !pedidas.palabras && !pedidas.bytes;
+
+  const filas: string[] = [];
+  for (const ruta of rutas) {
+    const texto = textoDeTrabajo(estado, ruta);
+    if (texto === null) return fallo(estado, `wc: ${ruta}: No such file or directory`);
+    const columnas: number[] = [];
+    if (todas || pedidas.lineas) columnas.push(lineasDe(texto).length);
+    if (todas || pedidas.palabras) {
+      columnas.push(texto.split(/\s+/).filter((palabra) => palabra !== '').length);
+    }
+    if (todas || pedidas.bytes) columnas.push(bytesDe(texto));
+    filas.push(`${columnas.map((numero) => String(numero).padStart(7)).join('')} ${ruta}`);
+  }
+  return ok(estado, lineas(...filas));
 };
 
 /**
@@ -145,6 +260,9 @@ export const ordenMv: Manejador = (estado, argumentos) => {
   }
 
   const seguido = estaSeguido(estado, origen);
+  // El texto viaja con el archivo. En el nombre nuevo no hay confirmacion de
+  // la que heredarlo, asi que deja de ser `null` y pasa a ser explicito.
+  const texto = textoDeTrabajo(estado, origen) ?? '';
   const sinElOrigen = estado.archivos.filter((archivo) => archivo.nombre !== origen);
 
   // Devolver un archivo a su nombre de siempre lo deja como estaba, **si su
@@ -153,7 +271,7 @@ export const ordenMv: Manejador = (estado, argumentos) => {
   if (estado.borradosSinPreparar.includes(destino)) {
     return ok({
       ...estado,
-      archivos: [...sinElOrigen, { nombre: destino, estado: 'limpio' as const }],
+      archivos: [...sinElOrigen, { nombre: destino, estado: 'limpio' as const, contenido: null }],
       borradosSinPreparar: estado.borradosSinPreparar.filter((nombre) => nombre !== destino),
     });
   }
@@ -164,7 +282,10 @@ export const ordenMv: Manejador = (estado, argumentos) => {
   if (estado.borrados.includes(destino)) {
     return ok({
       ...estado,
-      archivos: [...sinElOrigen, { nombre: destino, estado: 'sin-seguimiento' as const }],
+      archivos: [
+        ...sinElOrigen,
+        { nombre: destino, estado: 'sin-seguimiento' as const, contenido: texto },
+      ],
     });
   }
 
@@ -181,8 +302,13 @@ export const ordenMv: Manejador = (estado, argumentos) => {
     archivos: [
       ...sinElOrigen,
       seguido
-        ? { nombre: destino, estado: 'sin-seguimiento' as const, renombradoDe: origen }
-        : { nombre: destino, estado: 'sin-seguimiento' as const },
+        ? {
+            nombre: destino,
+            estado: 'sin-seguimiento' as const,
+            contenido: texto,
+            renombradoDe: origen,
+          }
+        : { nombre: destino, estado: 'sin-seguimiento' as const, contenido: texto },
     ],
     borradosSinPreparar: seguido
       ? [...estado.borradosSinPreparar, origen]
@@ -219,34 +345,16 @@ export const ordenRm: Manejador = (estado, argumentos) => {
 };
 
 /**
- * Aviso que acompaña a la creacion de un archivo de exclusiones.
+ * `echo`, con redireccion sobre un archivo, en sus dos formas.
  *
- * El motor no versiona contenido (restriccion R4), de modo que **no puede leer
- * las reglas de `.gitignore`**: el archivo queda creado, pero nada se filtra.
- * Antes eso ocurria en silencio, y la parte 3 del laboratorio 03 esta armada
- * sobre que si filtra: el participante escribia `echo "prueba" > temporal.tmp`,
- * el enunciado le decia «no aparece» y el simulador se lo mostraba.
+ * `>` reemplaza el texto del archivo y `>>` le agrega una linea al final. Es
+ * la manera de escribir dentro del simulador, y desde el SPEC 012 escribe de
+ * verdad: el texto queda en el directorio de trabajo y lo ven `cat`,
+ * `git diff` y las reglas de exclusion.
  *
- * Aceptar y descartar en silencio es justo la cuarta respuesta que la seccion 6
- * del SPEC 010 elimina. Aqui se usa la segunda: se dice que no se implementa y
- * que en la terminal si funciona.
- */
-const AVISO_EXCLUSIONES: readonly LineaSalida[] = [
-  lineaLimite('el simulador no aplica las reglas de .gitignore: no versiona contenido,'),
-  lineaLimite('asi que no puede leerlas. El archivo queda creado, pero nada se filtra.'),
-  lineaLimite('En tu terminal si funciona: esa parte del laboratorio hazla ahi.'),
-];
-
-/** Si la ruta es un archivo de exclusiones, en la raiz o en una carpeta. */
-function esExclusiones(ruta: string): boolean {
-  return ruta === '.gitignore' || ruta.endsWith('/.gitignore');
-}
-
-/**
- * `echo`, con redireccion de anexion sobre un archivo.
- *
- * Escribir sobre un archivo lo marca como modificado, que es la manera de
- * generar trabajo pendiente dentro del simulador.
+ * Antes esta orden llevaba un aviso pegado cuando el destino era un
+ * `.gitignore`, porque el archivo quedaba creado y no filtraba nada. Ese aviso
+ * se fue con la razon que lo justificaba.
  */
 export const ordenEcho: Manejador = (estado, argumentos) => {
   const corte = argumentos.findIndex(esOperador);
@@ -255,21 +363,33 @@ export const ordenEcho: Manejador = (estado, argumentos) => {
     return ok(estado, lineas(argumentos.join(' ')));
   }
 
+  const anexa = argumentos[corte] === '>>';
   const destino = argumentos[corte + 1];
   if (destino === undefined) {
     return fallo(estado, 'bash: syntax error near unexpected token `newline\'');
   }
 
-  const aviso = esExclusiones(destino) ? AVISO_EXCLUSIONES : [];
-
+  const escrito = normalizar(argumentos.slice(0, corte).join(' '));
   const existente = archivoPorNombre(estado, destino);
+  const previo = anexa ? (textoDeTrabajo(estado, destino) ?? '') : '';
+  const texto = `${previo}${escrito}`;
+
   if (existente === undefined) {
-    return ok(establecerArchivo(estado, destino, 'sin-seguimiento'), aviso);
+    return ok(
+      establecerContenido(
+        establecerArchivo(estado, destino, 'sin-seguimiento'),
+        destino,
+        texto,
+      ),
+    );
   }
-  if (existente.estado === 'limpio') {
-    return ok(establecerArchivo(estado, destino, 'modificado'), aviso);
-  }
-  return ok(estado, aviso);
+
+  // Escribir lo mismo que ya habia no ensucia el archivo, igual que en Git.
+  const destinoEstado =
+    existente.estado === 'limpio' && texto !== (textoDeTrabajo(estado, destino) ?? '')
+      ? 'modificado'
+      : existente.estado;
+  return ok(establecerContenido(establecerArchivo(estado, destino, destinoEstado), destino, texto));
 };
 
 /** `git remote`, con `-v` y `add`. */

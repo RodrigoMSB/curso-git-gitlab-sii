@@ -8,10 +8,12 @@ ordenes en una consola simulada y ve como reacciona el grafo de confirmaciones.
 Acompana las primeras cuatro sesiones del taller. De ahi en adelante las
 tecnicas avanzadas se practican en la consola real.
 
-El simulador es una **simulacion, no una implementacion de Git**. No hay
-archivos reales ni contenido versionado: hay nodos, punteros y estados de
-archivo declarados. Es a proposito, porque lo que el taller necesita mostrar es
-el grafo.
+El simulador es una **simulacion, no una implementacion de Git**. Modela las
+confirmaciones, las ramas, el area de preparacion y el texto de los archivos
+del recetario, que es lo que los laboratorios necesitan mostrar. Lo que no
+modela es una instalacion de Git: los identificadores se generan con una huella
+propia, no hay carpeta `.git` que abrir, no hay red ni submodulos, y lo que se
+compromete a ejecutar son las ordenes de los enunciados.
 
 ---
 

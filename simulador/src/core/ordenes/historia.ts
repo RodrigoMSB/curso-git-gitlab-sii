@@ -19,6 +19,7 @@ import {
   carrilDeRama,
   confirmacionPorId,
   establecerArchivo,
+  establecerContenido,
   estaSeguido,
   idActual,
   moverPosicionActual,
@@ -26,6 +27,7 @@ import {
   sincronizarDirectorio,
   transformarArchivos,
 } from '../estado';
+import { textoDeTrabajo, textoEnConfirmacion } from '../contenido';
 import { archivosCambiados, esAntepasado, exclusivasDe } from '../grafo';
 import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
@@ -80,6 +82,15 @@ export const ordenReset: Manejador = (estado, argumentos) => {
   // Archivos que las confirmaciones descartadas habian registrado.
   const afectados = [...archivosCambiados(estado, destino, cabeza)];
 
+  // El texto que el directorio de trabajo tiene **antes** de mover la posicion.
+  // `--soft` y `--mixed` no lo tocan, y sin fijarlo aqui los archivos limpios
+  // lo resolverian contra la confirmacion nueva: el simulador mostraria el
+  // directorio ya retrocedido y `git diff` no diria nada, cuando lo que Git
+  // muestra es justamente la diferencia entre los dos.
+  const textosPrevios = new Map(
+    afectados.map((nombre) => [nombre, textoDeTrabajo(estado, nombre)]),
+  );
+
   let siguiente = moverPosicionActual(estado, destino);
 
   if (modo === 'hard') {
@@ -103,6 +114,7 @@ export const ordenReset: Manejador = (estado, argumentos) => {
     for (const nombre of afectados) {
       if (modo === 'soft') {
         siguiente = establecerArchivo(siguiente, nombre, 'preparado');
+        siguiente = establecerContenido(siguiente, nombre, textosPrevios.get(nombre) ?? null);
         continue;
       }
       // Un archivo que la confirmacion deshecha habia estrenado deja de estar
@@ -111,6 +123,7 @@ export const ordenReset: Manejador = (estado, argumentos) => {
       // diferencia la encontro el recorrido comparado del laboratorio 06.
       const destino = estaSeguido(siguiente, nombre) ? 'modificado' : 'sin-seguimiento';
       siguiente = establecerArchivo(siguiente, nombre, destino);
+      siguiente = establecerContenido(siguiente, nombre, textosPrevios.get(nombre) ?? null);
     }
   }
 
@@ -159,16 +172,35 @@ export const ordenRevert: Manejador = (estado, argumentos) => {
   const cabeza = idActual(estado);
   if (cabeza === null) return fallo(estado, 'fatal: Failed to resolve HEAD as a valid ref.');
 
+  // Revertir es devolver cada archivo al texto que tenia **antes** de la
+  // confirmacion que se revierte, no al que tiene ahora. Un archivo que esa
+  // confirmacion creo no tiene version anterior: revertirla lo retira.
+  const previa = objetivo.padres[0] ?? null;
+  const devueltos: Record<string, string> = {};
+  const retirados: string[] = [];
+  for (const nombre of objetivo.archivos) {
+    const antes = textoEnConfirmacion(estado, previa, nombre);
+    if (antes === null) retirados.push(nombre);
+    else devueltos[nombre] = antes;
+  }
+  const registrados = objetivo.archivos.filter((nombre) => !retirados.includes(nombre));
+
   const mensaje = `Revert "${objetivo.mensaje}"`;
   const creado = agregarConfirmacion(estado, {
     mensaje,
     padres: [cabeza],
-    archivos: objetivo.archivos,
+    archivos: registrados,
+    borrados: retirados,
+    contenidos: devueltos,
     carril: confirmacionPorId(estado, cabeza)?.carril ?? 0,
     matiz: `revert:${objetivo.id}`,
   });
 
-  let siguiente = moverPosicionActual(creado.estado, creado.confirmacion.id);
+  // El directorio de trabajo queda como la confirmacion nueva, que es lo que
+  // hace Git: la reversion no deja nada pendiente.
+  let siguiente = sincronizarDirectorio(
+    moverPosicionActual(creado.estado, creado.confirmacion.id),
+  );
   siguiente = anotarMovimiento(siguiente, {
     id: creado.confirmacion.id,
     idAnterior: cabeza,
@@ -181,7 +213,7 @@ export const ordenRevert: Manejador = (estado, argumentos) => {
     siguiente,
     lineas(
       `[${ramaActual(siguiente) ?? 'detached HEAD'} ${creado.confirmacion.id}] ${mensaje}`,
-      resumenArchivos(objetivo.archivos),
+      resumenArchivos([...registrados, ...retirados]),
     ),
   );
 };
@@ -250,6 +282,15 @@ export const ordenRebase: Manejador = (estado, argumentos) => {
       mensaje: original.mensaje,
       padres: [anterior],
       archivos: original.archivos,
+      // La copia aplica el mismo cambio sobre la base nueva: lleva el texto
+      // que la confirmacion original dejo en cada archivo que toco, y lo apoya
+      // sobre el arbol de donde ahora cuelga.
+      contenidos: Object.fromEntries(
+        original.archivos.map((nombre) => [
+          nombre,
+          textoEnConfirmacion(siguiente, original.id, nombre) ?? '',
+        ]),
+      ),
       carril,
       // El matiz garantiza que la copia no comparta identificador con el original.
       matiz: `rebase:${original.id}:${anterior}`,

@@ -17,12 +17,13 @@
  * es todo lo demas.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { construirEscenario, ESCENARIOS } from '../src/escenarios';
 import type { EscenarioDeclarado } from '../src/escenarios';
+import { normalizar, textoDeTrabajo } from '../src/core/contenido';
 import type { EstadoArchivo, EstadoRepositorio } from '../src/core/tipos';
 import { type Escenario, git, gitCrudo, montarLab, preparar } from './laboratorios-en-disco';
 
@@ -47,6 +48,25 @@ interface Forma {
   readonly posicion: string;
   readonly etiquetas: readonly string[];
   readonly archivos: readonly string[];
+  /**
+   * El texto de cada archivo en cada confirmacion, con la confirmacion
+   * nombrada por su mensaje: los identificadores no coinciden entre los dos
+   * lados y no tienen por que.
+   */
+  readonly arboles: readonly string[];
+  /** El texto de cada archivo del directorio de trabajo. */
+  readonly textosDeTrabajo: readonly string[];
+}
+
+/**
+ * Una linea por archivo, con su texto pegado detras de un separador que no
+ * puede aparecer dentro del contenido.
+ *
+ * Se compara como lista de cadenas y no como objeto para que el fallo diga
+ * cual archivo se separo, en vez de volcar el arbol entero.
+ */
+function anotar(donde: string, ruta: string, texto: string): string {
+  return `${donde} · ${ruta}\n${'~'.repeat(20)}\n${normalizar(texto)}`;
 }
 
 /**
@@ -102,7 +122,28 @@ function formaDelDisco(esc: Escenario): Forma {
   // Ordenados: con varias ramas, el orden en que Git recorre `--all` no tiene
   // por que ser el orden en que la declaracion las escribe. Lo que fija la
   // forma del grafo son las ramas y sus puntas, que se comparan aparte.
+  // El arbol completo de cada confirmacion, con su texto. `--all`, porque hay
+  // confirmaciones que no cuelgan de main en los escenarios con ramas.
+  const arboles: string[] = [];
+  for (const id of identificadores) {
+    const mensaje = g('log', '-1', '--format=%s', id);
+    for (const ruta of lineas(g('ls-tree', '-r', '--name-only', id))) {
+      arboles.push(anotar(mensaje, ruta, g('show', `${id}:${ruta}`)));
+    }
+  }
+
+  // Y lo que hay en el disco ahora mismo, que en los archivos modificados o
+  // preparados no es lo mismo que en la confirmacion.
+  const textosDeTrabajo = [...nombres]
+    .filter((nombre) => existsSync(join(esc.recetario, nombre)))
+    .map((nombre) =>
+      anotar('directorio', nombre, readFileSync(join(esc.recetario, nombre), 'utf8')),
+    )
+    .sort();
+
   return {
+    arboles: arboles.sort(),
+    textosDeTrabajo,
     mensajes: [...lineas(g('log', '--all', '--format=%s'))].sort(),
     autores: [...lineas(g('log', '--all', '--format=%an'))].sort(),
     fechas: [...lineas(g('log', '--all', '--format=%at'))].sort(),
@@ -121,7 +162,19 @@ function formaDeclarada(declaracion: EscenarioDeclarado): Forma {
     declaracion.confirmaciones.map((confirmacion) => [confirmacion.clave, confirmacion.mensaje]),
   );
 
+  const arboles = estado.confirmaciones.flatMap((confirmacion) =>
+    Object.entries(confirmacion.arbol).map(([ruta, texto]) =>
+      anotar(confirmacion.mensaje, ruta, texto),
+    ),
+  );
+
+  const textosDeTrabajo = estado.archivos
+    .map((archivo) => anotar('directorio', archivo.nombre, textoDeTrabajo(estado, archivo.nombre) ?? ''))
+    .sort();
+
   return {
+    arboles: arboles.sort(),
+    textosDeTrabajo,
     mensajes: estado.confirmaciones.map((confirmacion) => confirmacion.mensaje).sort(),
     autores: estado.confirmaciones.map((confirmacion) => confirmacion.autor).sort(),
     fechas: declaracion.confirmaciones
@@ -189,6 +242,18 @@ describe('CA2 · el escenario del simulador es el repositorio que el participant
       it('el mismo estado de cada archivo del directorio de trabajo', () => {
         expect(disco.archivos).toEqual(declarada.archivos);
       });
+
+      // CA1 del SPEC 012. La declaracion es la unica fuente del contenido y
+      // `preparar.sh` escribe esos mismos bytes a mano; esto es lo que impide
+      // que los dos textos se separen. Sin esta prueba, el participante veria
+      // en la pantalla un archivo y en su terminal otro.
+      it('cada confirmacion guarda el mismo texto en cada archivo', () => {
+        expect(disco.arboles).toEqual(declarada.arboles);
+      });
+
+      it('el directorio de trabajo tiene el mismo texto en cada archivo', () => {
+        expect(disco.textosDeTrabajo).toEqual(declarada.textosDeTrabajo);
+      });
     });
   }
 });
@@ -255,6 +320,48 @@ describe('CA3 · la comparacion detecta de verdad una declaracion que se separo 
       ),
     });
     expect(alterada.archivos).not.toEqual(disco.archivos);
+  });
+
+  // CA1 pide que la prueba del contenido se pueda ver fallar cambiando uno de
+  // los dos lados. Se cambia el de la declaracion, que es el que esta a mano.
+  it('nota una linea cambiada dentro de un archivo confirmado', () => {
+    const primera = declaracion.confirmaciones[0];
+    if (primera === undefined) throw new Error('escenario sin confirmaciones');
+    const ruta = primera.archivos[0];
+    if (ruta === undefined) throw new Error('la primera confirmacion no registra archivos');
+
+    const alterada = formaDeclarada({
+      ...declaracion,
+      confirmaciones: declaracion.confirmaciones.map((confirmacion, indice) =>
+        indice === 0
+          ? {
+              ...confirmacion,
+              contenido: {
+                ...confirmacion.contenido,
+                [ruta]: `${confirmacion.contenido[ruta] ?? ''}una linea de mas\n`,
+              },
+            }
+          : confirmacion,
+      ),
+    });
+    expect(alterada.arboles).not.toEqual(disco.arboles);
+    // Y lo nota **solo** ahi: la forma sigue calzando, que es lo que hace falta
+    // para saber que la prueba nueva mide el contenido y no otra cosa.
+    expect(alterada.mensajes).toEqual(disco.mensajes);
+    expect(alterada.archivosPorConfirmacion).toEqual(disco.archivosPorConfirmacion);
+  });
+
+  it('nota un texto cambiado en el directorio de trabajo', () => {
+    const conCambio = declaracion.archivos.find((archivo) => archivo.contenido !== undefined);
+    if (conCambio === undefined) throw new Error('el escenario no declara ningun texto suelto');
+
+    const alterada = formaDeclarada({
+      ...declaracion,
+      archivos: declaracion.archivos.map((archivo) =>
+        archivo === conCambio ? { ...archivo, contenido: 'otra cosa\n' } : archivo,
+      ),
+    });
+    expect(alterada.textosDeTrabajo).not.toEqual(disco.textosDeTrabajo);
   });
 
   it('nota una rama que apunta a otra confirmacion', () => {

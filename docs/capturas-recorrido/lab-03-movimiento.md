@@ -33,34 +33,37 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 028 | `git commit -m "se retira la receta que no corresponde al recetario"` | nodos, ramas, puntero, areas, tiempo |
 | 029 | `git log --oneline -- recetas/mote-con-huesillo.md` | tiempo |
 | 030 | `ls` | tiempo |
+| 031 | `cat credenciales.txt` | tiempo |
 | 032 | `git log --oneline -- credenciales.txt` | tiempo |
-| 033 | `echo "contenido de ejemplo" > .gitignore` | areas, tiempo |
-| 034 | `git status` | tiempo |
-| 035 | `git ls-files` | tiempo |
-| 036 | `git rm --cached notas.tmp` | areas, tiempo |
-| 037 | `git rm --cached respaldo.bak` | areas, tiempo |
-| 038 | `git status` | tiempo |
-| 039 | `ls` | tiempo |
-| 040 | `git rm credenciales.txt` | areas, tiempo |
+| 033 | `echo "*.tmp" > .gitignore` | areas, tiempo |
+| 034 | `echo "*.bak" >> .gitignore` | tiempo |
+| 035 | `echo "credenciales.txt" >> .gitignore` | tiempo |
+| 036 | `git status` | tiempo |
+| 037 | `git ls-files` | tiempo |
+| 038 | `git rm --cached notas.tmp` | areas, tiempo |
+| 039 | `git rm --cached respaldo.bak` | areas, tiempo |
+| 040 | `git status` | tiempo |
 | 041 | `ls` | tiempo |
-| 042 | `git status` | tiempo |
-| 043 | `git add .gitignore` | areas, tiempo |
+| 042 | `git rm credenciales.txt` | areas, tiempo |
+| 043 | `ls` | tiempo |
 | 044 | `git status` | tiempo |
-| 045 | `git commit -m "se sacan del seguimiento los archivos que no corresponden"` | nodos, ramas, puntero, areas, tiempo |
-| 046 | `git ls-files` | tiempo |
-| 047 | `git status` | tiempo |
-| 048 | `git log --oneline -- credenciales.txt` | tiempo |
-| 049 | `echo "prueba" > temporal.tmp` | areas, tiempo |
-| 050 | `git status` | tiempo |
-| 051 | `rm temporal.tmp` | areas, tiempo |
-| 052 | `echo "esta si va" > importante.tmp` | areas, tiempo |
-| 053 | `git status` | tiempo |
-| 054 | `git add -f importante.tmp` | areas, tiempo |
+| 045 | `git add .gitignore` | areas, tiempo |
+| 046 | `git status` | tiempo |
+| 047 | `git commit -m "se sacan del seguimiento los archivos que no corresponden"` | nodos, ramas, puntero, areas, tiempo |
+| 048 | `git ls-files` | tiempo |
+| 049 | `git status` | tiempo |
+| 050 | `git log --oneline -- credenciales.txt` | tiempo |
+| 051 | `echo "prueba" > temporal.tmp` | tiempo |
+| 052 | `git status` | tiempo |
+| 053 | `rm temporal.tmp` | tiempo |
+| 054 | `echo "esta si va" > importante.tmp` | tiempo |
 | 055 | `git status` | tiempo |
-| 056 | `git restore --staged importante.tmp` | areas, tiempo |
-| 057 | `rm importante.tmp` | areas, tiempo |
-| 059 | `git ls-files` | tiempo |
-| 060 | `ls` | tiempo |
-| 061 | `ls recetas/principales recetas/postres` | tiempo |
-| 062 | `git status` | tiempo |
-| 063 | `git checkout HEAD~1 -- notas.tmp` | areas, tiempo |
+| 056 | `git add -f importante.tmp` | areas, tiempo |
+| 057 | `git status` | tiempo |
+| 058 | `git restore --staged importante.tmp` | areas, tiempo |
+| 059 | `rm importante.tmp` | tiempo |
+| 061 | `git ls-files` | tiempo |
+| 062 | `ls` | tiempo |
+| 063 | `ls recetas/principales recetas/postres` | tiempo |
+| 064 | `git status` | tiempo |
+| 065 | `git checkout HEAD~1 -- notas.tmp` | areas, tiempo |

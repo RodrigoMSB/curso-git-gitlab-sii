@@ -16,6 +16,7 @@ import {
   sinSeguimientoAgrupado,
   valorConfig,
 } from '../src/core/estado';
+import { textoDeTrabajo } from '../src/core/contenido';
 import { escenarioPorId } from '../src/escenarios';
 import {
   correr,
@@ -902,9 +903,28 @@ describe('git revert', () => {
     expect(texto(ejecutar(estado, 'git revert fantasma'))).toContain('bad revision');
   });
 
-  it('registra los mismos archivos que la confirmacion revertida', () => {
+  it('devuelve cada archivo al texto que tenia antes de la confirmacion', () => {
+    // Es el caso del laboratorio 06: la cuarta confirmacion suma un ingrediente
+    // que no existe y quedan tres encima. Revertirla tiene que dejar la lista
+    // como estaba antes de ese error, no como esta ahora.
+    const estado = correr(escenarioPorId('lab-06'), 'git revert HEAD~3');
+    const ingredientes = textoDeTrabajo(estado, 'ingredientes.md') ?? '';
+
+    expect(ingredientes).toContain('- aji de color');
+    expect(ingredientes).not.toContain('- sal marina en polvo');
+    // Y lo que vino despues del error sigue donde estaba.
+    expect(textoDeTrabajo(estado, 'cocineros.md')).toContain('- Sofia Rojas');
+  });
+
+  it('revertir la confirmacion que creo un archivo lo retira, como en Git', () => {
+    // La punta del escenario es la que agrega la receta del pastel de choclo,
+    // asi que revertirla la saca del seguimiento y del directorio.
     const resultado = ejecutar(repoLineal(), 'git revert HEAD');
-    expect(resultado.estado.confirmaciones.at(-1)?.archivos).toEqual(['recetas/pastel-de-choclo.md']);
+    const ultima = resultado.estado.confirmaciones.at(-1);
+
+    expect(ultima?.archivos).toEqual([]);
+    expect(ultima?.borrados).toEqual(['recetas/pastel-de-choclo.md']);
+    expect(archivoPorNombre(resultado.estado, 'recetas/pastel-de-choclo.md')).toBeUndefined();
     expect(texto(resultado)).toContain('1 file changed');
   });
 });

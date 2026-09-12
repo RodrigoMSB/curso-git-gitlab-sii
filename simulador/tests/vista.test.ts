@@ -252,8 +252,12 @@ describe('zona D: areas y paneles', () => {
 
     expect(paneles.objetos?.confirmacion.id).toBe(id);
     expect(paneles.objetos?.confirmacion.campos.map((campo) => campo.clave)).toContain('tree');
+    // El arbol de esa confirmacion, entero: es una foto y no un parche.
     expect(paneles.objetos?.elementos.map((elemento) => elemento.nombre)).toEqual([
+      'README.md',
       'cocineros.md',
+      'ingredientes.md',
+      'platos.md',
     ]);
     expect(paneles.objetos?.arbol.id).toBe(
       paneles.objetos?.confirmacion.campos.find((campo) => campo.clave === 'tree')?.valor,

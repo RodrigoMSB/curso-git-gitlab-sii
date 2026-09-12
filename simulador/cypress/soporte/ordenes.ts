@@ -138,7 +138,12 @@ export function motivoDeclarado(
 /** Lineas que no son ordenes ejecutables en ningun lado. */
 const NO_EJECUTABLES: readonly { readonly patron: RegExp; readonly motivo: string }[] = [
   {
-    patron: /<[^>]+>/,
+    // Un marcador es una palabra en minusculas entre angulos, como
+    // `<identificador-de-la-confirmacion>`. La forma amplia, «cualquier cosa
+    // entre angulos», se llevaba por delante el `grep` con que el laboratorio
+    // 05 busca marcadores de conflicto: `<<<<<<<\|=======\|>>>>>>>` tambien
+    // abre y cierra un angulo.
+    patron: /<[a-z][a-z0-9-]*>/,
     motivo: 'lleva un marcador de posicion que el participante reemplaza a mano',
   },
   {
@@ -152,7 +157,7 @@ function pareceOrden(linea: string): boolean {
   const primera = linea.split(/\s+/)[0] ?? '';
   // El verbo tiene que ser la palabra entera: el enunciado del laboratorio 03
   // habla de un archivo llamado `gitignore`, que no es una orden.
-  return /^(git|ls|cat|pwd|echo|cd|mkdir|wc|diff|rm|mv|labs)$/.test(primera) ||
+  return /^(git|ls|cat|pwd|echo|cd|mkdir|wc|diff|rm|mv|grep|labs)$/.test(primera) ||
     primera.startsWith('./');
 }
 
@@ -195,10 +200,13 @@ function clasificar(
  * del laboratorio que enseña a ramificar y confirmar no creo ni una sola
  * confirmacion, y el informe lo daba por cubierto.
  *
- * El paso se ejecuta con `echo`, que es como el simulador genera trabajo
- * pendiente. El contenido no se copia: ninguno de los dos lados lo compara
- * (seccion 25 de docs/arquitectura.md) y el simulador no versiona contenido.
- * Lo que importa es que el archivo exista en los dos lados con el mismo nombre.
+ * El paso se ejecuta con `echo`, que es como se escribe dentro del simulador.
+ * **El contenido se copia tal cual** desde el SPEC 012: antes se escribia una
+ * linea neutra, porque el motor no versionaba contenido y copiar el de verdad
+ * habria encendido efectos que el motor no modelaba, como que un `.gitignore`
+ * con `*.tmp` filtrara en Git y no en la pantalla. Ahora filtra en los dos, y
+ * escribir otra cosa seria dejar sin recorrer justo el paso que el SPEC 012
+ * vino a desbloquear.
  */
 function creacionesDeArchivo(
   enunciado: string,
@@ -220,13 +228,16 @@ function creacionesDeArchivo(
 
     const carpeta = ruta.includes('/') ? ruta.slice(0, ruta.lastIndexOf('/')) : '';
     if (carpeta !== '') ordenes.push(clasificar(`mkdir -p ${carpeta}`, indice + 1, alias));
-    // El contenido es una linea neutra y no el del enunciado, por dos razones.
-    // El motor no versiona contenido (restriccion R4), asi que ningun lado lo
-    // compara; y copiar el contenido de verdad encenderia efectos que el motor
-    // no modela, como que un `.gitignore` con `*.tmp` filtre en Git y no en el
-    // simulador. Escribir el nombre del archivo tampoco sirve: un `.gitignore`
-    // que se nombra a si mismo se ignora, y Git deja de mostrarlo.
-    ordenes.push(clasificar(`echo "contenido de ejemplo" > ${ruta}`, indice + 1, alias));
+
+    // El contenido del bloque, linea por linea: la primera con `>`, que
+    // reemplaza, y las demas con `>>`, que anexan. Son las dos formas que el
+    // simulador entiende y las dos que el participante escribe.
+    const filas = contenido.contenido.split('\n').filter((fila) => fila.trim() !== '');
+    const escritas = filas.length === 0 ? ['contenido de ejemplo'] : filas;
+    escritas.forEach((fila, orden) => {
+      const flecha = orden === 0 ? '>' : '>>';
+      ordenes.push(clasificar(`echo "${fila}" ${flecha} ${ruta}`, indice + 1, alias));
+    });
   });
 
   return ordenes;

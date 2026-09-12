@@ -9,6 +9,7 @@
  */
 
 import { posicionales, tieneOpcion } from '../analizador';
+import { textoDeTrabajo } from '../contenido';
 import { archivoPorNombre, archivosSeguidos, estaSeguido } from '../estado';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
 import type { Archivo, EstadoRepositorio, ResultadoOrden } from '../tipos';
@@ -77,7 +78,13 @@ export const ordenRm: Manejador = (estado, argumentos) => {
         archivos: soloDelIndice
           ? siguiente.archivos.map((candidato) =>
               candidato.nombre === archivo.nombre
-                ? { nombre: candidato.nombre, estado: 'sin-seguimiento' as const }
+                ? {
+                    nombre: candidato.nombre,
+                    estado: 'sin-seguimiento' as const,
+                    // Sale del seguimiento pero sigue en el disco con su texto:
+                    // hay que fijarlo, porque ya no habra HEAD de donde sacarlo.
+                    contenido: textoDeTrabajo(siguiente, candidato.nombre) ?? '',
+                  }
                 : candidato,
             )
           : siguiente.archivos.filter((candidato) => candidato.nombre !== archivo.nombre),
@@ -140,6 +147,9 @@ export const ordenMv: Manejador = (estado, argumentos) => {
           ? {
               nombre: destino,
               estado: 'preparado' as const,
+              // El archivo se llevo su texto al nombre nuevo. En el nombre
+              // nuevo no hay HEAD del que heredarlo, asi que viaja explicito.
+              contenido: textoDeTrabajo(siguiente, origen) ?? '',
               renombradoDe: candidato.renombradoDe ?? origen,
             }
           : candidato,

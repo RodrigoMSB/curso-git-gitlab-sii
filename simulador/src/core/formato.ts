@@ -2,9 +2,8 @@
  * Presentacion de los estados del repositorio: `git status`, `git log` y
  * `git diff`.
  *
- * Los textos imitan los de Git. En el caso del diff no hay contenido que
- * comparar (restriccion R4), de modo que se emite un cuerpo declarado que
- * conserva la forma del original y avisa que es una simulacion.
+ * Los textos imitan los de Git. La comparacion de diferencias vive aparte, en
+ * `diferencias.ts`, desde que hay contenido de verdad que comparar.
  */
 
 import { estaSeguido, idActual, ramaActual, sinSeguimientoAgrupado } from './estado';
@@ -12,6 +11,18 @@ import { decoracionesDe } from './referencias';
 import type { Confirmacion, EstadoRepositorio } from './tipos';
 
 const SANGRIA = '\t';
+
+/**
+ * Git ordena las rutas dentro de cada seccion de `git status`.
+ *
+ * El modelo las lleva en el orden en que ocurrieron, que es lo que la zona de
+ * areas necesita para no reordenarse al cambiar de rama. La ordenacion se hace
+ * aqui, al escribir, que es donde importa: con tres archivos retirados seguidos
+ * la diferencia con la terminal se lee de inmediato.
+ */
+function porRuta(rutas: readonly string[]): readonly string[] {
+  return [...rutas].sort();
+}
 
 /** Encabezado comun a las dos formas de `git status`. */
 function encabezadoPosicion(estado: EstadoRepositorio): string {
@@ -52,7 +63,7 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
         ? '  (use "git rm --cached <file>..." to unstage)'
         : '  (use "git restore --staged <file>..." to unstage)',
     );
-    for (const nombre of estado.borrados) {
+    for (const nombre of porRuta(estado.borrados)) {
       filas.push(`${SANGRIA}${'deleted:'.padEnd(12)}${nombre}`);
     }
     for (const archivo of preparados) {
@@ -81,7 +92,7 @@ export function formatearEstadoLargo(estado: EstadoRepositorio): readonly string
     filas.push('Changes not staged for commit:');
     filas.push('  (use "git add/rm <file>..." to update what will be committed)');
     filas.push('  (use "git restore <file>..." to discard changes in working directory)');
-    for (const nombre of estado.borradosSinPreparar) {
+    for (const nombre of porRuta(estado.borradosSinPreparar)) {
       filas.push(`${SANGRIA}${'deleted:'.padEnd(12)}${nombre}`);
     }
     for (const archivo of modificados) {
@@ -120,8 +131,8 @@ export function formatearEstadoCorto(estado: EstadoRepositorio): readonly string
   // tipos, convertiria un error de compilacion en un caso silencioso el dia que
   // se agregue un estado nuevo.
   const borrados = [
-    ...estado.borrados.map((nombre) => `D  ${nombre}`),
-    ...estado.borradosSinPreparar.map((nombre) => ` D ${nombre}`),
+    ...porRuta(estado.borrados).map((nombre) => `D  ${nombre}`),
+    ...porRuta(estado.borradosSinPreparar).map((nombre) => ` D ${nombre}`),
   ];
   // biome-ignore lint/suspicious/useIterableCallbackReturn: el switch es exhaustivo por tipos
   const resto = estado.archivos.flatMap((archivo) => {
@@ -216,23 +227,13 @@ export function formatearHistorial(
 }
 
 /**
- * Cuerpo de `git diff`.
+ * Resumen por archivo con el formato de `--stat`, sin contar lineas.
  *
- * El simulador no versiona contenido, de modo que muestra la forma del diff y
- * declara explicitamente que el detalle es simulado, en vez de inventar lineas
- * que el participante podria tomar por reales.
+ * Lo usa el guardado temporal, donde lo que se resume no es la diferencia
+ * entre dos confirmaciones sino una lista de archivos guardada. Donde si hay
+ * dos versiones que comparar se usa `formatearEstadisticasDe`, que cuenta las
+ * lineas de verdad.
  */
-export function formatearDiff(archivos: readonly string[]): readonly string[] {
-  return archivos.flatMap((nombre) => [
-    `diff --git a/${nombre} b/${nombre}`,
-    `--- a/${nombre}`,
-    `+++ b/${nombre}`,
-    `@@ simulación @@`,
-    `+ ${nombre} registra cambios; el simulador no versiona el contenido`,
-  ]);
-}
-
-/** Resumen por archivo con el formato de `--stat`. */
 export function formatearEstadisticas(archivos: readonly string[]): readonly string[] {
   const filas = archivos.map((nombre) => ` ${nombre} | 1 +`);
   const palabra = archivos.length === 1 ? 'file' : 'files';

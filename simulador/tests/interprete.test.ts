@@ -136,15 +136,31 @@ describe('ordenes del interprete de mandatos', () => {
     expect(resultado.salida).toHaveLength(0);
   });
 
-  it('cat dice que el simulador no muestra contenido, en vez de fabricarlo', () => {
-    // El contrato del SPEC 010 responde antes que el manejador: mostrar el
-    // contenido de un archivo esta declarado como no soportado, porque el
-    // motor modela nodos y punteros y no bytes.
+  it('cat muestra el texto del archivo (SPEC 012, punto 3.2)', () => {
     const resultado = ejecutar(repoConRamas(), 'cat platos.md');
+
+    expect(resultado.error).toBe(false);
+    expect(texto(resultado)).toContain('# Platos');
+    expect(texto(resultado)).toContain('- pastel de choclo');
+    expect(resultado.salida.every((linea) => linea.tipo === 'salida')).toBe(true);
+  });
+
+  it('cat sobre la carpeta oculta sigue declarado, y por una razon distinta', () => {
+    // No es que no se pueda: es que ese tramo se hace en la terminal a
+    // proposito. Fabricar una carpeta oculta de mentira enseñaria lo contrario
+    // de lo que ese tramo viene a enseñar (punto 6.1 del SPEC 012).
+    const resultado = ejecutar(repoConRamas(), 'cat .git/HEAD');
+
     expect(resultado.error).toBe(true);
-    expect(texto(resultado)).toContain('no implementa mostrar el contenido de un archivo');
-    expect(texto(resultado)).toContain('En tu terminal si funciona');
+    expect(texto(resultado)).toContain('mirar dentro de la carpeta .git');
     expect(resultado.salida.every((linea) => linea.tipo === 'limite')).toBe(true);
+  });
+
+  it('cat sobre un archivo que no esta reclama como el interprete', () => {
+    const resultado = ejecutar(repoConRamas(), 'cat fantasma.md');
+
+    expect(resultado.error).toBe(true);
+    expect(texto(resultado)).toContain('No such file or directory');
   });
 
   it('cat sin argumentos reclama como el interprete, no como un limite', () => {

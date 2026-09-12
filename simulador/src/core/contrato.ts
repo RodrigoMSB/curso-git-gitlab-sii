@@ -50,31 +50,17 @@ export interface FormaSinSoporte {
 /**
  * Lo que el motor no implementa y no va a implementar.
  *
- * Casi todo lo de aqui cae por la misma razon de fondo: **el motor modela
- * nodos y punteros, no contenido de archivos** (restriccion R4 del SPEC 001,
- * confirmada en el punto 5.2 del SPEC 010). Una orden que necesita leer los
- * bytes de un archivo no se puede implementar sin cambiar esa decision.
+ * Hasta el SPEC 011 casi todo lo de aqui caia por la misma razon de fondo: el
+ * motor modelaba nodos y punteros, no contenido de archivos. **El SPEC 012
+ * modelo el contenido y con eso se vacio media lista**: `git log -S`, `--stat`,
+ * `git cat-file -p`, `cat` sobre un archivo del proyecto y el parche de
+ * `git show` y de `git diff` pasaron a estar implementados.
+ *
+ * Lo que queda no es de contenido sino de alcance: el simulador es un
+ * repositorio, no el disco del participante, y la carpeta oculta se mira en la
+ * terminal a proposito.
  */
 export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
-  // --- Lo que exige contenido de archivos (punto 5.1) ------------------------
-  {
-    patron: /^git log\b.*(\s|^)-S(\s|=)/,
-    motivo:
-      'buscar en el contenido de las confirmaciones. El simulador registra que archivos cambiaron, no que decia adentro',
-  },
-  {
-    patron: /^git (log|show)\b.*\s--stat\b/,
-    motivo: 'el resumen de lineas cambiadas, que se calcula sobre el contenido',
-  },
-  {
-    patron: /^git cat-file\b.*\s-p\b/,
-    motivo: 'mostrar el contenido de un objeto interno',
-  },
-  {
-    patron: /^cat\s+(?!\.git)/,
-    motivo:
-      'mostrar el contenido de un archivo. El simulador sabe en que estado esta cada archivo, no que tiene escrito',
-  },
   // --- Preguntas sobre la instalacion, que aqui no hay ----------------------
   {
     patron: /^git --version\b/,
@@ -88,9 +74,12 @@ export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
       'escribir fuera del repositorio. El simulador solo modela el recetario: un archivo guardado en tu carpeta personal no tendria donde aparecer',
   },
   {
+    // `git diff` si funciona; esta es la del sistema, que el laboratorio 06 usa
+    // sobre un archivo guardado en la carpeta personal y con sustitucion de
+    // procesos, dos cosas que el simulador no modela.
     patron: /^diff\b/,
     motivo:
-      'comparar dos archivos linea por linea. Es una orden del sistema, no de Git, y necesita el contenido de los dos',
+      'comparar dos archivos del disco con la orden del sistema. El simulador modela el recetario, no tu carpeta personal ni la sustitucion de procesos del interprete. `git diff` si funciona',
   },
   // --- Moverse por el disco -------------------------------------------------
   {
@@ -106,6 +95,9 @@ export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
   },
   // --- La carpeta oculta (punto 3.3) ---------------------------------------
   {
+    // `cat` y `wc` sobre un archivo del proyecto si funcionan desde el
+    // SPEC 012. Lo que sigue fuera es mirar dentro de la carpeta oculta, y no
+    // por no poder: por no querer (punto 6.1 del SPEC 012).
     patron: /^(cat|ls|wc)\b.*\s\.git(\/|\b)/,
     motivo:
       'mirar dentro de la carpeta .git. Ese tramo del laboratorio 02 se hace en la terminal a proposito: fabricar una carpeta oculta de mentira enseñaria lo contrario de lo que viene a enseñar',
@@ -138,10 +130,10 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   log: [
     '--oneline', '--graph', '--all', '--decorate', '--no-decorate', '--date-order',
     '-n', '--max-count', '--author', '--since', '--after', '--until', '--before',
-    '--format', '--pretty', '--date', '--',
+    '--format', '--pretty', '--date', '--', '-S', '--stat', '-p', '--patch',
   ],
-  show: ['--oneline', '--format', '--pretty', '--no-patch', '-s'],
-  diff: ['--staged', '--cached'],
+  show: ['--oneline', '--format', '--pretty', '--no-patch', '-s', '--stat', '-p', '--patch'],
+  diff: ['--staged', '--cached', '--stat'],
   branch: ['-a', '--all', '-d', '--delete', '-D', '-m', '--move', '-v', '--verbose', '-q', '--quiet'],
   switch: ['-c', '--create', '-C', '--force-create', '--detach', '-q', '--quiet'],
   checkout: ['-b', '-B', '--detach', '-q', '--quiet', '--'],
@@ -160,6 +152,7 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   ls: ['-a', '--all', '-l', '-R'],
   mkdir: ['-p'],
   wc: ['-c', '-l', '-w'],
+  grep: ['-n', '-r', '-R'],
   cd: [],
   pwd: [],
   cat: [],
@@ -181,6 +174,8 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
  */
 export const EQUIVALENTES: Readonly<Record<string, string>> = {
   '--decorate': 'el simulador decora siempre, igual que Git contra un terminal',
+  '-p': 'git show y git diff ya muestran el parche; es la forma por omision',
+  '--patch': 'git show y git diff ya muestran el parche; es la forma por omision',
   '--no-decorate': 'no se puede apagar la decoracion: el grafo la necesita para explicarse',
   '--date-order': 'la historia ya se recorre por fecha',
   '--long': 'es la forma larga de git status, que es la de por omision',
@@ -189,7 +184,7 @@ export const EQUIVALENTES: Readonly<Record<string, string>> = {
   '-q': 'el simulador no tiene ruido que callar',
   '--verbose': 'la salida ya es la detallada',
   '-v': 'en git remote si se lee; en git branch y git mv la salida ya es la detallada',
-  '--force': 'no hay proteccion del sistema de archivos que forzar',
+  '--force': 'en git add pasa por encima del archivo de exclusiones, que si se lee; en git rm y git mv no hay proteccion del sistema de archivos que forzar',
   '--no-edit': 'el simulador no abre editor: acepta el mensaje propuesto',
   '--initial-branch': 'la rama inicial es main, que es lo unico que el taller usa',
   '-b': 'en git init nombra la rama inicial, que ya es main',
@@ -206,6 +201,18 @@ export function formaSinSoporte(linea: string): FormaSinSoporte | undefined {
 }
 
 /**
+ * Ordenes cuyos argumentos son texto y nunca opciones.
+ *
+ * `echo` es la unica: todo lo que va detras es lo que se escribe en el
+ * archivo. Sin esta lista, `echo "- lomo saltado" >> platos.md` respondia que
+ * el simulador no implementa la opcion «- lomo saltado», porque el argumento
+ * empieza con guion. Lo destapo el SPEC 012, al hacer que el arnes escribiera
+ * el contenido de verdad de los enunciados: la mitad de las lineas de una
+ * lista del recetario empieza con guion.
+ */
+const SIN_OPCIONES: ReadonlySet<string> = new Set(['echo']);
+
+/**
  * Opciones de la orden que el motor no reconoce.
  *
  * Devuelve la lista para poder nombrarlas en el mensaje: decir «no implementa
@@ -220,11 +227,15 @@ export function opcionesNoReconocidas(
 ): readonly string[] {
   const reconocidas = OPCIONES[nombre];
   if (reconocidas === undefined) return [];
+  if (SIN_OPCIONES.has(nombre)) return [];
 
   const fuera: string[] = [];
   for (const argumento of argumentos) {
     if (argumento === '--') break;
     if (!argumento.startsWith('-') || argumento === '-') continue;
+    // Una opcion nunca lleva espacios: lo que los lleva es el valor de una
+    // opcion, como el mensaje de `git commit -m "- se quita la cazuela"`.
+    if (/\s/.test(argumento)) continue;
     const clave = argumento.split('=')[0] ?? argumento;
     if (reconocidas.includes(clave)) continue;
     // `-3` es la forma corta de `-n 3`, y Git la acepta en log y en show.

@@ -2,13 +2,21 @@
  * Cadena de objetos internos de una confirmacion.
  *
  * Git guarda cada confirmacion como un objeto que apunta a un arbol, y el
- * arbol a un elemento por cada archivo. El simulador no versiona contenido
- * (restriccion R4), de modo que reproduce la forma de esa cadena sin inventar
- * contenido: los identificadores se derivan de forma determinista de lo que el
- * modelo si conoce, que son los nombres de archivo y el identificador de la
- * confirmacion.
+ * arbol a un elemento por cada archivo.
  *
- * Alimenta el panel de estructuras internas de la zona D del SPEC 002.
+ * **Desde el SPEC 012 los identificadores se derivan del contenido**, como en
+ * Git, y no del nombre del archivo. La diferencia se ve en el panel y es una
+ * de las cosas que el taller viene a enseñar: dos archivos con el mismo texto
+ * comparten elemento, y cambiar una linea cambia el elemento, el arbol y la
+ * confirmacion entera. Con identificadores derivados del nombre, todo eso
+ * quedaba quieto y el panel contaba algo falso sobre como funciona Git.
+ *
+ * La huella no es la de Git y no tiene por que serlo (SPEC 007): es la misma
+ * FNV que genera los identificadores de confirmacion, y la misma que escribe
+ * la linea `index` de `git diff`, de modo que las dos salidas coinciden.
+ *
+ * Alimenta el panel de estructuras internas de la zona D del SPEC 002 y la
+ * respuesta de `git cat-file -p`.
  */
 
 import { confirmacionPorId } from './estado';
@@ -46,14 +54,24 @@ export function cadenaDeObjetos(
   const confirmacion = confirmacionPorId(estado, id);
   if (confirmacion === undefined) return null;
 
-  const idArbol = huella(`tree:${confirmacion.id}:${confirmacion.archivos.join(',')}`);
+  // Los archivos del arbol, en el orden en que Git los guarda. Se enumera el
+  // arbol entero y no solo lo que la confirmacion toco: un arbol es una foto
+  // completa, y mostrar solo lo cambiado enseñaria que es un parche.
+  const rutas = Object.keys(confirmacion.arbol).sort();
 
-  const elementos = confirmacion.archivos.map((nombre) => ({
+  const elementos = rutas.map((nombre) => ({
     tipo: 'elemento' as const,
-    id: huella(`blob:${confirmacion.id}:${nombre}`),
+    id: huella(`blob:${confirmacion.arbol[nombre] ?? ''}`),
     nombre,
     campos: [{ clave: 'ruta', valor: nombre }],
   }));
+
+  // El arbol se identifica por lo que contiene: sus rutas y los elementos a
+  // los que apuntan. Dos confirmaciones que dejan el proyecto igual comparten
+  // arbol, igual que en Git.
+  const idArbol = huella(
+    `tree:${elementos.map((elemento) => `${elemento.nombre}:${elemento.id}`).join(',')}`,
+  );
 
   return {
     confirmacion: {

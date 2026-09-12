@@ -4,9 +4,12 @@
  */
 
 import { posicionales, tieneOpcion } from '../analizador';
-import { archivosEn, establecerArchivo, estaSeguido } from '../estado';
-import { formatearDiff, formatearEstadoCorto, formatearEstadoLargo } from '../formato';
-import { fallo, lineas, ok, sinRepositorio } from '../salida';
+import { textoDeTrabajo, textoEnCabeza, textoPreparado } from '../contenido';
+import { type Comparacion, formatearEstadisticasDe, formatearParches } from '../diferencias';
+import { archivosEn, establecerArchivo, establecerContenido, estaSeguido } from '../estado';
+import { estaExcluida, exclusionesDe, patronesFuera } from '../exclusiones';
+import { formatearEstadoCorto, formatearEstadoLargo } from '../formato';
+import { fallo, lineaLimite, lineas, ok, sinRepositorio } from '../salida';
 import type { Archivo, EstadoRepositorio, ResultadoOrden } from '../tipos';
 
 export type Manejador = (
@@ -58,11 +61,30 @@ export const ordenConfig: Manejador = (estado, argumentos) => {
   });
 };
 
-/** `git status`, en forma larga y con `-s`. */
+/**
+ * `git status`, en forma larga y con `-s`.
+ *
+ * Si el archivo de exclusiones lleva un patron que el simulador no cubre, se
+ * dice aqui: es el momento en que el participante espera que el filtrado haya
+ * ocurrido, y callarlo seria dejarlo creyendo que su regla funciono.
+ */
 export const ordenStatus: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
   const corto = tieneOpcion(argumentos, '-s', '--short');
-  return ok(estado, lineas(...(corto ? formatearEstadoCorto(estado) : formatearEstadoLargo(estado))));
+  const cuerpo = corto ? formatearEstadoCorto(estado) : formatearEstadoLargo(estado);
+
+  const sinCubrir = patronesFuera(estado);
+  const aviso =
+    sinCubrir.length === 0
+      ? []
+      : [
+          lineaLimite(
+            `el simulador no aplica ${sinCubrir.map((uno) => `«${uno}»`).join(', ')} de .gitignore: solo cubre los comodines de extension, los nombres literales y las carpetas.`,
+          ),
+          lineaLimite('En tu terminal si funciona: esa regla compruebala ahi.'),
+        ];
+
+  return ok(estado, [...lineas(...cuerpo), ...aviso]);
 };
 
 /** Archivos que una ruta abarca: el archivo exacto o todo lo que cuelga de una carpeta. */
@@ -74,12 +96,27 @@ function coincidencias(estado: EstadoRepositorio, ruta: string): readonly Archiv
   );
 }
 
-/** `git add`, con archivo puntual, `.` y `-A`. */
+/**
+ * `git add`, con archivo puntual, `.`, `-A` y `-f`.
+ *
+ * Lo que el archivo de exclusiones tapa **no entra**, que es lo que el punto
+ * 3.2 del laboratorio 03 hace comprobar. La diferencia entre nombrarlo y
+ * barrer es la de Git: `git add .` se salta lo tapado en silencio, y nombrarlo
+ * a mano es un error que dice como insistir.
+ */
 export const ordenAdd: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
   const rutas = posicionales(argumentos);
   const todo = tieneOpcion(argumentos, '-A', '--all', '-a');
+  const forzado = tieneOpcion(argumentos, '-f', '--force');
+  const exclusiones = exclusionesDe(estado);
+  /** Una regla solo tapa lo que todavia no esta en seguimiento. */
+  const tapado = (archivo: Archivo): boolean =>
+    !forzado &&
+    archivo.estado === 'sin-seguimiento' &&
+    !estaSeguido(estado, archivo.nombre) &&
+    estaExcluida(exclusiones, archivo.nombre);
 
   if (rutas.length === 0 && !todo) {
     return ok(
@@ -93,14 +130,28 @@ export const ordenAdd: Manejador = (estado, argumentos) => {
 
   const objetivo: Archivo[] = [];
   if (todo || rutas.length === 0) {
-    objetivo.push(...estado.archivos);
+    // Barrer se salta lo tapado sin decir nada, igual que Git.
+    objetivo.push(...estado.archivos.filter((archivo) => !tapado(archivo)));
   } else {
     for (const ruta of rutas) {
       const encontrados = coincidencias(estado, ruta);
       if (encontrados.length === 0) {
         return fallo(estado, `fatal: pathspec '${ruta}' did not match any files`);
       }
-      objetivo.push(...encontrados);
+      // Nombrar a mano un archivo tapado es un error, y Git dice como
+      // insistir. Alcanzarlo a traves de una carpeta, como hace `git add .`,
+      // no lo es: ahi se salta en silencio.
+      const tapados = encontrados.filter(tapado);
+      const nombrados = tapados.filter((archivo) => archivo.nombre === ruta);
+      if (nombrados.length > 0) {
+        return fallo(
+          estado,
+          'The following paths are ignored by one of your .gitignore files:',
+          ...nombrados.map((archivo) => archivo.nombre),
+          'hint: Use -f if you really want to add them.',
+        );
+      }
+      objetivo.push(...encontrados.filter((archivo) => !tapado(archivo)));
     }
   }
 
@@ -179,7 +230,9 @@ export const ordenRestore: Manejador = (estado, argumentos) => {
         borrados: siguiente.borrados.filter((nombre) => nombre !== ruta),
         archivos: siguiente.archivos.some((archivo) => archivo.nombre === ruta)
           ? siguiente.archivos.map((archivo) =>
-              archivo.nombre === ruta ? { nombre: ruta, estado: 'limpio' as const } : archivo,
+              archivo.nombre === ruta
+                ? { nombre: ruta, estado: 'limpio' as const, contenido: null }
+                : archivo,
             )
           : siguiente.archivos,
         borradosSinPreparar: siguiente.archivos.some((archivo) => archivo.nombre === ruta)
@@ -210,7 +263,13 @@ export const ordenRestore: Manejador = (estado, argumentos) => {
         }
       } else {
         if (archivo.estado !== 'modificado') continue;
-        siguiente = establecerArchivo(siguiente, archivo.nombre, 'limpio');
+        // Descartar el cambio devuelve el texto de la confirmacion actual, que
+        // es lo que el `null` significa.
+        siguiente = establecerContenido(
+          establecerArchivo(siguiente, archivo.nombre, 'limpio'),
+          archivo.nombre,
+          null,
+        );
       }
     }
   }
@@ -218,10 +277,62 @@ export const ordenRestore: Manejador = (estado, argumentos) => {
   return ok(siguiente);
 };
 
-/** `git diff`, sin opciones y con `--staged`. */
+/**
+ * `git diff`, sin opciones y con `--staged` (seccion 4 del SPEC 012).
+ *
+ * Son dos preguntas distintas y el taller vive de esa distincion:
+ *
+ * - `git diff` compara **el area de preparacion con el directorio**: lo que
+ *   cambiaste y todavia no preparaste.
+ * - `git diff --staged` compara **la confirmacion con el area**: lo que
+ *   preparaste y todavia no confirmaste.
+ *
+ * Hasta el SPEC 011 las dos mostraban la forma del parche y una linea que
+ * declaraba que el detalle era simulado. Ahora muestran el texto.
+ */
 export const ordenDiff: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
   const preparado = tieneOpcion(argumentos, '--staged', '--cached');
-  const seleccion = archivosEn(estado, preparado ? 'preparado' : 'modificado');
-  return ok(estado, lineas(...formatearDiff(seleccion.map((archivo) => archivo.nombre))));
+
+  const comparaciones: Comparacion[] = preparado
+    ? [
+        // Las bajas preparadas van primero, como las ordena `git status`.
+        ...estado.borrados.map((ruta) => ({
+          ruta,
+          antes: textoEnCabeza(estado, ruta),
+          despues: null,
+        })),
+        ...archivosEn(estado, 'preparado').map((archivo) => ({
+          ruta: archivo.nombre,
+          antes: textoEnCabeza(estado, archivo.nombre),
+          despues: textoDeTrabajo(estado, archivo.nombre),
+        })),
+      ]
+    : [
+        ...estado.borradosSinPreparar.map((ruta) => ({
+          ruta,
+          antes: textoEnCabeza(estado, ruta),
+          despues: null,
+        })),
+        ...archivosEn(estado, 'modificado').map((archivo) => ({
+          ruta: archivo.nombre,
+          // Sin preparar, el lado izquierdo es lo que hay en el indice, que en
+          // un archivo no preparado es lo mismo que en la confirmacion.
+          antes: textoPreparado(estado, archivo.nombre),
+          despues: textoDeTrabajo(estado, archivo.nombre),
+        })),
+      ];
+
+  // `--stat` resume en vez de mostrar el parche, con las lineas contadas de
+  // verdad. Esta en la carta de opciones, asi que tiene que hacer algo: una
+  // opcion aceptada y descartada es lo unico que el contrato no admite.
+  const resumir = tieneOpcion(argumentos, '--stat');
+  return ok(
+    estado,
+    lineas(
+      ...(resumir
+        ? formatearEstadisticasDe(comparaciones)
+        : formatearParches(comparaciones)),
+    ),
+  );
 };
