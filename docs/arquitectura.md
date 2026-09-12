@@ -2157,8 +2157,8 @@ caja», deja de existir como laboratorio propio y su contenido util queda como
 | 06 | 05 | Fusionar y resolver |
 | 07 | 06 | Retroceder, revertir y etiquetar |
 | 08 | 07 | Interrumpir y limpiar la historia |
-| 09 | 08 | Conectar y publicar |
-| 10 | 09 | Etiquetas, versiones y limpieza |
+| 09 | 08 | Dos remotos, un submodulo y un gancho |
+| 10 | 09 | Conectar y publicar |
 | 11 al 15 | 10 al 14 | los de la plataforma y la tuberia |
 
 ### Que sobrevivio del antiguo 03 y que no
@@ -3652,24 +3652,137 @@ nuevos, que es lo que la Parte 2 viene a enseñar. Dos diferencias menores:
   `rebase (finish)`. **Las confirmaciones originales sí quedan en la bitácora**,
   que es lo que el punto 2.4 hace comprobar, así que ese paso se sostiene.
 
-### 57.8 · La tabla de renumeración tiene dos títulos corridos
+### 57.8 · La tabla de renumeración tenía dos títulos corridos
 
-La tabla de la sección 31 dice:
+La tabla de la sección 31 decía:
 
-| Antes | Ahora | Título que dice | Título que es |
+| Antes | Ahora | Título que decía | Título que es |
 |---|---|---|---|
 | 09 | 08 | Conectar y publicar | **Dos remotos, un submódulo y un gancho** |
 | 10 | 09 | Etiquetas, versiones y limpieza | **Conectar y publicar** |
 
 El material del arquitecto tiene `LAB-09-dos-remotos-un-submodulo-y-un-gancho` y
 `LAB-10-conectar-y-publicar`, y no tiene ningún «Etiquetas, versiones y
-limpieza». Los números de la tabla son correctos; los dos títulos, no. La
+limpieza». Los números de la tabla eran correctos; los dos títulos, no. La
 declaración del simulador para el 09 dice «Conectar y publicar», que es lo
 correcto.
 
+**Corregido en la sección 31.**
+
 ### 57.9 · Dos formas distintas de escribir la Preparación
 
-Los enunciados 03, 04 y 06 dicen `labs/lab-NN/preparar.sh` desde la raíz del
-clon, y explican dónde pararse. El 02 y el 05 dicen `./preparar.sh` con un
-`cd ../../../`. Los dos funcionan; son dos formas para lo mismo. El 07 y el 08
-siguen la de los tres, que es la que explica dónde está parado el participante.
+Los enunciados 03, 04 y 06 decían `labs/lab-NN/preparar.sh` desde la raíz del
+clon, y explicaban dónde pararse. El 02 y el 05 decían `./preparar.sh` con un
+`cd ../../../`. Los dos funcionan; eran dos formas para lo mismo. El 07 y el 08
+siguieron la de los tres, que es la que explica dónde está parado el
+participante.
+
+**Unificado: los siete enunciados que se preparan usan hoy la forma de los
+tres.** Una prueba de `laboratorios.test.ts` la exige para todos y rechaza la
+forma vieja, de modo que la divergencia no puede volver sin que la suite lo
+diga.
+
+---
+
+## 58. La resolución de los nueve desajustes, y las dieciséis opciones que salieron del contrato
+
+La sección 57 dejó nueve desajustes reportados y sin tocar, que es lo que el
+propietario pidió. Los nueve están resueltos. Cuatro de ellos no eran defectos
+del simulador ni de los escenarios: eran decisiones que el propietario cambió
+al mirarlas. Esta sección anota qué se hizo con cada uno y, sobre todo, el
+tercero, que resultó el más caro porque destapó un agujero en la prueba que
+vigila el contrato.
+
+### 58.1 · Qué se hizo con cada uno
+
+| # | Desajuste | Resolución | Quién cedió |
+|---|---|---|---|
+| 1 | La rama del 07 se llama `trabajo` en el enunciado y `tailandesa` en el escenario | Se renombró en el escenario y en `preparar.sh`. El enunciado no se tocó | el escenario |
+| 2 | El 07 guarda con `git stash` una receta que el escenario deja sin seguimiento | La receta pasa a estar versionada y modificada encima | el escenario |
+| 3 | El 07 hace `rebase -i` y el motor lo aceptaba sin hacer nada | Se arregló la prueba del contrato, se declaró `rebase -i` como no soportada y la parte 3 del 07 se hace en la terminal | el simulador |
+| 4 | Los dos remotos del 08 apuntaban al mismo paquete | `upstream.bundle` va dos confirmaciones por delante de `recetario.bundle` | el escenario |
+| 5 | El submódulo del 08 no funciona en ningún Git posterior a octubre de 2022 | La parte del submódulo sale del enunciado y queda explicado en dos párrafos que se leen y no se ejecutan | el enunciado |
+| 6 | Seis diferencias del simulador en el tramo de guardado temporal | Las seis implementadas | el simulador |
+| 7 | El rebase del 07 se ve distinto en el registro de referencias | Anotado, sin cambio: lo que el punto 2.4 hace comprobar se sostiene | nadie |
+| 8 | Dos títulos corridos en la tabla de renumeración | Corregidos en la sección 31 | la documentación |
+| 9 | Dos formas de escribir la Preparación | Unificadas en la de los tres, con una prueba que la exige | los enunciados |
+
+### 58.2 · El agujero de la prueba del contrato
+
+La prueba «toda opción que el contrato reconoce la lee alguien» leía **todo**
+`src/core`, y `contrato.ts` vive en `src/core`. Una opción declarada allí y
+leída por nadie se encontraba a sí misma en la declaración y aprobaba. La
+prueba comprobaba que el contrato estuviera escrito, no que alguien lo
+obedeciera.
+
+Excluirlo destapó además un ruido propio de la prueba: las opciones de una
+sola letra se leen en el código con `has('u')` y no con la cadena `'-u'`, así
+que aparecían como no leídas sin serlo. La prueba acepta hoy las dos formas.
+
+Descontado ese ruido, quedaron al descubierto **dieciséis opciones** declaradas
+y leídas por nadie:
+
+| Orden | Opción | Qué pasaba | Resolución |
+|---|---|---|---|
+| `config` | `--local` | el ámbito por omisión | declarada equivalente |
+| `config` | `--get` | la forma explícita de consultar | declarada equivalente |
+| `config` | `--unset` | no borraba nada | **implementada** |
+| `restore` | `--source` | restauraba desde la confirmación actual, no desde la que se le pedía | sale del contrato |
+| `commit` | `--allow-empty` | respondía «nothing to commit»; Git crea la confirmación | sale del contrato |
+| `merge` | `--continue` | se ignoraba | **implementada** |
+| `merge` | `--no-ff` | se ignoraba: avanzaba rápido igual | **implementada** |
+| `merge` | `--ff-only` | se ignoraba: fusionaba igual | **implementada** |
+| `reset` | `--mixed` | es el modo por omisión | declarada equivalente |
+| `revert` | `--continue` | la reversión del motor nunca choca | sale del contrato |
+| `revert` | `--no-commit` | aplicaba y confirmaba igual, que es lo contrario | sale del contrato |
+| `stash` | `-u` | no guardaba lo que no estaba en seguimiento | sale del contrato |
+| `stash` | `--include-untracked` | lo mismo | sale del contrato |
+| `rebase` | `--continue` | el rebase del motor no se detiene nunca | sale del contrato |
+| `rebase` | `-i` | aceptaba y no hacía nada | **sin soporte, con motivo** |
+| `rebase` | `--interactive` | lo mismo | **sin soporte, con motivo** |
+
+«Sale del contrato» significa que la opción pasa a responder que no está
+soportada, con su motivo. Es la segunda de las tres respuestas que el SPEC 010
+permite, y es honesta: la orden existe en Git, el simulador no la hace, y lo
+dice.
+
+`rebase -i` no salió por la puerta de las opciones sino por la de
+`SIN_SOPORTE`, y el motivo lo explica: **no es una orden que falte, es un modo
+de trabajo que la pantalla no tiene.** El rebase interactivo abre un editor con
+la lista de confirmaciones y se eligen las acciones línea por línea. Esa
+interacción no cabe en una terminal simulada de una sola línea, y fingirla
+enseñaría algo falso.
+
+### 58.3 · Dos hallazgos que aparecieron al arreglar lo anterior
+
+**`git switch` a la rama en la que ya se está.** Decía
+`Switched to branch 'main'` y anotaba en la bitácora un movimiento que no
+ocurrió. Git dice `Already on 'main'` y no anota nada. El participante del 07
+se cambia a la rama donde ya está más de una vez y veía una mudanza inventada.
+Corregido, con la distinción que Git hace: estando desconectado sobre la misma
+confirmación, volver a la rama **sí** es un movimiento y sí se anota.
+
+**`--detach` se aceptaba y no se obedecía.** `git checkout --detach main`
+dejaba la posición en la rama. La prueba del contrato no lo veía porque
+`'--detach'` sí aparece en el código, en la rama de `git switch`: la prueba
+busca la cadena en todo el archivo y no por subcomando. Es la misma clase de
+agujero que 58.2, un escalón más abajo. Corregido: `--detach` deja la posición
+en la confirmación aunque el nombre sea el de una rama.
+
+**Queda anotada la limitación de la prueba**: comprueba que la opción se lea en
+alguna parte, no que la lea el subcomando que la declara. Cerrarla del todo
+pide leer el código por función, que es otro trabajo.
+
+### 58.4 · Dos cosas que no se cambiaron, y por qué
+
+**El título del laboratorio 08 sigue prometiendo un submódulo.** Dice «Dos
+remotos, un submódulo y un gancho», y el laboratorio ya no lo practica. El
+título es el del material del arquitecto y es el que la sección 31 fija, así
+que no se toca sin que él lo diga. El enunciado explica en su primer párrafo
+que la parte del submódulo se lee y no se ejecuta.
+
+**El `git status` largo del simulador imprime una línea en blanco después de
+`On branch X` que Git no imprime.** Es una diferencia de una línea, no cambia
+nada de lo que el participante aprende, y tocarla mueve la comparación contra
+disco de varios escenarios. Queda anotada para cuando haya otra razón para
+entrar ahí.

@@ -163,15 +163,31 @@ describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
     // Una opcion listada como reconocida que ningun manejador consulta es,
     // literalmente, una opcion aceptada y descartada. Esto lo detecta sin
     // depender de que alguien se acuerde de mirarlo.
+    //
+    // **`contrato.ts` se excluye de la busqueda.** Mientras estuvo dentro, una
+    // opcion declarada y jamas leida se encontraba a si misma en la propia
+    // lista que la declaraba, y la prueba pasaba: asi `rebase -i` estuvo
+    // aceptada y descartada desde que se escribio. Al sacarlo quedaron
+    // diecinueve al descubierto, anotadas en la seccion 58.
     const fuentes = readdirSync(MOTOR, { recursive: true, encoding: 'utf8' })
-      .filter((nombre) => nombre.endsWith('.ts'))
+      .filter((nombre) => nombre.endsWith('.ts') && nombre !== 'contrato.ts')
       .map((nombre) => readFileSync(join(MOTOR, nombre), 'utf8'))
       .join('\n');
+
+    /**
+     * Las opciones cortas agrupables no se comparan como palabra entera: el
+     * motor las lee por su letra, con `letrasCortas`, de modo que `wc -w` se
+     * consulta como `cortas.has('w')` y nunca aparece escrita como `'-w'`.
+     */
+    const laLeeAlguien = (opcion: string): boolean => {
+      if (fuentes.includes(`'${opcion}'`)) return true;
+      return /^-[a-zA-Z]$/.test(opcion) && fuentes.includes(`has('${opcion.slice(1)}')`);
+    };
 
     for (const [verbo, opciones] of Object.entries(OPCIONES)) {
       for (const opcion of opciones) {
         if (opcion === '--' || Object.hasOwn(EQUIVALENTES, opcion)) continue;
-        expect(fuentes.includes(`'${opcion}'`), `${verbo} ${opcion}`).toBe(true);
+        expect(laLeeAlguien(opcion), `${verbo} ${opcion}`).toBe(true);
       }
     }
   });

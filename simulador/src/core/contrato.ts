@@ -93,6 +93,12 @@ export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
     motivo:
       'crear carpetas fuera del repositorio. El simulador solo modela el recetario en el que estas parado',
   },
+  // --- Modos de interaccion que la pantalla no tiene ------------------------
+  {
+    patron: /^git rebase\b.*(\s)(-i|--interactive)(\s|$)/,
+    motivo:
+      'el rebase interactivo. Abre un editor con la lista de confirmaciones y se eligen las acciones linea por linea: no es una orden que falte, es un modo de trabajo que esta pantalla no tiene. La parte 3 del laboratorio 07 se hace en tu terminal',
+  },
   // --- La carpeta oculta (punto 3.3) ---------------------------------------
   {
     // `cat` y `wc` sobre un archivo del proyecto si funcionan desde el
@@ -119,13 +125,17 @@ export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
 export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   init: ['-b', '--initial-branch', '-q', '--quiet'],
   config: ['--global', '--local', '--list', '-l', '--get', '--unset'],
+  // `--source` salio: `git restore --source=<ref> <archivo>` restaura desde
+  // otra confirmacion y el motor restauraba desde la actual, en silencio.
   status: ['-s', '--short', '--long'],
   add: ['-A', '--all', '-a', '-f', '--force'],
-  restore: ['--staged', '--cached', '--worktree', '--source'],
+  restore: ['--staged', '--cached', '--worktree'],
   // Vale para `git rm` y para el `rm` del interprete: comparten opciones.
   rm: ['--cached', '-r', '-f', '--force', '-q', '--quiet'],
   mv: ['-f', '--force', '-v', '--verbose'],
-  commit: ['-m', '--message', '-a', '--all', '--amend', '--no-edit', '-c', '-C', '--allow-empty', '-q', '--quiet'],
+  // `--allow-empty` salio: el motor responde «nothing to commit» y Git crea la
+  // confirmacion vacia. Es la diferencia que la seccion 28 dejo anotada.
+  commit: ['-m', '--message', '-a', '--all', '--amend', '--no-edit', '-c', '-C', '-q', '--quiet'],
   // `--decorate` y `--date-order`: el motor ya se comporta asi siempre.
   log: [
     '--oneline', '--graph', '--all', '--decorate', '--no-decorate', '--date-order',
@@ -140,10 +150,17 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   merge: ['--abort', '--continue', '--no-ff', '--ff-only', '-m', '--message', '--no-edit'],
   tag: ['-a', '--annotate', '-m', '--message', '-d', '--delete', '-l', '--list', '-n'],
   reset: ['--soft', '--mixed', '--hard'],
-  revert: ['--no-edit', '--abort', '--continue', '-n', '--no-commit'],
-  stash: ['-u', '--include-untracked', '-m', '--message', '--stat', '--index'],
+  // La reversion del motor nunca choca, asi que no hay nada que continuar ni
+  // que abortar; `-n` aplicaba y confirmaba igual, que es lo contrario de lo
+  // que pide.
+  revert: ['--no-edit'],
+  // `-u` salio: guardar tambien lo que no esta en seguimiento pide mover del
+  // directorio a la pila archivos que la entrada no sabe llevar.
+  stash: ['-m', '--message', '--stat', '--index', '-p', '--patch'],
   reflog: ['--all', '-n'],
-  rebase: ['--abort', '--continue', '-i', '--interactive'],
+  // `--continue` salio con `-i`: el rebase del motor no se detiene nunca, de
+  // modo que no hay nada que continuar.
+  rebase: ['--abort'],
   remote: ['-v', '--verbose'],
   'rev-parse': ['--short', '--abbrev-ref', '--is-inside-work-tree', '--git-dir'],
   'merge-base': [],
@@ -174,8 +191,6 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
  */
 export const EQUIVALENTES: Readonly<Record<string, string>> = {
   '--decorate': 'el simulador decora siempre, igual que Git contra un terminal',
-  '-p': 'git show y git diff ya muestran el parche; es la forma por omision',
-  '--patch': 'git show y git diff ya muestran el parche; es la forma por omision',
   '--no-decorate': 'no se puede apagar la decoracion: el grafo la necesita para explicarse',
   '--date-order': 'la historia ya se recorre por fecha, de la mas reciente a la mas antigua',
   '--long': 'es la forma larga de git status, que es la de por omision',
@@ -188,6 +203,11 @@ export const EQUIVALENTES: Readonly<Record<string, string>> = {
   '--no-edit': 'el simulador no abre editor: acepta el mensaje propuesto',
   '--initial-branch': 'la rama inicial es main, que es lo unico que el taller usa',
   '-b': 'en git init nombra la rama inicial, que ya es main',
+  '--local': 'es el ambito por omision de git config, el que se usa sin --global',
+  '--get': 'es la forma explicita de consultar, que es lo que git config hace sin ella',
+  '--mixed': 'es el modo por omision de git reset',
+  '-p': 'en git show y git diff el parche es la forma por omision; en git stash show si se lee',
+  '--patch': 'lo mismo que -p',
 };
 
 /**

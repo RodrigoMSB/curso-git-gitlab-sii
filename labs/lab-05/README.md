@@ -18,9 +18,11 @@ Siempre vas a escribir la misma orden. Lo que decide qué ocurre es la forma que
 
 ## Preparación
 
+Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+
 ```
-./preparar.sh
-cd ../../../taller-git-trabajo/lab-05/recetario
+labs/lab-05/preparar.sh
+cd ../taller-git-trabajo/lab-05/recetario
 ```
 
 Mira con qué te encontraste.

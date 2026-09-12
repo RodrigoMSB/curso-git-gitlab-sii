@@ -41,10 +41,17 @@ export const ordenLs: Manejador = (estado, argumentos) => {
         ? prefijoPedido
         : `${prefijoPedido}/`;
 
+  // Con `-R` no se corta en la primera barra: se enumera todo lo que cuelga.
+  const recursivo = letrasCortas(argumentos).has('R');
+
   const entradas = new Set<string>();
   for (const archivo of estado.archivos) {
     if (!archivo.nombre.startsWith(prefijo)) continue;
     const resto = archivo.nombre.slice(prefijo.length);
+    if (recursivo) {
+      entradas.add(resto);
+      continue;
+    }
     const corte = resto.indexOf('/');
     entradas.add(corte < 0 ? resto : `${resto.slice(0, corte)}/`);
   }

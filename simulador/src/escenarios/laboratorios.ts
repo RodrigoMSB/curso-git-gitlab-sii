@@ -847,9 +847,13 @@ export const LAB06: EscenarioDeclarado = {
 // ---------------------------------------------------------------------------
 
 /**
- * La rama `tailandesa` lleva cuatro confirmaciones con mensajes que no dicen
- * nada, y `main` avanzo dos por su cuenta. El participante arranca parado en la
- * rama de trabajo, con un archivo sin seguimiento encima.
+ * La rama `trabajo` lleva cuatro confirmaciones con mensajes que no dicen nada,
+ * y `main` avanzo dos por su cuenta. El participante arranca parado en ella,
+ * con una receta ya versionada y reescrita a medias encima.
+ *
+ * **Se llama `trabajo` porque asi la nombra el enunciado.** La descripcion de
+ * la semilla del SPEC 003 la llamaba `tailandesa` y la declaracion la habia
+ * seguido; el enunciado, que es el contrato, nunca dijo eso.
  */
 const INGREDIENTES_LAB07 = INGREDIENTES_BASE;
 
@@ -877,9 +881,25 @@ const CURRY_VERDE = `# Curry verde
 Pasta verde, leche de coco, albahaca tailandesa y berenjena.
 `;
 
+/**
+ * El curry massaman **confirmado**, tal como quedo en la rama de trabajo.
+ *
+ * El laboratorio 07 arranca con esta receta a medio reescribir encima, y eso
+ * pide que el archivo este en seguimiento: `git stash` sin `-u` no toca lo que
+ * nunca entro, y con la receta sin seguimiento la Parte 1 entera se quedaba sin
+ * materia. Comprobado contra Git.
+ */
 const CURRY_MASSAMAN = `# Curry massaman
 
 Pasta massaman, leche de coco, papa y mani tostado.
+`;
+
+/** Lo que el participante tenia a medio escribir cuando lo interrumpieron. */
+const CURRY_MASSAMAN_A_MEDIAS = `# Curry massaman
+
+Pasta massaman, leche de coco, papa y mani tostado.
+Tiempo de preparacion:
+Se sofrie la pasta, se agrega la leche de coco y
 `;
 
 export const LAB07: EscenarioDeclarado = {
@@ -967,8 +987,11 @@ export const LAB07: EscenarioDeclarado = {
     {
       clave: 't4',
       mensaje: 'arreglos',
-      archivos: ['recetas/curry-verde.md'],
-      contenido: { 'recetas/curry-verde.md': CURRY_VERDE },
+      archivos: ['recetas/curry-verde.md', 'recetas/curry-massaman.md'],
+      contenido: {
+        'recetas/curry-verde.md': CURRY_VERDE,
+        'recetas/curry-massaman.md': CURRY_MASSAMAN,
+      },
       padres: ['t3'],
       carril: 1,
       epoca: cuando(7, 2, 16, 40),
@@ -976,10 +999,10 @@ export const LAB07: EscenarioDeclarado = {
   ],
   ramas: [
     { nombre: 'main', en: 'c4', carril: 0 },
-    { nombre: 'tailandesa', en: 't4', carril: 1 },
+    { nombre: 'trabajo', en: 't4', carril: 1 },
   ],
   etiquetas: [],
-  posicion: 'tailandesa',
+  posicion: 'trabajo',
   archivos: [
     ...limpios(
       'README.md',
@@ -988,11 +1011,13 @@ export const LAB07: EscenarioDeclarado = {
       'recetas/pad-thai.md',
       'recetas/curry-verde.md',
     ),
-    // Lo que el participante tenia a medias cuando lo interrumpieron.
+    // Lo que el participante tenia a medias cuando lo interrumpieron: la receta
+    // **ya versionada** y reescrita a medias encima. Tiene que estar en
+    // seguimiento para que `git stash` se la lleve (punto 1.3 del enunciado).
     {
       nombre: 'recetas/curry-massaman.md',
-      estado: 'sin-seguimiento',
-      contenido: CURRY_MASSAMAN,
+      estado: 'modificado',
+      contenido: CURRY_MASSAMAN_A_MEDIAS,
     },
   ],
   remotos: [],

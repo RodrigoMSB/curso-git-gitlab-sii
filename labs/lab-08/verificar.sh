@@ -6,9 +6,10 @@
 # «Comprobacion» del enunciado. Con `--escenario` comprueba el ESTADO INICIAL,
 # que es lo que usa preparar.sh antes de entregar el laboratorio.
 #
-# Lo que distingue un laboratorio hecho de uno recien preparado son las tres
-# piezas que el participante pone: el submodulo incorporado, el gancho escrito
-# y con permiso de ejecucion, y el segundo remoto ya quitado.
+# Lo que distingue un laboratorio hecho de uno recien preparado son tres cosas:
+# que lo que traia el segundo remoto ya este incorporado, que el gancho este
+# escrito y con permiso de ejecucion, y que el segundo remoto ya se haya
+# quitado.
 #
 # Escrito para Bash 3.2, el de macOS.
 
@@ -106,25 +107,27 @@ if [ "$MODO" = escenario ] && [ "$HAY_REPOSITORIO" = si ]; then
   fi
 
   if [ -f "$TRABAJO/recetario.bundle" ]; then
-    aprobado 'el paquete del recetario esta al lado, y hace de remoto'
+    aprobado 'el paquete del recetario esta al lado, y hace de origin'
   else
-    fallido 'el paquete que hace de remoto' \
+    fallido 'el paquete que hace de origin' \
       'taller-git-trabajo/lab-08/recetario.bundle' 'no existe'
   fi
 
-  # Sin el segundo paquete no hay submodulo que incorporar.
-  if [ -f "$TRABAJO/condimentos.bundle" ]; then
-    aprobado 'el paquete de los condimentos esta al lado, para el submodulo'
+  if [ ! -f "$TRABAJO/upstream.bundle" ]; then
+    fallido 'el paquete del proyecto original' \
+      'taller-git-trabajo/lab-08/upstream.bundle' 'no existe'
   else
-    fallido 'el paquete de los condimentos' \
-      'taller-git-trabajo/lab-08/condimentos.bundle' 'no existe'
-  fi
-
-  # Incorporar el submodulo es el laboratorio: no puede venir puesto.
-  if [ ! -e "$REPOSITORIO/.gitmodules" ]; then
-    aprobado 'no hay .gitmodules: incorporar el submodulo es el ejercicio'
-  else
-    fallido 'el submodulo no viene puesto' 'que no exista .gitmodules' 'ya existe'
+    # **Tiene que ir por delante.** Si trajera lo mismo que origin, los puntos
+    # 1.4 a 1.6 del enunciado no traerian nada y se quedarian sin ejercicio.
+    ADELANTE=$(git -C "$REPOSITORIO" bundle list-heads "$TRABAJO/upstream.bundle" 2>/dev/null |
+      awk '{print $1}' | head -1)
+    if [ -n "$ADELANTE" ] && ! g merge-base --is-ancestor "$ADELANTE" main 2>/dev/null; then
+      aprobado 'el paquete del proyecto original va por delante: traer desde el si trae algo'
+    else
+      fallido 'el paquete del proyecto original va por delante de origin' \
+        'confirmaciones que el recetario todavia no tiene' \
+        'trae lo mismo; el ejercicio de los dos remotos se quedaria sin materia'
+    fi
   fi
 
   # Escribir el gancho tambien es el laboratorio.
@@ -154,37 +157,20 @@ if [ "$MODO" = final ]; then
       "${REMOTOS:-ninguno}; falta quitar el segundo con git remote remove"
   fi
 
+  # Lo que el segundo remoto traia ya tiene que estar incorporado: es el punto
+  # 1.6, y es lo unico que distingue haber traido de haber solo mirado.
   if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'el submodulo quedo incorporado' 'un .gitmodules que apunta a los condimentos'
-  elif [ ! -f "$REPOSITORIO/.gitmodules" ]; then
-    fallido 'el submodulo quedo incorporado' \
-      'un .gitmodules que apunta a los condimentos' \
-      'no existe .gitmodules; falta el git submodule add del punto 2.2'
-  elif grep -q 'condimentos' "$REPOSITORIO/.gitmodules"; then
-    aprobado 'el submodulo quedo incorporado y .gitmodules apunta a los condimentos'
+    sin_repositorio 'lo que traia el proyecto original ya esta incorporado' 'el comino y el oregano'
   else
-    fallido 'el submodulo quedo incorporado' \
-      'que .gitmodules nombre los condimentos' "$(cat "$REPOSITORIO/.gitmodules")"
-  fi
-
-  # Lo que el repositorio guarda del submodulo es un identificador, no
-  # archivos. Es el punto 2.3 y el unico criterio que lo comprueba.
-  if [ "$HAY_REPOSITORIO" = no ]; then
-    sin_repositorio 'el submodulo se guardo como identificador' 'una linea con modo 160000'
-  else
-    ENTRADA=$(g ls-files -s condimentos)
-    case $ENTRADA in
-      160000\ *)
-        aprobado 'el submodulo se guardo como un identificador de confirmacion, no como archivos'
-        ;;
-      '')
-        fallido 'el submodulo se guardo como identificador' \
-          'una linea de git ls-files -s condimentos' \
-          'no hay ninguna; falta confirmar el submodulo'
+    INGREDIENTES=$(g show HEAD:ingredientes.md)
+    case $INGREDIENTES in
+      *comino*oregano*)
+        aprobado 'lo que traia el proyecto original ya esta incorporado en ingredientes.md'
         ;;
       *)
-        fallido 'el submodulo se guardo como identificador' \
-          'modo 160000, que es como Git anota un submodulo' "$ENTRADA"
+        fallido 'lo que traia el proyecto original ya esta incorporado' \
+          'el comino y el oregano en ingredientes.md, que es lo que upstream tenia de mas' \
+          'no estan; falta el git merge del punto 1.6'
         ;;
     esac
   fi
@@ -201,14 +187,6 @@ if [ "$MODO" = final ]; then
     fallido 'el gancho commit-msg es ejecutable' \
       'permiso de ejecucion, que es lo que hace que corra' \
       'existe pero no es ejecutable; falta el chmod +x'
-  fi
-
-  # El clon de prueba de la parte 2 se borra al terminar.
-  if [ -e "$TRABAJO/recetario-copia" ]; then
-    fallido 'no quedo el clon de prueba dando vueltas' \
-      'que recetario-copia este borrado' 'sigue ahi'
-  else
-    aprobado 'no quedo el clon de prueba dando vueltas'
   fi
 
   if [ "$HAY_REPOSITORIO" = no ]; then

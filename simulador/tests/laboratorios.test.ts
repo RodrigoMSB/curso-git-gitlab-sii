@@ -673,11 +673,11 @@ describe('CA6 · el enunciado difiere solo en los cambios autorizados', () => {
   const enunciado = readFileSync(join(LAB02, 'README.md'), 'utf8');
 
   it('la preparacion apunta al script del laboratorio', () => {
-    // La ruta lleva tres niveles: el enunciado se ejecuta desde la carpeta del
-    // laboratorio, no desde la raiz del clon. Con dos niveles la carpeta de
-    // trabajo caeria dentro del clon del curso, que es justo lo que la seccion
-    // 17 de la arquitectura prohibe.
-    expect(enunciado).toContain('./preparar.sh\ncd ../../../taller-git-trabajo/lab-02/recetario');
+    // Los ocho enunciados usan la misma forma: se parte en la raiz del clon,
+    // se invoca el script por su ruta y se sale a la carpeta hermana. Un nivel
+    // de `..`, porque se sale del clon y no de la carpeta del laboratorio. Es
+    // la carpeta de trabajo fuera del clon que la seccion 17 exige.
+    expect(enunciado).toContain('labs/lab-02/preparar.sh\ncd ../taller-git-trabajo/lab-02/recetario');
   });
 
   it('la ruta de trabajo es la carpeta hermana', () => {
@@ -847,6 +847,19 @@ describe('la renumeracion quedo consistente', () => {
           `taller-git-trabajo/lab-${otro}/`,
         );
       }
+    }
+  });
+
+  it('los siete que se preparan usan la misma forma de Preparacion', () => {
+    // Habia dos formas para lo mismo: unos decian `./preparar.sh` desde la
+    // carpeta del laboratorio y otros la ruta desde la raiz del clon. Quedo la
+    // segunda, que es la que dice donde esta parado el participante.
+    for (const n of armados.filter((numero) => numero !== '01')) {
+      const enunciado = readFileSync(join(LABS, `lab-${n}`, 'README.md'), 'utf8');
+      expect(enunciado, `lab-${n}`).toContain(
+        `labs/lab-${n}/preparar.sh\ncd ../taller-git-trabajo/lab-${n}/recetario`,
+      );
+      expect(enunciado, `lab-${n} conserva la forma vieja`).not.toContain('./preparar.sh\ncd');
     }
   });
 

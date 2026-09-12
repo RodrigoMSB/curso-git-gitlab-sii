@@ -33,6 +33,7 @@ import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
 import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
+import { ordenCommit } from './confirmar';
 
 /** Crea una rama sin tocar la posicion actual. Es el punto 8.1 del SPEC 001. */
 function crearRama(
@@ -167,20 +168,29 @@ export const ordenBranch: Manejador = (estado, argumentos) => {
  * Cambia la posicion a una rama o, si no lo es, a la confirmacion que el
  * nombre resuelva.
  *
- * `avisoLargo` distingue las dos ordenes: `git checkout` explica el estado
- * desconectado con su parrafo, y `git switch --detach` solo dice donde quedo
- * la posicion. Es la diferencia que Git hace y que el participante ve.
+ * `desconectar` es `--detach`, y hace dos cosas. Deja la posicion en la
+ * confirmacion aunque el nombre sea el de una rama, que es lo que `--detach`
+ * pide, y acorta el aviso: `git checkout` sobre una confirmacion explica el
+ * estado desconectado con su parrafo, y `--detach` solo dice donde quedo la
+ * posicion. Es la diferencia que Git hace y que el participante ve.
  */
 function cambiarA(
   estado: EstadoRepositorio,
   destino: string,
   nueva: boolean,
-  avisoLargo = true,
+  desconectar = false,
 ): ResultadoOrden {
   const origen = ramaActual(estado) ?? idActual(estado) ?? 'HEAD';
-  const rama = ramaPorNombre(estado, destino);
+  const rama = desconectar ? undefined : ramaPorNombre(estado, destino);
 
   if (rama !== undefined) {
+    // Cambiarse a la rama en la que ya se esta no mueve nada: Git lo dice y no
+    // anota reflog. Solo vale cuando la posicion es esa rama; estando
+    // desconectado sobre su misma confirmacion, Git si cambia y si lo anota.
+    if (!nueva && ramaActual(estado) === destino) {
+      return ok(estado, lineas(`Already on '${destino}'`));
+    }
+
     // El directorio de trabajo sigue al arbol del destino, como en Git.
     const siguiente = anotarReflog(
       sincronizarDirectorio(
@@ -214,7 +224,7 @@ function cambiarA(
       descripcion: `moving from ${origen} to ${id}`,
     },
   );
-  if (!avisoLargo) {
+  if (desconectar) {
     return ok(
       siguiente,
       lineas(`HEAD is now at ${id} ${confirmacion?.mensaje ?? ''}`.trimEnd()),
@@ -258,7 +268,7 @@ export const ordenSwitch: Manejador = (estado, argumentos) => {
     if (resolverReferencia(estado, destino) === null) {
       return fallo(estado, `fatal: invalid reference: '${destino}'`);
     }
-    return cambiarA(estado, destino, false, false);
+    return cambiarA(estado, destino, false, true);
   }
 
   if (ramaPorNombre(estado, destino) === undefined) {
@@ -360,7 +370,10 @@ export const ordenCheckout: Manejador = (estado, argumentos) => {
   ) {
     return fallo(estado, `error: pathspec '${destino}' did not match any file(s) known to git`);
   }
-  return cambiarA(estado, destino, false);
+  // `--detach` esta declarado para `checkout` igual que para `switch`, y aqui
+  // se leia. Sin esta linea la orden lo aceptaba y no lo obedecia, que es lo
+  // que el SPEC 010 prohibe.
+  return cambiarA(estado, destino, false, tieneOpcion(argumentos, '--detach'));
 };
 
 /** Aborta una fusion con conflictos y devuelve los archivos a su estado previo. */
@@ -376,6 +389,17 @@ function abortarFusion(estado: EstadoRepositorio): ResultadoOrden {
 export const ordenMerge: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
   if (tieneOpcion(argumentos, '--abort')) return abortarFusion(estado);
+
+  // `--continue` cierra la fusion ya resuelta, que es lo mismo que hace
+  // `git commit` sobre una fusion en curso. Antes respondia «No commit
+  // specified», porque `--continue` no nombra ninguna rama.
+  if (tieneOpcion(argumentos, '--continue')) {
+    if (estado.fusion === null) {
+      return fallo(estado, 'fatal: There is no merge in progress (MERGE_HEAD missing).');
+    }
+    return ordenCommit(estado, ['--no-edit']);
+  }
+
   if (estado.fusion !== null) {
     return fallo(
       estado,
@@ -406,9 +430,12 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
   }
 
   const traidos = [...archivosCambiados(estado, cabeza, idOtro)];
+  const soloAvance = tieneOpcion(argumentos, '--ff-only');
+  const sinAvance = tieneOpcion(argumentos, '--no-ff');
 
-  // Caso 2: la actual esta contenida en la otra. Avance del puntero, sin confirmacion.
-  if (esAntepasado(estado, cabeza, idOtro)) {
+  // Caso 2: la actual esta contenida en la otra. Avance del puntero, sin
+  // confirmacion, salvo que se pida lo contrario con `--no-ff`.
+  if (esAntepasado(estado, cabeza, idOtro) && !sinAvance) {
     // El avance rapido lleva el directorio de trabajo al arbol de destino: los
     // archivos que trae la otra rama aparecen. Sin esto, `recetas/` seguia sin
     // existir despues de fusionar la rama que la habia creado.
@@ -427,6 +454,16 @@ export const ordenMerge: Manejador = (estado, argumentos) => {
         'Fast-forward',
         ...formatearEstadisticasDe(comparacionesEntre(estado, cabeza, idOtro), true),
       ),
+    );
+  }
+
+  // `--ff-only` se niega cuando la fusion no puede resolverse moviendo el
+  // puntero. Antes creaba la union igual, que es justo lo que esa opcion pide
+  // evitar.
+  if (soloAvance) {
+    return fallo(
+      estado,
+      'fatal: Not possible to fast-forward, aborting.',
     );
   }
 

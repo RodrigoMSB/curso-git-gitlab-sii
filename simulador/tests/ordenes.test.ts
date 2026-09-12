@@ -495,7 +495,7 @@ describe('git log', () => {
   });
 
   it('--graph marca las confirmaciones y abre la union', () => {
-    const estado = correr(repoConRamaDesdeMain(), 'git merge tailandesa');
+    const estado = correr(repoConRamaDesdeMain(), 'git merge trabajo');
     const salida = texto(ejecutar(estado, 'git log --oneline --graph'));
 
     expect(salida).toContain('* ');
@@ -503,13 +503,13 @@ describe('git log', () => {
   });
 
   it('la forma larga de una union muestra la linea Merge', () => {
-    const estado = correr(repoConRamaDesdeMain(), 'git merge tailandesa');
+    const estado = correr(repoConRamaDesdeMain(), 'git merge trabajo');
     expect(texto(ejecutar(estado, 'git log'))).toContain('Merge: ');
   });
 
   it('acepta una referencia explicita y reclama si no existe', () => {
     const estado = repoConRamaDesdeMain();
-    expect(texto(ejecutar(estado, 'git log --oneline tailandesa'))).toContain('arreglos');
+    expect(texto(ejecutar(estado, 'git log --oneline trabajo'))).toContain('arreglos');
     expect(ejecutar(estado, 'git log fantasma').error).toBe(true);
   });
 
@@ -627,7 +627,7 @@ describe('git branch', () => {
   it('lista las ramas y marca la actual', () => {
     const salida = texto(ejecutar(repoConRamaDesdeMain(), 'git branch'));
     expect(salida).toContain('* main');
-    expect(salida).toContain('  tailandesa');
+    expect(salida).toContain('  trabajo');
   });
 
   it('crea una rama sobre una referencia dada', () => {
@@ -636,10 +636,10 @@ describe('git branch', () => {
   });
 
   it('reclama si la rama ya existe o si el repositorio no tiene confirmaciones', () => {
-    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch tailandesa'))).toContain(
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch trabajo'))).toContain(
       'already exists',
     );
-    expect(texto(ejecutar(repoVacio(), 'git branch tailandesa'))).toContain(
+    expect(texto(ejecutar(repoVacio(), 'git branch trabajo'))).toContain(
       'not a valid object name',
     );
     expect(texto(ejecutar(repoLineal(), 'git branch nueva fantasma'))).toContain(
@@ -651,14 +651,14 @@ describe('git branch', () => {
     const conIntegrada = correr(repoConRamaDesdeMain(), 'git branch chilena');
     expect(texto(ejecutar(conIntegrada, 'git branch -d chilena'))).toContain('Deleted branch');
 
-    const resultado = ejecutar(repoConRamaDesdeMain(), 'git branch -d tailandesa');
+    const resultado = ejecutar(repoConRamaDesdeMain(), 'git branch -d trabajo');
     expect(resultado.error).toBe(true);
     expect(texto(resultado)).toContain('not fully merged');
   });
 
   it('-D borra a la fuerza, pero nunca la rama actual', () => {
-    const estado = ejecutar(repoConRamaDesdeMain(), 'git branch -D tailandesa').estado;
-    expect(ramaPorNombre(estado, 'tailandesa')).toBeUndefined();
+    const estado = ejecutar(repoConRamaDesdeMain(), 'git branch -D trabajo').estado;
+    expect(ramaPorNombre(estado, 'trabajo')).toBeUndefined();
     expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -D main'))).toContain('Cannot delete');
     expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -d fantasma'))).toContain('not found');
   });
@@ -667,7 +667,7 @@ describe('git branch', () => {
     const actual = ejecutar(repoConRamaDesdeMain(), 'git branch -m principal').estado;
     expect(ramaActual(actual)).toBe('principal');
 
-    const otra = ejecutar(repoConRamaDesdeMain(), 'git branch -m tailandesa thai').estado;
+    const otra = ejecutar(repoConRamaDesdeMain(), 'git branch -m trabajo thai').estado;
     expect(ramaPorNombre(otra, 'thai')).toBeDefined();
     expect(ramaActual(otra)).toBe('main');
   });
@@ -676,7 +676,7 @@ describe('git branch', () => {
     expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -m fantasma otra'))).toContain(
       'not found',
     );
-    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -m tailandesa main'))).toContain(
+    expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -m trabajo main'))).toContain(
       'already exists',
     );
     expect(texto(ejecutar(repoConRamaDesdeMain(), 'git branch -d'))).toContain('branch name required');
@@ -685,9 +685,31 @@ describe('git branch', () => {
 
 describe('git switch y git checkout', () => {
   it('git switch cambia de rama', () => {
-    const resultado = ejecutar(repoConRamaDesdeMain(), 'git switch tailandesa');
-    expect(texto(resultado)).toBe("Switched to branch 'tailandesa'");
-    expect(ramaActual(resultado.estado)).toBe('tailandesa');
+    const resultado = ejecutar(repoConRamaDesdeMain(), 'git switch trabajo');
+    expect(texto(resultado)).toBe("Switched to branch 'trabajo'");
+    expect(ramaActual(resultado.estado)).toBe('trabajo');
+  });
+
+  it('cambiarse a la rama en la que ya se esta no mueve nada y Git lo dice', () => {
+    // Decia «Switched to branch 'main'» y anotaba un reflog de un movimiento
+    // que no ocurrio. El participante del 07 se cambia a la rama donde ya
+    // esta mas de una vez y veia una mudanza inventada.
+    const estado = repoConRamaDesdeMain();
+    const antes = estado.reflog.length;
+    const resultado = ejecutar(estado, 'git switch main');
+    expect(texto(resultado)).toBe("Already on 'main'");
+    expect(ramaActual(resultado.estado)).toBe('main');
+    expect(resultado.estado.reflog.length).toBe(antes);
+  });
+
+  it('estando desconectado sobre la misma confirmacion, checkout si cambia', () => {
+    // Git distingue los dos casos: desconectado sobre el mismo arbol, volver a
+    // la rama es un movimiento de verdad y se anota.
+    const desconectado = ejecutar(repoConRamaDesdeMain(), 'git checkout --detach main');
+    expect(texto(desconectado)).toContain('HEAD is now at');
+    expect(ramaActual(desconectado.estado)).toBeNull();
+    const resultado = ejecutar(desconectado.estado, 'git checkout main');
+    expect(texto(resultado)).toContain("Switched to branch 'main'");
   });
 
   it('git switch -c crea y cambia en un paso', () => {
@@ -705,12 +727,12 @@ describe('git switch y git checkout', () => {
     expect(texto(aUnIdentificador)).toContain('a branch is expected, got commit');
     expect(texto(aUnIdentificador)).toContain('--detach');
     expect(texto(ejecutar(estado, 'git switch'))).toContain('missing branch');
-    expect(texto(ejecutar(estado, 'git switch -c tailandesa'))).toContain('already exists');
+    expect(texto(ejecutar(estado, 'git switch -c trabajo'))).toContain('already exists');
   });
 
   it('git checkout cambia de rama y -b crea', () => {
-    expect(ramaActual(ejecutar(repoConRamaDesdeMain(), 'git checkout tailandesa').estado)).toBe(
-      'tailandesa',
+    expect(ramaActual(ejecutar(repoConRamaDesdeMain(), 'git checkout trabajo').estado)).toBe(
+      'trabajo',
     );
     expect(ramaActual(ejecutar(repoConRamaDesdeMain(), 'git checkout -b chilena').estado)).toBe(
       'chilena',
@@ -742,11 +764,11 @@ describe('git switch y git checkout', () => {
 
 describe('git merge', () => {
   it('la fusion limpia registra los archivos que trae la otra rama', () => {
-    const resultado = ejecutar(repoConRamaDesdeMain(), 'git merge tailandesa');
+    const resultado = ejecutar(repoConRamaDesdeMain(), 'git merge trabajo');
     const union = resultado.estado.confirmaciones.at(-1);
 
     expect(texto(resultado)).toContain("Merge made by the 'ort' strategy.");
-    expect(union?.mensaje).toBe("Merge branch 'tailandesa'");
+    expect(union?.mensaje).toBe("Merge branch 'trabajo'");
     expect(union?.archivos).toContain('recetas/pad-thai.md');
   });
 
@@ -962,12 +984,27 @@ describe('git stash', () => {
   it('list y list --stat describen la pila', () => {
     const estado = correr(repoLineal(), 'git stash push -m "uno"');
     expect(texto(ejecutar(estado, 'git stash list'))).toBe('stash@{0}: On main: uno');
-    expect(texto(ejecutar(estado, 'git stash list --stat'))).toContain('ingredientes.md | 1 +');
+
+    // Con `--stat`, Git deja una linea en blanco entre la entrada y su resumen,
+    // y cuenta las lineas de verdad.
+    expect(texto(ejecutar(estado, 'git stash list --stat')).split('\n')).toEqual([
+      'stash@{0}: On main: uno',
+      '',
+      ' ingredientes.md | 3 ++-',
+      ' cocineros.md    | 1 +',
+      ' 2 files changed, 3 insertions(+), 1 deletion(-)',
+    ]);
   });
 
-  it('show describe los archivos de una entrada', () => {
+  it('show describe los archivos de una entrada, y con -p muestra el parche', () => {
     const estado = correr(repoLineal(), 'git stash push -m "uno"');
-    expect(texto(ejecutar(estado, 'git stash show'))).toContain('2 files changed');
+    expect(texto(ejecutar(estado, 'git stash show'))).toContain(
+      '2 files changed, 3 insertions(+), 1 deletion(-)',
+    );
+
+    const parche = texto(ejecutar(estado, 'git stash show -p'));
+    expect(parche).toContain('diff --git a/ingredientes.md b/ingredientes.md');
+    expect(parche).toContain('+asdf probando');
   });
 
   it('apply devuelve los archivos como modificados y conserva la entrada', () => {
@@ -1011,12 +1048,12 @@ describe('git stash', () => {
 
 describe('git reflog', () => {
   it('registra los movimientos de HEAD en orden, del mas reciente al mas antiguo', () => {
-    const estado = correr(repoConRamaDesdeMain(), 'git switch tailandesa', 'git switch main');
+    const estado = correr(repoConRamaDesdeMain(), 'git switch trabajo', 'git switch main');
     const salida = texto(ejecutar(estado, 'git reflog'));
     const filas = salida.split('\n');
 
-    expect(filas[0]).toContain('HEAD@{0}: checkout: moving from tailandesa to main');
-    expect(filas[1]).toContain('HEAD@{1}: checkout: moving from main to tailandesa');
+    expect(filas[0]).toContain('HEAD@{0}: checkout: moving from trabajo to main');
+    expect(filas[1]).toContain('HEAD@{1}: checkout: moving from main to trabajo');
     expect(salida).toContain('commit');
   });
 
@@ -1028,7 +1065,7 @@ describe('git reflog', () => {
 
 describe('git rebase', () => {
   it('avisa cuando la rama ya esta al dia', () => {
-    const estado = correr(repoConRamaDesdeMain(), 'git switch tailandesa');
+    const estado = correr(repoConRamaDesdeMain(), 'git switch trabajo');
     expect(texto(ejecutar(estado, 'git rebase HEAD~1'))).toContain('is up to date');
   });
 
@@ -1057,7 +1094,7 @@ describe('git rebase', () => {
   });
 
   it('conserva el mensaje y los archivos de cada confirmacion reescrita', () => {
-    const partida = correr(repoConRamaDesdeMain(), 'git switch tailandesa');
+    const partida = correr(repoConRamaDesdeMain(), 'git switch trabajo');
     const despues = ejecutar(partida, 'git rebase main').estado;
     const salida = texto(ejecutar(despues, 'git log --oneline'));
 

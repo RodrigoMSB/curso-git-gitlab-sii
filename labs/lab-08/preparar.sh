@@ -9,17 +9,21 @@
 #
 # Deja tres cosas, una al lado de la otra:
 #
-#   recetario/            el repositorio donde trabaja el participante, con
-#                         `origin` apuntando al paquete de al lado
-#   recetario.bundle      ese paquete, que hace de remoto
-#   condimentos.bundle    un segundo repositorio, chico, para incorporar como
-#                         submodulo
+#   recetario/          el repositorio donde trabaja el participante, con
+#                       `origin` apuntando al paquete de al lado
+#   recetario.bundle    ese paquete, que hace de `origin`
+#   upstream.bundle     el proyecto original del que salio la copia, **dos
+#                       confirmaciones por delante**: sin esa diferencia,
+#                       traer desde el segundo remoto no traeria nada y los
+#                       puntos 1.4 a 1.6 del enunciado se quedarian sin materia
 #
-# **No hay `.gitmodules`**: incorporar el submodulo es el laboratorio.
+# No hay repositorio de condimentos: el submodulo salio del laboratorio porque
+# Git bloquea el transporte `file` desde la version 2.38.1 (CVE-2022-39253) y
+# en esta sala todos los remotos viven en carpetas del disco.
 #
 # Este laboratorio no lleva escenario de simulador. Lo que enseña son dos
-# remotos, un submodulo y un gancho, y el motor no modela ninguna de las tres
-# cosas (seccion 24 de docs/arquitectura.md).
+# remotos y un gancho, y el motor no modela ninguna de las dos cosas
+# (seccion 24 de docs/arquitectura.md).
 #
 # Determinista con las tecnicas de siempre: fechas como epoca, autor y
 # confirmador fijados, finales de linea fijados en el repositorio generado.
@@ -102,9 +106,8 @@ echo
 echo "Preparando el escenario del laboratorio 08"
 echo
 
-# El clon de prueba de la parte 2 y los dos paquetes se rehacen enteros.
-rm -rf "$TRABAJO/recetario-copia" "$TRABAJO/recetario.bundle" \
-  "$TRABAJO/condimentos.bundle" "$TRABAJO/.condimentos"
+# Los paquetes se rehacen enteros.
+rm -rf "$TRABAJO/recetario.bundle" "$TRABAJO/upstream.bundle" "$TRABAJO/.upstream"
 
 CORREO_JUANA='juana.perez@recetario.cl'
 CORREO_MARCO='marco.diaz@recetario.cl'
@@ -199,56 +202,59 @@ cat > cocineros.md <<'ARCHIVO'
 ARCHIVO
 confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1727792100 'Agrega la tabla de cocineros'
 
-# El paquete que hace de remoto, y el remoto que apunta a el. En las demas
+# El paquete que hace de `origin`, con las cuatro confirmaciones. En las demas
 # semillas `preparar.sh` quita el remoto; aqui se pone a proposito, porque el
 # remoto es la materia del ejercicio.
 git bundle create -q "$TRABAJO/recetario.bundle" --all HEAD
+
+# --- El proyecto original, dos confirmaciones por delante --------------------
+#
+# Se arma clonando el paquete de origin en una carpeta aparte, agregandole lo
+# que el proyecto original avanzo, y empaquetandolo. La carpeta se borra: lo
+# que el participante recibe es el paquete.
+#
+# Las dos confirmaciones tocan `ingredientes.md`, que es un archivo que el
+# recetario ya tiene, de modo que traerlas sea una fusion de verdad y no la
+# aparicion de archivos nuevos.
+
+git clone -q "$TRABAJO/recetario.bundle" "$TRABAJO/.upstream"
+cd "$TRABAJO/.upstream"
+configurar
+
+# 5 · 15 de octubre de 2024
+cat > ingredientes.md <<'ARCHIVO'
+# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+- comino molido
+ARCHIVO
+confirmar 'Juana Perez' "$CORREO_JUANA" 1729001700 'Suma el comino a la lista base'
+
+# 6 · 29 de octubre de 2024
+cat > ingredientes.md <<'ARCHIVO'
+# Ingredientes
+
+- choclo
+- carne de vacuno
+- cebolla
+- aji de color
+- comino molido
+- oregano
+ARCHIVO
+confirmar 'Marco Diaz' "$CORREO_MARCO" 1730212200 'Suma el oregano a la lista base'
+
+git bundle create -q "$TRABAJO/upstream.bundle" --all HEAD
+cd "$TRABAJO"
+rm -rf "$TRABAJO/.upstream"
+
+# El remoto de origen queda puesto, apuntando al paquete de al lado.
+cd "$REPOSITORIO"
 git remote add origin "$TRABAJO/recetario.bundle"
 git fetch -q origin
 git branch --set-upstream-to=origin/main main >/dev/null 2>&1 || true
-
-# --- Los condimentos, que entran como submodulo ------------------------------
-#
-# Se arman en una carpeta aparte, se empaquetan y la carpeta se borra: lo que
-# el participante recibe es el paquete, que es lo que `git submodule add`
-# necesita. Que el submodulo no este puesto es el ejercicio.
-
-mkdir -p "$TRABAJO/.condimentos"
-cd "$TRABAJO/.condimentos"
-
-if git init -q -b main --ref-format=files . 2>/dev/null; then
-  :
-else
-  git init -q -b main .
-fi
-configurar
-
-# 1 · 13 de agosto de 2024
-cat > README.md <<'ARCHIVO'
-# Condimentos del casino
-
-Tabla de condimentos compartida entre los recetarios de las distintas
-unidades. Se incorpora a cada recetario como submodulo, de modo que la
-correccion de una cantidad llegue a todos.
-ARCHIVO
-confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1723554900 'Agrega el README de los condimentos'
-
-# 2 · 27 de agosto de 2024
-cat > condimentos.md <<'ARCHIVO'
-# Condimentos
-
-| Condimento | Presentacion | Rinde |
-|---|---|---|
-| Aji de color | Frasco de 100 g | 40 porciones |
-| Comino molido | Frasco de 50 g | 60 porciones |
-| Oregano | Bolsa de 100 g | 80 porciones |
-| Merken | Frasco de 80 g | 30 porciones |
-ARCHIVO
-confirmar 'Sofia Rojas' "$CORREO_SOFIA" 1724770800 'Agrega la tabla de condimentos'
-
-git bundle create -q "$TRABAJO/condimentos.bundle" --all HEAD
-cd "$TRABAJO"
-rm -rf "$TRABAJO/.condimentos"
 
 cd "$REPOSITORIO"
 
@@ -260,9 +266,9 @@ echo
 echo "  El repositorio quedo en:"
 echo "      $REPOSITORIO"
 echo
-echo "  Y al lado, los dos paquetes que vas a usar:"
-echo "      recetario.bundle    el remoto"
-echo "      condimentos.bundle  el submodulo"
+echo "  Y al lado, los dos paquetes que hacen de remotos:"
+echo "      recetario.bundle    tu origin"
+echo "      upstream.bundle     el proyecto original, dos confirmaciones adelante"
 echo
 echo "  Tu primera orden es:"
 echo "      cd $REPOSITORIO_DICHO"
@@ -272,6 +278,6 @@ echo "      git log --oneline"
 echo "      git remote -v"
 echo
 echo "  Este laboratorio va entero en tu terminal: es el unico que no se"
-echo "  puede seguir en el simulador, porque enseña remotos, un submodulo"
-echo "  y un gancho, y el motor no modela ninguna de las tres cosas."
+echo "  puede seguir en el simulador, porque enseña remotos y un gancho,"
+echo "  y el motor no modela ninguna de las dos cosas."
 echo

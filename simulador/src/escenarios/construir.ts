@@ -9,6 +9,7 @@
 import { agregarConfirmacion } from '../core/confirmaciones';
 import { normalizar } from '../core/contenido';
 import { estadoVacio } from '../core/estado';
+import { huella } from '../core/identificadores';
 import type { Archivo, EstadoRepositorio } from '../core/tipos';
 import type { ArchivoDeclarado, EscenarioDeclarado } from './tipos';
 
@@ -142,11 +143,14 @@ export function construirEscenario(declaracion: EscenarioDeclarado): EstadoRepos
       mensaje: etiqueta.mensaje,
     })),
     puntero: { tipo: 'rama', rama: declaracion.posicion },
-    guardados: (declaracion.guardados ?? []).map((guardado) => ({
+    guardados: (declaracion.guardados ?? []).map((guardado, posicion) => ({
       mensaje: guardado.mensaje,
       archivos: guardado.archivos.map(archivoDeclarado),
       rama: guardado.rama,
       idBase: resolver(guardado.sobre),
+      // Cada entrada es un objeto propio, igual que en Git: dos guardados
+      // hechos sobre el mismo punto no comparten identificador.
+      id: huella(`stash:${declaracion.id}:${guardado.mensaje}:${posicion}`),
     })),
   };
 

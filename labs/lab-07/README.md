@@ -198,11 +198,13 @@ git stash list
 
 Quedó una sola.
 
-### 1.10 El conflicto al recuperar
+### 1.10 Cuando el directorio estorba
 
-Esta es la parte que sorprende. Modifica a mano la misma línea que trae la entrada que queda.
+Esta es la parte que sorprende, y lo que sorprende no es lo que casi todos esperan.
 
-Agrega a `ingredientes.md` una línea distinta en el mismo lugar.
+Te queda una entrada en la pila, la de los ingredientes tailandeses. Ensucia a mano ese mismo archivo, con otra cosa.
+
+Agrega a `ingredientes.md` una línea distinta.
 
 ```
 - leche condensada
@@ -214,27 +216,39 @@ Y ahora intenta recuperar.
 git stash pop
 ```
 
-Choca. Los marcadores son los mismos que viste en el laboratorio 05.
+**No choca. Se niega.** La diferencia importa y es la que casi nadie tiene clara.
+
+Git no intentó combinar tu línea con la de la entrada. Vio que `ingredientes.md` tiene trabajo sin confirmar, vio que la entrada también lo toca, y **se detuvo antes de tocar nada**: `Your local changes to the following files would be overwritten by merge`. No hay marcadores de conflicto por ninguna parte, porque nunca llegó a mezclar.
+
+Mira las dos cosas que quedaron.
 
 ```
-git status
-cat ingredientes.md
-```
-
-Resuélvelo a mano, deja el archivo como quieras y quita los marcadores.
-
-```
-git add ingredientes.md
 git status
 git stash list
 ```
 
-Fíjate en un detalle que confunde a mucha gente. **Cuando `pop` choca, la entrada no se borra.** Git la deja por seguridad. Si ya resolviste y no la necesitas, la sacas tú.
+Tu archivo está intacto, con tu línea y sin marcadores. Y **la entrada sigue en la pila**: Git no saca nada cuando no pudo aplicar. Esa es la red de seguridad.
+
+Para salir tienes dos puertas y las dos son buenas. Si lo que acabas de escribir sirve, lo guardas también con `git stash push -m "..."` y decides después cuál de las dos entradas aplicas. Si era una prueba, lo descartas.
+
+Aquí era una prueba.
 
 ```
-git stash drop
+git restore ingredientes.md
+git status
+```
+
+El directorio quedó limpio otra vez. Y ahora sí.
+
+```
+git stash pop
+git status
 git stash list
 ```
+
+Entró sin reclamar y la pila quedó vacía. **Cuando `pop` sí aplica, saca; cuando no puede, no saca nada.** Esa es la regla entera.
+
+Quédate con la distinción, porque los dos verbos se parecen y hacen cosas distintas. `git restore <archivo>` descarta lo que tienes en el disco. `git stash drop` descarta una entrada de la pila. Ninguna de las dos pregunta.
 
 ### 1.11 Vaciar la pila
 
@@ -333,6 +347,8 @@ Mientras el trabajo sea solo tuyo, el rebase es limpio y conveniente. Cuando ya 
 ## Parte 3 · Rebase interactivo
 
 **Tiempo sugerido, 25 minutos.**
+
+**Esta parte entera va en tu terminal.** El rebase interactivo abre un editor con la lista de confirmaciones y se eligen las acciones línea por línea. No es una orden que al simulador le falte: es un modo de trabajo que esa pantalla no tiene, y por eso la declara en vez de fingirlo.
 
 Tus cuatro confirmaciones tienen mensajes que no sirven. Vas a arreglar eso.
 

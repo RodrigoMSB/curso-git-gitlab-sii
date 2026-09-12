@@ -126,11 +126,11 @@ describe('consola', () => {
 
 describe('sesion y linea de tiempo', () => {
   it('7.1 retroceder devuelve el estado y la consola de ese momento', () => {
-    const sesion = correrSesion('lab-07', 'git switch tailandesa', 'git switch main');
+    const sesion = correrSesion('lab-07', 'git switch trabajo', 'git switch main');
     expect(sesion.pasos).toHaveLength(3);
 
     const atras = retroceder(sesion);
-    expect(estadoDe(atras).puntero).toEqual({ tipo: 'rama', rama: 'tailandesa' });
+    expect(estadoDe(atras).puntero).toEqual({ tipo: 'rama', rama: 'trabajo' });
     expect(renglonesDe(atras).length).toBeLessThan(renglonesDe(sesion).length);
 
     const adelante = avanzar(atras);

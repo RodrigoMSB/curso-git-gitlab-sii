@@ -21,9 +21,7 @@ TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-07"
 REPOSITORIO="$TRABAJO/recetario"
 REPOSITORIO_DICHO='taller-git-trabajo/lab-07/recetario'
 
-# La rama de trabajo del escenario. El enunciado la llama `trabajo` y el
-# escenario del simulador la llama `tailandesa`: mientras eso no se resuelva,
-# el verificador acepta la que exista y lo dice.
+# La rama de trabajo del escenario, que el enunciado nombra en cada paso.
 RAMA_DE_TRABAJO=''
 
 MODO=final
@@ -93,13 +91,8 @@ fi
 
 RAMAS=$(g for-each-ref --format='%(refname:short)' refs/heads | sort | paste -sd ' ' -)
 
-if [ "$HAY_REPOSITORIO" = si ]; then
-  for candidata in trabajo tailandesa; do
-    if g show-ref --verify --quiet "refs/heads/$candidata"; then
-      RAMA_DE_TRABAJO="$candidata"
-      break
-    fi
-  done
+if [ "$HAY_REPOSITORIO" = si ] && g show-ref --verify --quiet refs/heads/trabajo; then
+  RAMA_DE_TRABAJO='trabajo'
 fi
 
 # --- Estado inicial ----------------------------------------------------------
@@ -154,12 +147,16 @@ if [ "$MODO" = escenario ] && [ "$HAY_REPOSITORIO" = si ]; then
       "$MENSAJES"
   fi
 
-  # La receta a medio escribir, sin seguimiento: es lo que se guarda en 1.3.
-  if [ "$(suciedad)" = '?? recetas/curry-massaman.md' ]; then
-    aprobado 'hay una receta a medio escribir sin seguimiento, para guardar'
+  # La receta a medio reescribir. **En seguimiento y modificada**, no sin
+  # seguimiento: `git stash` sin `-u` no toca lo que nunca entro, y con la
+  # receta fuera del seguimiento la parte 1 entera se queda sin materia.
+  # La primera columna es un espacio porque el cambio no esta preparado: es la
+  # leccion de la seccion 27, y por eso `suciedad` no lo recorta.
+  if [ "$(suciedad)" = ' M recetas/curry-massaman.md' ]; then
+    aprobado 'hay una receta versionada y reescrita a medias, que git stash si se lleva'
   else
     fallido 'el trabajo a medias del directorio' \
-      'solo recetas/curry-massaman.md sin seguimiento' "$(suciedad)"
+      'recetas/curry-massaman.md modificada y en seguimiento' "$(suciedad)"
   fi
 
   # El guardado temporal parte vacio: crear la primera entrada es el ejercicio.

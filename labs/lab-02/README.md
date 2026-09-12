@@ -16,11 +16,11 @@ El repositorio con el que vas a trabajar no es el tuyo. Tiene cinco confirmacion
 
 ## Preparación
 
-Desde la carpeta del laboratorio.
+Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
 
 ```
-./preparar.sh
-cd ../../../taller-git-trabajo/lab-02/recetario
+labs/lab-02/preparar.sh
+cd ../taller-git-trabajo/lab-02/recetario
 ```
 
 El script arma el escenario y verifica que quedó bien antes de devolverte el control.

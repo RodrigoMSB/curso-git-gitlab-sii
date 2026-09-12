@@ -179,10 +179,17 @@ describe('escenarios de laboratorio', () => {
 
   it('el laboratorio 07 arranca en la rama de trabajo, con algo a medias encima', () => {
     const estado = escenarioPorId('lab-07');
-    expect(ramaActual(estado)).toBe('tailandesa');
+    // La rama se llama como la nombra el enunciado.
+    expect(ramaActual(estado)).toBe('trabajo');
+    // Y lo que quedo a medias esta **en seguimiento y modificado**: `git stash`
+    // sin `-u` no toca lo que nunca entro, y sin eso la parte 1 del enunciado
+    // se queda sin materia.
     expect(
-      estado.archivos.filter((archivo) => archivo.estado === 'sin-seguimiento').map((a) => a.nombre),
+      estado.archivos.filter((archivo) => archivo.estado === 'modificado').map((a) => a.nombre),
     ).toEqual(['recetas/curry-massaman.md']);
+    expect(
+      estado.archivos.filter((archivo) => archivo.estado === 'sin-seguimiento'),
+    ).toHaveLength(0);
     // Los mensajes que el ejercicio manda arreglar.
     const mensajes = estado.confirmaciones.map((confirmacion) => confirmacion.mensaje);
     expect(mensajes).toEqual(expect.arrayContaining(['wip', 'cambios', 'mas cambios', 'arreglos']));

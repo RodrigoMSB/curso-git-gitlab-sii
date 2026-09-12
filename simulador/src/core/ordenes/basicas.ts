@@ -59,6 +59,15 @@ export const ordenConfig: Manejador = (estado, argumentos) => {
     return fallo(estado, 'usage: git config [--global] <name> [<value>]');
   }
 
+  // `--unset` borra la clave. El motor devolvia su valor, que es lo que hace
+  // sin opciones: la orden se aceptaba y no quitaba nada.
+  if (tieneOpcion(argumentos, '--unset')) {
+    const ambitoActual = { ...estado.config[ambito] };
+    if (!Object.hasOwn(ambitoActual, clave)) return fallo(estado);
+    delete ambitoActual[clave];
+    return ok({ ...estado, config: { ...estado.config, [ambito]: ambitoActual } });
+  }
+
   const valor = restantes[1];
   if (valor === undefined) {
     const guardado = global ? estado.config.global[clave] : estado.config.local[clave];

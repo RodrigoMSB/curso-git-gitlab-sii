@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { ejecutar } from '../src/core/motor';
 import { idActual, ramaActual, ramaPorNombre, confirmacionPorId } from '../src/core/estado';
 import { antepasados, huerfanas } from '../src/core/grafo';
+import { textoDeTrabajo } from '../src/core/contenido';
 import { correr, correrHasta, ids, repoConRamaDeTrabajo, repoConRamas, repoLineal, texto } from './ayudas';
 
 describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', () => {
@@ -84,12 +85,12 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
     // El laboratorio 07 es el que tiene una rama de trabajo con varias
     // confirmaciones propias, que es lo que el rebase reescribe.
     const partida = repoConRamaDeTrabajo();
-    const originales = [...antepasados(partida, ramaPorNombre(partida, 'tailandesa')?.id ?? '')];
+    const originales = [...antepasados(partida, ramaPorNombre(partida, 'trabajo')?.id ?? '')];
     const antesDeLaBase = new Set(antepasados(partida, ramaPorNombre(partida, 'main')?.id ?? ''));
     const reescritas = originales.filter((id) => !antesDeLaBase.has(id));
 
     const despues = ejecutar(partida, 'git rebase main').estado;
-    const resultantes = antepasados(despues, ramaPorNombre(despues, 'tailandesa')?.id ?? '');
+    const resultantes = antepasados(despues, ramaPorNombre(despues, 'trabajo')?.id ?? '');
 
     expect(reescritas).toHaveLength(4);
     for (const original of reescritas) {
@@ -134,6 +135,44 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
     const despues = ejecutar(partida, 'git stash pop').estado;
     expect(despues.guardados).toHaveLength(1);
     expect(despues.guardados[0]?.mensaje).toContain('primero');
+  });
+
+  it('8.6 bis · recuperar sobre un archivo sucio se niega antes de mezclar, y conserva la entrada', () => {
+    // Es el punto 1.10 del laboratorio 07, el que el enunciado llama «la parte
+    // que sorprende». Lo que sorprende no son marcadores de conflicto: es que
+    // Git no llega a mezclar. Ve el trabajo sin confirmar, ve que la entrada
+    // toca el mismo archivo, y se detiene antes de tocar nada.
+    const partida = correr(
+      repoLineal(),
+      'echo "- salsa de pescado" >> ingredientes.md',
+      'git stash push -m "tailandeses"',
+      'echo "- leche condensada" >> ingredientes.md',
+    );
+    const antes = textoDeTrabajo(partida, 'ingredientes.md');
+
+    const resultado = ejecutar(partida, 'git stash pop');
+    expect(resultado.error).toBe(true);
+    const salida = texto(resultado);
+    expect(salida).toContain(
+      'error: Your local changes to the following files would be overwritten by merge:',
+    );
+    expect(salida).toContain('\tingredientes.md');
+    expect(salida).toContain('The stash entry is kept in case you need it again.');
+    // Ni un marcador de conflicto: nunca llego a mezclar.
+    expect(salida).not.toContain('<<<<<<<');
+    expect(textoDeTrabajo(resultado.estado, 'ingredientes.md')).toBe(antes);
+    expect(resultado.estado.guardados).toHaveLength(1);
+
+    // `apply` se niega igual, pero no dice que conserva la entrada: nunca saca
+    // nada de la pila.
+    expect(texto(ejecutar(partida, 'git stash apply'))).not.toContain('The stash entry is kept');
+
+    // Descartado lo del disco, la misma orden entra sin reclamar y vacia la pila.
+    const limpio = ejecutar(partida, 'git restore ingredientes.md').estado;
+    const recuperado = ejecutar(limpio, 'git stash pop');
+    expect(recuperado.error).toBe(false);
+    expect(recuperado.estado.guardados).toHaveLength(0);
+    expect(textoDeTrabajo(recuperado.estado, 'ingredientes.md')).toContain('salsa de pescado');
   });
 
   it('8.7 la reversion no reescribe historia: crea una confirmacion nueva y conserva la original', () => {
@@ -182,14 +221,14 @@ describe('secuencias completas exigidas por los criterios de aceptacion', () => 
   it('CA6: el rebase no reutiliza ningun identificador original y los conserva', () => {
     const partida = repoConRamaDeTrabajo();
     const idsOriginales = ids(partida);
-    const puntaOriginal = ramaPorNombre(partida, 'tailandesa')?.id ?? '';
+    const puntaOriginal = ramaPorNombre(partida, 'trabajo')?.id ?? '';
     const base = ramaPorNombre(partida, 'main')?.id ?? '';
     const reescritas = [...antepasados(partida, puntaOriginal)].filter(
       (id) => !antepasados(partida, base).has(id),
     );
 
     const despues = ejecutar(partida, 'git rebase main').estado;
-    const resultante = [...antepasados(despues, ramaPorNombre(despues, 'tailandesa')?.id ?? '')];
+    const resultante = [...antepasados(despues, ramaPorNombre(despues, 'trabajo')?.id ?? '')];
 
     for (const original of reescritas) {
       expect(resultante).not.toContain(original);

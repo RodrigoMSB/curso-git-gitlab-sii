@@ -126,6 +126,15 @@ export interface EntradaGuardado {
   readonly rama: string;
   /** Confirmacion sobre la que se guardo. */
   readonly idBase: string;
+  /**
+   * Identificador **de la entrada**, que en Git es una confirmacion propia.
+   *
+   * No es el de la confirmacion sobre la que se guardo: dos entradas hechas
+   * sobre el mismo punto tienen el mismo `idBase` y son objetos distintos. Es
+   * el que `git stash drop` imprime, y el que la seccion de rescate del
+   * laboratorio 07 dice que hay que anotar para poder recuperarla.
+   */
+  readonly id: string;
 }
 
 /** Entrada del registro de referencias. */

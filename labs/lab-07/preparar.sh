@@ -2,10 +2,12 @@
 # Preparacion del escenario del laboratorio 07 (forma de la seccion 18 de
 # docs/arquitectura.md).
 #
-# `main` con cuatro confirmaciones y una rama de trabajo con otras cuatro,
-# separada desde la segunda. El puntero queda **en la rama de trabajo**, que es
-# donde el enunciado arranca, y en el directorio hay una receta a medio escribir
-# sin seguimiento: es lo que el participante guarda temporalmente en su Parte 1.
+# `main` con cuatro confirmaciones y la rama `trabajo` con otras cuatro,
+# separada desde la segunda. El puntero queda **en `trabajo`**, que es donde el
+# enunciado arranca, y en el directorio hay una receta ya versionada y
+# reescrita a medias: es lo que el participante guarda temporalmente en su
+# Parte 1. Tiene que estar en seguimiento, porque `git stash` sin `-u` no toca
+# lo que nunca entro al repositorio.
 #
 # Los mensajes de la rama de trabajo son pobres a proposito —wip, cambios, mas
 # cambios, arreglos— porque son los que la Parte 3 junta y reescribe.
@@ -189,7 +191,7 @@ confirmar 'Juana Perez' "$CORREO_JUANA" 1722347100 'Agrega la tabla de cocineros
 # participante entre medio de lo que main avanzaba. Son las que la Parte 3
 # reescribe con `rebase -i`, asi que **no hay que mejorarlas aqui**.
 
-git switch -q -c tailandesa "$BASE"
+git switch -q -c trabajo "$BASE"
 
 # 25 de junio de 2024
 mkdir -p recetas
@@ -226,17 +228,26 @@ cat > recetas/curry-verde.md <<'ARCHIVO'
 
 Pasta verde, leche de coco, albahaca tailandesa y berenjena.
 ARCHIVO
-confirmar "$NOMBRE_PARTICIPANTE" "$CORREO_PARTICIPANTE" 1719949200 'arreglos'
-
-# --- Lo que quedo a medias cuando lo interrumpieron --------------------------
-#
-# Sin seguimiento y sin confirmar: es lo que el participante guarda con
-# `git stash` en el punto 1.3. El guardado temporal parte vacio a proposito,
-# porque crear la primera entrada es el ejercicio.
 cat > recetas/curry-massaman.md <<'ARCHIVO'
 # Curry massaman
 
 Pasta massaman, leche de coco, papa y mani tostado.
+ARCHIVO
+confirmar "$NOMBRE_PARTICIPANTE" "$CORREO_PARTICIPANTE" 1719949200 'arreglos'
+
+# --- Lo que quedo a medias cuando lo interrumpieron --------------------------
+#
+# La receta **ya esta versionada** y se reescribe a medias encima: es lo que el
+# participante guarda con `git stash` en el punto 1.3. Tiene que estar en
+# seguimiento, porque `git stash` sin `-u` no toca lo que nunca entro. El
+# guardado temporal parte vacio a proposito, porque crear la primera entrada es
+# el ejercicio.
+cat > recetas/curry-massaman.md <<'ARCHIVO'
+# Curry massaman
+
+Pasta massaman, leche de coco, papa y mani tostado.
+Tiempo de preparacion:
+Se sofrie la pasta, se agrega la leche de coco y
 ARCHIVO
 
 if ! "$RAIZ/verificar.sh" --escenario; then
