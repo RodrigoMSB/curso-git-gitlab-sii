@@ -128,8 +128,15 @@ function coincidencias(estado: EstadoRepositorio, ruta: string): readonly Archiv
 export const ordenAdd: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
+  // `-a` no existe en `git add`: es de `git commit`. Se tomaba por `--all`, o
+  // sea que el simulador inventaba una opcion. Ahora responde lo que Git
+  // (seccion 59.7).
+  if (tieneOpcion(argumentos, '-a')) {
+    return fallo(estado, "error: unknown switch `a'", 'usage: git add [<options>] [--] <pathspec>...');
+  }
+
   const rutas = posicionales(argumentos);
-  const todo = tieneOpcion(argumentos, '-A', '--all', '-a');
+  const todo = tieneOpcion(argumentos, '-A', '--all');
   const forzado = tieneOpcion(argumentos, '-f', '--force');
   const exclusiones = exclusionesDe(estado);
   /** Una regla solo tapa lo que todavia no esta en seguimiento. */

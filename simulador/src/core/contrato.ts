@@ -140,6 +140,8 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   init: ['-b', '--initial-branch'],
   config: ['--global', '--local', '--list', '-l', '--get', '--unset'],
   status: ['-s', '--short', '--long'],
+  // `-a` no existe en Git; esta aqui para que llegue al manejador y este
+  // responda `error: unknown switch`, que es la tercera respuesta.
   add: ['-A', '--all', '-a', '-f', '--force'],
   // `--source` salio: `git restore --source=<ref> <archivo>` restaura desde
   // otra confirmacion y el motor restauraba desde la actual, en silencio.

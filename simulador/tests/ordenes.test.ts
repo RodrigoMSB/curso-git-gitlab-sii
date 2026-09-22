@@ -1146,8 +1146,19 @@ describe('las opciones que el contrato aceptaba y nadie leia', () => {
 
   it('git rebase --abort no rebasa aunque lleve una rama detras', () => {
     const estado = escenarioPorId('lab-07');
+    // Comprobado contra Git 2.54: con algo detras responde el uso, y sin
+    // nada, `fatal: no rebase in progress`.
     const resultado = ejecutar(estado, 'git rebase --abort main');
-    expect(texto(resultado)).toContain('No rebase in progress');
+    expect(texto(resultado)).toContain('usage: git rebase');
+    expect(resultado.estado).toBe(estado);
+    expect(texto(ejecutar(estado, 'git rebase --abort'))).toBe('fatal: no rebase in progress');
+  });
+
+  it('git add -a responde lo que Git, que no la conoce', () => {
+    // Se tomaba por `--all`. En Git es `error: unknown switch 'a'`.
+    const estado = escenarioPorId('lab-02');
+    const resultado = ejecutar(estado, 'git add -a');
+    expect(texto(resultado)).toContain("error: unknown switch `a'");
     expect(resultado.estado).toBe(estado);
   });
 

@@ -252,8 +252,20 @@ export const ordenRebase: Manejador = (estado, argumentos) => {
 
   // El rebase del motor nunca se detiene a medias, asi que nunca hay uno en
   // curso que abortar. Se lee aparte y no se deduce de que falte la base:
-  // `git rebase --abort main` rebasaba sobre main.
-  if (tieneOpcion(argumentos, '--abort')) return fallo(estado, 'fatal: No rebase in progress?');
+  // `git rebase --abort main` rebasaba sobre main. Git no acepta nada detras
+  // de `--abort` y responde con el uso; sin nada detras, con el texto de
+  // Git 2.54, comprobado.
+  if (tieneOpcion(argumentos, '--abort')) {
+    if (posicionales(argumentos).length > 0) {
+      return fallo(
+        estado,
+        'usage: git rebase [-i] [options] [--exec <cmd>] [--onto <newbase> | --keep-base] [<upstream> [<branch>]]',
+        '   or: git rebase [-i] [options] [--exec <cmd>] [--onto <newbase>] --root [<branch>]',
+        '   or: git rebase --continue | --abort | --skip | --edit-todo',
+      );
+    }
+    return fallo(estado, 'fatal: no rebase in progress');
+  }
 
   const referencia = posicionales(argumentos)[0];
   if (referencia === undefined) {

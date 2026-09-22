@@ -3663,7 +3663,7 @@ La tabla de la sección 31 decía:
 
 | Antes | Ahora | Título que decía | Título que es |
 |---|---|---|---|
-| 09 | 08 | Conectar y publicar | **Dos remotos, un submódulo y un gancho** |
+| 09 | 08 | Conectar y publicar | **Dos remotos y un gancho** (el de entonces nombraba también el submódulo; sección 59) |
 | 10 | 09 | Etiquetas, versiones y limpieza | **Conectar y publicar** |
 
 El material del arquitecto tiene `LAB-09-dos-remotos-un-submodulo-y-un-gancho` y
@@ -3783,8 +3783,8 @@ pide leer el código por función, que es otro trabajo.
 
 ### 58.4 · Dos cosas que no se cambiaron, y por qué
 
-**El título del laboratorio 08 sigue prometiendo un submódulo.** Dice «Dos
-remotos, un submódulo y un gancho», y el laboratorio ya no lo practica. El
+**El título del laboratorio 08 sigue prometiendo un submódulo.** Lo nombra
+entre los dos remotos y el gancho, y el laboratorio ya no lo practica. El
 título es el del material del arquitecto y es el que la sección 31 fija, así
 que no se toca sin que él lo diga. El enunciado explica en su primer párrafo
 que la parte del submódulo se lee y no se ejecuta.
@@ -3916,10 +3916,11 @@ prueba impide volver a ponerlas sin ella.
 
 **`git add -a`** lo acepta el simulador como `--all`. En Git no existe:
 `error: unknown switch 'a'`. No es una opción descartada sino una inventada,
-así que la prueba del contrato la da por buena. Queda anotada y sin tocar:
-sacarla haría que el simulador dijera «en la terminal sí funciona», que es
-falso, y la respuesta correcta, la tercera, pide un mensaje de error por
-opción que el contrato hoy no tiene.
+así que la prueba del contrato la da por buena. Sacarla del contrato haría que
+el simulador dijera «en la terminal sí funciona», que es falso.
+
+> **Arreglada en 59.7** sin tocar el contrato: la opción sigue declarada para
+> que llegue al manejador, y el manejador responde el error de Git.
 
 ### 59.6 · La prueba del guion se aprobaba sola, y le faltaba un laboratorio
 
@@ -3943,4 +3944,51 @@ Y la lista de laboratorios que esas pruebas recorren **terminaba en el 06**.
 El 07 está armado y con escenario desde la sección 56, y ninguna de las
 pruebas del guion miraba sus órdenes. Entró, y pasó entero salvo el
 `--continue` de arriba.
+
+### 59.7 · El cierre del SPEC 014
+
+El SPEC 014 llegó después de los dos commits de arriba y pide lo mismo: el
+título del 08 y el agujero de la prueba. Se revisó criterio por criterio sobre
+lo ya hecho, y faltaban tres cosas.
+
+**La comprobación contra Git de verdad** (punto 2.6). Los comportamientos de
+59.3 se habían comprobado en el motor, con la opción y sin ella, pero lo que
+Git hace se había escrito de memoria. Se corrió cada uno en Git 2.54 sobre un
+repositorio hecho para la ocasión. Todo lo afirmado se sostuvo, salvo dos:
+
+| Orden | Lo que se había escrito | Lo que hace Git 2.54 | Ahora |
+|---|---|---|---|
+| `git rebase --abort main` | que respondía «no hay rebase en curso» | **el uso de la orden**, código 129: no acepta nada detrás de `--abort` | responde el uso |
+| `git rebase --abort` | `fatal: No rebase in progress?` | `fatal: no rebase in progress`, en minúsculas y sin pregunta | el texto de Git |
+
+Y `git add -a`, que 59.5 dejó anotado, **dice ahora lo que Git**:
+`error: unknown switch 'a'`. No se agregó nada al contrato (punto 4.1 del
+spec): `-a` ya estaba declarada, y el manejador pasó de obedecer una opción
+inventada a rechazarla con el texto de Git, que es la tercera respuesta.
+
+`git rebase` sin argumentos sigue diciendo `No rebase in progress?`, que es el
+texto de un Git más viejo; el 2.54 dice otra cosa. No es una opción, así que
+queda fuera de este spec y anotado aquí.
+
+**El título viejo en dos registros** (CA1). Las secciones 57.8 y 58.4 lo
+citaban textual. El criterio pide que no aparezca en ninguna parte, y se
+reescribieron nombrándolo sin citarlo. Una búsqueda en todo el repositorio no
+lo encuentra.
+
+**La cobertura, antes y después** (CA5). Se midió con la misma función que usa
+el recorrido de Cypress, sobre el commit anterior a la sección 59 y sobre el
+de hoy:
+
+| Laboratorio | Órdenes | Comparadas | En pantalla, antes | En pantalla, después |
+|---|---|---|---|---|
+| 02 | 52 | 37 | 71 % | 71 % |
+| 03 | 66 | 63 | 95 % | 95 % |
+| 04 | 85 | 78 | 92 % | 92 % |
+| 05 | 55 | 54 | 98 % | 98 % |
+| 06 | 51 | 45 | 88 % | 88 % |
+| 07 | 77 | 70 | 82 % | 82 % |
+
+Idéntica. Las cuarenta y una opciones que salieron no aparecen en ningún
+guion recorrido, que era la condición para sacarlas. El 07 no tiene recorrido
+de Cypress todavía; su cifra es la de la clasificación.
 
