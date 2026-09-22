@@ -1,5 +1,5 @@
 /**
- * El grafo tiene que caber (SPEC 016, CA1).
+ * El grafo tiene que caber (SPEC 016, CA1, y SPEC 017, CA8).
  *
  * En los ocho escenarios, en los dos modos y en los dos temas, cada etiqueta
  * de rama y el puntero de posicion tienen que estar a la vista: dentro de la
@@ -71,32 +71,48 @@ function todasALaVista(): void {
   });
 }
 
-function preparar(lab: string, modo: string, tema: string): void {
+const TIRADOR = '[role="separator"]';
+
+/**
+ * Los tres repartos extremos del CA8 del SPEC 017. El de partida es el que la
+ * pantalla trae; los otros dos se llevan con el teclado, que es exacto: Inicio
+ * al minimo y Fin al maximo.
+ */
+const REPARTOS = ['partida', 'minimo', 'maximo'] as const;
+
+function preparar(lab: string, modo: string, tema: string, reparto: (typeof REPARTOS)[number]): void {
   cy.visit(`/SIMULADOR.html?lab=${lab}`);
   if (modo === 'relator') cy.contains('button', 'modo relator').click();
-  if (tema === 'claro') cy.contains('button', 'tema claro').click();
+  if (tema === 'claro') cy.get('button[aria-label="Cambiar tema"]').click();
+  if (reparto === 'minimo') cy.get(TIRADOR).focus().type('{home}');
+  if (reparto === 'maximo') cy.get(TIRADOR).focus().type('{end}');
+  if (reparto !== 'partida') {
+    cy.get(TIRADOR).should('have.attr', 'aria-valuenow', reparto === 'minimo' ? '24' : '72');
+  }
 }
 
 for (const tema of ['oscuro', 'claro']) {
   for (const modo of ['normal', 'relator']) {
-    describe(`CA1 · todas las etiquetas a la vista · tema ${tema}, modo ${modo}`, () => {
-      for (const lab of ESCENARIOS) {
-        it(`laboratorio ${lab}`, () => {
-          preparar(lab, modo, tema);
-          // El 01 arranca sin repositorio: no hay nada que dibujar ni que
-          // perder de vista, y se comprueba que de verdad no haya etiquetas.
-          if (lab === '01') cy.get('g[data-forma]').should('not.exist');
-          else todasALaVista();
-        });
-      }
+    for (const reparto of REPARTOS) {
+      describe(`CA8 · etiquetas a la vista · ${tema}, ${modo}, consola en reparto ${reparto}`, () => {
+        for (const lab of ESCENARIOS) {
+          it(`laboratorio ${lab}`, () => {
+            preparar(lab, modo, tema, reparto);
+            // El 01 arranca sin repositorio: no hay nada que dibujar ni que
+            // perder de vista, y se comprueba que de verdad no haya etiquetas.
+            if (lab === '01') cy.get('g[data-forma]').should('not.exist');
+            else todasALaVista();
+          });
+        }
 
-      it('laboratorio 07 despues del rebase, que es donde se perdia main', () => {
-        preparar('07', modo, tema);
-        cy.get(CONSOLA).type('git rebase main{enter}', { delay: 4 });
-        cy.get('g[data-huerfana="si"]').should('have.length', 4);
-        cy.get('g[data-etiqueta="main"]').should('exist');
-        todasALaVista();
+        it('laboratorio 07 despues del rebase, que es donde se perdia main', () => {
+          preparar('07', modo, tema, reparto);
+          cy.get(CONSOLA).type('git rebase main{enter}', { delay: 4 });
+          cy.get('g[data-huerfana="si"]').should('have.length', 4);
+          cy.get('g[data-etiqueta="main"]').should('exist');
+          todasALaVista();
+        });
       });
-    });
+    }
   }
 }

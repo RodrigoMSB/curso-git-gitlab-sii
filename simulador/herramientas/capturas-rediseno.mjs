@@ -79,16 +79,42 @@ async function capturarTodo(salida, pagina) {
   // Hay tema claro si la barra ofrece el interruptor. La corrida de antes del
   // rediseño no lo tiene, y se captura solo en oscuro.
   await navegador.navegar(`${url}?lab=02`);
-  const hayTemaClaro = await navegador.evaluar(
-    `[...document.querySelectorAll('button')].some((b) => b.textContent.trim().startsWith('tema claro'))`,
-  );
+  // Desde el SPEC 017 el tema es un boton redondo con sol y luna; antes era
+  // un interruptor con texto. Se reconocen los dos para poder capturar una
+  // corrida anterior como base.
+  const BOTON_TEMA = `(document.querySelector('button[aria-label="Cambiar tema"]') ?? [...document.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith('tema claro')))`;
+  const hayTemaClaro = await navegador.evaluar(`Boolean(${BOTON_TEMA})`);
+  const hayTirador = await navegador.evaluar(`document.querySelector('[role="separator"]') !== null`);
   const temas = hayTemaClaro ? ['oscuro', 'claro'] : ['oscuro'];
 
   /** Deja la pantalla en el tema y el modo pedidos, recien abierta sobre un escenario. */
-  async function preparar(lab, tema, modo) {
+  async function preparar(lab, tema, modo, reparto = 'partida') {
     await navegador.navegar(`${url}?lab=${lab}`);
-    if (tema === 'claro') await navegador.pulsar('tema claro');
-    if (modo === 'relator') await navegador.pulsar('modo relator');
+    if (tema === 'claro') {
+      await navegador.evaluar(`${BOTON_TEMA}.click(); true`);
+      await esperar(200);
+    }
+    // A veces el clic llega antes de que la pantalla termine de montarse y no
+    // enciende nada; una captura de «relator» que en verdad es normal mide la
+    // letra de otro modo. Se reintenta hasta confirmarlo en el documento.
+    if (modo === 'relator') {
+      for (let intento = 0; intento < 5; intento += 1) {
+        await navegador.pulsar('modo relator');
+        if (await navegador.evaluar(`document.querySelector('[data-relator]').dataset.relator === 'true'`)) break;
+      }
+      if (!(await navegador.evaluar(`document.querySelector('[data-relator]').dataset.relator === 'true'`))) {
+        throw new Error(`el modo relator no se encendio en ${lab}`);
+      }
+    }
+    // El reparto de la consola se lleva con el teclado, que es exacto: Inicio
+    // al minimo y Fin al maximo (SPEC 017, punto 8.3).
+    if (reparto !== 'partida') {
+      await navegador.evaluar(`document.querySelector('[role="separator"]').focus(); true`);
+      const tecla = reparto === 'minimo' ? { key: 'Home', code: 'Home', windowsVirtualKeyCode: 36 } : { key: 'End', code: 'End', windowsVirtualKeyCode: 35 };
+      await navegador.pedir('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...tecla });
+      await navegador.pedir('Input.dispatchKeyEvent', { type: 'keyUp', ...tecla });
+      await esperar(200);
+    }
     // Sin foco en la consola no aparecen las lineas de ayuda, que dependen de
     // si el cursor esta ahi; se deja como al cargar, con el foco puesto.
     await esperar(350);
@@ -125,6 +151,17 @@ async function capturarTodo(salida, pagina) {
       await navegador.escribir('git merge andina');
       await esperar(300);
       await guardar(`${tema}-${modo}-previsualizacion`, '05', tema, modo);
+      // Los dos repartos extremos de la consola, sobre los dos grafos que mas
+      // piden: el 05, el mas ancho, y el 07 tras el rebase, el mas alto.
+      if (hayTirador) {
+        for (const reparto of ['minimo', 'maximo']) {
+          await preparar('05', tema, modo, reparto);
+          await guardar(`${tema}-${modo}-lab-05-consola-${reparto}`, '05', tema, modo);
+          await preparar('07', tema, modo, reparto);
+          await navegador.ejecutar('git rebase main');
+          await guardar(`${tema}-${modo}-huerfanas-consola-${reparto}`, '07', tema, modo);
+        }
+      }
     }
   }
 

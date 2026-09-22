@@ -194,19 +194,14 @@ describe('zona D: areas y paneles', () => {
       'Directorio de trabajo',
       'Área de preparación',
       'Repositorio local',
-      'Repositorio remoto',
     ]);
   });
 
-  it('las cuatro columnas son fijas y siempre estan', () => {
+  it('las tres columnas son fijas y siempre estan, sin la del remoto', () => {
+    // El remoto salio con el SPEC 017: el simulador no tiene red y el panel
+    // decia lo mismo en los ocho escenarios.
     const columnas = columnasDeAreas(repoVacio());
-    expect(columnas.map((columna) => columna.clave)).toEqual([
-      'trabajo',
-      'preparacion',
-      'local',
-      'remoto',
-    ]);
-    expect(columnas[3]?.vacio).toBe('sin remoto configurado');
+    expect(columnas.map((columna) => columna.clave)).toEqual(['trabajo', 'preparacion', 'local']);
   });
 
   it('los paneles que no aplican no se muestran', () => {

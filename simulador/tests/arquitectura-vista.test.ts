@@ -11,6 +11,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { REPARTO_DE_PARTIDA } from '../src/ui/Consola';
+import { REPARTO_MAXIMO, REPARTO_MINIMO } from '../src/ui/Tirador';
 import { FILAS_VISIBLES } from '../src/vista';
 
 const RAIZ = fileURLToPath(new URL('../src', import.meta.url));
@@ -152,35 +154,67 @@ describe('la ayuda de la consola no es permanente', () => {
   });
 });
 
-describe('la pantalla se ajusta al contenido', () => {
+/**
+ * La disposicion del SPEC 017.
+ *
+ * Reemplaza la del SPEC 002 (seccion 7.11), donde la consola y el grafo median
+ * lo que su contenido pedia y el grafo reservaba un alto para crecer. Con eso
+ * la consola quedaba como una caja chica arriba a la izquierda con tres
+ * cuartos de vacio debajo, que es lo que el product owner vio.
+ */
+describe('la disposicion reparte la pantalla (SPEC 017)', () => {
   const aplicacion = readFileSync(join(RAIZ, 'ui', 'Aplicacion.tsx'), 'utf8');
   const consola = readFileSync(join(RAIZ, 'ui', 'Consola.tsx'), 'utf8');
   const grafo = readFileSync(join(RAIZ, 'ui', 'Grafo.tsx'), 'utf8');
 
-  it('el bloque central no impone su altura a la consola ni al grafo', () => {
-    expect(aplicacion).toContain('items-start');
-    // La altura fija anterior es justamente lo que se quito: ahora es un
-    // minimo, de modo que las zonas no se estiran para rellenar la ventana.
-    expect(aplicacion).not.toMatch(/(?<![-\w])h-\[100dvh\]/);
-    expect(aplicacion).toContain('min-h-[100dvh]');
-    // Las areas fluyen tras el grafo: lo que sobra cae al final de la pagina.
-    expect(aplicacion).not.toContain('mt-auto');
+  it('en escritorio la pantalla mide la ventana, y no mas', () => {
+    // Un alto y no un minimo: con un minimo, el grafo sin apretar del primer
+    // dibujo estiraba la pagina y la medicion ya no apretaba nada.
+    expect(aplicacion).toContain('min-[1280px]:h-[100dvh]');
   });
 
-  it('la consola y el grafo crecen hasta un tope y ahi se desplazan por dentro', () => {
-    expect(consola).toContain('max-h-[var(--alto-central)]');
-    expect(consola).toContain('min-h-0 overflow-auto');
-    // `min-h-0 flex-1` y no `max-h-full`: el porcentaje no tenia contra que
-    // resolverse, el dibujo crecia entero y el panel lo cortaba sin barra.
-    // Ninguna prueba lo vio hasta el SPEC 016.
+  it('la consola ocupa la columna y ancla su contenido abajo', () => {
+    expect(consola).toContain('min-[1280px]:basis-[var(--reparto)]');
+    expect(consola).toContain('<div className="flex-[1_0_auto]" aria-hidden="true" />');
+    expect(consola).toContain('min-h-0 flex-1 flex-col overflow-auto');
+  });
+
+  it('el grafo se desplaza por dentro cuando ni apretando cabe', () => {
     expect(grafo).toContain('min-h-0 flex-1 overflow-auto');
-    expect(aplicacion).toContain('flex max-h-[var(--alto-central)] min-h-[var(--alto-grafo)] flex-col overflow-hidden');
-    expect(aplicacion).toContain('[--alto-central:calc(100dvh-20rem)]');
   });
 
-  it('el grafo reserva su espacio de crecimiento para que las areas no se deslicen', () => {
-    expect(aplicacion).toContain('[--alto-grafo:26rem]');
-    expect(aplicacion).toContain('min-h-[var(--alto-grafo)]');
+  it('el reparto de partida deja entrar noventa caracteres, acotado a los limites del tirador', () => {
+    // Noventa y uno: con noventa justos el redondeo partia la linea igual.
+    expect(REPARTO_DE_PARTIDA).toBe(`clamp(${REPARTO_MINIMO}%, calc(91ch + 42px), ${REPARTO_MAXIMO}%)`);
+    expect([REPARTO_MINIMO, REPARTO_MAXIMO]).toEqual([24, 72]);
+  });
+});
+
+describe('SPEC 017 · la barra, las areas y la tipografia', () => {
+  const estilos = readFileSync(join(RAIZ, 'ui', 'estilos.css'), 'utf8');
+
+  it('6.3 las dos pilas tipograficas estan declaradas, con Windows, macOS y Linux', () => {
+    const tema = estilos.slice(estilos.indexOf('@theme {'), estilos.indexOf('}', estilos.indexOf('@theme {')));
+    for (const familia of ['system-ui', '-apple-system', "'Segoe UI'", 'Roboto', "'Noto Sans'", "'Liberation Sans'"]) {
+      expect(tema, familia).toContain(familia);
+    }
+    for (const familia of ['ui-monospace', "'SF Mono'", "'Cascadia Mono'", 'Consolas', "'DejaVu Sans Mono'", "'Liberation Mono'"]) {
+      expect(tema, familia).toContain(familia);
+    }
+  });
+
+  it('4.4 ningun texto de la interfaz nombra el panel del remoto', () => {
+    for (const archivo of ['Aplicacion.tsx', 'Areas.tsx', 'BarraEstado.tsx', 'Consola.tsx', 'Grafo.tsx', 'LineaTiempo.tsx']) {
+      expect(readFileSync(join(RAIZ, 'ui', archivo), 'utf8'), archivo).not.toMatch(/Repositorio remoto|git push/);
+    }
+    expect(readFileSync(join(RAIZ, 'vista', 'pantalla.ts'), 'utf8')).not.toContain("titulo: 'Repositorio remoto'");
+  });
+
+  it('5.1 el tema es un boton con sol y luna, fuera del grupo de interruptores', () => {
+    const barra = readFileSync(join(RAIZ, 'ui', 'BarraEstado.tsx'), 'utf8');
+    expect(barra).toContain('aria-label="Cambiar tema"');
+    expect(barra).toContain('{temaClaro ? <Sol /> : <Luna />}');
+    expect(barra).not.toContain('etiqueta="tema claro"');
   });
 });
 

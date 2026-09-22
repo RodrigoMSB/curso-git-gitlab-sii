@@ -284,6 +284,19 @@ function recorrer(numero: string): void {
   const movimiento: { paso: number; orden: string; piezas: Readonly<Record<Pieza, string>> }[] = [];
 
   before(() => {
+    // El recorrido mide el dibujo final de cada orden, no el camino hasta el.
+    // Desde el SPEC 013 el puntero se desliza en doscientos sesenta
+    // milisegundos, y el arnes lo media en un punto variable de ese
+    // deslizamiento: dos corridas identicas daban informes de movimiento
+    // distintos, y a veces un cambio de rama real no figuraba. Con movimiento
+    // reducido, que la pantalla respeta, las transiciones terminan en el acto.
+    cy.wrap(
+      Cypress.automation('remote:debugger:protocol', {
+        command: 'Emulation.setEmulatedMedia',
+        params: { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] },
+      }),
+      { log: false },
+    );
     // Los alias del taller salen del enunciado del laboratorio 01, que es donde
     // el participante los configura. El arnes no los escribe.
     cy.task<string>('leerEnunciado', '01').then((primero) => {

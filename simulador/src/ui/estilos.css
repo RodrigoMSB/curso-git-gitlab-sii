@@ -1,12 +1,23 @@
 @import 'tailwindcss';
 
 /*
-  Tipografia del sistema. La restriccion R5 prohibe cargar fuentes externas:
-  romperia el funcionamiento sin red y retrasaria el primer dibujado.
+  Tipografia del sistema, declarada entera (SPEC 017, seccion 6). La
+  restriccion R5 prohibe cargar fuentes externas, y embeber una familia
+  sumaria entre ciento cincuenta y trescientos kilobytes al archivo unico: el
+  product owner decidio que la del sistema esta bien. Cada pila nombra la de
+  macOS, la de Windows y las de Linux antes de caer en la generica.
+
+  La monoespaciada es la de la consola y la de todo lo que imita a Git:
+  identificadores, etiquetas del grafo, archivos, ordenes. La de texto, el
+  resto de la interfaz.
 */
 @theme {
-  --font-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Consolas', 'Courier New', monospace;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans',
+    'Liberation Sans', Ubuntu, Cantarell, Arial, sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', Consolas, 'Roboto Mono',
+    'DejaVu Sans Mono', 'Liberation Mono', 'Ubuntu Mono', Menlo, 'Courier New', monospace;
 }
 
 /*
@@ -144,100 +155,135 @@ body {
 }
 
 /*
-  Las cuatro areas son un solo flujo (SPEC 013, seccion 3): pegadas, con las
-  esquinas redondeadas solo hacia afuera y una marca de direccion en cada
-  junta. El archivo viaja de izquierda a derecha, y eso es lo que el dibujo
-  tiene que decir sin palabras.
+  Las tres areas son un solo flujo (SPEC 013, seccion 3, y SPEC 017, seccion
+  4): una pieza con las zonas separadas por una linea, y sobre cada linea un
+  circulo ambar con la flecha. El archivo viaja de izquierda a derecha, que es
+  la primera leccion del curso, y la flecha tiene que verse proyectada: el
+  signo chico y tenue de antes desaparecia.
 
-  En cuatro columnas la marca va en las tres juntas. En dos por dos, bajo mil
-  doscientos ochenta pixeles, va en las dos juntas horizontales: la que cruza
-  de la primera fila a la segunda no tiene un lado hacia donde apuntar.
+  Bajo setecientos sesenta y ocho pixeles se apilan, y la flecha no tiene hacia
+  donde apuntar.
 */
 .flujo {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--fondo-panel);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
 }
 
 .flujo > .area {
   position: relative;
-  background: var(--fondo-panel);
-  border: 1px solid var(--borde);
-  border-radius: 0;
+  border-top: 1px solid var(--borde);
+}
+.flujo > .area:first-child {
+  border-top: 0;
 }
 
-.flujo > .area:nth-child(2n) {
-  border-left-width: 0;
-}
-.flujo > .area:nth-child(n + 3) {
-  border-top-width: 0;
-}
-.flujo > .area:nth-child(1) {
-  border-top-left-radius: 8px;
-}
-.flujo > .area:nth-child(2) {
-  border-top-right-radius: 8px;
-}
-.flujo > .area:nth-child(3) {
-  border-bottom-left-radius: 8px;
-}
-.flujo > .area:nth-child(4) {
-  border-bottom-right-radius: 8px;
-}
-
-/*
-  La marca de direccion es una flecha y no un signo de puntuacion (SPEC 016,
-  seccion 4): un circulo sobre la junta, con la flecha en trazo grueso del
-  color del texto. Es la que enseña que el archivo viaja de izquierda a
-  derecha, la primera leccion del curso.
-*/
 .flecha-flujo {
-  position: absolute;
-  top: 50%;
-  right: calc(var(--escala) * -17px);
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: calc(var(--escala) * 34px);
-  height: calc(var(--escala) * 34px);
-  border: 2px solid var(--texto-apagado);
-  border-radius: 50%;
-  background: var(--fondo-panel);
-  color: var(--texto);
-  transform: translateY(-50%);
-}
-
-.flecha-flujo > svg {
-  width: 62%;
-  height: 62%;
-}
-
-/* En dos por dos, la junta que cruza de una fila a la otra no lleva flecha. */
-.flujo > .area:nth-child(2) > .flecha-flujo,
-.flujo > .area:last-child > .flecha-flujo {
   display: none;
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 768px) {
   .flujo {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .flujo > .area:nth-child(n) {
-    border-top-width: 1px;
-    border-left-width: 0;
-    border-radius: 0;
-  }
-  .flujo > .area:first-child {
-    border-left-width: 1px;
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
+  .flujo > .area {
+    border-top: 0;
+    border-right: 1px solid var(--borde);
   }
   .flujo > .area:last-child {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
+    border-right: 0;
   }
-  .flujo > .area:nth-child(2) > .flecha-flujo {
+  .flujo > .area:not(:last-child) > .flecha-flujo {
+    position: absolute;
+    top: 50%;
+    right: calc(var(--escala) * -13px);
+    z-index: 1;
     display: grid;
+    place-items: center;
+    width: calc(var(--escala) * 26px);
+    height: calc(var(--escala) * 26px);
+    border-radius: 50%;
+    background: var(--puntero);
+    color: var(--fondo-panel);
+    /* Un anillo del color del panel lo despega de la linea divisoria. Es un
+       contorno solido, no una sombra. */
+    outline: calc(var(--escala) * 4px) solid var(--fondo-panel);
+    transform: translateY(-50%);
   }
+}
+
+.flecha-flujo > svg {
+  width: 48%;
+  height: 48%;
+}
+
+/*
+  El redimensionador entre la consola y el grafo (SPEC 017, seccion 3). Una
+  barrita discreta que se resalta al pasar por encima o al tomar el foco, con
+  el cursor de redimensionar. Se toma con el raton, con el dedo y con el
+  teclado.
+*/
+.tirador {
+  flex: 0 0 14px;
+  display: grid;
+  place-items: center;
+  cursor: col-resize;
+  touch-action: none;
+}
+.tirador > i {
+  display: block;
+  width: 4px;
+  height: calc(var(--escala) * 44px);
+  border-radius: 3px;
+  background: var(--borde);
+}
+.tirador:hover > i,
+.tirador:focus-visible > i,
+.tirador[data-arrastrando='si'] > i {
+  background: var(--puntero);
+}
+
+/*
+  Los dos interruptores que quedan van en una pieza con fondo propio, cada uno
+  con un punto que se enciende en ambar (SPEC 017, punto 5.2). El apagado deja
+  de parecer texto muerto, y el estado se lee sin leer la palabra.
+*/
+.grupo-interruptores {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--borde);
+  border-radius: 9px;
+  background: var(--fondo);
+}
+.interruptor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--escala) * 6px) calc(var(--escala) * 12px);
+  border-radius: 7px;
+  color: var(--texto-apagado);
+  white-space: nowrap;
+}
+.interruptor:hover {
+  color: var(--texto);
+}
+.interruptor[aria-pressed='true'] {
+  background: var(--fondo-panel);
+  color: var(--texto);
+}
+.interruptor > .luz {
+  width: calc(var(--escala) * 9px);
+  height: calc(var(--escala) * 9px);
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--texto-tenue);
+}
+.interruptor[aria-pressed='true'] > .luz {
+  border-color: var(--puntero);
+  background: var(--puntero);
 }
 
 /*

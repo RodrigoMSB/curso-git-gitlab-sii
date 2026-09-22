@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { previsualizar } from '../src/core/motor';
 import { idActual, ramaPorNombre } from '../src/core/estado';
-import { disponer, FILA_MINIMA, FILA_PUNTERO_DEBAJO, TEXTO_HUERFANAS } from '../src/grafico/disposicion';
+import { CARRIL_MINIMO, disponer, FILA_MINIMA, FILA_PUNTERO_DEBAJO, TEXTO_HUERFANAS } from '../src/grafico/disposicion';
 import { MEDIDAS } from '../src/grafico/tipos';
 import type { EstadoRepositorio } from '../src/core/tipos';
 import { correr, repoConRamaDeTrabajo, repoConRamas, repoLineal, repoVacio } from './ayudas';
@@ -492,5 +492,57 @@ describe('SPEC 016 · el grafo cabe en el alto que hay', () => {
     expect(apretada.espacioFila).toBe(FILA_MINIMA);
     expect(apretada.fueraDeVista).toContain('main');
     expect(apretada.fueraDeVista).not.toContain('HEAD');
+  });
+});
+
+/**
+ * SPEC 017 · el grafo aguanta la consola al maximo.
+ *
+ * Con el tirador al setenta y dos por ciento el grafo queda angosto. Se
+ * aprietan primero los carriles y despues se dejan de dibujar los
+ * identificadores, que son lo unico prescindible: las ramas y el puntero se
+ * quedan siempre.
+ */
+describe('SPEC 017 · el grafo cabe en el ancho que hay', () => {
+  it('sin tope de ancho se dibuja como siempre, con identificadores', () => {
+    const holgada = disponer(repoConRamas());
+    expect(holgada.espacioCarril).toBe(MEDIDAS.espacioCarril);
+    expect(holgada.identificadores).toBe(true);
+  });
+
+  it('con poco ancho, aprieta los carriles y conserva los identificadores si alcanza', () => {
+    const holgada = disponer(repoConRamas());
+    const apretada = disponer(repoConRamas(), { anchoMaximo: holgada.ancho - 40 });
+    expect(apretada.ancho).toBeLessThanOrEqual(holgada.ancho - 40);
+    expect(apretada.espacioCarril).toBeLessThan(MEDIDAS.espacioCarril);
+    expect(apretada.espacioCarril).toBeGreaterThanOrEqual(CARRIL_MINIMO);
+    expect(apretada.identificadores).toBe(true);
+    // Mismas confirmaciones, en las mismas filas: cambia el ancho, nada mas.
+    expect(apretada.nodos.map((nodo) => [nodo.id, nodo.carril, nodo.y])).toEqual(
+      holgada.nodos.map((nodo) => [nodo.id, nodo.carril, nodo.y]),
+    );
+  });
+
+  it('con menos todavia, deja de dibujar los identificadores antes que una rama', () => {
+    // El caso del laboratorio 05 con la consola al maximo a 1600 en modo
+    // relator: unas trescientas unidades de ancho.
+    const apretada = disponer(repoConRamas(), { anchoMaximo: 300 });
+    expect(apretada.identificadores).toBe(false);
+    expect(apretada.ancho).toBeLessThanOrEqual(300);
+    expect(apretada.fueraDeVista).toEqual([]);
+    expect(apretada.etiquetas.filter((etiqueta) => etiqueta.forma !== 'version')).toHaveLength(
+      disponer(repoConRamas()).etiquetas.filter((etiqueta) => etiqueta.forma !== 'version').length,
+    );
+  });
+
+  it('lo que ni asi cabe a lo ancho, lo nombra', () => {
+    const imposible = disponer(repoConRamas(), { anchoMaximo: 120 });
+    expect(imposible.espacioCarril).toBe(CARRIL_MINIMO);
+    expect(imposible.fueraDeVista.length).toBeGreaterThan(0);
+  });
+
+  it('si cabe a lo ancho, no toca nada', () => {
+    const holgada = disponer(repoConRamas());
+    expect(disponer(repoConRamas(), { anchoMaximo: holgada.ancho + 200 })).toEqual(holgada);
   });
 });

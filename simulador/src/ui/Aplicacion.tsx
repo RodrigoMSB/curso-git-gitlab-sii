@@ -26,6 +26,7 @@ import { BarraEstado } from './BarraEstado';
 import { Consola } from './Consola';
 import { Grafo } from './Grafo';
 import { LineaTiempo } from './LineaTiempo';
+import { Tirador } from './Tirador';
 import { useMovimientoReducido } from './useMovimientoReducido';
 
 export function Aplicacion(): React.ReactElement {
@@ -48,30 +49,59 @@ export function Aplicacion(): React.ReactElement {
   const movimientoReducido = useMovimientoReducido();
   const escala = modoRelator ? ESCALA_RELATOR : 1;
 
-  // El alto que el panel del grafo puede alcanzar, en pixeles. Es su tope de
-  // la hoja de estilos menos su relleno, y cambia con la ventana. El calculo de
-  // posiciones lo recibe en unidades del dibujo para apretar las filas cuando
-  // el grafo no cabe (SPEC 016): antes el panel lo cortaba y lo que quedaba
-  // abajo, `main` incluida, desaparecia sin aviso.
+  // El reparto del ancho que eligio el relator, en porcentaje para la
+  // consola, o `null` mientras no haya movido el tirador: entonces manda el de
+  // partida, que es el que deja entrar la linea mas larga del guion (SPEC 017,
+  // punto 3.2). Vive aqui y no se toca al cambiar de escenario (punto 3.6).
+  const [reparto, setReparto] = useState<number | null>(null);
+
+  // Lo que mide la pantalla y el calculo de posiciones necesita: el hueco del
+  // panel del grafo, descontado su relleno (p-4) y sus bordes, y el reparto
+  // que se ve. El grafo aprieta filas y carriles para caber en ese hueco
+  // (SPEC 016 y 017); antes el panel lo cortaba sin aviso.
+  const cuerpo = useRef<HTMLDivElement>(null);
   const panelGrafo = useRef<HTMLElement>(null);
-  const [altoPanel, setAltoPanel] = useState<number | null>(null);
+  const consola = useRef<HTMLElement>(null);
+  const [medidas, setMedidas] = useState<{
+    readonly ancho: number;
+    readonly alto: number;
+    readonly reparto: number;
+  } | null>(null);
   useLayoutEffect(() => {
     const medir = (): void => {
       const panel = panelGrafo.current;
-      if (panel === null) return;
-      const tope = Number.parseFloat(getComputedStyle(panel).maxHeight);
-      // El relleno del dibujo (p-4) y los dos bordes del panel.
-      if (Number.isFinite(tope)) setAltoPanel(tope - 2 * 16 - 2);
+      const contenedor = cuerpo.current;
+      const columna = consola.current;
+      if (panel === null || contenedor === null || columna === null) return;
+      const hueco = 2 * 16 + 2;
+      const siguiente = {
+        ancho: panel.clientWidth - hueco + 2,
+        alto: panel.clientHeight - hueco + 2,
+        reparto: (columna.getBoundingClientRect().width / Math.max(contenedor.clientWidth, 1)) * 100,
+      };
+      setMedidas((anterior) =>
+        anterior !== null &&
+        anterior.ancho === siguiente.ancho &&
+        anterior.alto === siguiente.alto &&
+        Math.abs(anterior.reparto - siguiente.reparto) < 0.1
+          ? anterior
+          : siguiente,
+      );
     };
     medir();
-    window.addEventListener('resize', medir);
-    return () => window.removeEventListener('resize', medir);
+    const observador = new ResizeObserver(medir);
+    for (const elemento of [panelGrafo.current, cuerpo.current, consola.current]) {
+      if (elemento !== null) observador.observe(elemento);
+    }
+    return () => observador.disconnect();
   }, []);
-  const altoGrafo = altoPanel === null ? null : altoPanel / escala;
+  const altoGrafo = medidas === null ? null : medidas.alto / escala;
+  const anchoGrafo = medidas === null ? null : medidas.ancho / escala;
 
   const pantalla = useMemo(
-    () => construirPantalla(sesion, { previsualizacionActiva, entrada, modoRelator, altoGrafo }),
-    [sesion, previsualizacionActiva, entrada, modoRelator, altoGrafo],
+    () =>
+      construirPantalla(sesion, { previsualizacionActiva, entrada, modoRelator, altoGrafo, anchoGrafo }),
+    [sesion, previsualizacionActiva, entrada, modoRelator, altoGrafo, anchoGrafo],
   );
 
   const ejecutar = useCallback((texto: string): void => {
@@ -116,12 +146,16 @@ export function Aplicacion(): React.ReactElement {
   }, []);
 
   return (
-    // La pantalla ocupa al menos el alto de la ventana, pero no lo impone: si
-    // el contenido no llega, las zonas no se estiran para rellenarlo.
+    // En escritorio la pantalla mide exactamente la ventana, y la consola y el
+    // grafo se quedan con lo que las demas zonas no usan (SPEC 017, seccion
+    // 2). Tiene que ser un alto y no un minimo: con un minimo, el grafo sin
+    // apretar del primer dibujo estiraba la pagina, la medicion veia un panel
+    // alto y ya no apretaba nada. Bajo mil doscientos ochenta, apilada, la
+    // pantalla crece con su contenido.
     <div
       data-relator={modoRelator}
       style={{ '--escala': escala } as React.CSSProperties}
-      className="flex min-h-[100dvh] flex-col gap-4 p-4"
+      className="flex min-h-[100dvh] flex-col min-[1280px]:h-[100dvh]"
     >
       <BarraEstado
         barra={pantalla.barra}
@@ -136,70 +170,64 @@ export function Aplicacion(): React.ReactElement {
         onReiniciar={() => elegirEscenario(sesion.escenario)}
       />
 
-      {/*
-        Por debajo de mil doscientos ochenta pixeles las zonas se apilan en
-        vertical en lugar de comprimirse (punto 10.5).
-
-        `items-start` es lo que deja que la consola y el grafo midan lo que su
-        contenido pide. Sin eso, ambos se estiraban a la altura de la fila y en
-        los escenarios de la sesion 1 la pantalla mostraba mil pixeles vacios.
-        El tope los mantiene dentro de la ventana junto con el resto de zonas.
-
-        El grafo reserva ademas un alto minimo, que es donde va a crecer durante
-        la clase. Esa reserva es lo que mantiene quietas a las areas mientras
-        aparecen confirmaciones, sin necesidad de anclarlas al borde inferior:
-        anclarlas partia la pantalla en dos en los escenarios chicos.
-      */}
-      <div className="grid grid-cols-1 items-start gap-4 [--alto-central:calc(100dvh-20rem)] [--alto-grafo:26rem] min-[1280px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <Consola
-          indicador={pantalla.indicador}
-          renglones={pantalla.renglones}
-          entrada={entrada}
-          sugerencias={sugerencias}
-          aviso={pantalla.aviso}
-          previsualizacionActiva={previsualizacionActiva}
-          onEntrada={(texto) => {
-            setEntrada(texto);
-            setSugerencias([]);
-          }}
-          onEjecutar={ejecutar}
-          onCompletar={completarOrden}
-          onHistorial={recorrerHistorial}
-          onDescartar={descartar}
-        />
-
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
         {/*
-          Columna flexible: sin ella el `max-h-full` del dibujo no tenia contra
-          que resolverse, el dibujo crecia entero y el panel lo cortaba sin
-          barra de desplazamiento (SPEC 016).
+          La consola ocupa la columna izquierda entera, de arriba abajo, y el
+          grafo la derecha, con el tirador entre medio (SPEC 017). El bloque
+          crece hasta llenar lo que dejan las demas zonas, con un minimo: si
+          aparecen los paneles secundarios, la pagina se desplaza en vez de
+          aplastarlo. Bajo mil doscientos ochenta pixeles se apilan (punto 10.5
+          del SPEC 002) y el tirador no tiene sentido.
         */}
-        <section
-          ref={panelGrafo}
-          className="panel flex max-h-[var(--alto-central)] min-h-[var(--alto-grafo)] flex-col overflow-hidden"
-          aria-label="Grafo de confirmaciones"
+        <div
+          ref={cuerpo}
+          className="flex min-h-[26rem] flex-1 flex-col gap-4 min-[1280px]:flex-row min-[1280px]:gap-0"
         >
-          <Grafo
-            disposicion={pantalla.grafo}
-            escala={escala}
-            seleccion={pantalla.seleccion}
-            animar={!movimientoReducido}
-            escenario={sesion.escenario}
-            onSeleccionar={(id) => setSesion((anterior) => seleccionarConfirmacion(anterior, id))}
+          <Consola
+            ref={consola}
+            reparto={reparto}
+            indicador={pantalla.indicador}
+            renglones={pantalla.renglones}
+            entrada={entrada}
+            sugerencias={sugerencias}
+            aviso={pantalla.aviso}
+            previsualizacionActiva={previsualizacionActiva}
+            onEntrada={(texto) => {
+              setEntrada(texto);
+              setSugerencias([]);
+            }}
+            onEjecutar={ejecutar}
+            onCompletar={completarOrden}
+            onHistorial={recorrerHistorial}
+            onDescartar={descartar}
           />
-        </section>
-      </div>
 
-      {/*
-        Las areas fluyen a continuacion del grafo, con la misma separacion que
-        el resto de las zonas. Lo que sobre queda al final de la pagina, no en
-        el medio.
-      */}
-      <div className="shrink-0 space-y-4">
+          <Tirador
+            actual={medidas?.reparto ?? 50}
+            pedido={reparto}
+            contenedor={cuerpo}
+            onCambiar={setReparto}
+          />
+
+          <section
+            ref={panelGrafo}
+            className="panel flex min-h-[26rem] min-w-0 flex-1 flex-col overflow-hidden min-[1280px]:min-h-0"
+            aria-label="Grafo de confirmaciones"
+          >
+            <Grafo
+              disposicion={pantalla.grafo}
+              escala={escala}
+              seleccion={pantalla.seleccion}
+              animar={!movimientoReducido}
+              escenario={sesion.escenario}
+              onSeleccionar={(id) => setSesion((anterior) => seleccionarConfirmacion(anterior, id))}
+            />
+          </section>
+        </div>
+
         <Areas columnas={pantalla.columnas} />
         <PanelesSecundarios paneles={pantalla.paneles} />
-      </div>
 
-      <div className="shrink-0">
         <LineaTiempo
           segmentos={pantalla.segmentos}
           onIr={(indice) => setSesion((anterior) => irAPaso(anterior, indice))}

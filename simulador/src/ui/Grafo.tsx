@@ -247,7 +247,10 @@ export function Grafo({
                 {/*
                   El identificador va a la izquierda, alineado a la derecha: las
                   etiquetas de rama se quedan con el costado derecho (SPEC 013, 2.4).
+                  Con la consola muy ancha es lo primero que se deja de dibujar,
+                  antes que una rama (SPEC 017).
                 */}
+                {disposicion.identificadores && (
                 <text
                   x={nodo.x - MEDIDAS.radio - 10}
                   y={nodo.y + 4}
@@ -266,6 +269,7 @@ export function Grafo({
                 >
                   {nodo.id}
                 </text>
+                )}
               </g>
             );
           })}

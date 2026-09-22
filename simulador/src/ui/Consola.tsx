@@ -8,7 +8,24 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AvisoPrevisualizacion, ColorConsola, Indicador, Renglon } from '../vista';
 
+/**
+ * Ancho de partida de la consola, cuando el relator todavia no movio el
+ * tirador (SPEC 017, punto 3.2): el que deja entrar la salida mas larga del
+ * guion sin partirla, que son noventa caracteres —el `renamed:` del
+ * laboratorio 03—, mas el relleno y los bordes. Va en `ch` de la propia letra
+ * de la consola, asi que sigue a la escala del modo relator sin calcular
+ * nada, acotado a los limites del tirador.
+ *
+ * Son noventa y uno y no noventa: con noventa justos la linea medida quedaba
+ * dos centesimas de pixel mas ancha que el hueco, por redondeo, y el
+ * navegador la partia igual.
+ */
+export const REPARTO_DE_PARTIDA = 'clamp(24%, calc(91ch + 42px), 72%)';
+
 interface Props {
+  readonly ref?: React.Ref<HTMLElement>;
+  /** Porcentaje del ancho que eligio el relator, o `null` para el de partida. */
+  readonly reparto: number | null;
   readonly indicador: Indicador;
   readonly renglones: readonly Renglon[];
   readonly entrada: string;
@@ -33,6 +50,8 @@ const CLASE_POR_COLOR: Readonly<Record<ColorConsola, string>> = {
 };
 
 export function Consola({
+  ref,
+  reparto,
   indicador,
   renglones,
   entrada,
@@ -122,8 +141,17 @@ export function Consola({
     // daria acceso a nada nuevo.
     // biome-ignore lint/a11y/useKeyWithClickEvents: el teclado ya alcanza el campo sin esto
     <section
-      className="panel terminal flex max-h-[var(--alto-central)] min-h-0 flex-col"
-      style={{ background: 'var(--fondo-consola)' }}
+      ref={ref}
+      // La columna entera, de arriba abajo (SPEC 017, punto 2.1). El ancho sale
+      // del reparto; la letra de la seccion es la de la consola, para que el
+      // `ch` del ancho de partida mida sus caracteres.
+      className="panel terminal t-normal flex h-[26rem] min-h-0 flex-none flex-col font-mono min-[1280px]:h-auto min-[1280px]:basis-[var(--reparto)]"
+      style={
+        {
+          background: 'var(--fondo-consola)',
+          '--reparto': reparto === null ? REPARTO_DE_PARTIDA : `${reparto}%`,
+        } as React.CSSProperties
+      }
       aria-label="Consola"
       onClick={() => campo.current?.focus()}
     >
@@ -131,8 +159,14 @@ export function Consola({
         ref={desplazable}
         onScroll={alDesplazar}
         // Mas aire entre lineas: la consola es lo que mas se lee (SPEC 013, 5.2).
-        className="t-normal min-h-0 overflow-auto px-5 py-4 font-mono leading-[1.8]"
+        className="t-normal flex min-h-0 flex-1 flex-col overflow-auto px-5 py-4 font-mono leading-[1.8]"
       >
+        {/*
+          El contenido se ancla al fondo (SPEC 017, punto 2.2): este relleno se
+          come el espacio que sobra arriba mientras hay poco texto, y se reduce
+          a nada cuando el historial llena la caja y empieza a desplazarse.
+        */}
+        <div className="flex-[1_0_auto]" aria-hidden="true" />
         {renglones.map((renglon) =>
           renglon.color === 'orden' ? (
             <div key={renglon.clave} className="mt-4 first:mt-0" data-color="orden">
@@ -164,7 +198,7 @@ export function Consola({
 
       {aviso !== null && (
         <p
-          className="t-min border-t border-[var(--borde-suave)] px-5 py-2 text-[var(--puntero)]"
+          className="t-min border-t border-[var(--borde-suave)] px-5 py-2 font-sans text-[var(--puntero)]"
           role="status"
         >
           Previsualización:{' '}
@@ -199,11 +233,11 @@ export function Consola({
         </div>
         {mostrarAyuda && (
           <>
-            <p className="t-min mt-1 text-[var(--texto-apagado)]">
+            <p className="t-min mt-1 font-sans text-[var(--texto-apagado)]">
               Tabulación completa la orden. Con el campo vacío, tabulación sale de la consola.
             </p>
             {previsualizacionActiva && (
-              <p id="aviso-previsualizacion" className="t-min mt-1 text-[var(--texto-apagado)]">
+              <p id="aviso-previsualizacion" className="t-min mt-1 font-sans text-[var(--texto-apagado)]">
                 Previsualización activa: lo que la orden haría se dibuja discontinuo antes de
                 ejecutarla.
               </p>

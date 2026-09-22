@@ -238,13 +238,15 @@ de modo que se pueden actualizar cada vez que la vista cambie.
 La pantalla tiene cinco zonas:
 
 1. **Barra de estado**, arriba: repositorio, rama actual, cambios sin
-   confirmar, selector de escenario y los interruptores.
-2. **Consola**, a la izquierda: se escribe la orden y se ve la respuesta, con
-   el aspecto y los colores de Git Bash.
+   confirmar, selector de escenario, los interruptores de previsualizacion y
+   modo relator, y al extremo derecho el boton de tema, con sol y luna.
+2. **Consola**, a la izquierda y de arriba abajo: se escribe la orden y se ve
+   la respuesta, con el aspecto y los colores de Git Bash. Entre la consola y
+   el grafo hay una barrita que se arrastra para repartir el ancho.
 3. **Grafo**, a la derecha: las confirmaciones mas recientes arriba y las ramas
    desplegandose hacia la derecha.
-4. **Areas**, abajo: directorio de trabajo, area de preparacion, repositorio
-   local y repositorio remoto. Debajo aparecen, solo cuando corresponde, la pila
+4. **Areas**, abajo: directorio de trabajo, area de preparacion y repositorio
+   local. El remoto no esta: se enseña en GitLab. Debajo aparecen, solo cuando corresponde, la pila
    de guardado temporal, las diferencias y los objetos internos.
 5. **Linea de tiempo**, al pie: un segmento por orden ejecutada. Se puede
    retroceder y toda la pantalla vuelve a como estaba en ese momento.

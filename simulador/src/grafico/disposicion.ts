@@ -35,13 +35,37 @@ export interface OpcionesDisposicion {
    * sitio desharia justo eso.
    */
   readonly altoMaximo: number | null;
+  /**
+   * Ancho disponible, en unidades del dibujo, o `null` si no hay tope.
+   *
+   * El relator reparte el ancho entre la consola y el grafo (SPEC 017), y con
+   * la consola al maximo el grafo tiene que seguir mostrando cada rama. Se
+   * aprieta primero la separacion entre carriles y despues, si hace falta, se
+   * dejan de dibujar los identificadores. Los nodos, las lineas y la letra no
+   * se tocan.
+   */
+  readonly anchoMaximo: number | null;
 }
 
 const POR_DEFECTO: OpcionesDisposicion = {
   limite: MEDIDAS.limitePorDefecto,
   previsualizadas: [],
   altoMaximo: null,
+  anchoMaximo: null,
 };
+
+/**
+ * La separacion entre carriles mas apretada que se admite: el diametro de un
+ * nodo mas diez. Dos carriles vecinos no comparten fila, asi que no se tocan.
+ */
+export const CARRIL_MINIMO = 32;
+
+/** Con que medidas se dibuja: las de `MEDIDAS` o las apretadas para caber. */
+interface Geometria {
+  readonly fila: number;
+  readonly carril: number;
+  readonly identificadores: boolean;
+}
 
 /**
  * El espacio entre filas mas apretado que se admite: el diametro de un nodo
@@ -229,35 +253,68 @@ export function disponer(
   opciones: Partial<OpcionesDisposicion> = {},
 ): Disposicion {
   const completas = { ...POR_DEFECTO, ...opciones };
-  const holgada = disponerCon(estado, completas, MEDIDAS.espacioFila);
-  const tope = completas.altoMaximo;
-  if (tope === null || holgada.alto <= tope || holgada.nodos.length < 2) return holgada;
+  let geometria: Geometria = { fila: MEDIDAS.espacioFila, carril: MEDIDAS.espacioCarril, identificadores: true };
+  let actual = disponerCon(estado, completas, geometria);
+  const { altoMaximo, anchoMaximo } = completas;
 
-  // Lo que no depende de la separacion entre filas se mantiene; lo que si,
-  // se reparte en el alto que hay.
-  const filas = holgada.nodos.length - 1;
-  const fijo = holgada.alto - filas * MEDIDAS.espacioFila;
-  const fila = Math.max(FILA_MINIMA, Math.floor((tope - fijo) / filas));
-  const apretada = disponerCon(estado, completas, fila);
-  return { ...apretada, fueraDeVista: fueraDeVista(apretada, tope) };
+  // Alto: lo que no depende de la separacion entre filas se mantiene; lo que
+  // si, se reparte en el alto que hay (SPEC 016).
+  if (altoMaximo !== null && actual.alto > altoMaximo && actual.nodos.length > 1) {
+    const filas = actual.nodos.length - 1;
+    const fijo = actual.alto - filas * geometria.fila;
+    geometria = { ...geometria, fila: Math.max(FILA_MINIMA, Math.floor((altoMaximo - fijo) / filas)) };
+    actual = disponerCon(estado, completas, geometria);
+  }
+
+  // Ancho: primero los carriles, igual que las filas; despues, si todavia no
+  // cabe, los identificadores, que son lo unico prescindible del dibujo. Las
+  // ramas y el puntero se quedan siempre (SPEC 017, CA8).
+  if (anchoMaximo !== null && actual.ancho > anchoMaximo) {
+    const carriles = Math.max(0, ...actual.nodos.map((nodo) => nodo.carril));
+    if (carriles > 0) {
+      const fijo = actual.ancho - carriles * geometria.carril;
+      geometria = {
+        ...geometria,
+        carril: Math.max(CARRIL_MINIMO, Math.min(geometria.carril, Math.floor((anchoMaximo - fijo) / carriles))),
+      };
+      actual = disponerCon(estado, completas, geometria);
+    }
+    if (actual.ancho > anchoMaximo) {
+      geometria = { ...geometria, identificadores: false };
+      actual = disponerCon(estado, completas, geometria);
+    }
+  }
+
+  return { ...actual, fueraDeVista: fueraDeVista(actual, altoMaximo, anchoMaximo) };
 }
 
 /**
- * Las etiquetas de rama y el puntero que, aun apretando las filas, quedan
- * mas abajo del alto disponible. La pantalla las nombra: una confirmacion con
+ * Las etiquetas de rama y el puntero que, aun apretando, quedan fuera del alto
+ * o del ancho disponible. La pantalla las nombra: una confirmacion con
  * etiqueta nunca queda fuera de la vista sin que nada lo diga (SPEC 016, 2.3).
  */
-function fueraDeVista(disposicion: Disposicion, tope: number): readonly string[] {
+function fueraDeVista(
+  disposicion: Disposicion,
+  altoMaximo: number | null,
+  anchoMaximo: number | null,
+): readonly string[] {
   return disposicion.etiquetas
-    .filter((etiqueta) => etiqueta.forma !== 'version' && etiqueta.y + etiqueta.alto > tope)
+    .filter((etiqueta) => etiqueta.forma !== 'version')
+    .filter(
+      (etiqueta) =>
+        (altoMaximo !== null && etiqueta.y + etiqueta.alto > disposicion.origenY + altoMaximo) ||
+        (anchoMaximo !== null && etiqueta.x + etiqueta.ancho > disposicion.origenX + anchoMaximo),
+    )
     .map((etiqueta) => etiqueta.texto);
 }
 
 function disponerCon(
   estado: EstadoRepositorio,
   opciones: OpcionesDisposicion,
-  espacioFila: number,
+  geometria: Geometria,
 ): Disposicion {
+  const espacioFila = geometria.fila;
+  const anchoIdentificador = geometria.identificadores ? MEDIDAS.anchoIdentificador : 0;
   const { limite, previsualizadas } = opciones;
   const enPrevisualizacion = new Set(previsualizadas);
 
@@ -287,7 +344,7 @@ function disponerCon(
   const posicion = new Map<string, { x: number; y: number }>();
   const nodos: NodoGrafo[] = visibles.map((confirmacion, fila) => {
     const carril = carriles.get(confirmacion.id) ?? 0;
-    const x = MEDIDAS.margenSuperior + carril * MEDIDAS.espacioCarril;
+    const x = MEDIDAS.margenSuperior + carril * geometria.carril;
     const y = MEDIDAS.margenSuperior + fila * espacioFila;
     posicion.set(confirmacion.id, { x, y });
     return {
@@ -342,13 +399,14 @@ function disponerCon(
     estado,
     posicion,
     espacioFila >= FILA_PUNTERO_DEBAJO,
+    anchoIdentificador,
   );
   const rotuloHuerfanas = rotularHuerfanas(nodos);
 
   // El marco se deduce de lo dibujado. Las etiquetas de version quedan a la
   // izquierda de la primera columna, de modo que el origen puede ser negativo.
   const izquierdas = [
-    ...nodos.map((nodo) => nodo.x - MEDIDAS.radio - MEDIDAS.anchoIdentificador),
+    ...nodos.map((nodo) => nodo.x - MEDIDAS.radio - anchoIdentificador),
     ...etiquetas.map((etiqueta) => etiqueta.x),
   ];
   const derechas = [
@@ -363,7 +421,11 @@ function disponerCon(
     ...etiquetas.map((etiqueta) => etiqueta.y + etiqueta.alto),
   ];
 
-  const origenX = Math.min(...izquierdas, 0) - MEDIDAS.margenInferior;
+  // Sin identificadores el dibujo empieza en el primer nodo: el margen que
+  // quedaba a la izquierda era el espacio de ellos.
+  const origenX =
+    Math.min(...izquierdas, geometria.identificadores ? 0 : Number.POSITIVE_INFINITY) -
+    MEDIDAS.margenInferior;
   const extremoX = Math.max(...derechas, 0) + MEDIDAS.margenInferior;
   const extremoY = Math.max(...abajos, 0) + MEDIDAS.margenInferior;
 
@@ -379,6 +441,8 @@ function disponerCon(
     alto: extremoY,
     ocultas: Math.max(todas.length - visibles.length, 0),
     espacioFila,
+    espacioCarril: geometria.carril,
+    identificadores: geometria.identificadores,
     fueraDeVista: [],
   };
 }
@@ -444,6 +508,7 @@ function disponerEtiquetas(
   estado: EstadoRepositorio,
   posicion: ReadonlyMap<string, { x: number; y: number }>,
   punteroDebajo: boolean,
+  anchoIdentificador: number,
 ): {
   etiquetas: readonly EtiquetaGrafo[];
   enlacePuntero: EnlacePuntero | null;
@@ -495,7 +560,7 @@ function disponerEtiquetas(
     if (punto === undefined) continue;
     // A la izquierda del identificador, que ocupa el espacio pegado al nodo.
     // Antes se dibujaban encima de el y lo tapaban (SPEC 013).
-    let borde = punto.x - MEDIDAS.radio - MEDIDAS.anchoIdentificador;
+    let borde = punto.x - MEDIDAS.radio - Math.max(anchoIdentificador, MEDIDAS.separacionEtiqueta);
     for (const version of versiones) {
       const ancho = anchoDeTexto(version.nombre);
       etiquetas.push({

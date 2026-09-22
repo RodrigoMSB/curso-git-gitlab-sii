@@ -4378,3 +4378,185 @@ de partida del 46 por ciento. **En este spec no se tocó ningún ancho.**
 | Recorridos de punta a punta | los mismos 5, la misma cobertura: 71, 95, 92, 98 y 88 % |
 | Artefacto | 321 913 bytes, 1 719 más que en el SPEC 013 |
 
+---
+
+# SPEC 017 · La disposición de la pantalla
+
+## 63. La pantalla, repartida de nuevo
+
+El SPEC 013 cambió medidas y nunca tocó el reparto. Este spec reparte, con un
+mockup aprobado por el product owner como guía. La lógica no se tocó.
+
+### 63.1 · La consola, de arriba abajo
+
+Ocupa la columna izquierda entera, con el contenido anclado al fondo: un
+relleno que crece se come el espacio sobrante arriba y se reduce a nada cuando
+el historial llena la caja. Después de cada orden baja sola al final, como ya
+lo hacía. Sigue oscura en los dos temas.
+
+**La pantalla mide exactamente la ventana en escritorio**, y la consola y el
+grafo se quedan con lo que las demás zonas no usan. Tuvo que ser un alto y no
+un mínimo. Con un mínimo apareció un bucle: el grafo sin apretar del primer
+dibujo estiraba la página, la medición veía un panel alto y ya no apretaba
+nada, y en modo relator la línea de tiempo quedaba debajo de la ventana. Bajo
+1 280 píxeles la pantalla se apila y crece con su contenido.
+
+### 63.2 · El tirador
+
+Una barrita entre la consola y el grafo, con rol de separador. Se arrastra con
+el ratón y con el dedo —son eventos de puntero, que cubren los dos— y se mueve
+con el teclado: flechas de dos en dos por ciento, Inicio al mínimo y Fin al
+máximo. Límites, 24 y 72 por ciento. El reparto elegido vive en la aplicación
+y no se toca al cambiar de escenario.
+
+**El reparto de partida** va en `ch` de la propia letra de la consola:
+`clamp(24%, calc(91ch + 42px), 72%)`. Así sigue a la escala del modo relator
+sin calcular nada. Son 91 caracteres y no 90: con 90 justos la línea medía
+704,41 píxeles contra un hueco de 704,39, y el navegador la partía por dos
+centésimas.
+
+Medido con la salida más larga del guion, el `renamed:` de 90 caracteres del
+laboratorio 03:
+
+| Ventana | Normal | Relator |
+|---|---|---|
+| 1 280 | entera, consola al 61 % | **se parte**: la consola ya está en el 72 % |
+| 1 600 | entera, 49 % | entera, 62 % |
+| 1 920 | entera, 40 % | entera, 52 % |
+
+En modo relator deja de partirse desde **1 381 píxeles** de ventana. Es el
+caso que el punto 3.2 anticipaba y se deja así.
+
+### 63.3 · El grafo aguanta los dos extremos
+
+Con la consola al 72 %, el grafo del laboratorio 05 en modo relator a 1 600
+píxeles tiene unas 300 unidades de ancho y mide 446. Se resolvió como el alto
+del SPEC 016, sin achicar nodos, líneas ni letra:
+
+1. **Se aprieta la separación entre carriles**, de 54 hasta un mínimo de 32.
+2. **Si todavía no cabe, se dejan de dibujar los identificadores**, que son lo
+   único prescindible: las ramas y el puntero se quedan siempre.
+3. **Si ni así cabe**, el aviso sobre el dibujo nombra lo que quedó fuera, y el
+   panel se desplaza.
+
+La interfaz mide el hueco del panel del grafo con un observador de tamaño y se
+lo pasa al cálculo en unidades del dibujo, alto y ancho.
+
+### 63.4 · Las áreas, la barra y la letra
+
+- **El repositorio remoto salió.** Quedan tres áreas de un tercio. Ningún
+  texto de la interfaz ni de los enunciados lo prometía; el README sí, y se
+  corrigió.
+- **Las marcas de dirección** son círculos ámbar de 26 píxeles sobre la línea
+  divisoria, con la flecha adentro y un anillo del color del panel. Es un
+  contorno sólido, no una sombra.
+- **La barra** va en tres bloques: el repositorio a la izquierda, los controles
+  al medio —que se parten en dos filas si no caben— y el tema al extremo
+  derecho, arriba. Es un botón redondo con luna en el oscuro y sol en el claro.
+  Los dos interruptores que quedan van juntos en una pieza con fondo propio,
+  cada uno con una luz que se enciende en ámbar; perdieron el «: sí» y el
+  «: no», como en el mockup, y `aria-pressed` le dice el estado a quien no ve
+  la luz. El selector de escenario pasó de 12 a 15 píxeles.
+- **Las dos pilas tipográficas** quedan declaradas con las familias de macOS,
+  Windows y Linux. La consola y todo lo que imita a Git van en monoespaciada;
+  las líneas de ayuda de la consola, que son de la interfaz, volvieron a la de
+  texto.
+
+Dos cosas del mockup no se copiaron, por el punto 9.2: la sombra del
+interruptor encendido y el degradado de la flecha del selector.
+
+### 63.5 · Las pruebas
+
+**CA8.** `visibilidad.cy.ts` recorre ahora los tres repartos —partida, mínimo
+y máximo— en los ocho escenarios, dos modos y dos temas, más el 07 tras el
+rebase: 108 casos. Se la vio fallar apagando el ajuste de ancho. El primer
+intento de apagarlo no compiló, y Cypress corrió contra el build anterior, que
+sí ajustaba: pasó 108 de 108 sin probar nada. Con un sabotaje que compila,
+fallan 6, todos con la consola al máximo: el 05 en los dos modos y el 07 tras
+el rebase en relator, en los dos temas. Con el ajuste, pasan los 108.
+
+**`disposicion.cy.ts`**, nuevo, con doce pruebas: la consola de alto entero y
+anclada abajo, el prompt a la vista tras cada orden, el tirador con ratón, con
+dedo y con teclado, sus límites, el reparto que sobrevive al cambio de
+escenario, la línea de 90 caracteres entera con el de partida, tres áreas, el
+botón de tema y las luces. Contra el build anterior fallan once. La que pasa,
+«la consola baja sola al final», es una guarda de algo que ya existía.
+
+Dos de esas pruebas destaparon defectos míos antes de publicar:
+
+- **Arrastrar no hacía nada.** El primer movimiento podía llegar antes de que
+  React redibujara, y consultaba un estado que todavía decía «no
+  arrastrando». Ahora se sigue en una referencia.
+- **El teclado sumaba desde un valor viejo.** Partía del reparto medido, que
+  llega después del redibujado, y dos flechas seguidas sumaban una sola vez.
+
+Y una que se aprobaba sola: «lo escrito queda abajo, pegado al prompt» pasaba
+también con la consola vieja, que medía lo que su contenido. Ahora exige
+además el espacio sobrante arriba.
+
+El `trigger` de Cypress no sirvió para arrastrar: fabrica un evento genérico.
+Se despachan `PointerEvent` de verdad, con una pausa entre pulsar y mover como
+la de una mano; sin ella, dentro de Cypress el movimiento se perdía. Con un
+ratón y un dedo reales, conducidos por el protocolo de Chrome, el tirador
+funcionaba desde el principio: 40 y 60 por ciento.
+
+**De unidad**, tres pruebas de la disposición del SPEC 002 se reemplazaron por
+las de este spec, con el motivo escrito, y se agregaron las del ajuste de
+ancho, los límites del tirador, el ancho de partida, las pilas tipográficas y
+la ausencia del remoto. Todas se vieron fallar, las guardas rompiendo lo que
+vigilan.
+
+### 63.6 · Las cifras
+
+| | |
+|---|---|
+| Pruebas de unidad | 714 |
+| Pruebas de punta a punta | 168: los 48 de antes, 108 de visibilidad y 12 de disposición |
+| Recorridos | los mismos 5, la misma cobertura: 71, 95, 92, 98 y 88 % |
+| Capturas | 56: ocho escenarios, huérfanas y previsualización en dos modos y dos temas, más los repartos extremos |
+| Letra mínima pintada | 11 píxeles en normal y 14,3 en relator, en las 56 |
+| Desborde horizontal a 1 280, 1 600 y 1 920 | ninguno |
+| Artefacto | 326 215 bytes, 4 302 más que en el SPEC 016 |
+
+### 63.7 · El recorrido medía el deslizamiento, no el dibujo
+
+Al regenerar las capturas, los informes de movimiento de los cinco
+laboratorios cambiaron, y siempre en la misma pieza: el puntero, marcado como
+movido tras órdenes que no cambian nada, como `git lg`. En Chrome solo, paso a
+paso, el puntero estaba quieto. Dos corridas idénticas de Cypress daban
+informes distintos, entre 4 y 36 líneas, y en una de ellas un
+`git switch main` real no figuraba como movimiento del puntero.
+
+La causa es del SPEC 013: el puntero se desliza en 260 milisegundos y el
+arnés lo medía en un momento variable de ese deslizamiento. Los recorridos
+pasaban igual, porque sus afirmaciones esperan al estado final; lo que se
+volvía ruido era el informe. El recorrido corre ahora con movimiento reducido,
+que la pantalla respeta, y mide el dibujo ya quieto.
+
+La herramienta de capturas encendía a veces el modo relator antes de que la
+pantalla terminara de montarse, y una captura de «relator» medía en realidad
+el modo normal: la letra mínima salió de 11 píxeles en una. Ahora reintenta
+hasta confirmarlo en el documento, y se rehicieron las 56.
+
+### 63.8 · Un hallazgo que no es de disposición, y no se tocó
+
+Con los informes ya deterministas, un cambio de rama del laboratorio 04 no
+movía el puntero: el paso 031, `git switch peruana`. Falla en los dos lados
+con `fatal: invalid reference: 'peruana'`, y por eso el recorrido pasa.
+
+La orden anterior del enunciado es `git branch peruana <identificador>`. Lleva
+un marcador de posición, el arnés no la ejecuta en ningún lado, y **desde ahí
+el recorrido del 04 sigue sin la rama `peruana`**: las confirmaciones de la
+cocina peruana caen en `mexicana`, en el simulador y en Git por igual. Los dos
+lados se equivocan igual y la comparación da verde.
+
+La sección 25 dice que los marcadores de identificador quedan sólo en órdenes
+«de solo mirar», que «no desalinean nada». Esta crea una rama. Es la séptima
+vez del patrón: una prueba que pasa sin comprobar lo que dice comprobar.
+
+**No se arregló**, por el punto 9.1 del spec: no es disposición. Lo que haría
+falta es que el arnés resuelva ese marcador —el identificador sale del
+`git log` del paso anterior en cada lado, y cada lado usa el suyo— o que
+distinga las órdenes con marcador que modifican el repositorio y se niegue a
+seguir comparando después de ellas. Queda para el arquitecto.
+

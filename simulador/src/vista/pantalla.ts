@@ -118,6 +118,8 @@ export interface OpcionesPantalla {
    * aqui solo se le pasa al calculo de posiciones (SPEC 016).
    */
   readonly altoGrafo?: number | null;
+  /** Lo mismo para el ancho, que el relator reparte con la consola (SPEC 017). */
+  readonly anchoGrafo?: number | null;
 }
 
 const TONO_POR_ESTADO = {
@@ -198,16 +200,9 @@ export function columnasDeAreas(estado: EstadoRepositorio): readonly ColumnaArea
       ],
       vacio: 'sin confirmaciones',
     },
-    {
-      clave: 'remoto',
-      titulo: 'Repositorio remoto',
-      orden: 'git push',
-      elementos: estado.remotos.map((remoto) => ({
-        texto: `${remoto.nombre} · ${remoto.url}`,
-        tono: 'neutro' as const,
-      })),
-      vacio: 'sin remoto configurado',
-    },
+    // El repositorio remoto salio con el SPEC 017: el simulador no tiene red
+    // ni remotos, y ese panel decia lo mismo en los ocho escenarios ocupando
+    // un cuarto del ancho. El remoto se enseña en GitLab, con la plataforma.
   ];
 }
 
@@ -294,10 +289,15 @@ export function construirPantalla(sesion: Sesion, opciones: OpcionesPantalla): P
 
   const grafo =
     vista === null
-      ? disponer(estado, { previsualizadas: comprometidas, altoMaximo: opciones.altoGrafo ?? null })
+      ? disponer(estado, {
+          previsualizadas: comprometidas,
+          altoMaximo: opciones.altoGrafo ?? null,
+          anchoMaximo: opciones.anchoGrafo ?? null,
+        })
       : disponer(vista.estadoResultante, {
           previsualizadas: vista.confirmacionesNuevas,
           altoMaximo: opciones.altoGrafo ?? null,
+          anchoMaximo: opciones.anchoGrafo ?? null,
         });
 
   return {

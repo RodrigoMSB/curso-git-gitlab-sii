@@ -1,5 +1,5 @@
 /**
- * Zona D: las cuatro areas fijas y los paneles que aparecen segun el estado.
+ * Zona D: las tres areas fijas y los paneles que aparecen segun el estado.
  *
  * Los paneles que no aplican no se muestran, y no se muestran vacios: la
  * pantalla debe respirar en los escenarios simples de la sesion 1.
@@ -33,13 +33,13 @@ export function Areas({
     // (SPEC 013, seccion 3). La forma la pone la hoja de estilos.
     <div className="flujo">
       {columnas.map((columna) => (
-        <section key={columna.clave} className="area px-8 py-4" data-columna={columna.clave}>
+        <section key={columna.clave} className="area px-6 py-4" data-columna={columna.clave}>
           <span className="flecha-flujo" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
-                d="M4 12 H19 M13 6 L19 12 L13 18"
+                d="M5 12 H18 M12.5 6.5 L18 12 L12.5 17.5"
                 stroke="currentColor"
-                strokeWidth={3}
+                strokeWidth={3.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />

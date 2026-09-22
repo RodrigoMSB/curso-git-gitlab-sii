@@ -99,6 +99,13 @@ export interface Disposicion {
   readonly ocultas: number;
   /** Separacion entre filas con que se dibujo: menor que la de `MEDIDAS` si hubo que apretar. */
   readonly espacioFila: number;
+  /** Separacion entre carriles con que se dibujo: menor que la de `MEDIDAS` si hubo que apretar. */
+  readonly espacioCarril: number;
+  /**
+   * Si se dibujan los identificadores. Con la consola muy ancha es lo primero
+   * que se deja fuera, antes que una rama (SPEC 017).
+   */
+  readonly identificadores: boolean;
   /**
    * Etiquetas de rama y puntero que ni apretando caben en el alto disponible.
    * La pantalla las nombra en vez de dejarlas fuera en silencio (SPEC 016).

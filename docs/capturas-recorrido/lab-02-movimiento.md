@@ -26,18 +26,18 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 021 | `git status` | tiempo |
 | 022 | `git log -1` | tiempo |
 | 023 | `git commit --amend -m "se corrige la receta del pastel de choclo"` | nodos, ramas, puntero, areas, tiempo |
-| 024 | `git log -1` | puntero, tiempo |
-| 025 | `git lg` | puntero, tiempo |
-| 026 | `git log --oneline` | puntero, tiempo |
+| 024 | `git log -1` | tiempo |
+| 025 | `git lg` | tiempo |
+| 026 | `git log --oneline` | tiempo |
 | 027 | `git reset --soft HEAD~1` | nodos, ramas, puntero, areas, tiempo |
-| 028 | `git status` | puntero, tiempo |
-| 029 | `git log --oneline` | puntero, tiempo |
+| 028 | `git status` | tiempo |
+| 029 | `git log --oneline` | tiempo |
 | 030 | `git commit -m "se documenta la receta del pastel de choclo"` | nodos, ramas, puntero, areas, tiempo |
-| 031 | `ls -a` | puntero, tiempo |
-| 037 | `git log --oneline -1` | puntero, tiempo |
-| 039 | `git branch prueba` | ramas, puntero, areas, tiempo |
+| 031 | `ls -a` | tiempo |
+| 037 | `git log --oneline -1` | tiempo |
+| 039 | `git branch prueba` | ramas, areas, tiempo |
 | 044 | `git switch prueba` | ramas, puntero, areas, tiempo |
 | 046 | `git switch main` | ramas, puntero, areas, tiempo |
-| 047 | `git branch -d prueba` | ramas, puntero, areas, tiempo |
-| 049 | `git log --oneline` | puntero, tiempo |
-| 050 | `git status` | puntero, tiempo |
+| 047 | `git branch -d prueba` | ramas, areas, tiempo |
+| 049 | `git log --oneline` | tiempo |
+| 050 | `git status` | tiempo |
