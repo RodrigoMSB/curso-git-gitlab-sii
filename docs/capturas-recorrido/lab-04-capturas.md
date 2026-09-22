@@ -8,39 +8,39 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 000 | movio | — |
 | 001 | movio | — |
 | 002 | movio | — |
-| 003 | movio | tiempo |
-| 004 | movio | tiempo |
-| 005 | movio | ramas, areas, tiempo |
-| 006 | movio | tiempo |
-| 007 | movio | tiempo |
+| 003 | movio | puntero, tiempo |
+| 004 | movio | puntero, tiempo |
+| 005 | movio | ramas, puntero, areas, tiempo |
+| 006 | movio | puntero, tiempo |
+| 007 | movio | puntero, tiempo |
 | 008 | movio | ramas, puntero, areas, tiempo |
-| 009 | movio | tiempo |
+| 009 | movio | puntero, tiempo |
 | 010 | movio | areas, tiempo |
-| 011 | movio | tiempo |
-| 012 | movio | tiempo |
+| 011 | movio | puntero, tiempo |
+| 012 | movio | puntero, tiempo |
 | 013 | movio | areas, tiempo |
 | 014 | movio | nodos, ramas, puntero, areas, tiempo |
-| 015 | movio | tiempo |
+| 015 | movio | puntero, tiempo |
 | 016 | movio | ramas, puntero, areas, tiempo |
 | 017 | movio | tiempo |
 | 018 | movio | ramas, puntero, areas, tiempo |
-| 019 | movio | tiempo |
-| 020 | movio | tiempo |
+| 019 | movio | puntero, tiempo |
+| 020 | movio | puntero, tiempo |
 | 021 | movio | tiempo |
-| 022 | movio | tiempo |
-| 023 | movio | tiempo |
-| 024 | movio | areas, tiempo |
+| 022 | movio | puntero, tiempo |
+| 023 | movio | puntero, tiempo |
+| 024 | movio | puntero, areas, tiempo |
 | 025 | movio | tiempo |
-| 026 | movio | tiempo |
-| 027 | movio | areas, tiempo |
+| 026 | movio | puntero, tiempo |
+| 027 | movio | puntero, areas, tiempo |
 | 028 | movio | nodos, ramas, puntero, areas, tiempo |
 | 029 | movio | tiempo |
 | 030 | movio | tiempo |
 | 031 | movio | tiempo |
 | 032 | movio | tiempo |
 | 033 | movio | tiempo |
-| 034 | movio | areas, tiempo |
-| 035 | movio | tiempo |
+| 034 | movio | puntero, areas, tiempo |
+| 035 | movio | puntero, tiempo |
 | 036 | movio | tiempo |
 | 037 | movio | areas, tiempo |
 | 038 | movio | nodos, ramas, puntero, areas, tiempo |

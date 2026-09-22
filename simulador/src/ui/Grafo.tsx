@@ -99,7 +99,16 @@ export function Grafo({
   }
 
   return (
-    <div className="max-h-full overflow-auto p-4">
+    <div className="min-h-0 flex-1 overflow-auto p-4">
+      {/*
+        Si ni apretando las filas caben todas las etiquetas, se dice cuales
+        quedaron abajo. Nunca una rama fuera de la vista sin aviso (SPEC 016).
+      */}
+      {disposicion.fueraDeVista.length > 0 && (
+        <p className="t-min mb-2 text-[var(--puntero)]" role="status">
+          Más abajo: {disposicion.fueraDeVista.join(', ')}. Desplaza el grafo para verlas.
+        </p>
+      )}
       {disposicion.ocultas > 0 && (
         <p className="t-min mb-2 text-[var(--texto-apagado)]">
           Se dibujan las {nodos.length} confirmaciones más recientes.{' '}

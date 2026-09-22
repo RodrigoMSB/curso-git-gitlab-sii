@@ -5,39 +5,39 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | paso | orden | se movio |
 |---|---|---|
 | 002 | `git log --oneline` | (primer paso) |
-| 003 | `git lg` | tiempo |
-| 004 | `git branch` | tiempo |
-| 005 | `git branch tailandesa` | ramas, areas, tiempo |
-| 006 | `git branch` | tiempo |
-| 007 | `git lg` | tiempo |
+| 003 | `git lg` | puntero, tiempo |
+| 004 | `git branch` | puntero, tiempo |
+| 005 | `git branch tailandesa` | ramas, puntero, areas, tiempo |
+| 006 | `git branch` | puntero, tiempo |
+| 007 | `git lg` | puntero, tiempo |
 | 008 | `git switch tailandesa` | ramas, puntero, areas, tiempo |
-| 009 | `mkdir -p recetas` | tiempo |
+| 009 | `mkdir -p recetas` | puntero, tiempo |
 | 010 | `echo "# Pad thai" > recetas/pad-thai.md` | areas, tiempo |
-| 011 | `echo "" >> recetas/pad-thai.md` | tiempo |
-| 012 | `echo "Fideos de arroz, tamarindo, mani, huevo y salsa de pescado." >> recetas/pad-thai.md` | tiempo |
+| 011 | `echo "" >> recetas/pad-thai.md` | puntero, tiempo |
+| 012 | `echo "Fideos de arroz, tamarindo, mani, huevo y salsa de pescado." >> recetas/pad-thai.md` | puntero, tiempo |
 | 013 | `git add recetas/pad-thai.md` | areas, tiempo |
 | 014 | `git commit -m "se abre la cocina tailandesa"` | nodos, ramas, puntero, areas, tiempo |
-| 015 | `git lg` | tiempo |
+| 015 | `git lg` | puntero, tiempo |
 | 016 | `git switch main` | ramas, puntero, areas, tiempo |
 | 017 | `git log --oneline` | tiempo |
 | 018 | `git switch -c mexicana HEAD~3` | ramas, puntero, areas, tiempo |
-| 019 | `git lg` | tiempo |
-| 020 | `ls` | tiempo |
+| 019 | `git lg` | puntero, tiempo |
+| 020 | `ls` | puntero, tiempo |
 | 021 | `ls recetas` | tiempo |
-| 022 | `mkdir -p recetas` | tiempo |
-| 023 | `mkdir -p recetas` | tiempo |
-| 024 | `echo "# Tacos" > recetas/tacos.md` | areas, tiempo |
+| 022 | `mkdir -p recetas` | puntero, tiempo |
+| 023 | `mkdir -p recetas` | puntero, tiempo |
+| 024 | `echo "# Tacos" > recetas/tacos.md` | puntero, areas, tiempo |
 | 025 | `echo "" >> recetas/tacos.md` | tiempo |
-| 026 | `echo "Tortilla de maiz, carne, cebolla, cilantro y limon." >> recetas/tacos.md` | tiempo |
-| 027 | `git add recetas/tacos.md` | areas, tiempo |
+| 026 | `echo "Tortilla de maiz, carne, cebolla, cilantro y limon." >> recetas/tacos.md` | puntero, tiempo |
+| 027 | `git add recetas/tacos.md` | puntero, areas, tiempo |
 | 028 | `git commit -m "se abre la cocina mexicana"` | nodos, ramas, puntero, areas, tiempo |
 | 029 | `git lg` | tiempo |
 | 030 | `git log --oneline main` | tiempo |
 | 031 | `git switch peruana` | tiempo |
 | 032 | `git lg` | tiempo |
 | 033 | `mkdir -p recetas` | tiempo |
-| 034 | `echo "# Ceviche" > recetas/ceviche.md` | areas, tiempo |
-| 035 | `echo "" >> recetas/ceviche.md` | tiempo |
+| 034 | `echo "# Ceviche" > recetas/ceviche.md` | puntero, areas, tiempo |
+| 035 | `echo "" >> recetas/ceviche.md` | puntero, tiempo |
 | 036 | `echo "Pescado blanco, limon, cebolla morada, aji y camote." >> recetas/ceviche.md` | tiempo |
 | 037 | `git add recetas/ceviche.md` | areas, tiempo |
 | 038 | `git commit -m "se abre la cocina peruana"` | nodos, ramas, puntero, areas, tiempo |

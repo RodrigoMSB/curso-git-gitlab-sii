@@ -33,7 +33,18 @@ export function Areas({
     // (SPEC 013, seccion 3). La forma la pone la hoja de estilos.
     <div className="flujo">
       {columnas.map((columna) => (
-        <section key={columna.clave} className="area px-5 py-4" data-columna={columna.clave}>
+        <section key={columna.clave} className="area px-8 py-4" data-columna={columna.clave}>
+          <span className="flecha-flujo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M4 12 H19 M13 6 L19 12 L13 18"
+                stroke="currentColor"
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
           <div className="mb-3 flex items-baseline gap-2">
             <h2 className="rotulo">{columna.titulo}</h2>
             <p className="t-min font-mono text-[var(--texto-tenue)]">{columna.orden}</p>

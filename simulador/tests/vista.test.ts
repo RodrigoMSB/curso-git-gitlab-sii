@@ -376,3 +376,14 @@ describe('barra de estado y armado de la pantalla', () => {
     expect(pantalla.segmentos[2]?.futuro).toBe(true);
   });
 });
+
+describe('SPEC 016 · la pantalla le pasa el alto al grafo', () => {
+  it('con el alto medido, el grafo del 07 tras el rebase cabe', () => {
+    const sesion = ejecutarOrden(iniciarSesion('lab-07'), 'git rebase main');
+    const opciones = { previsualizacionActiva: false, entrada: '', modoRelator: true };
+    const sinTope = construirPantalla(sesion, opciones);
+    const conTope = construirPantalla(sesion, { ...opciones, altoGrafo: 497 });
+    expect(sinTope.grafo.alto).toBeGreaterThan(497);
+    expect(conTope.grafo.alto).toBeLessThanOrEqual(497);
+  });
+});

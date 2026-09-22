@@ -6,7 +6,7 @@
  * calcula nada sobre confirmaciones, ramas ni punteros (restriccion R6).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   cambiarEscenario,
   completar,
@@ -48,9 +48,30 @@ export function Aplicacion(): React.ReactElement {
   const movimientoReducido = useMovimientoReducido();
   const escala = modoRelator ? ESCALA_RELATOR : 1;
 
+  // El alto que el panel del grafo puede alcanzar, en pixeles. Es su tope de
+  // la hoja de estilos menos su relleno, y cambia con la ventana. El calculo de
+  // posiciones lo recibe en unidades del dibujo para apretar las filas cuando
+  // el grafo no cabe (SPEC 016): antes el panel lo cortaba y lo que quedaba
+  // abajo, `main` incluida, desaparecia sin aviso.
+  const panelGrafo = useRef<HTMLElement>(null);
+  const [altoPanel, setAltoPanel] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const medir = (): void => {
+      const panel = panelGrafo.current;
+      if (panel === null) return;
+      const tope = Number.parseFloat(getComputedStyle(panel).maxHeight);
+      // El relleno del dibujo (p-4) y los dos bordes del panel.
+      if (Number.isFinite(tope)) setAltoPanel(tope - 2 * 16 - 2);
+    };
+    medir();
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, []);
+  const altoGrafo = altoPanel === null ? null : altoPanel / escala;
+
   const pantalla = useMemo(
-    () => construirPantalla(sesion, { previsualizacionActiva, entrada, modoRelator }),
-    [sesion, previsualizacionActiva, entrada, modoRelator],
+    () => construirPantalla(sesion, { previsualizacionActiva, entrada, modoRelator, altoGrafo }),
+    [sesion, previsualizacionActiva, entrada, modoRelator, altoGrafo],
   );
 
   const ejecutar = useCallback((texto: string): void => {
@@ -147,8 +168,14 @@ export function Aplicacion(): React.ReactElement {
           onDescartar={descartar}
         />
 
+        {/*
+          Columna flexible: sin ella el `max-h-full` del dibujo no tenia contra
+          que resolverse, el dibujo crecia entero y el panel lo cortaba sin
+          barra de desplazamiento (SPEC 016).
+        */}
         <section
-          className="panel max-h-[var(--alto-central)] min-h-[var(--alto-grafo)] overflow-hidden"
+          ref={panelGrafo}
+          className="panel flex max-h-[var(--alto-central)] min-h-[var(--alto-grafo)] flex-col overflow-hidden"
           aria-label="Grafo de confirmaciones"
         >
           <Grafo

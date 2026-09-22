@@ -97,6 +97,13 @@ export interface Disposicion {
   readonly alto: number;
   /** Confirmaciones que quedaron fuera por el limite de dibujo. */
   readonly ocultas: number;
+  /** Separacion entre filas con que se dibujo: menor que la de `MEDIDAS` si hubo que apretar. */
+  readonly espacioFila: number;
+  /**
+   * Etiquetas de rama y puntero que ni apretando caben en el alto disponible.
+   * La pantalla las nombra en vez de dejarlas fuera en silencio (SPEC 016).
+   */
+  readonly fueraDeVista: readonly string[];
 }
 
 /** Medidas del dibujo. Estan aqui para que las pruebas puedan afirmar sobre ellas. */

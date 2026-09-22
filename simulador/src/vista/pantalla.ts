@@ -112,6 +112,12 @@ export interface OpcionesPantalla {
   readonly previsualizacionActiva: boolean;
   readonly entrada: string;
   readonly modoRelator: boolean;
+  /**
+   * Alto que el panel del grafo ofrece, en unidades del dibujo, o `null` si
+   * todavia no se midio. Lo mide la interfaz, que es la que conoce la ventana;
+   * aqui solo se le pasa al calculo de posiciones (SPEC 016).
+   */
+  readonly altoGrafo?: number | null;
 }
 
 const TONO_POR_ESTADO = {
@@ -288,8 +294,11 @@ export function construirPantalla(sesion: Sesion, opciones: OpcionesPantalla): P
 
   const grafo =
     vista === null
-      ? disponer(estado, { previsualizadas: comprometidas })
-      : disponer(vista.estadoResultante, { previsualizadas: vista.confirmacionesNuevas });
+      ? disponer(estado, { previsualizadas: comprometidas, altoMaximo: opciones.altoGrafo ?? null })
+      : disponer(vista.estadoResultante, {
+          previsualizadas: vista.confirmacionesNuevas,
+          altoMaximo: opciones.altoGrafo ?? null,
+        });
 
   return {
     barra: resumenBarra(estado),

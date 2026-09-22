@@ -4283,3 +4283,98 @@ regeneraron con el diseño nuevo.
 Sigue siendo un archivo único y autocontenido. Pasó de 314 154 a **320 194
 bytes**: 6 040 más, un 1,9 %.
 
+---
+
+# SPEC 016 · El grafo tiene que caber
+
+## 62. La altura, que era el defecto real
+
+### 62.1 · Por qué desaparecía `main`
+
+Tras el rebase del laboratorio 07, en modo relator, el grafo se cortaba en
+`f747227` y `main` quedaba fuera. Eran dos causas sumadas:
+
+- **El SPEC 013 agrandó el grafo y nadie ajustó qué pasa cuando no cabe.** Ese
+  dibujo mide 759 unidades de alto, 987 píxeles en modo relator, y el panel
+  ofrece 680 a mil píxeles de ventana.
+- **El panel nunca se desplazó.** El dibujo llevaba `max-h-full overflow-auto`
+  dentro de una sección de alto automático: el porcentaje no tenía contra qué
+  resolverse, el dibujo crecía entero y la sección, con `overflow-hidden`, lo
+  cortaba sin barra. Lo que quedaba abajo desaparecía sin que nada lo dijera,
+  y así desde el SPEC 002. Una prueba de código fuente afirmaba lo contrario:
+  comprobaba que la clase estuviera escrita, no que el panel se desplazara.
+
+### 62.2 · El mecanismo: apretar el espacio entre filas
+
+De los tres caminos del punto 2.2, el de recuperar espacio, aplicado a lo
+único que sobra en un grafo alto: **la separación entre filas**. Los nodos,
+las líneas y la letra no cambian (punto 6.3).
+
+- La interfaz mide el alto que el panel puede alcanzar —su tope de la hoja de
+  estilos menos su relleno— y se lo pasa al cálculo de posiciones, en
+  unidades del dibujo.
+- Si el grafo no cabe, la separación baja de 62 hasta lo que haga falta, con
+  un mínimo de 34: el diámetro de un nodo más doce. En el caso del defecto
+  queda en 38; en modo normal, en 51.
+- Con las filas por debajo de 60, el puntero ya no cabe colgado bajo su rama
+  —chocaría con la etiqueta de la fila siguiente— y pasa al costado, unido a
+  ella por un trazo.
+- Si ni con el mínimo caben todas las etiquetas, el panel lo dice sobre el
+  dibujo: «Más abajo: main. Desplaza el grafo para verlas.» Y ahora sí se
+  desplaza.
+
+Se descartó escalar el grafo entero: achica los nodos, que es justo lo que el
+SPEC 013 vino a arreglar, y la letra del grafo bajaría de los catorce píxeles
+que el modo relator exige.
+
+### 62.3 · La prueba, que la primera vez se aprobó sola
+
+`cypress/e2e/visibilidad.cy.ts` recorre los ocho escenarios en los dos modos y
+los dos temas, más el 07 tras el rebase, y exige que cada etiqueta de rama y
+el puntero estén enteros dentro de lo que se ve.
+
+**La primera versión pasó 36 de 36 con el defecto presente.** Es la sexta vez
+del patrón. Medía contra la caja con `overflow-auto`, que es la que no
+recorta, por la misma causa de 62.1; y podía medir antes de que el grafo se
+dibujara, con una lista vacía que también es «ninguna fuera». La corregida
+interseca todos los antepasados que recortan, más la ventana, y reintenta
+sobre las etiquetas ya dibujadas. Contra el build del SPEC 013 falla en los
+dos casos del defecto —07 tras el rebase, relator, oscuro y claro— y pasa en
+los otros 34. Con el arreglo pasa en los 36.
+
+Las pruebas de unidad del mecanismo se vieron fallar contra el código
+anterior. Una, «si cabe, no toca nada», pasaba también con la guarda quitada:
+con el tope igual al alto, apretar o no da lo mismo. Ahora prueba además con
+holgura, donde un cálculo sin guarda estiraría las filas, y se la vio fallar.
+
+### 62.4 · La marca de dirección
+
+Pasó de un triángulo de borde tenue a **una flecha**: un círculo de 34 píxeles
+sobre cada junta, con borde de dos, y dentro una flecha de trazo tres del
+color del texto. En el tema oscuro, texto claro sobre el panel; en el claro,
+texto oscuro sobre blanco. El relleno lateral de las áreas subió a 32 para
+que el círculo no toque el texto de al lado.
+
+### 62.5 · El ancho, que queda para el spec siguiente
+
+La medición mostró que el grafo no está corto de ancho: a 1600 píxeles el
+panel mide 905 y el dibujo usa entre 396 y 580. La consola sí: la salida más
+larga del guion que imprime Git, el `renamed:` de 90 caracteres del
+laboratorio 03, pide 702 píxeles en modo normal y 913 en relator, y la consola
+tiene 605, así que **hoy ya se parte**. Los criterios CA3 y CA4 se
+contradecían a 1600 píxeles.
+
+El product owner eligió dar a la consola su medida y los dejó sin efecto: el
+spec siguiente trae un redimensionador entre consola y grafo, con un reparto
+de partida del 46 por ciento. **En este spec no se tocó ningún ancho.**
+
+### 62.6 · Las cifras
+
+| | |
+|---|---|
+| Etiquetas a la vista, 8 escenarios × 2 modos × 2 temas + el 07 tras el rebase | 36 de 36 |
+| Letra mínima pintada en las 40 capturas | 11 píxeles en normal, 14,3 en relator |
+| Desborde horizontal a 1280, 1600 y 1920 | ninguno |
+| Recorridos de punta a punta | los mismos 5, la misma cobertura: 71, 95, 92, 98 y 88 % |
+| Artefacto | 321 913 bytes, 1 719 más que en el SPEC 013 |
+

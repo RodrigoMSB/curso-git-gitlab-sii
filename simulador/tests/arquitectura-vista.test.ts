@@ -170,7 +170,11 @@ describe('la pantalla se ajusta al contenido', () => {
   it('la consola y el grafo crecen hasta un tope y ahi se desplazan por dentro', () => {
     expect(consola).toContain('max-h-[var(--alto-central)]');
     expect(consola).toContain('min-h-0 overflow-auto');
-    expect(grafo).toContain('max-h-full overflow-auto');
+    // `min-h-0 flex-1` y no `max-h-full`: el porcentaje no tenia contra que
+    // resolverse, el dibujo crecia entero y el panel lo cortaba sin barra.
+    // Ninguna prueba lo vio hasta el SPEC 016.
+    expect(grafo).toContain('min-h-0 flex-1 overflow-auto');
+    expect(aplicacion).toContain('flex max-h-[var(--alto-central)] min-h-[var(--alto-grafo)] flex-col overflow-hidden');
     expect(aplicacion).toContain('[--alto-central:calc(100dvh-20rem)]');
   });
 

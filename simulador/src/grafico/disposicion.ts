@@ -26,12 +26,35 @@ export interface OpcionesDisposicion {
   readonly limite: number;
   /** Confirmaciones que la orden en curso produciria, dibujadas discontinuas. */
   readonly previsualizadas: readonly string[];
+  /**
+   * Alto disponible, en unidades del dibujo, o `null` si no hay tope.
+   *
+   * Cuando el grafo no cabe, se aprieta el espacio **entre** filas hasta
+   * `FILA_MINIMA` (SPEC 016). Los nodos, las lineas y la letra no se tocan: el
+   * SPEC 013 los agrando para que se vean proyectados, y achicarlos para hacer
+   * sitio desharia justo eso.
+   */
+  readonly altoMaximo: number | null;
 }
 
 const POR_DEFECTO: OpcionesDisposicion = {
   limite: MEDIDAS.limitePorDefecto,
   previsualizadas: [],
+  altoMaximo: null,
 };
+
+/**
+ * El espacio entre filas mas apretado que se admite: el diametro de un nodo
+ * mas doce, que deja ver el tramo de linea entre dos confirmaciones y separa
+ * las etiquetas de filas vecinas, que miden veinticuatro.
+ */
+export const FILA_MINIMA = 34;
+
+/**
+ * Por debajo de este espacio entre filas el puntero ya no cabe colgado bajo su
+ * rama: chocaria con la etiqueta de la fila siguiente. Pasa al costado.
+ */
+export const FILA_PUNTERO_DEBAJO = MEDIDAS.altoEtiqueta + 10 + MEDIDAS.altoPuntero + 4;
 
 function anchoDeTexto(texto: string): number {
   return Math.round(texto.length * MEDIDAS.anchoCaracter + MEDIDAS.relleno * 2);
@@ -178,9 +201,10 @@ function trazadoEntre(
   x2: number,
   y2: number,
   enElHijo: boolean,
+  fila: number,
 ): string {
   if (x1 === x2) return `M ${x1} ${y1} L ${x2} ${y2}`;
-  const tramo = Math.min(MEDIDAS.espacioFila - MEDIDAS.radio * 2, y2 - y1);
+  const tramo = Math.min(fila - MEDIDAS.radio * 2, y2 - y1);
   if (enElHijo) {
     const fin = y1 + tramo;
     const medio = (y1 + fin) / 2;
@@ -204,7 +228,37 @@ export function disponer(
   estado: EstadoRepositorio,
   opciones: Partial<OpcionesDisposicion> = {},
 ): Disposicion {
-  const { limite, previsualizadas } = { ...POR_DEFECTO, ...opciones };
+  const completas = { ...POR_DEFECTO, ...opciones };
+  const holgada = disponerCon(estado, completas, MEDIDAS.espacioFila);
+  const tope = completas.altoMaximo;
+  if (tope === null || holgada.alto <= tope || holgada.nodos.length < 2) return holgada;
+
+  // Lo que no depende de la separacion entre filas se mantiene; lo que si,
+  // se reparte en el alto que hay.
+  const filas = holgada.nodos.length - 1;
+  const fijo = holgada.alto - filas * MEDIDAS.espacioFila;
+  const fila = Math.max(FILA_MINIMA, Math.floor((tope - fijo) / filas));
+  const apretada = disponerCon(estado, completas, fila);
+  return { ...apretada, fueraDeVista: fueraDeVista(apretada, tope) };
+}
+
+/**
+ * Las etiquetas de rama y el puntero que, aun apretando las filas, quedan
+ * mas abajo del alto disponible. La pantalla las nombra: una confirmacion con
+ * etiqueta nunca queda fuera de la vista sin que nada lo diga (SPEC 016, 2.3).
+ */
+function fueraDeVista(disposicion: Disposicion, tope: number): readonly string[] {
+  return disposicion.etiquetas
+    .filter((etiqueta) => etiqueta.forma !== 'version' && etiqueta.y + etiqueta.alto > tope)
+    .map((etiqueta) => etiqueta.texto);
+}
+
+function disponerCon(
+  estado: EstadoRepositorio,
+  opciones: OpcionesDisposicion,
+  espacioFila: number,
+): Disposicion {
+  const { limite, previsualizadas } = opciones;
   const enPrevisualizacion = new Set(previsualizadas);
 
   const proyectadas = previsualizadas
@@ -234,7 +288,7 @@ export function disponer(
   const nodos: NodoGrafo[] = visibles.map((confirmacion, fila) => {
     const carril = carriles.get(confirmacion.id) ?? 0;
     const x = MEDIDAS.margenSuperior + carril * MEDIDAS.espacioCarril;
-    const y = MEDIDAS.margenSuperior + fila * MEDIDAS.espacioFila;
+    const y = MEDIDAS.margenSuperior + fila * espacioFila;
     posicion.set(confirmacion.id, { x, y });
     return {
       id: confirmacion.id,
@@ -275,6 +329,7 @@ export function disponer(
           destino.x,
           destino.y - MEDIDAS.radio,
           esUnion,
+          espacioFila,
         ),
         previsualizada: nodoHijo?.previsualizada === true,
         atenuada: nodoHijo?.huerfana === true && nodoPadre?.huerfana === true,
@@ -283,7 +338,11 @@ export function disponer(
     });
   }
 
-  const { etiquetas, enlacePuntero } = disponerEtiquetas(estado, posicion);
+  const { etiquetas, enlacePuntero } = disponerEtiquetas(
+    estado,
+    posicion,
+    espacioFila >= FILA_PUNTERO_DEBAJO,
+  );
   const rotuloHuerfanas = rotularHuerfanas(nodos);
 
   // El marco se deduce de lo dibujado. Las etiquetas de version quedan a la
@@ -319,6 +378,8 @@ export function disponer(
     ancho: extremoX - origenX,
     alto: extremoY,
     ocultas: Math.max(todas.length - visibles.length, 0),
+    espacioFila,
+    fueraDeVista: [],
   };
 }
 
@@ -382,6 +443,7 @@ function alcanzablesDesdeReferencias(estado: EstadoRepositorio): ReadonlySet<str
 function disponerEtiquetas(
   estado: EstadoRepositorio,
   posicion: ReadonlyMap<string, { x: number; y: number }>,
+  punteroDebajo: boolean,
 ): {
   etiquetas: readonly EtiquetaGrafo[];
   enlacePuntero: EnlacePuntero | null;
@@ -457,7 +519,39 @@ function disponerEtiquetas(
   // Al cambiar de rama, esto es lo unico que se mueve en pantalla.
   let enlacePuntero: EnlacePuntero | null = null;
 
-  if (etiquetaSeguida !== null) {
+  if (etiquetaSeguida !== null && !punteroDebajo) {
+    // Con las filas apretadas el puntero va al costado, despues de la ultima
+    // etiqueta de esa confirmacion, y un trazo lo une a su rama. Si hay otra
+    // rama entre medio, el trazo pasa por detras de su pildora, que es opaca.
+    const seguida = etiquetaSeguida;
+    const ancho = anchoDeTexto('HEAD');
+    const borde = Math.max(
+      ...etiquetas
+        .filter((etiqueta) => etiqueta.forma === 'rama' && etiqueta.idConfirmacion === seguida.idConfirmacion)
+        .map((etiqueta) => etiqueta.x + etiqueta.ancho),
+    );
+    const x = borde + 12;
+    const y = seguida.y + (MEDIDAS.altoEtiqueta - MEDIDAS.altoPuntero) / 2;
+    const medio = seguida.y + MEDIDAS.altoEtiqueta / 2;
+    etiquetas.push({
+      clave: 'puntero',
+      texto: 'HEAD',
+      forma: 'puntero',
+      x,
+      y,
+      ancho,
+      alto: MEDIDAS.altoPuntero,
+      actual: true,
+      principal: false,
+      anotada: false,
+      idConfirmacion: seguida.idConfirmacion,
+    });
+    enlacePuntero = {
+      trazado: `M ${x} ${medio} L ${seguida.x + seguida.ancho} ${medio}`,
+      relativo: `M 0 ${medio - y} L ${seguida.x + seguida.ancho - x} ${medio - y}`,
+      ancla: 'rama',
+    };
+  } else if (etiquetaSeguida !== null) {
     const ancho = anchoDeTexto('HEAD');
     const x = etiquetaSeguida.x;
     const y = etiquetaSeguida.y + MEDIDAS.altoEtiqueta + 10;

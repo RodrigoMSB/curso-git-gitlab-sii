@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { previsualizar } from '../src/core/motor';
 import { idActual, ramaPorNombre } from '../src/core/estado';
-import { disponer, TEXTO_HUERFANAS } from '../src/grafico/disposicion';
+import { disponer, FILA_MINIMA, FILA_PUNTERO_DEBAJO, TEXTO_HUERFANAS } from '../src/grafico/disposicion';
 import { MEDIDAS } from '../src/grafico/tipos';
 import type { EstadoRepositorio } from '../src/core/tipos';
 import { correr, repoConRamaDeTrabajo, repoConRamas, repoLineal, repoVacio } from './ayudas';
@@ -432,5 +432,65 @@ describe('SPEC 013 · la etiqueta de version no tapa el identificador', () => {
         (nodo?.x ?? 0) - MEDIDAS.radio - MEDIDAS.anchoIdentificador,
       );
     }
+  });
+});
+
+/**
+ * SPEC 016 · el grafo tiene que caber.
+ *
+ * Tras el rebase del laboratorio 07, en modo relator, el grafo se cortaba
+ * antes de `main`. Cuando no cabe, se aprieta el espacio entre filas; los
+ * nodos, las lineas y la letra no se tocan.
+ */
+describe('SPEC 016 · el grafo cabe en el alto que hay', () => {
+  const trasElRebase = (): EstadoRepositorio => correr(repoConRamaDeTrabajo(), 'git rebase main');
+
+  it('sin tope se dibuja como siempre', () => {
+    const holgada = disponer(trasElRebase());
+    expect(holgada.espacioFila).toBe(MEDIDAS.espacioFila);
+    expect(holgada.fueraDeVista).toEqual([]);
+  });
+
+  it('con tope, aprieta las filas hasta caber, y solo las filas', () => {
+    const holgada = disponer(trasElRebase());
+    // El caso del defecto: el alto del panel en modo relator a mil pixeles de ventana.
+    const tope = (680 - 34) / 1.3;
+    expect(holgada.alto).toBeGreaterThan(tope);
+    const apretada = disponer(trasElRebase(), { altoMaximo: tope });
+    expect(apretada.alto).toBeLessThanOrEqual(tope);
+    expect(apretada.espacioFila).toBeLessThan(MEDIDAS.espacioFila);
+    expect(apretada.espacioFila).toBeGreaterThanOrEqual(FILA_MINIMA);
+    expect(apretada.fueraDeVista).toEqual([]);
+    // Mismas confirmaciones, en los mismos carriles: cambia la altura, nada mas.
+    expect(apretada.nodos.map((nodo) => [nodo.id, nodo.carril, nodo.x])).toEqual(
+      holgada.nodos.map((nodo) => [nodo.id, nodo.carril, nodo.x]),
+    );
+    expect(apretada.etiquetas.find((etiqueta) => etiqueta.texto === 'main')).toBeDefined();
+  });
+
+  it('si cabe, no toca nada: ni aprieta ni estira', () => {
+    // Con un tope justo igual al alto, apretar o no da lo mismo y la prueba no
+    // distinguia nada; se vio pasar con la guarda quitada. Con holgura, un
+    // calculo sin guarda estiraria las filas para llenar el panel.
+    const holgada = disponer(repoLineal());
+    expect(disponer(repoLineal(), { altoMaximo: holgada.alto })).toEqual(holgada);
+    expect(disponer(repoLineal(), { altoMaximo: holgada.alto + 200 })).toEqual(holgada);
+  });
+
+  it('con las filas apretadas, el puntero va al costado de su rama y no debajo', () => {
+    const apretada = disponer(trasElRebase(), { altoMaximo: 400 });
+    expect(apretada.espacioFila).toBeLessThan(FILA_PUNTERO_DEBAJO);
+    const puntero = apretada.etiquetas.find((etiqueta) => etiqueta.forma === 'puntero');
+    const rama = apretada.etiquetas.find((etiqueta) => etiqueta.forma === 'rama' && etiqueta.actual);
+    expect(puntero?.x).toBeGreaterThan((rama?.x ?? 0) + (rama?.ancho ?? 0));
+    // A la misma altura que su rama: no invade la fila siguiente.
+    expect((puntero?.y ?? 0) + (puntero?.alto ?? 0) / 2).toBeCloseTo((rama?.y ?? 0) + (rama?.alto ?? 0) / 2);
+  });
+
+  it('nunca aprieta por debajo del minimo, y lo que no cabe lo nombra', () => {
+    const apretada = disponer(trasElRebase(), { altoMaximo: 150 });
+    expect(apretada.espacioFila).toBe(FILA_MINIMA);
+    expect(apretada.fueraDeVista).toContain('main');
+    expect(apretada.fueraDeVista).not.toContain('HEAD');
   });
 });

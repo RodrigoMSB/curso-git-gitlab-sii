@@ -184,19 +184,37 @@ body {
   border-bottom-right-radius: 8px;
 }
 
-/* La marca de direccion: un triangulo sobre la junta, del color del borde. */
-.flujo > .area:nth-child(2n + 1)::after {
-  content: '';
+/*
+  La marca de direccion es una flecha y no un signo de puntuacion (SPEC 016,
+  seccion 4): un circulo sobre la junta, con la flecha en trazo grueso del
+  color del texto. Es la que enseña que el archivo viaja de izquierda a
+  derecha, la primera leccion del curso.
+*/
+.flecha-flujo {
   position: absolute;
   top: 50%;
-  right: calc(var(--escala) * -9px);
+  right: calc(var(--escala) * -17px);
   z-index: 1;
-  width: calc(var(--escala) * 16px);
-  height: calc(var(--escala) * 16px);
+  display: grid;
+  place-items: center;
+  width: calc(var(--escala) * 34px);
+  height: calc(var(--escala) * 34px);
+  border: 2px solid var(--texto-apagado);
+  border-radius: 50%;
   background: var(--fondo-panel);
-  border-top: 2px solid var(--texto-tenue);
-  border-right: 2px solid var(--texto-tenue);
-  transform: translateY(-50%) rotate(45deg);
+  color: var(--texto);
+  transform: translateY(-50%);
+}
+
+.flecha-flujo > svg {
+  width: 62%;
+  height: 62%;
+}
+
+/* En dos por dos, la junta que cruza de una fila a la otra no lleva flecha. */
+.flujo > .area:nth-child(2) > .flecha-flujo,
+.flujo > .area:last-child > .flecha-flujo {
+  display: none;
 }
 
 @media (min-width: 1280px) {
@@ -217,18 +235,8 @@ body {
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
   }
-  .flujo > .area:nth-child(2)::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: calc(var(--escala) * -9px);
-    z-index: 1;
-    width: calc(var(--escala) * 16px);
-    height: calc(var(--escala) * 16px);
-    background: var(--fondo-panel);
-    border-top: 2px solid var(--texto-tenue);
-    border-right: 2px solid var(--texto-tenue);
-    transform: translateY(-50%) rotate(45deg);
+  .flujo > .area:nth-child(2) > .flecha-flujo {
+    display: grid;
   }
 }
 
