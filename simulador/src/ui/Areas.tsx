@@ -29,16 +29,20 @@ export function Areas({
   readonly columnas: readonly ColumnaArea[];
 }): React.ReactElement {
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    // Un solo flujo, no cuatro cajas: el archivo viaja de izquierda a derecha
+    // (SPEC 013, seccion 3). La forma la pone la hoja de estilos.
+    <div className="flujo">
       {columnas.map((columna) => (
-        <section key={columna.clave} className="panel p-3" data-columna={columna.clave}>
-          <h2 className="t-pequeno font-semibold">{columna.titulo}</h2>
-          <p className="t-min mb-2 font-mono text-[var(--texto-apagado)]">{columna.orden}</p>
+        <section key={columna.clave} className="area px-5 py-4" data-columna={columna.clave}>
+          <div className="mb-3 flex items-baseline gap-2">
+            <h2 className="rotulo">{columna.titulo}</h2>
+            <p className="t-min font-mono text-[var(--texto-tenue)]">{columna.orden}</p>
+          </div>
           {columna.elementos.length === 0 ? (
-            <p className="t-min text-[var(--texto-apagado)]">{columna.vacio}</p>
+            <p className="t-pequeno text-[var(--texto-apagado)]">{columna.vacio}</p>
           ) : (
             <ul
-              className="lista-archivos t-min font-mono"
+              className="lista-archivos t-normal font-mono font-medium"
               // Cuando la lista se desplaza pasa a ser alcanzable con el
               // teclado; si cabe entera no agrega una parada de tabulacion que
               // no lleva a ninguna parte (CA8).
@@ -73,10 +77,10 @@ export function PanelesSecundarios({
   if (!hayAlguno) return null;
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {paneles.guardado !== null && (
-        <section className="panel p-3">
-          <h2 className="t-pequeno mb-2 font-semibold">Pila de guardado temporal</h2>
+        <section className="panel px-5 py-4">
+          <h2 className="rotulo mb-3">Pila de guardado temporal</h2>
           <ol className="t-min space-y-1 font-mono">
             {paneles.guardado.map((entrada) => (
               <li key={entrada.clave} data-guardado={entrada.texto}>
@@ -92,8 +96,8 @@ export function PanelesSecundarios({
       )}
 
       {paneles.diferencias !== null && (
-        <section className="panel p-3">
-          <h2 className="t-pequeno mb-2 font-semibold">Diferencias</h2>
+        <section className="panel px-5 py-4">
+          <h2 className="rotulo mb-3">Diferencias</h2>
           <div className="t-min max-h-48 overflow-auto font-mono">
             {paneles.diferencias.map((renglon: Renglon) => (
               <pre
@@ -116,8 +120,8 @@ export function PanelesSecundarios({
       )}
 
       {paneles.objetos !== null && (
-        <section className="panel p-3">
-          <h2 className="t-pequeno mb-2 font-semibold">Objetos internos</h2>
+        <section className="panel px-5 py-4">
+          <h2 className="rotulo mb-3">Objetos internos</h2>
           <div className="t-min space-y-2 font-mono">
             <ObjetoDibujado
               titulo="confirmación"

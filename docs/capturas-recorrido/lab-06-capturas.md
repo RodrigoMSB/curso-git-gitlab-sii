@@ -22,7 +22,7 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 014 | movio | tiempo |
 | 015 | movio | areas, tiempo |
 | 016 | movio | nodos, ramas, puntero, areas, tiempo |
-| 017 | movio | tiempo |
+| 017 | movio | nodos, tiempo |
 | 018 | movio | tiempo |
 | 019 | movio | nodos, ramas, puntero, tiempo |
 | 020 | movio | tiempo |

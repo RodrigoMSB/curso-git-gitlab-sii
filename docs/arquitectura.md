@@ -4155,3 +4155,131 @@ Sin cambios, medida en la corrida de Cypress: 02 en 71 %, 03 en 95 %, 04 en
 92 %, 05 en 98 % y 06 en 88 %, las mismas cifras de 59.7. Ninguna orden de los
 guiones usa `-q`, `commit -a` ni una opción inexistente.
 
+---
+
+# SPEC 013 · Rediseño visual del simulador
+
+## 61. El aspecto, sin tocar la lógica
+
+Llegó después del 014 y el 015, que ya lo anunciaban como «el spec siguiente
+de aspecto». El motor, el contrato, los escenarios y los verificadores no se
+tocaron; lo único que cambió en `src/grafico` es presentación: medidas, forma
+de las aristas y dónde van las etiquetas.
+
+### 61.1 · Dos cosas que el spec describía distinto de como estaban
+
+- **Los colores.** El punto 1.4 dice «gris para la rama principal, verde para
+  las derivadas, coral para el puntero». La pantalla usa **azul, violeta y
+  ámbar** desde el SPEC 002. Como el mismo punto pide no cambiar significados,
+  se conservaron los tonos que el participante ya aprendió y se deja anotado.
+  Si el arquitecto quiere los otros, es un cambio de paleta de una línea por
+  tema.
+- **Los identificadores** ya iban a la izquierda del nodo y alineados a la
+  derecha (punto 2.4); el radio era nueve y no siete u ocho, y las aristas
+  medían dos y no uno y medio.
+
+### 61.2 · Lo que cambió, en cifras
+
+| | Antes | Después |
+|---|---|---|
+| Radio de los nodos | 9 | **11** |
+| Aristas | 2, gris | **3**, del color de su rama; 2,5 las previsualizadas; puntas redondas |
+| Curva entre carriles | repartida en todo el tramo | **solo en la junta**: encima del punto de donde sale la rama, debajo de la unión que la cierra |
+| Etiquetas de rama y puntero | 20 de alto, esquina 3, sin relleno | **24 y 22 de alto, píldora**, rellenas del color del panel |
+| Letra del grafo | 11 | 12 |
+| Filas · carriles | 58 · 48 | 62 · 54 |
+| Nombre del repositorio | 15, semibold | **21**, semibold, con la rama en píldora al lado |
+| Rótulo de área · sus datos | 12 negrita · 11 | **11 versalitas tenue · 13** |
+| Relleno de paneles · separación entre zonas | 12 · 12 | 16 a 20 · 16 |
+| Consola: interlineado · separación entre órdenes | 1,63 · 8 | 1,8 · 16 |
+| Línea de tiempo | panel con título y botones | una línea: paso, segmentos, orden, botones |
+
+Las cuatro áreas son un flujo: pegadas, redondeadas sólo hacia afuera y con
+una marca de dirección en cada junta. Bajo 1 280 píxeles pasan a dos por dos,
+con la marca en las dos juntas horizontales.
+
+### 61.3 · El tema claro
+
+`:root[data-tema='claro']` redefine cada color del oscuro —una prueba lo
+exige, variable por variable— con tonos más oscuros para que el significado se
+sostenga sobre blanco. La consola lleva la clase `terminal`, que reafirma sus
+tonos oscuros en los dos temas. El interruptor va junto al de modo relator y,
+como todo lo demás de la interfaz, no se guarda (decisión 7.12).
+
+### 61.4 · El movimiento, medido
+
+`herramientas/capturas-rediseno.mjs movimiento` lee lo que el navegador pinta
+sesenta milisegundos después de la orden, con la previsualización apagada para
+que el cambio lo produzca la orden y no la escritura:
+
+| | Normal | Movimiento reducido |
+|---|---|---|
+| `git switch azteca`, posición del puntero | 830 → **871** → 938 | 830 → 938 → 938 |
+| `git commit`, nodos creciendo | **1** | 0 |
+| `git reset --hard HEAD~1`, opacidad de la huérfana | 1 → **0,87** → 0,65 | 1 → 0,65 → 0,65 |
+| Al cargar | nada se mueve | nada se mueve |
+
+La cifra del medio es la que prueba la transición: en modo normal está a mitad
+de camino, en reducido ya es la final. Las duraciones van de 220 a 280 ms, y
+una prueba exige que todas estén entre 150 y 300.
+
+Dos decisiones de detalle. Al cambiar de escenario el grafo entero es nuevo y
+eso no es una acción del participante, así que no crece nada y el puntero no
+viaja desde el escenario anterior. Y las confirmaciones previsualizadas no
+crecen: aparecen y desaparecen al escribir, y animarlas en cada tecla sería
+movimiento que no muestra nada.
+
+### 61.5 · Lo que apareció al mirar
+
+**La etiqueta de versión tapaba el identificador.** Las dos iban en el mismo
+espacio a la izquierda del nodo. Antes del rediseño se enciman y no se leía
+ninguna; con las píldoras rellenas, la etiqueta lo tapaba entero. Lo destapó
+el informe de movimiento del laboratorio 06, que después de `git tag v0.9`
+dejó de marcar movimiento en los nodos. Es posición de presentación y se
+corrigió aquí, con una prueba que se vio fallar: la etiqueta va a la izquierda
+del identificador.
+
+**Las líneas gruesas atravesaban los nombres de las ramas vecinas.** Una
+etiqueta a la derecha de su nodo cae sobre el carril siguiente. Con la línea
+fina y gris de antes casi no se notaba; con tres píxeles de color se leía
+«ta|landesa». Las píldoras van rellenas del color del panel, y los
+identificadores llevan un contorno del mismo color por debajo de la letra.
+
+**Ningún defecto de comportamiento.** El único que está pendiente es el de la
+sección 60.6, anterior a este spec.
+
+### 61.6 · Las pruebas
+
+- **Una sola se ajustó por una medida**: el alto de fila de las listas pasó de
+  18 a 22 píxeles, porque los datos subieron de 11 a 13.
+- **Los recorridos de punta a punta no necesitaron ningún ajuste.** Pasan los
+  48, con la misma cobertura: 02 en 71 %, 03 en 95 %, 04 en 92 %, 05 en 98 %
+  y 06 en 88 %.
+- **Once pruebas nuevas.** Nueve se vieron fallar contra el código de antes:
+  el radio, las dos curvas en la junta, el color de cada arista, el trazo del
+  puntero que viaja con él, la etiqueta de versión, el tema claro completo, la
+  consola oscura y las duraciones. Las otras dos son guardas que ya se
+  cumplían —«en el mismo carril, una recta» y «ni degradados ni sombras»— y se
+  las vio fallar rompiendo a propósito lo que vigilan.
+
+### 61.7 · Las capturas
+
+`herramientas/capturas-rediseno.mjs capturar` recorre los ocho escenarios con
+escenario, en modo normal y relator, en los dos temas, más huérfanas tras el
+rebase del 07 y la fusión previsualizada del 05: cuarenta capturas. De cada
+una mide la letra más chica que el navegador pintó y el desborde horizontal a
+1 280, 1 600 y 1 920 píxeles. En las cuarenta: **11 píxeles en normal y 14,3
+en relator, y ningún desborde.** El modo relator no quedó apretado en ningún
+laboratorio.
+
+`comparar` cruza cada una con la de antes contando píxeles en Chrome. En el
+tema oscuro cambió entre el 4,6 y el 8,5 % de la pantalla; en el claro, contra
+el oscuro de antes, entre el 90 y el 95 %. Las capturas quedan fuera del
+repositorio, como las del recorrido; las seis de `docs/capturas` se
+regeneraron con el diseño nuevo.
+
+### 61.8 · El artefacto
+
+Sigue siendo un archivo único y autocontenido. Pasó de 314 154 a **320 194
+bytes**: 6 040 más, un 1,9 %.
+

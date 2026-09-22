@@ -159,11 +159,38 @@ function repartirCarriles(
   return reparto;
 }
 
-/** Curva suave entre una confirmacion y uno de sus padres. */
-function trazadoEntre(x1: number, y1: number, x2: number, y2: number): string {
+/**
+ * Trazado entre una confirmacion y uno de sus padres.
+ *
+ * En el mismo carril, una recta. Entre carriles, la curva ocurre **en la
+ * junta** y el resto es recto (SPEC 013, punto 2.3): una rama que se abre dobla
+ * justo encima del punto de donde sale y sube derecha por su carril; una union
+ * baja derecha y dobla justo debajo de la confirmacion que la cierra. Antes la
+ * curva se repartia entre las dos puntas, y una rama de cinco filas se leia
+ * como una diagonal que no decia ni donde se abrio ni donde se cerro.
+ *
+ * `enElHijo` dice en que punta esta la junta: en el hijo para una union, en el
+ * padre para una rama que se abre.
+ */
+function trazadoEntre(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  enElHijo: boolean,
+): string {
   if (x1 === x2) return `M ${x1} ${y1} L ${x2} ${y2}`;
-  const medio = (y1 + y2) / 2;
-  return `M ${x1} ${y1} C ${x1} ${medio}, ${x2} ${medio}, ${x2} ${y2}`;
+  const tramo = Math.min(MEDIDAS.espacioFila - MEDIDAS.radio * 2, y2 - y1);
+  if (enElHijo) {
+    const fin = y1 + tramo;
+    const medio = (y1 + fin) / 2;
+    const curva = `M ${x1} ${y1} C ${x1} ${medio}, ${x2} ${medio}, ${x2} ${fin}`;
+    return fin >= y2 ? curva : `${curva} L ${x2} ${y2}`;
+  }
+  const inicio = y2 - tramo;
+  const medio = (inicio + y2) / 2;
+  const curva = `C ${x1} ${medio}, ${x2} ${medio}, ${x2} ${y2}`;
+  return inicio <= y1 ? `M ${x1} ${y1} ${curva}` : `M ${x1} ${y1} L ${x1} ${inicio} ${curva}`;
 }
 
 /**
@@ -228,11 +255,16 @@ export function disponer(
   for (const confirmacion of visibles) {
     const hijo = posicion.get(confirmacion.id);
     if (hijo === undefined) continue;
-    for (const padre of confirmacion.padres) {
+    confirmacion.padres.forEach((padre, orden) => {
       const destino = posicion.get(padre);
-      if (destino === undefined) continue;
+      if (destino === undefined) return;
       const nodoHijo = porId.get(confirmacion.id);
       const nodoPadre = porId.get(padre);
+      // El segundo padre y los siguientes son lo que la union trae: la junta
+      // esta en el hijo. El primero, si cambia de carril, es una rama que se
+      // abre desde el padre.
+      const esUnion = orden > 0;
+      const carrilDibujado = esUnion ? (nodoPadre?.carril ?? 0) : (nodoHijo?.carril ?? 0);
       aristas.push({
         clave: `${confirmacion.id}->${padre}`,
         desde: confirmacion.id,
@@ -242,11 +274,13 @@ export function disponer(
           hijo.y + MEDIDAS.radio,
           destino.x,
           destino.y - MEDIDAS.radio,
+          esUnion,
         ),
         previsualizada: nodoHijo?.previsualizada === true,
         atenuada: nodoHijo?.huerfana === true && nodoPadre?.huerfana === true,
+        derivada: carrilDibujado !== 0,
       });
-    }
+    });
   }
 
   const { etiquetas, enlacePuntero } = disponerEtiquetas(estado, posicion);
@@ -397,7 +431,9 @@ function disponerEtiquetas(
   for (const [id, versiones] of versionesPorConfirmacion) {
     const punto = posicion.get(id);
     if (punto === undefined) continue;
-    let borde = punto.x - MEDIDAS.radio - MEDIDAS.separacionEtiqueta;
+    // A la izquierda del identificador, que ocupa el espacio pegado al nodo.
+    // Antes se dibujaban encima de el y lo tapaban (SPEC 013).
+    let borde = punto.x - MEDIDAS.radio - MEDIDAS.anchoIdentificador;
     for (const version of versiones) {
       const ancho = anchoDeTexto(version.nombre);
       etiquetas.push({
@@ -440,6 +476,7 @@ function disponerEtiquetas(
     });
     enlacePuntero = {
       trazado: `M ${x + ancho / 2} ${y} L ${x + ancho / 2} ${etiquetaSeguida.y + MEDIDAS.altoEtiqueta}`,
+      relativo: `M ${ancho / 2} 0 L ${ancho / 2} ${etiquetaSeguida.y + MEDIDAS.altoEtiqueta - y}`,
       ancla: 'rama',
     };
   } else if (estado.puntero.tipo === 'confirmacion') {
@@ -463,6 +500,7 @@ function disponerEtiquetas(
       });
       enlacePuntero = {
         trazado: `M ${punto.x + MEDIDAS.radio} ${punto.y} L ${x} ${punto.y}`,
+        relativo: `M ${punto.x + MEDIDAS.radio - x} ${punto.y - y} L 0 ${punto.y - y}`,
         ancla: 'confirmacion',
       };
     }

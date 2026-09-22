@@ -18,7 +18,7 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 014 | `git status` | tiempo |
 | 015 | `git add .` | areas, tiempo |
 | 016 | `git commit -c ORIG_HEAD` | nodos, ramas, puntero, areas, tiempo |
-| 017 | `git log --oneline -3` | tiempo |
+| 017 | `git log --oneline -3` | nodos, tiempo |
 | 018 | `git status` | tiempo |
 | 019 | `git reset --hard HEAD~1` | nodos, ramas, puntero, tiempo |
 | 020 | `git log --oneline -3` | tiempo |

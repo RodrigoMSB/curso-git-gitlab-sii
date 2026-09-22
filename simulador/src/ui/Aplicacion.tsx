@@ -6,7 +6,7 @@
  * calcula nada sobre confirmaciones, ramas ni punteros (restriccion R6).
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cambiarEscenario,
   completar,
@@ -35,6 +35,15 @@ export function Aplicacion(): React.ReactElement {
   const [indiceHistorial, setIndiceHistorial] = useState(0);
   const [previsualizacionActiva, setPrevisualizacionActiva] = useState(true);
   const [modoRelator, setModoRelator] = useState(false);
+  // El tema no se guarda: recargar vuelve al oscuro, como todo lo demas de la
+  // interfaz vuelve a su estado inicial (decision 7.12).
+  const [temaClaro, setTemaClaro] = useState(false);
+
+  // Los colores viven en la raiz del documento, porque el fondo de la pagina
+  // tambien cambia con el tema y no solo lo que esta dentro de la aplicacion.
+  useEffect(() => {
+    document.documentElement.dataset.tema = temaClaro ? 'claro' : 'oscuro';
+  }, [temaClaro]);
 
   const movimientoReducido = useMovimientoReducido();
   const escala = modoRelator ? ESCALA_RELATOR : 1;
@@ -91,14 +100,16 @@ export function Aplicacion(): React.ReactElement {
     <div
       data-relator={modoRelator}
       style={{ '--escala': escala } as React.CSSProperties}
-      className="flex min-h-[100dvh] flex-col gap-3 p-3"
+      className="flex min-h-[100dvh] flex-col gap-4 p-4"
     >
       <BarraEstado
         barra={pantalla.barra}
         escenario={sesion.escenario}
         previsualizacionActiva={previsualizacionActiva}
         modoRelator={modoRelator}
+        temaClaro={temaClaro}
         onEscenario={elegirEscenario}
+        onTemaClaro={() => setTemaClaro((valor) => !valor)}
         onPrevisualizacion={() => setPrevisualizacionActiva((valor) => !valor)}
         onModoRelator={() => setModoRelator((valor) => !valor)}
         onReiniciar={() => elegirEscenario(sesion.escenario)}
@@ -118,7 +129,7 @@ export function Aplicacion(): React.ReactElement {
         aparecen confirmaciones, sin necesidad de anclarlas al borde inferior:
         anclarlas partia la pantalla en dos en los escenarios chicos.
       */}
-      <div className="grid grid-cols-1 items-start gap-3 [--alto-central:calc(100dvh-20rem)] [--alto-grafo:26rem] min-[1280px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="grid grid-cols-1 items-start gap-4 [--alto-central:calc(100dvh-20rem)] [--alto-grafo:26rem] min-[1280px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <Consola
           indicador={pantalla.indicador}
           renglones={pantalla.renglones}
@@ -145,6 +156,7 @@ export function Aplicacion(): React.ReactElement {
             escala={escala}
             seleccion={pantalla.seleccion}
             animar={!movimientoReducido}
+            escenario={sesion.escenario}
             onSeleccionar={(id) => setSesion((anterior) => seleccionarConfirmacion(anterior, id))}
           />
         </section>
@@ -155,7 +167,7 @@ export function Aplicacion(): React.ReactElement {
         el resto de las zonas. Lo que sobre queda al final de la pagina, no en
         el medio.
       */}
-      <div className="shrink-0 space-y-3">
+      <div className="shrink-0 space-y-4">
         <Areas columnas={pantalla.columnas} />
         <PanelesSecundarios paneles={pantalla.paneles} />
       </div>

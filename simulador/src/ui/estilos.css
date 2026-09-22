@@ -14,17 +14,23 @@
   rama principal, otro para las derivadas, otro para la posicion actual y un
   atenuado para lo huerfano. Los tres colores de consola son aparte: reproducen
   los que usa Git y el punto 4.5 los exige.
+
+  Hay dos temas (SPEC 013, seccion 7). Los colores conservan su significado en
+  los dos; lo que cambia es el tono, para que en el claro tengan el contraste
+  que en el oscuro dan por si solos. El tema no se guarda en el navegador,
+  igual que el resto de la interfaz (decision 7.12).
 */
 :root {
   --escala: 1;
 
-  --fondo: #12151b;
-  --fondo-panel: #171b23;
+  --fondo: #10131a;
+  --fondo-panel: #181c25;
   --fondo-consola: #0b0d12;
-  --borde: #2a3140;
-  --borde-suave: #212734;
-  --texto: #e6e9ef;
-  --texto-apagado: #93a0b4;
+  --borde: #2c3342;
+  --borde-suave: #222836;
+  --texto: #eef1f6;
+  --texto-apagado: #97a3b6;
+  --texto-tenue: #6b7588;
 
   --rama-principal: #4b8bf5;
   --rama-derivada: #b06cf0;
@@ -38,6 +44,47 @@
   --consola-azul: #6fb3e8;
 
   color-scheme: dark;
+}
+
+:root[data-tema='claro'] {
+  --fondo: #eceff4;
+  --fondo-panel: #ffffff;
+  --borde: #c9d0db;
+  --borde-suave: #dfe4eb;
+  --texto: #141821;
+  --texto-apagado: #535d6e;
+  --texto-tenue: #7a8496;
+
+  --rama-principal: #1f5fd6;
+  --rama-derivada: #8a3fd1;
+  --puntero: #b86a00;
+  --huerfano: #a7afbc;
+
+  --consola-verde: #16803e;
+  --consola-rojo: #c7352c;
+  --consola-amarillo: #8f6700;
+  --consola-azul: #1d6aa8;
+
+  color-scheme: light;
+}
+
+/*
+  La consola es una terminal y se reconoce como tal: queda oscura en los dos
+  temas (punto 7.3). Redefine aqui los tonos que usa, de modo que el tema claro
+  no le cambie ni el fondo ni la letra.
+*/
+.terminal {
+  --fondo-consola: #0b0d12;
+  --borde-suave: #232937;
+  --texto: #eef1f6;
+  --texto-apagado: #97a3b6;
+  --consola-verde: #4ec27a;
+  --consola-rojo: #f2685f;
+  --consola-amarillo: #e3bb4a;
+  --consola-azul: #6fb3e8;
+  --puntero: #f0a83c;
+  color-scheme: dark;
+  border-color: #2c3342;
 }
 
 html,
@@ -73,12 +120,116 @@ body {
 .t-grande {
   font-size: calc(var(--escala) * 18px);
 }
+.t-titulo {
+  font-size: calc(var(--escala) * 21px);
+}
 
 /* Superficies planas: sin degradados ni sombras difusas (punto 10.2). */
 .panel {
   background: var(--fondo-panel);
   border: 1px solid var(--borde);
-  border-radius: 6px;
+  border-radius: 8px;
+}
+
+/*
+  Rotulo de zona: el segundo nivel de la jerarquia (SPEC 013, punto 4.1). Mas
+  chico y mas tenue que los datos que encabeza, que son lo que cambia.
+*/
+.rotulo {
+  font-size: calc(var(--escala) * 11px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-apagado);
+}
+
+/*
+  Las cuatro areas son un solo flujo (SPEC 013, seccion 3): pegadas, con las
+  esquinas redondeadas solo hacia afuera y una marca de direccion en cada
+  junta. El archivo viaja de izquierda a derecha, y eso es lo que el dibujo
+  tiene que decir sin palabras.
+
+  En cuatro columnas la marca va en las tres juntas. En dos por dos, bajo mil
+  doscientos ochenta pixeles, va en las dos juntas horizontales: la que cruza
+  de la primera fila a la segunda no tiene un lado hacia donde apuntar.
+*/
+.flujo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.flujo > .area {
+  position: relative;
+  background: var(--fondo-panel);
+  border: 1px solid var(--borde);
+  border-radius: 0;
+}
+
+.flujo > .area:nth-child(2n) {
+  border-left-width: 0;
+}
+.flujo > .area:nth-child(n + 3) {
+  border-top-width: 0;
+}
+.flujo > .area:nth-child(1) {
+  border-top-left-radius: 8px;
+}
+.flujo > .area:nth-child(2) {
+  border-top-right-radius: 8px;
+}
+.flujo > .area:nth-child(3) {
+  border-bottom-left-radius: 8px;
+}
+.flujo > .area:nth-child(4) {
+  border-bottom-right-radius: 8px;
+}
+
+/* La marca de direccion: un triangulo sobre la junta, del color del borde. */
+.flujo > .area:nth-child(2n + 1)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: calc(var(--escala) * -9px);
+  z-index: 1;
+  width: calc(var(--escala) * 16px);
+  height: calc(var(--escala) * 16px);
+  background: var(--fondo-panel);
+  border-top: 2px solid var(--texto-tenue);
+  border-right: 2px solid var(--texto-tenue);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+@media (min-width: 1280px) {
+  .flujo {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .flujo > .area:nth-child(n) {
+    border-top-width: 1px;
+    border-left-width: 0;
+    border-radius: 0;
+  }
+  .flujo > .area:first-child {
+    border-left-width: 1px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+  }
+  .flujo > .area:last-child {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+  }
+  .flujo > .area:nth-child(2)::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: calc(var(--escala) * -9px);
+    z-index: 1;
+    width: calc(var(--escala) * 16px);
+    height: calc(var(--escala) * 16px);
+    background: var(--fondo-panel);
+    border-top: 2px solid var(--texto-tenue);
+    border-right: 2px solid var(--texto-tenue);
+    transform: translateY(-50%) rotate(45deg);
+  }
 }
 
 /*
@@ -90,7 +241,7 @@ body {
   modo relator se siguen viendo seis filas completas y no cinco y media.
 */
 .lista-archivos {
-  --alto-fila: calc(var(--escala) * 18px);
+  --alto-fila: calc(var(--escala) * 22px);
   --filas-visibles: 6;
   max-height: calc(var(--alto-fila) * var(--filas-visibles));
   overflow-y: auto;
@@ -117,23 +268,35 @@ body {
 }
 
 /*
-  Movimiento. Las transiciones responden a la accion del participante y no hay
-  ninguna que se dispare sola (punto 5.7).
+  Movimiento (SPEC 013, seccion 6). Responde a una accion del participante y
+  muestra que cambio: nada decorativo y nada al cargar. Duraciones entre ciento
+  cincuenta y trescientos milisegundos, porque mas lento estorba en clase.
 */
-.transicion-nodo {
-  transition:
-    transform 220ms ease-out,
-    opacity 220ms ease-out;
+
+/* El puntero se desliza al cambiar de rama: es la leccion entera de git switch. */
+.transicion-puntero {
+  transition: transform 260ms ease-out;
 }
 
+/* Una confirmacion que queda huerfana se apaga, no desaparece de un cuadro al otro. */
+.transicion-color {
+  transition:
+    fill 280ms ease-out,
+    stroke 280ms ease-out,
+    opacity 280ms ease-out;
+}
+
+/* Las confirmaciones nuevas aparecen creciendo desde su centro. */
 .entrada-nodo {
-  animation: aparecer 240ms ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: aparecer 220ms ease-out;
 }
 
 @keyframes aparecer {
   from {
     opacity: 0;
-    transform: scale(0.7);
+    transform: scale(0.4);
   }
   to {
     opacity: 1;

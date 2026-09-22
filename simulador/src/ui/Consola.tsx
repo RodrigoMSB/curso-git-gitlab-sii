@@ -122,7 +122,7 @@ export function Consola({
     // daria acceso a nada nuevo.
     // biome-ignore lint/a11y/useKeyWithClickEvents: el teclado ya alcanza el campo sin esto
     <section
-      className="panel flex max-h-[var(--alto-central)] min-h-0 flex-col"
+      className="panel terminal flex max-h-[var(--alto-central)] min-h-0 flex-col"
       style={{ background: 'var(--fondo-consola)' }}
       aria-label="Consola"
       onClick={() => campo.current?.focus()}
@@ -130,11 +130,12 @@ export function Consola({
       <div
         ref={desplazable}
         onScroll={alDesplazar}
-        className="t-normal min-h-0 overflow-auto p-3 font-mono leading-relaxed"
+        // Mas aire entre lineas: la consola es lo que mas se lee (SPEC 013, 5.2).
+        className="t-normal min-h-0 overflow-auto px-5 py-4 font-mono leading-[1.8]"
       >
         {renglones.map((renglon) =>
           renglon.color === 'orden' ? (
-            <div key={renglon.clave} className="mt-2 first:mt-0" data-color="orden">
+            <div key={renglon.clave} className="mt-4 first:mt-0" data-color="orden">
               <LineaIndicador indicador={indicador} />
               <div className="text-[var(--texto)]">
                 <span className="text-[var(--consola-verde)]">$ </span>
@@ -163,7 +164,7 @@ export function Consola({
 
       {aviso !== null && (
         <p
-          className="t-min border-t border-[var(--borde-suave)] px-3 py-1 text-[var(--puntero)]"
+          className="t-min border-t border-[var(--borde-suave)] px-5 py-2 text-[var(--puntero)]"
           role="status"
         >
           Previsualización:{' '}
@@ -175,7 +176,7 @@ export function Consola({
         </p>
       )}
 
-      <div className="shrink-0 border-t border-[var(--borde-suave)] p-3">
+      <div className="shrink-0 border-t border-[var(--borde-suave)] px-5 py-4">
         <LineaIndicador indicador={indicador} />
         <div className="t-normal flex items-baseline gap-2 font-mono">
           <span className="text-[var(--consola-verde)]">$</span>

@@ -19,7 +19,14 @@ se pidio. Con `node herramientas/capturas.mjs --ver` abre la ventana, que sirve
 cuando una captura no sale como se esperaba.
 
 Son el respaldo visual de los criterios de aceptacion del SPEC 002 que hablan
-de lo que se ve, y no de lo que el modelo calcula.
+de lo que se ve, y no de lo que el modelo calcula. Se regeneraron con el
+rediseño del SPEC 013.
+
+Para comparar un cambio visual contra el anterior hay una segunda herramienta,
+`simulador/herramientas/capturas-rediseno.mjs`: recorre los ocho escenarios en
+los dos modos y los dos temas, mide la letra minima y el desborde, compara
+contra otra corrida contando pixeles y mide las transiciones a mitad de
+camino. Esta explicada en la seccion 61 de `docs/arquitectura.md`.
 
 | Archivo | Escenario | Que muestra |
 |---|---|---|

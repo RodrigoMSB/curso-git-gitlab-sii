@@ -29,6 +29,11 @@ export interface AristaGrafo {
   readonly trazado: string;
   readonly previsualizada: boolean;
   readonly atenuada: boolean;
+  /**
+   * La arista toma el color de la rama que dibuja: la de la derivada que se
+   * abre o que vuelve, o la principal si no sale de su carril (SPEC 013).
+   */
+  readonly derivada: boolean;
 }
 
 export type FormaEtiqueta = 'rama' | 'version' | 'puntero';
@@ -54,6 +59,14 @@ export interface EtiquetaGrafo {
 export interface EnlacePuntero {
   /** Trazado desde la etiqueta de posicion hasta aquello de lo que cuelga. */
   readonly trazado: string;
+  /**
+   * El mismo trazado, medido desde la esquina de la etiqueta de posicion.
+   *
+   * El puntero se desliza al cambiar de rama (SPEC 013, punto 6.1), y el trazo
+   * que lo une a su rama tiene que viajar con el: se dibuja dentro del mismo
+   * grupo, que es lo que se mueve.
+   */
+  readonly relativo: string;
   /** De que cuelga: de una rama o directamente de una confirmacion. */
   readonly ancla: 'rama' | 'confirmacion';
 }
@@ -88,18 +101,20 @@ export interface Disposicion {
 
 /** Medidas del dibujo. Estan aqui para que las pruebas puedan afirmar sobre ellas. */
 export const MEDIDAS = {
-  margenSuperior: 34,
-  margenInferior: 26,
-  espacioCarril: 48,
-  espacioFila: 58,
-  radio: 9,
-  separacionEtiqueta: 16,
-  altoEtiqueta: 20,
-  altoPuntero: 18,
-  anchoCaracter: 6.4,
-  relleno: 14,
+  margenSuperior: 38,
+  margenInferior: 28,
+  espacioCarril: 54,
+  espacioFila: 62,
+  /** Once: en proyeccion comprimida los nodos chicos desaparecen (SPEC 013, 2.1). */
+  radio: 11,
+  separacionEtiqueta: 14,
+  altoEtiqueta: 24,
+  altoPuntero: 22,
+  /** Ancho de un caracter de la letra monoespaciada de doce pixeles de las etiquetas. */
+  anchoCaracter: 7.3,
+  relleno: 12,
   /** Espacio que ocupa el identificador dibujado a la izquierda del nodo. */
-  anchoIdentificador: 62,
+  anchoIdentificador: 70,
   /** Sobre esta cantidad se dibujan solo las mas recientes (punto 5.8). */
   limitePorDefecto: 40,
 } as const;

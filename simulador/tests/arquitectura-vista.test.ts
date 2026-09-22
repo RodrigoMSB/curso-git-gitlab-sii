@@ -126,7 +126,9 @@ describe('las listas de la zona D se desplazan por filas enteras', () => {
   });
 
   it('el alto de fila acompana la escala del modo relator', () => {
-    expect(bloque).toContain('--alto-fila: calc(var(--escala) * 18px)');
+    // Veintidos desde el SPEC 013: los datos subieron de once a trece pixeles
+    // para pesar mas que su rotulo, y la fila crecio con ellos.
+    expect(bloque).toContain('--alto-fila: calc(var(--escala) * 22px)');
   });
 
   it('la interfaz usa el mismo numero de filas que la hoja de estilos', () => {
@@ -222,5 +224,48 @@ describe('R5 · ninguna fuente tipografica externa', () => {
     expect(estilos).not.toMatch(/@font-face|fonts\.googleapis|fonts\.gstatic|\.woff/);
     expect(estilos).toContain('system-ui');
     expect(estilos).toContain('ui-monospace');
+  });
+});
+
+describe('SPEC 013 · temas y movimiento', () => {
+  const estilos = readFileSync(join(RAIZ, 'ui', 'estilos.css'), 'utf8');
+
+  it('7.2 hay un tema claro que redefine la paleta completa', () => {
+    const oscuro = estilos.slice(estilos.indexOf(':root {'), estilos.indexOf('}', estilos.indexOf(':root {')));
+    const claro = estilos.slice(
+      estilos.indexOf(":root[data-tema='claro']"),
+      estilos.indexOf('}', estilos.indexOf(":root[data-tema='claro']")),
+    );
+    const variables = (bloque: string): string[] => [...bloque.matchAll(/(--[\w-]+):/g)].map((m) => m[1] ?? '');
+    // Cada color del oscuro tiene su tono en el claro; la escala no es un color.
+    const colores = variables(oscuro).filter((nombre) => nombre !== '--escala' && nombre !== '--fondo-consola');
+    expect(colores.length).toBeGreaterThan(10);
+    for (const nombre of colores) expect(variables(claro), nombre).toContain(nombre);
+  });
+
+  it('7.3 la consola se queda oscura en los dos temas', () => {
+    expect(readFileSync(join(RAIZ, 'ui', 'Consola.tsx'), 'utf8')).toContain('panel terminal');
+    const terminal = estilos.slice(estilos.indexOf('.terminal {'), estilos.indexOf('}', estilos.indexOf('.terminal {')));
+    for (const nombre of ['--fondo-consola', '--texto', '--texto-apagado', '--consola-verde', '--consola-rojo']) {
+      expect(terminal, nombre).toContain(`${nombre}:`);
+    }
+    expect(terminal).toContain('color-scheme: dark');
+  });
+
+  it('6.5 toda duracion de movimiento esta entre ciento cincuenta y trescientos milisegundos', () => {
+    const fuera = estilos.slice(0, estilos.indexOf('@media (prefers-reduced-motion: reduce)'));
+    const duraciones = [...fuera.matchAll(/(\d+)ms/g)].map((m) => Number(m[1]));
+    expect(duraciones.length).toBeGreaterThanOrEqual(4);
+    for (const duracion of duraciones) {
+      expect(duracion).toBeGreaterThanOrEqual(150);
+      expect(duracion).toBeLessThanOrEqual(300);
+    }
+  });
+
+  it('10.2 ni degradados ni sombras', () => {
+    const componentes = ['Aplicacion.tsx', 'Areas.tsx', 'BarraEstado.tsx', 'Consola.tsx', 'Grafo.tsx', 'LineaTiempo.tsx']
+      .map((archivo) => readFileSync(join(RAIZ, 'ui', archivo), 'utf8'))
+      .join('\n');
+    expect(`${estilos}\n${componentes}`).not.toMatch(/gradient|box-shadow|drop-shadow|\bshadow-|blur\(/);
   });
 });

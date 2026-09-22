@@ -343,3 +343,94 @@ describe('marco y limites del dibujo', () => {
     expect(disposicion.ancho).toBeGreaterThan(0);
   });
 });
+
+/**
+ * SPEC 013 · el grafo como protagonista.
+ *
+ * Lo que se puede afirmar sin navegador: las medidas, la forma de cada
+ * arista, su color y que el trazo del puntero viaje con el. Lo que el
+ * navegador pinta y mueve se mide con `herramientas/capturas-rediseno.mjs`.
+ */
+describe('SPEC 013 · el grafo', () => {
+  /** Los numeros de un trazado SVG, en orden. */
+  const numeros = (trazado: string): number[] => (trazado.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+
+  it('2.1 los nodos miden al menos diez de radio', () => {
+    expect(MEDIDAS.radio).toBeGreaterThanOrEqual(10);
+    expect(MEDIDAS.radio).toBeLessThanOrEqual(11);
+  });
+
+  it('2.3 una rama que se abre dobla junto al punto de donde sale y sube recta', () => {
+    // `azteca` nace tres confirmaciones abajo: recta por su carril y la curva
+    // al final, junto al padre.
+    const { aristas, nodos } = disponer(repoConRamas());
+    const punta = nodos.find((nodo) => nodo.mensaje.includes('guacamole'));
+    const arista = aristas.find((candidata) => candidata.desde === punta?.id);
+    expect(arista?.trazado).toMatch(/^M [\d.-]+ [\d.-]+ L [\d.-]+ [\d.-]+ C /);
+    const [x1, , xRecta] = numeros(arista?.trazado ?? '');
+    expect(xRecta).toBe(x1);
+  });
+
+  it('2.3 una union dobla junto a la confirmacion que la cierra y baja recta', () => {
+    const estado = correr(repoConRamas(), 'git merge azteca -m "une azteca"');
+    const union = disponer(estado);
+    const arista = union.aristas.find(
+      (candidata) => candidata.desde === idActual(estado) && candidata.clave.endsWith(ramaPorNombre(estado, 'azteca')?.id ?? '?'),
+    );
+    expect(arista?.trazado).toMatch(/^M [\d.-]+ [\d.-]+ C .* L [\d.-]+ [\d.-]+$/);
+  });
+
+  it('2.3 en el mismo carril la arista es una recta', () => {
+    const { aristas } = disponer(repoLineal());
+    for (const arista of aristas) expect(arista.trazado).toMatch(/^M [\d.-]+ [\d.-]+ L [\d.-]+ [\d.-]+$/);
+  });
+
+  it('la arista toma el color de la rama que dibuja', () => {
+    const estado = correr(repoConRamas(), 'git merge azteca -m "une azteca"');
+    const { aristas, nodos } = disponer(estado);
+    const carril = new Map(nodos.map((nodo) => [nodo.id, nodo.carril]));
+    for (const arista of aristas) {
+      const primerPadre = estado.confirmaciones.find((c) => c.id === arista.desde)?.padres[0] === arista.hasta;
+      const dibujado = primerPadre ? carril.get(arista.desde) : carril.get(arista.hasta);
+      expect(arista.derivada, arista.clave).toBe(dibujado !== 0);
+    }
+    // Hay de las dos, que es lo que hace que la prueba diga algo.
+    expect(aristas.some((arista) => arista.derivada)).toBe(true);
+    expect(aristas.some((arista) => !arista.derivada)).toBe(true);
+  });
+
+  it('6.1 el trazo del puntero, medido desde su etiqueta, es el mismo trazo', () => {
+    // Si el relativo no calzara con el absoluto, al deslizarse el puntero su
+    // trazo quedaria apuntando a otro lado.
+    for (const estado of [repoConRamas(), correr(repoLineal(), 'git checkout HEAD~1')]) {
+      const { etiquetas, enlacePuntero } = disponer(estado);
+      const puntero = etiquetas.find((etiqueta) => etiqueta.forma === 'puntero');
+      const absolutos = numeros(enlacePuntero?.trazado ?? '');
+      const relativos = numeros(enlacePuntero?.relativo ?? '');
+      expect(relativos).toHaveLength(absolutos.length);
+      relativos.forEach((valor, indice) => {
+        const origen = indice % 2 === 0 ? (puntero?.x ?? 0) : (puntero?.y ?? 0);
+        expect(valor + origen).toBeCloseTo(absolutos[indice] ?? Number.NaN);
+      });
+    }
+  });
+});
+
+describe('SPEC 013 · la etiqueta de version no tapa el identificador', () => {
+  it('va a la izquierda del identificador, no encima', () => {
+    // El identificador ocupa, a la izquierda del nodo, hasta
+    // `anchoIdentificador`. La etiqueta de version se dibujaba en ese mismo
+    // espacio y lo tapaba; lo hacia desde antes del SPEC 013, pero con el
+    // relleno opaco de las pildoras dejo de leerse del todo.
+    const estado = correr(repoLineal(), 'git tag v0.9', 'git tag -a v1.0 -m "primera"');
+    const { etiquetas, nodos } = disponer(estado);
+    const versiones = etiquetas.filter((etiqueta) => etiqueta.forma === 'version');
+    expect(versiones).toHaveLength(2);
+    for (const version of versiones) {
+      const nodo = nodos.find((candidato) => candidato.id === version.idConfirmacion);
+      expect(version.x + version.ancho, version.texto).toBeLessThanOrEqual(
+        (nodo?.x ?? 0) - MEDIDAS.radio - MEDIDAS.anchoIdentificador,
+      );
+    }
+  });
+});

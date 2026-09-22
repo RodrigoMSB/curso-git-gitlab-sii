@@ -28,35 +28,16 @@ export function LineaTiempo({ segmentos, onIr }: Props): React.ReactElement {
 
   const actual = segmentos.find((segmento) => segmento.actual);
 
+  // Una sola linea, sin panel propio: es informacion secundaria (SPEC 013,
+  // punto 4.3). El titulo se queda para quien navega con lector de pantalla.
   return (
-    <nav className="panel px-3 py-2" aria-label="Línea de tiempo">
-      <div className="mb-1 flex items-baseline gap-3">
-        <h2 className="t-pequeno font-semibold">Línea de tiempo</h2>
-        <p className="t-min text-[var(--texto-apagado)]">
-          paso {(actual?.indice ?? 0) + 1} de {segmentos.length}
-          {actual?.etiqueta !== undefined && ` · ${actual.etiqueta}`}
-        </p>
-        <div className="ml-auto flex gap-2">
-          <button
-            type="button"
-            className="t-min rounded border border-[var(--borde)] px-2 py-0.5 text-[var(--texto-apagado)]"
-            onClick={() => onIr((actual?.indice ?? 0) - 1)}
-            disabled={(actual?.indice ?? 0) === 0}
-          >
-            retroceder
-          </button>
-          <button
-            type="button"
-            className="t-min rounded border border-[var(--borde)] px-2 py-0.5 text-[var(--texto-apagado)]"
-            onClick={() => onIr((actual?.indice ?? 0) + 1)}
-            disabled={(actual?.indice ?? 0) === segmentos.length - 1}
-          >
-            avanzar
-          </button>
-        </div>
-      </div>
+    <nav className="flex items-center gap-4 px-1" aria-label="Línea de tiempo">
+      <h2 className="sr-only">Línea de tiempo</h2>
+      <p className="t-min shrink-0 text-[var(--texto-apagado)]">
+        paso {(actual?.indice ?? 0) + 1} de {segmentos.length}
+      </p>
 
-      <div ref={contenedor} className="flex flex-wrap gap-1">
+      <div ref={contenedor} className="flex min-w-0 flex-1 flex-wrap gap-1">
         {segmentos.map((segmento) => (
           <button
             key={segmento.indice}
@@ -66,9 +47,10 @@ export function LineaTiempo({ segmentos, onIr }: Props): React.ReactElement {
             aria-current={segmento.actual ? 'step' : undefined}
             onClick={() => onIr(segmento.indice)}
             onKeyDown={(evento) => alTeclear(evento, segmento.indice)}
-            className="h-4 rounded-sm border"
+            className="rounded-full border"
             style={{
-              width: 'calc(var(--escala) * 26px)',
+              width: 'calc(var(--escala) * 22px)',
+              height: 'calc(var(--escala) * 8px)',
               borderColor: segmento.actual ? 'var(--puntero)' : 'var(--borde)',
               background: segmento.actual
                 ? 'var(--puntero)'
@@ -79,6 +61,28 @@ export function LineaTiempo({ segmentos, onIr }: Props): React.ReactElement {
             }}
           />
         ))}
+      </div>
+
+      <p className="t-min min-w-0 max-w-[40%] shrink truncate text-[var(--texto-tenue)]">
+        {actual?.etiqueta}
+      </p>
+      <div className="flex shrink-0 gap-2">
+        <button
+          type="button"
+          className="t-min rounded-full border border-[var(--borde)] px-3 py-0.5 text-[var(--texto-apagado)]"
+          onClick={() => onIr((actual?.indice ?? 0) - 1)}
+          disabled={(actual?.indice ?? 0) === 0}
+        >
+          retroceder
+        </button>
+        <button
+          type="button"
+          className="t-min rounded-full border border-[var(--borde)] px-3 py-0.5 text-[var(--texto-apagado)]"
+          onClick={() => onIr((actual?.indice ?? 0) + 1)}
+          disabled={(actual?.indice ?? 0) === segmentos.length - 1}
+        >
+          avanzar
+        </button>
       </div>
     </nav>
   );
