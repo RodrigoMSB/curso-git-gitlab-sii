@@ -33,7 +33,7 @@
 
 import { ORDENES_GIT, ORDENES_INTERPRETE } from '../../src/core';
 import { tokenizar } from '../../src/core/analizador';
-import { formaSinSoporte, opcionesNoReconocidas } from '../../src/core/contrato';
+import { formaSinSoporte, revisarOpciones } from '../../src/core/contrato';
 import { declaracionPorId } from '../../src/escenarios';
 import { bloquesDe, enTerminal, tramosDeTerminal } from './enunciado';
 
@@ -129,10 +129,10 @@ export function motivoDeclarado(
   const esGit = piezas[0] === 'git';
   const nombre = (esGit ? piezas[1] : piezas[0]) ?? '';
   const argumentos = piezas.slice(esGit ? 2 : 1);
-  const fuera = opcionesNoReconocidas(nombre, argumentos, esGit ? 'git' : 'interprete');
-  if (fuera.length === 0) return null;
-  const como = esGit ? `git ${nombre}` : nombre;
-  return `${fuera.map((opcion) => `«${opcion}»`).join(', ')} de ${como}`;
+  // Una opcion que no existe no se declara: falla en los dos lados con el
+  // mismo error, y eso se compara como cualquier otra orden.
+  const revision = revisarOpciones(esGit ? `git ${nombre}` : nombre, nombre, argumentos, esGit ? 'git' : 'interprete');
+  return revision?.tipo === 'limite' ? revision.motivo : null;
 }
 
 /** Lineas que no son ordenes ejecutables en ningun lado. */

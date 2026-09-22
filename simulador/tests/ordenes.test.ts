@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ejecutar } from '../src/core/motor';
+import { ejecutar, ejecutarSecuencia } from '../src/core/motor';
 import type { EstadoRepositorio } from '../src/core/tipos';
 import {
   archivoPorNombre,
@@ -1089,7 +1089,7 @@ describe('git rebase', () => {
 
   it('reclama sin argumentos o ante una base desconocida', () => {
     const estado = repoConRamaDesdeMain();
-    expect(texto(ejecutar(estado, 'git rebase'))).toContain('No rebase in progress');
+    expect(texto(ejecutar(estado, 'git rebase'))).toContain('There is no tracking information for the current branch.');
     expect(texto(ejecutar(estado, 'git rebase fantasma'))).toContain('invalid upstream');
   });
 
@@ -1180,8 +1180,6 @@ describe('las opciones que el contrato aceptaba y nadie leia', () => {
     const lab02 = escenarioPorId('lab-02');
     const lab05 = escenarioPorId('lab-05');
     const casos: readonly [EstadoRepositorio, string][] = [
-      [lab02, 'git commit -a -m "x"'],
-      [lab02, 'git commit -am "x"'],
       [lab02, 'git commit -q -m "x"'],
       [lab02, 'git switch -q -c nueva'],
       [lab02, 'git rm -q platos.md'],
@@ -1189,12 +1187,114 @@ describe('las opciones que el contrato aceptaba y nadie leia', () => {
       [lab02, 'git cat-file -s HEAD'],
       [lab02, 'git mv -v platos.md p.md'],
       [lab02, 'ls -l'],
-      [lab02, 'rm --cached platos.md'],
       [lab02, 'mv -f platos.md p.md'],
       [lab05, 'git branch -v'],
       [lab05, 'git merge --message "hola" azteca'],
       [lab05, 'git tag -l'],
     ];
     for (const [estado, linea] of casos) expect(esLimite(estado, linea), linea).toBe(true);
+  });
+});
+
+/**
+ * SPEC 015 · las opciones que el participante escribe por costumbre.
+ *
+ * Cada texto que imita a Git esta copiado de una corrida de Git 2.54 o de las
+ * coreutils de GNU, las de Git Bash (seccion 60).
+ */
+describe('SPEC 015', () => {
+  /** El caso del punto 1.3, comprobado contra el repositorio que arma `preparar.sh`. */
+  const conNuevo = (): EstadoRepositorio =>
+    ejecutarSecuencia(escenarioPorId('lab-02'), ['rm platos.md', 'echo "x" > nuevo.md']);
+
+  for (const forma of ['git commit -a -m "algo"', 'git commit -am "algo"', 'git commit --all -m "algo"']) {
+    it(`${forma} confirma lo seguido y deja afuera lo que no tiene seguimiento`, () => {
+      const resultado = ejecutar(conNuevo(), forma);
+      expect(resultado.error).toBe(false);
+      expect(texto(resultado)).toContain(' 3 files changed');
+      const ultima = resultado.estado.confirmaciones.at(-1);
+      expect(ultima?.mensaje).toBe('algo');
+      expect([...(ultima?.archivos ?? [])].sort()).toEqual(['cocineros.md', 'ingredientes.md']);
+      expect(ultima?.borrados).toEqual(['platos.md']);
+      // Git, sobre el mismo repositorio: `?? nuevo.md` y nada mas.
+      expect(texto(ejecutar(resultado.estado, 'git status --short'))).toBe('?? nuevo.md');
+    });
+  }
+
+  it('git commit -a sin mensaje no deja nada preparado', () => {
+    const estado = conNuevo();
+    const resultado = ejecutar(estado, 'git commit -a');
+    expect(texto(resultado)).toContain('Aborting commit due to empty commit message.');
+    expect(resultado.estado).toBe(estado);
+  });
+
+  it('la letra con valor se come el resto de la palabra, como en Git', () => {
+    const resultado = ejecutar(conNuevo(), 'git commit -amhola');
+    expect(resultado.estado.confirmaciones.at(-1)?.mensaje).toBe('hola');
+  });
+
+  it('-q responde el motivo en todos los subcomandos de Git que la aceptan', () => {
+    const estado = escenarioPorId('lab-05');
+    const ordenes = [
+      'git init -q', 'git restore -q platos.md', 'git rm -q platos.md', 'git commit -q -m x',
+      'git log -q', 'git show -q', 'git diff -q', 'git branch -q nueva', 'git switch -q azteca',
+      'git checkout -q azteca', 'git merge -q azteca', 'git reset -q HEAD', 'git stash -q',
+      'git reflog -q', 'git rebase -q main', 'git rev-parse -q HEAD', 'git revert --quiet HEAD',
+      'git commit --quiet -m x',
+    ];
+    for (const orden of ordenes) {
+      const resultado = ejecutar(estado, orden);
+      expect(resultado.salida[0]?.tipo, orden).toBe('limite');
+      expect(texto(resultado), orden).toContain('siempre muestra lo que ocurrio');
+      expect(resultado.estado, orden).toBe(estado);
+    }
+  });
+
+  it('una opcion que no existe responde el error de Git, identico', () => {
+    const estado = escenarioPorId('lab-02');
+    const casos: readonly [string, string][] = [
+      ['git add -q', "error: unknown switch `q'\nusage: git add [<options>] [--] <pathspec>..."],
+      ['git status --quiet', "error: unknown option `quiet'\nusage: git status [<options>] [--] [<pathspec>...]"],
+      ['git restore --cached platos.md', "error: unknown option `cached'\nusage: git restore [<options>] [--source=<branch>] <file>..."],
+      ['git revert -q HEAD', 'usage: git revert [--[no-]edit] [-n] [-m <parent-number>] [-s] [-S[<keyid>]] <commit>...\n   or: git revert (--continue | --skip | --abort | --quit)'],
+      ['rm --cached platos.md', "rm: unrecognized option '--cached'\nTry 'rm --help' for more information."],
+      ['rm -q platos.md', "rm: invalid option -- 'q'\nTry 'rm --help' for more information."],
+      ['rm --quiet platos.md', "rm: unrecognized option '--quiet'\nTry 'rm --help' for more information."],
+    ];
+    for (const [orden, esperado] of casos) {
+      const resultado = ejecutar(estado, orden);
+      expect(texto(resultado), orden).toBe(esperado);
+      expect(resultado.salida.every((linea) => linea.tipo === 'error'), orden).toBe(true);
+      expect(resultado.estado, orden).toBe(estado);
+    }
+  });
+
+  it('git rebase sin base responde lo que Git 2.54, en una rama y desconectado', () => {
+    const enRama = ejecutar(escenarioPorId('lab-02'), 'git rebase');
+    expect(texto(enRama)).toBe(
+      [
+        'There is no tracking information for the current branch.',
+        'Please specify which branch you want to rebase against.',
+        'See git-rebase(1) for details.',
+        '',
+        "    git rebase '<branch>'",
+        '',
+        'If you wish to set tracking information for this branch you can do so with:',
+        '',
+        '    git branch --set-upstream-to=<remote>/<branch> main',
+        '',
+      ].join('\n'),
+    );
+    const suelto = ejecutarSecuencia(escenarioPorId('lab-02'), ['git checkout --detach main']);
+    expect(texto(ejecutar(suelto, 'git rebase'))).toBe(
+      [
+        'You are not currently on a branch.',
+        'Please specify which branch you want to rebase against.',
+        'See git-rebase(1) for details.',
+        '',
+        "    git rebase '<branch>'",
+        '',
+      ].join('\n'),
+    );
   });
 });

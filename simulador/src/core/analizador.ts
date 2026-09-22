@@ -107,6 +107,37 @@ export function letrasCortas(argumentos: readonly string[]): ReadonlySet<string>
   return letras;
 }
 
+/**
+ * Separa las opciones cortas agrupadas como las separa Git.
+ *
+ * `-am "x"` son `-a` y `-m "x"`. La letra que lleva valor se come el resto de
+ * la palabra, si lo hay: `-mhola` es `-m hola`, y `-amhola` es `-a -m hola`.
+ * `conValor` son las letras que llevan valor en esa orden. Lo que no es una
+ * palabra de opciones cortas pasa tal cual, y lo que va despues de `--`
+ * tambien.
+ */
+export function desagrupar(argumentos: readonly string[], conValor: string): readonly string[] {
+  const resultado: string[] = [];
+  let separado = false;
+  for (const argumento of argumentos) {
+    if (separado || argumento === '--' || !/^-[a-zA-Z]{2,}/.test(argumento) || /\s/.test(argumento)) {
+      if (argumento === '--') separado = true;
+      resultado.push(argumento);
+      continue;
+    }
+    for (let indice = 1; indice < argumento.length; indice += 1) {
+      const letra = argumento[indice] ?? '';
+      resultado.push(`-${letra}`);
+      if (conValor.includes(letra)) {
+        const resto = argumento.slice(indice + 1);
+        if (resto !== '') resultado.push(resto);
+        break;
+      }
+    }
+  }
+  return resultado;
+}
+
 /** Valor que sigue a una opcion, o `null` si la opcion no aparece o va sin valor. */
 export function valorDeOpcion(
   argumentos: readonly string[],

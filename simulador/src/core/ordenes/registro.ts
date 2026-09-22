@@ -7,8 +7,8 @@
 
 import type { OrdenAnalizada } from '../analizador';
 import { tokenizar } from '../analizador';
-import { esOperador } from '../analizador';
-import { formaSinSoporte, opcionesNoReconocidas } from '../contrato';
+import { desagrupar, esOperador } from '../analizador';
+import { AGRUPABLES_GIT, formaSinSoporte, type Revision, revisarOpciones } from '../contrato';
 import { archivoPorNombre, establecerArchivo } from '../estado';
 import { fallo, limite } from '../salida';
 import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
@@ -191,7 +191,7 @@ export function despachar(
       `git ${subOrden}`,
       'git',
     );
-    if (revision !== null) return limite(estado, revision);
+    if (revision !== null) return responder(estado, revision);
 
     const manejador = ORDENES_GIT[subOrden];
     if (manejador === undefined) {
@@ -201,7 +201,11 @@ export function despachar(
       );
     }
 
-    const resultado = manejador(estado, expandida.argumentos.slice(1));
+    // `git commit -am "x"` le llega al manejador como `-a -m "x"`: lee palabras
+    // enteras, y el contrato ya reviso la forma separada.
+    const agrupables = AGRUPABLES_GIT[subOrden];
+    const propios = expandida.argumentos.slice(1);
+    const resultado = manejador(estado, agrupables === undefined ? propios : desagrupar(propios, agrupables));
     if (redirigida.destino === null || resultado.error) return resultado;
     return { ...resultado, estado: escribirEnArchivo(resultado.estado, redirigida.destino), salida: [] };
   }
@@ -213,7 +217,7 @@ export function despachar(
     orden.programa,
     'interprete',
   );
-  if (revision !== null) return limite(estado, revision);
+  if (revision !== null) return responder(estado, revision);
 
   const manejador = ORDENES_INTERPRETE[orden.programa];
   if (manejador === undefined) return ordenDesconocida(estado, orden.programa);
@@ -229,14 +233,14 @@ function escribirEnArchivo(estado: EstadoRepositorio, destino: string): EstadoRe
 }
 
 /**
- * Consulta el contrato y devuelve que es lo que el motor no implementa de esta
- * orden, o `null` si la puede ejecutar entera.
+ * Consulta el contrato y devuelve que responder en vez de ejecutar la orden, o
+ * `null` si la puede ejecutar entera.
  *
- * Se pregunta dos cosas, en este orden. Primero si la orden cae en una forma
- * declarada como no soportada, que lleva su propio motivo escrito. Despues si
- * trae alguna opcion que su manejador no entiende, porque una opcion que llega
- * al manejador sin que este la mire es justo el caso que el punto 1 del SPEC
- * 010 viene a eliminar: aceptada y descartada en silencio.
+ * Primero la forma declarada como no soportada, que lleva su propio motivo.
+ * Despues las opciones: las que no existen se responden con el error de Git,
+ * y las que existen y el simulador no hace, con el mensaje de limite. Una
+ * opcion que llega al manejador sin que este la mire es justo el caso que el
+ * punto 1 del SPEC 010 viene a eliminar: aceptada y descartada en silencio.
  */
 function revisarContrato(
   linea: string,
@@ -244,13 +248,12 @@ function revisarContrato(
   argumentos: readonly string[],
   comoSeLlama: string,
   lado: 'git' | 'interprete',
-): string | null {
+): Revision | null {
   const forma = formaSinSoporte(linea);
-  if (forma !== undefined) return forma.motivo;
+  if (forma !== undefined) return { tipo: 'limite', motivo: forma.motivo };
+  return revisarOpciones(comoSeLlama, nombre, argumentos, lado);
+}
 
-  const fuera = opcionesNoReconocidas(nombre, argumentos, lado);
-  if (fuera.length === 0) return null;
-  const lista = fuera.map((opcion) => `«${opcion}»`).join(', ');
-  const plural = fuera.length === 1 ? 'la opcion' : 'las opciones';
-  return `${plural} ${lista} de ${comoSeLlama}`;
+function responder(estado: EstadoRepositorio, revision: Revision): ResultadoOrden {
+  return revision.tipo === 'error' ? fallo(estado, ...revision.lineas) : limite(estado, revision.motivo);
 }

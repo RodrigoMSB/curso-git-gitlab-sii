@@ -14,6 +14,7 @@ import { agregarConfirmacion, resumenArchivos } from '../confirmaciones';
 import {
   archivosEn,
   carrilDeRama,
+  establecerArchivo,
   confirmacionPorId,
   idActual,
   moverPosicionActual,
@@ -156,13 +157,35 @@ function enmendar(estado: EstadoRepositorio, mensajePedido: string | null): Resu
   );
 }
 
-/** `git commit`, con `-m` y `--amend`. */
-export const ordenCommit: Manejador = (estado, argumentos) => {
-  if (!estado.iniciado) return sinRepositorio(estado);
+/**
+ * Lo que `git commit -a` prepara antes de confirmar: todo lo que tiene
+ * seguimiento y cambio o desaparecio, haya pasado o no por el area de
+ * preparacion. **Lo que no tiene seguimiento se queda afuera**, que es la
+ * leccion: `git status` lo sigue mostrando despues (SPEC 015, punto 1.3).
+ */
+function prepararSeguidos(estado: EstadoRepositorio): EstadoRepositorio {
+  let siguiente = estado;
+  for (const archivo of estado.archivos) {
+    if (archivo.estado === 'modificado') siguiente = establecerArchivo(siguiente, archivo.nombre, 'preparado');
+  }
+  return {
+    ...siguiente,
+    borrados: [...new Set([...siguiente.borrados, ...siguiente.borradosSinPreparar])],
+    borradosSinPreparar: [],
+  };
+}
+
+/** `git commit`, con `-m`, `-a` y `--amend`. */
+export const ordenCommit: Manejador = (estadoRecibido, argumentos) => {
+  if (!estadoRecibido.iniciado) return sinRepositorio(estadoRecibido);
+  // Con `-a` se confirma sobre el estado ya preparado. Si la orden falla, se
+  // devuelve el recibido: Git no deja nada preparado por un commit abortado.
+  const todo = tieneOpcion(argumentos, '-a', '--all');
+  const estado = todo ? prepararSeguidos(estadoRecibido) : estadoRecibido;
 
   const heredado = mensajeHeredado(estado, argumentos);
   if (typeof heredado === 'string' && heredado.startsWith('fatal:')) {
-    return fallo(estado, heredado);
+    return fallo(estadoRecibido, heredado);
   }
   const mensaje = valorDeOpcion(argumentos, '-m', '--message') ?? (heredado as string | null);
 
@@ -178,7 +201,7 @@ export const ordenCommit: Manejador = (estado, argumentos) => {
   }
   if (mensaje === null) {
     return fallo(
-      estado,
+      estadoRecibido,
       'Aborting commit due to empty commit message.',
       'hint: use "git commit -m \'<mensaje>\'" to describe the change',
     );

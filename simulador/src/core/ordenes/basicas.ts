@@ -239,7 +239,7 @@ function prepararBorrados(
 export const ordenRestore: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
-  const preparado = tieneOpcion(argumentos, '--staged', '--cached');
+  const preparado = tieneOpcion(argumentos, '--staged');
   const rutas = posicionales(argumentos);
 
   if (rutas.length === 0) {

@@ -246,6 +246,37 @@ export const ordenReflog: Manejador = (estado, argumentos) => {
   );
 };
 
+/**
+ * `git rebase` sin base. Los rebases del simulador no tienen rama de
+ * seguimiento de la cual tomarla, asi que responde lo que Git 2.54 responde
+ * sin ella, copiado de una corrida y no de memoria (SPEC 015, punto 4). Antes
+ * decia `No rebase in progress?`, el texto de un Git mas viejo.
+ */
+function sinBase(estado: EstadoRepositorio): ResultadoOrden {
+  const rama = ramaActual(estado);
+  const encabezado =
+    rama === null ? 'You are not currently on a branch.' : 'There is no tracking information for the current branch.';
+  const consejo =
+    rama === null
+      ? []
+      : [
+          'If you wish to set tracking information for this branch you can do so with:',
+          '',
+          `    git branch --set-upstream-to=<remote>/<branch> ${rama}`,
+          '',
+        ];
+  return fallo(
+    estado,
+    encabezado,
+    'Please specify which branch you want to rebase against.',
+    'See git-rebase(1) for details.',
+    '',
+    "    git rebase '<branch>'",
+    '',
+    ...consejo,
+  );
+}
+
 /** `git rebase` sobre una rama. Copia las confirmaciones y deja las originales huerfanas. */
 export const ordenRebase: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
@@ -268,9 +299,7 @@ export const ordenRebase: Manejador = (estado, argumentos) => {
   }
 
   const referencia = posicionales(argumentos)[0];
-  if (referencia === undefined) {
-    return fallo(estado, 'fatal: No rebase in progress?');
-  }
+  if (referencia === undefined) return sinBase(estado);
 
   const base = resolverReferencia(estado, referencia);
   if (base === null) {

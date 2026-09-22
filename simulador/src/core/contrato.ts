@@ -40,6 +40,8 @@
  * `--since` con cualquier fecha, no esa fecha.
  */
 
+import { desagrupar } from './analizador';
+
 /** Forma que el motor declara no implementar, con el motivo que se le muestra al participante. */
 export interface FormaSinSoporte {
   readonly patron: RegExp;
@@ -141,16 +143,22 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   config: ['--global', '--local', '--list', '-l', '--get', '--unset'],
   status: ['-s', '--short', '--long'],
   // `-a` no existe en Git; esta aqui para que llegue al manejador y este
-  // responda `error: unknown switch`, que es la tercera respuesta.
+  // responda `error: unknown switch`, que es la tercera respuesta. Se quedo
+  // asi por el punto 3.1 del SPEC 015; las demas inexistentes van por
+  // `INEXISTENTES`, que hace lo mismo sin pasar por el manejador.
   add: ['-A', '--all', '-a', '-f', '--force'],
   // `--source` salio: `git restore --source=<ref> <archivo>` restaura desde
   // otra confirmacion y el motor restauraba desde la actual, en silencio.
-  restore: ['--staged', '--cached', '--worktree'],
+  // `--cached` salio con el SPEC 015: `git restore` no la tiene, es de
+  // `git diff` y `git rm`. Va por `INEXISTENTES`.
+  restore: ['--staged', '--worktree'],
   rm: ['--cached', '-r', '-f', '--force'],
   mv: [],
   // `--allow-empty` salio: el motor responde «nothing to commit» y Git crea la
   // confirmacion vacia. Es la diferencia que la seccion 28 dejo anotada.
-  commit: ['-m', '--message', '--amend', '--no-edit', '-c', '-C'],
+  // `-a` entro con el SPEC 015: es la que mas escribe quien aprendio Git de
+  // oido. `-q` no: ver `CALLAR`.
+  commit: ['-m', '--message', '-a', '--all', '--amend', '--no-edit', '-c', '-C'],
   log: [
     '--oneline', '--graph', '--all', '--decorate', '--no-decorate', '--date-order',
     '-n', '--max-count', '--author', '--since', '--after', '--until', '--before',
@@ -213,6 +221,117 @@ export const OPCIONES_INTERPRETE: Readonly<Record<string, readonly string[]>> = 
  * llegaba al manejador sin `-a` ni `-m` a la vista.
  */
 export const AGRUPABLES: ReadonlySet<string> = new Set(['ls', 'grep', 'wc']);
+
+/**
+ * Subordenes de Git que aceptan opciones cortas agrupadas, con las letras que
+ * llevan valor.
+ *
+ * Solo `git commit`, porque `-am` es como se escribe de verdad (SPEC 015). El
+ * despachador las separa con `desagrupar` antes de revisar el contrato y de
+ * llamar al manejador, que ve `-a` y `-m` sueltas y las lee como palabras.
+ */
+export const AGRUPABLES_GIT: Readonly<Record<string, string>> = { commit: 'mcC' };
+
+/**
+ * Opciones que **no existen** en Git ni en el interprete de Git Bash.
+ *
+ * Son la tercera respuesta del contrato, no la segunda: decir «no esta
+ * implementada, en la terminal si funciona» de una opcion que la terminal
+ * rechaza le enseña algo falso al participante. Responden el error de verdad,
+ * copiado de Git 2.54 y de las coreutils de GNU, que son las de Git Bash, y
+ * comprobado corriendolos (seccion 60). Git imprime ademas el uso completo;
+ * aqui va su primera linea, como en el resto de los usos del simulador.
+ */
+export const INEXISTENTES: Readonly<Record<string, readonly string[]>> = {
+  'git restore --cached': ["error: unknown option `cached'", 'usage: git restore [<options>] [--source=<branch>] <file>...'],
+  'git config -q': ["error: unknown switch `q'", 'usage: git config list [<file-option>] [<display-option>] [--includes]'],
+  'git config --quiet': ["error: unknown option `quiet'", 'usage: git config list [<file-option>] [<display-option>] [--includes]'],
+  'git status -q': ["error: unknown switch `q'", 'usage: git status [<options>] [--] [<pathspec>...]'],
+  'git status --quiet': ["error: unknown option `quiet'", 'usage: git status [<options>] [--] [<pathspec>...]'],
+  'git add -q': ["error: unknown switch `q'", 'usage: git add [<options>] [--] <pathspec>...'],
+  'git add --quiet': ["error: unknown option `quiet'", 'usage: git add [<options>] [--] <pathspec>...'],
+  'git mv -q': ["error: unknown switch `q'", 'usage: git mv [-v] [-f] [-n] [-k] <source> <destination>'],
+  'git mv --quiet': ["error: unknown option `quiet'", 'usage: git mv [-v] [-f] [-n] [-k] <source> <destination>'],
+  'git tag -q': ["error: unknown switch `q'", 'usage: git tag [-a | -s | -u <key-id>] [-f] [-m <msg> | -F <file>] [-e]'],
+  'git tag --quiet': ["error: unknown option `quiet'", 'usage: git tag [-a | -s | -u <key-id>] [-f] [-m <msg> | -F <file>] [-e]'],
+  'git remote -q': ["error: unknown switch `q'", 'usage: git remote [-v | --verbose]'],
+  'git remote --quiet': ["error: unknown option `quiet'", 'usage: git remote [-v | --verbose]'],
+  'git merge-base -q': ["error: unknown switch `q'", 'usage: git merge-base [-a | --all] <commit> <commit>...'],
+  'git merge-base --quiet': ["error: unknown option `quiet'", 'usage: git merge-base [-a | --all] <commit> <commit>...'],
+  'git cat-file -q': ["error: unknown switch `q'", 'usage: git cat-file <type> <object>'],
+  'git cat-file --quiet': ["error: unknown option `quiet'", 'usage: git cat-file <type> <object>'],
+  'git ls-files -q': ["error: unknown switch `q'", 'usage: git ls-files [<options>] [<file>...]'],
+  'git ls-files --quiet': ["error: unknown option `quiet'", 'usage: git ls-files [<options>] [<file>...]'],
+  // `git revert` tiene `--quiet` y no `-q`, y a `-q` no le dice que no la
+  // conoce: responde con el uso a secas.
+  'git revert -q': [
+    'usage: git revert [--[no-]edit] [-n] [-m <parent-number>] [-s] [-S[<keyid>]] <commit>...',
+    '   or: git revert (--continue | --skip | --abort | --quit)',
+  ],
+  'rm --cached': ["rm: unrecognized option '--cached'", "Try 'rm --help' for more information."],
+  'rm -q': ["rm: invalid option -- 'q'", "Try 'rm --help' for more information."],
+  'rm --quiet': ["rm: unrecognized option '--quiet'", "Try 'rm --help' for more information."],
+};
+
+/**
+ * Subordenes de Git que si aceptan `-q` o `--quiet`, comprobado en Git 2.54.
+ *
+ * En todas se responde lo mismo, `CALLAR` (SPEC 015, punto 2). `git revert`
+ * acepta solo la larga.
+ */
+const ACEPTAN_CALLAR: ReadonlySet<string> = new Set([
+  'git init', 'git restore', 'git rm', 'git commit', 'git log', 'git show', 'git diff',
+  'git branch', 'git switch', 'git checkout', 'git merge', 'git reset', 'git stash',
+  'git reflog', 'git rebase', 'git rev-parse', 'git revert',
+]);
+
+/** Por que `-q` no se implementa: la salida es la leccion (SPEC 015, punto 2.1). */
+export const CALLAR =
+  'callar la salida: el simulador siempre muestra lo que ocurrio, porque eso es lo que viene a enseñar';
+
+/** Lo que el contrato responde a las opciones de una orden, si no la deja pasar. */
+export type Revision =
+  | { readonly tipo: 'limite'; readonly motivo: string }
+  | { readonly tipo: 'error'; readonly lineas: readonly string[] };
+
+/**
+ * Revisa las opciones de una orden y dice que responder, o `null` si pasa.
+ *
+ * `como` es como se escribe la orden, `git commit` o `rm`. El orden importa:
+ * primero lo que no existe, que es un error del participante; despues lo que
+ * existe y el simulador no hace, que es un limite de la herramienta.
+ */
+export function revisarOpciones(
+  como: string,
+  nombre: string,
+  argumentos: readonly string[],
+  lado: 'git' | 'interprete',
+): Revision | null {
+  const agrupables = lado === 'git' ? AGRUPABLES_GIT[nombre] : undefined;
+  const separados = agrupables === undefined ? argumentos : desagrupar(argumentos, agrupables);
+
+  const claves: string[] = [];
+  for (const argumento of separados) {
+    if (argumento === '--') break;
+    if (!argumento.startsWith('-') || argumento === '-' || /\s/.test(argumento)) continue;
+    claves.push(argumento.split('=')[0] ?? argumento);
+  }
+
+  for (const clave of claves) {
+    const error = INEXISTENTES[`${como} ${clave}`];
+    if (error !== undefined) return { tipo: 'error', lineas: error };
+  }
+  const callar = como === 'git revert' ? ['--quiet'] : ['-q', '--quiet'];
+  if (ACEPTAN_CALLAR.has(como) && claves.some((clave) => callar.includes(clave))) {
+    return { tipo: 'limite', motivo: CALLAR };
+  }
+
+  const fuera = opcionesNoReconocidas(nombre, separados, lado);
+  if (fuera.length === 0) return null;
+  const lista = fuera.map((opcion) => `«${opcion}»`).join(', ');
+  const plural = fuera.length === 1 ? 'la opcion' : 'las opciones';
+  return { tipo: 'limite', motivo: `${plural} ${lista} de ${como}` };
+}
 
 /**
  * Opciones que el motor reconoce **sin tener que hacer nada**, porque el

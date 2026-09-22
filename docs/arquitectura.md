@@ -3992,3 +3992,166 @@ Idéntica. Las cuarenta y una opciones que salieron no aparecen en ningún
 guion recorrido, que era la condición para sacarlas. El 07 no tiene recorrido
 de Cypress todavía; su cifra es la de la clasificación.
 
+---
+
+# SPEC 015 · Las opciones que el participante escribe por costumbre
+
+## 60. Tres decisiones del product owner, y un barrido
+
+### 60.1 · `git commit -a` se implementa
+
+Prepara lo que tiene seguimiento y cambió o desapareció, haya pasado o no por el
+área de preparación, y confirma. **Lo que no tiene seguimiento se queda
+afuera**, y esa es la lección del punto 1.3.
+
+Se comprobó sobre el repositorio que arma `labs/lab-02/preparar.sh`, corrido
+en una copia del clon dentro del directorio temporal para no tocar el
+`taller-git-trabajo` de la máquina. Sobre el escenario recién preparado
+(`cocineros.md` preparado, `ingredientes.md` modificado) se borró `platos.md`,
+se creó `nuevo.md` y se escribió `git commit -am "algo"`, en Git 2.54 y en el
+simulador:
+
+| | Git 2.54 | Simulador |
+|---|---|---|
+| La confirmación | 3 archivos: los dos modificados y la baja de `platos.md` | los mismos 3 |
+| `git status --short` después | `?? nuevo.md` | `?? nuevo.md` |
+| El resumen | ` 3 files changed, 3 insertions(+), 7 deletions(-)` y `delete mode` | ` 3 files changed` |
+
+La última fila es la diferencia de `git commit` que la sección 51 ya dejó
+anotada: su resumen cuenta archivos y no líneas. No es de este spec.
+
+**La forma pegada, `-am`, se separa como la separa Git**: `desagrupar` en el
+analizador, y sólo para `git commit` (`AGRUPABLES_GIT`). La letra que lleva
+valor se come el resto de la palabra, así que `-amhola` es `-a -m hola`. El
+despachador separa antes de revisar el contrato y antes de llamar al
+manejador, de modo que el manejador sigue leyendo palabras enteras y la prueba
+por función sigue sirviendo.
+
+Si la confirmación no ocurre —sin mensaje, por ejemplo— el estado vuelve sin
+nada preparado, igual que en Git.
+
+### 60.2 · `-q` no se implementa, y dice por qué
+
+En los dieciséis subcomandos del motor que la aceptan en Git 2.54, comprobado
+uno por uno, responde el mismo motivo, `CALLAR`: el simulador siempre muestra
+lo que ocurrió, porque eso es lo que viene a enseñar. En `git revert` sólo
+`--quiet`, porque `-q` no existe ahí.
+
+### 60.3 · Las opciones que no existen
+
+El punto 3.3 del spec: una opción que existe y no implementamos, y una que no
+existe, son dos respuestas distintas. Se barrió **el contrato entero**, no sólo
+las cuarenta y una, corriendo cada opción en Git 2.54 y cada opción del
+intérprete en las coreutils de GNU, que son las de Git Bash.
+
+Van en `INEXISTENTES`, con el texto copiado de la corrida, y responden como
+error del participante, no como límite de la herramienta:
+
+| Orden | De dónde salió | Qué hacía antes | Qué responde ahora |
+|---|---|---|---|
+| `rm --cached` | de las 41 | **borraba el archivo** | `rm: unrecognized option '--cached'` |
+| `rm -q` | de las 41 | **borraba el archivo** | `rm: invalid option -- 'q'` |
+| `rm --quiet` | de las 41 | borraba el archivo | `rm: unrecognized option '--quiet'` |
+| `git restore --cached` | del resto del contrato | **la tomaba por `--staged`** | `error: unknown option 'cached'` |
+| `-q` y `--quiet` en `config`, `status`, `add`, `mv`, `tag`, `remote`, `merge-base`, `cat-file`, `ls-files` | del barrido de `-q` | «no implementa» | `error: unknown switch 'q'` / `unknown option 'quiet'` |
+| `git revert -q` | ídem | «no implementa» | el uso de `git revert`, que es lo que Git imprime |
+
+Cada una lleva además la primera línea del uso, que Git imprime completo.
+
+El barrido dio tres falsos positivos, descartados: `--format` sin valor es un
+error de uso y no una opción inexistente; `--stat` e `--index` de `git stash`
+existen en `stash list`, `stash show` y `stash pop`, que es donde se usan.
+
+Una prueba nueva exige que ninguna opción esté a la vez entre las aceptadas y
+entre las inexistentes. En su primera corrida atrapó `git restore --cached`,
+que seguía declarada como aceptada.
+
+**Lo que no cubre.** Una opción que no está en ninguna tabla —`git status
+--nada`, por ejemplo— sigue respondiendo «no implementa». Separar todas las
+inexistentes pide la lista completa de opciones de cada subcomando de Git, que
+son cientos. El barrido de este spec cubre lo que el contrato declara y la
+familia de `-q`.
+
+### 60.4 · `git rebase` sin base
+
+Decía `fatal: No rebase in progress?`, de un Git más viejo. Ahora responde lo
+que Git 2.54 responde sin rama de seguimiento, copiado de una corrida y con sus
+dos variantes: parado en una rama nombra la rama en el consejo de
+`--set-upstream-to`; desconectado dice `You are not currently on a branch.` y
+no da ese consejo.
+
+### 60.5 · Las cuarenta y una, y las cuatro que se quedaron
+
+Qué hacía cada una antes está medido en el código de antes de la sección 59,
+no recordado.
+
+| # | Opción | Qué hacía antes | Estado |
+|---|---|---|---|
+| 1 | `git init -q` | imprimía `Initialized empty Git repository` | no implementada (`CALLAR`) |
+| 2 | `git init --quiet` | lo mismo | no implementada (`CALLAR`) |
+| 3 | `git rm -q` | imprimía `rm 'archivo'` | no implementada (`CALLAR`) |
+| 4 | `git rm --quiet` | lo mismo | no implementada (`CALLAR`) |
+| 5 | `git commit -q` | imprimía el resumen | no implementada (`CALLAR`) |
+| 6 | `git commit --quiet` | lo mismo | no implementada (`CALLAR`) |
+| 7 | `git branch -q` | imprimía igual | no implementada (`CALLAR`) |
+| 8 | `git branch --quiet` | lo mismo | no implementada (`CALLAR`) |
+| 9 | `git switch -q` | imprimía `Switched to branch` | no implementada (`CALLAR`) |
+| 10 | `git switch --quiet` | lo mismo | no implementada (`CALLAR`) |
+| 11 | `git checkout -q` | imprimía `Switched to branch` | no implementada (`CALLAR`) |
+| 12 | `git checkout --quiet` | lo mismo | no implementada (`CALLAR`) |
+| 13 | `rm -q` (intérprete) | borraba; en bash no existe | **error de bash** |
+| 14 | `rm --quiet` (intérprete) | borraba; en bash no existe | **error de bash** |
+| 15 | `rm --cached` (intérprete) | **borraba el archivo**; en bash no existe | **error de bash** |
+| 16 | `rm -r` (intérprete) | se ignoraba: `rm -r recetas` decía `No such file or directory` | no implementada |
+| 17 | `rm -f` (intérprete) | se ignoraba: sobre un archivo que no existe daba error, y en bash calla | no implementada |
+| 18 | `rm --force` (intérprete) | lo mismo | no implementada |
+| 19 | `git commit -a` | **confirmaba sólo lo preparado** | **implementada** |
+| 20 | `git commit --all` | lo mismo | **implementada** |
+| 21 | `git show --oneline` | mostraba la cabecera larga | no implementada |
+| 22 | `git branch -a` | listaba sólo las locales; sin ramas remotas coincide con Git | no implementada |
+| 23 | `git branch --all` | lo mismo | no implementada |
+| 24 | `git branch -v` | listaba sólo nombres; Git agrega identificador y mensaje | no implementada |
+| 25 | `git branch --verbose` | lo mismo | no implementada |
+| 26 | `git mv -f` | se negaba igual que sin ella: `destination exists` | no implementada |
+| 27 | `git mv --force` | lo mismo | no implementada |
+| 28 | `git mv -v` | no imprimía nada; Git dice `Renaming a to b` | no implementada |
+| 29 | `git mv --verbose` | lo mismo | no implementada |
+| 30 | `mv -f` (intérprete) | lo mismo que sin ella, **que es lo que hace bash** | no implementada · *candidata a equivalente* |
+| 31 | `mv --force` (intérprete) | lo mismo | no implementada · *candidata a equivalente* |
+| 32 | `mv -v` (intérprete) | no imprimía nada; bash dice `renamed 'a' -> 'b'` | no implementada |
+| 33 | `mv --verbose` (intérprete) | lo mismo | no implementada |
+| 34 | `git merge --message` | **tomaba el mensaje por la rama**: `not something we can merge` | no implementada |
+| 35 | `git tag -l` | con patrón, no devolvía nada | no implementada |
+| 36 | `git tag --list` | lo mismo | no implementada |
+| 37 | `git tag -n` | listaba sólo nombres, sin el mensaje | no implementada |
+| 38 | `git reflog --all` | mostraba sólo `HEAD` | no implementada |
+| 39 | `git reflog -n` | `-n 1` no devolvía nada; `-2` mostraba todo | **implementada** (el guion la usa, 59.6) |
+| 40 | `git cat-file -s` | respondía un uso inventado | no implementada |
+| 41 | `ls -l` | listaba en formato corto | no implementada |
+
+Y las cuatro que la prueba por función señaló y **no salieron** del contrato:
+
+| Opción | Qué hacía antes | Estado |
+|---|---|---|
+| `git rebase --abort` | acertaba por casualidad; `--abort main` rebasaba | **implementada** (el guion la usa) |
+| `git rev-parse --short` | igual que sin ella | equivalente: los identificadores ya son cortos |
+| `git ls-files --cached` | igual que sin ella | equivalente: es el modo por omisión |
+| `git ls-files -c` | lo mismo | equivalente |
+
+Las filas 30 y 31 son las que el punto 5.2 del spec buscaba: `mv -f` se sacó
+del contrato cuando **ya coincidía con bash**, que sobrescribe con o sin ella.
+Devolverla como equivalente es decisión del product owner (punto 7.1).
+
+### 60.6 · Otra que apareció y no se tocó
+
+`git checkout --detach` **sin nombre** responde `fatal: you must specify a
+branch name`. Git desconecta la posición en la confirmación actual. Apareció
+al probar el caso desconectado de 60.4; es una diferencia de comportamiento y
+no una opción, y queda anotada para que el product owner decida.
+
+### 60.7 · La cobertura
+
+Sin cambios, medida en la corrida de Cypress: 02 en 71 %, 03 en 95 %, 04 en
+92 %, 05 en 98 % y 06 en 88 %, las mismas cifras de 59.7. Ninguna orden de los
+guiones usa `-q`, `commit -a` ni una opción inexistente.
+

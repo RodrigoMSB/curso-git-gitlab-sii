@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ORDENES_GIT } from '../src/core';
 import { ejecutar } from '../src/core/motor';
-import { AGRUPABLES, EQUIVALENTES, OPCIONES, OPCIONES_INTERPRETE, SIN_SOPORTE } from '../src/core/contrato';
+import { AGRUPABLES, EQUIVALENTES, INEXISTENTES, OPCIONES, OPCIONES_INTERPRETE, SIN_SOPORTE } from '../src/core/contrato';
 import { CodigoPorFuncion, sinComentarios } from './codigo-por-funcion';
 import { ALIAS_DEL_TALLER, escenarioPorId } from '../src/escenarios';
 import {
@@ -266,9 +266,25 @@ describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
 
   it('en Git una opcion agrupada no pasa el contrato', () => {
     const estado = escenarioPorId('lab-02');
-    const resultado = ejecutar(estado, 'git commit -am "x"');
+    // `git commit` es la excepcion, con `AGRUPABLES_GIT`; `git rm` no lo es.
+    const resultado = ejecutar(estado, 'git rm -rf recetas');
     expect(resultado.salida.some((linea) => linea.tipo === 'limite')).toBe(true);
     expect(resultado.estado).toBe(estado);
+  });
+
+  it('una opcion que no existe no esta a la vez entre las aceptadas', () => {
+    // Si estuviera en las dos, la respuesta dependeria del orden en que el
+    // despachador las mira, y eso no se decide por accidente (SPEC 015).
+    // `git add -a` es la excepcion escrita: la acepta el contrato para que su
+    // manejador responda el error.
+    for (const clave of Object.keys(INEXISTENTES)) {
+      const partes = clave.split(' ');
+      const opcion = partes.at(-1) ?? '';
+      const esGit = partes[0] === 'git';
+      const nombre = esGit ? (partes[1] ?? '') : (partes[0] ?? '');
+      const tabla = esGit ? OPCIONES : OPCIONES_INTERPRETE;
+      expect(tabla[nombre]?.includes(opcion) ?? false, clave).toBe(false);
+    }
   });
 
   it('cada equivalencia nombra una opcion que el contrato declara', () => {
