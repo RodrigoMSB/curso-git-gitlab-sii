@@ -33,6 +33,7 @@ import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
 import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
+import { limitePedido } from './confirmar';
 
 type ModoReset = 'soft' | 'mixed' | 'hard';
 
@@ -218,12 +219,21 @@ export const ordenRevert: Manejador = (estado, argumentos) => {
   );
 };
 
-/** `git reflog`. Muestra las posiciones por las que paso `HEAD`. */
+/**
+ * `git reflog`. Muestra las posiciones por las que paso `HEAD`.
+ *
+ * Con `-n 10` o `-10` se queda con las mas recientes, que es como lo usan los
+ * laboratorios 06 y 07. Antes el contrato aceptaba el numero y nadie lo leia:
+ * `-10` mostraba el registro entero y `-n 1` tomaba el `1` por una rama y no
+ * mostraba nada (seccion 59).
+ */
 export const ordenReflog: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
-  const referencia = posicionales(argumentos).find((valor) => valor !== 'show') ?? 'HEAD';
-  const entradas = estado.reflog.filter((entrada) => entrada.ref === referencia);
+  const referencia = posicionales(argumentos, ['-n']).find((valor) => valor !== 'show') ?? 'HEAD';
+  const todas = estado.reflog.filter((entrada) => entrada.ref === referencia);
+  const limite = limitePedido(argumentos);
+  const entradas = limite === null ? todas : todas.slice(0, limite);
 
   return ok(
     estado,

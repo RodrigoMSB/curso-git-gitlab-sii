@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ORDENES_GIT } from '../src/core';
 import { ejecutar } from '../src/core/motor';
-import { AGRUPABLES, EQUIVALENTES, OPCIONES, OPCIONES_INTERPRETE } from '../src/core/contrato';
+import { AGRUPABLES, EQUIVALENTES, OPCIONES, OPCIONES_INTERPRETE, SIN_SOPORTE } from '../src/core/contrato';
 import { CodigoPorFuncion, sinComentarios } from './codigo-por-funcion';
 import { ALIAS_DEL_TALLER, escenarioPorId } from '../src/escenarios';
 import {
@@ -174,7 +174,9 @@ describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
   // tiene que hacer una de tres cosas: ejecutarla entera, decir que no la
   // implementa, o decir que la orden no existe. La cuarta, aceptarla y
   // descartarla en silencio, es la que este spec viene a eliminar.
-  const LABORATORIOS = ['01', '02', '03', '04', '05', '06'];
+  // El 07 entro con la seccion 59: armado desde la 56 y con escenario, se
+  // habia quedado fuera de esta lista y sus ordenes no las miraba nadie.
+  const LABORATORIOS = ['01', '02', '03', '04', '05', '06', '07'];
 
   function guionDe(numero: string): readonly OrdenDelEnunciado[] {
     const texto = enunciado(numero);
@@ -278,6 +280,25 @@ describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
       ),
     );
     for (const clave of Object.keys(EQUIVALENTES)) expect(declaradas.has(clave), clave).toBe(true);
+  });
+
+  it('ninguna orden del guion queda fuera por una opcion', () => {
+    // La prueba de abajo mira solo las comparadas, y la clasificacion sale
+    // del mismo contrato: una opcion que se saca de la tabla vuelve
+    // «declarada» la orden del guion que la usa, y la prueba sigue en verde
+    // mirando una orden menos. Asi `git reflog -10` del laboratorio 06 se
+    // salio del recorrido en la seccion 59 sin que nada lo dijera.
+    //
+    // Lo unico que puede dejar fuera una orden del guion es una forma de
+    // `SIN_SOPORTE`, que lleva su motivo escrito. Una opcion, nunca.
+    const motivosDeForma = new Set(SIN_SOPORTE.map((forma) => forma.motivo));
+    for (const numero of LABORATORIOS) {
+      for (const orden of guionDe(numero)) {
+        const motivo = motivoDeclarado(orden.texto, ALIAS);
+        if (motivo === null) continue;
+        expect(motivosDeForma.has(motivo), `lab-${numero}: ${orden.texto} · ${motivo}`).toBe(true);
+      }
+    }
   });
 
   it('el guion no usa ninguna opcion que el contrato no nombre', () => {

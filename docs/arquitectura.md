@@ -3866,7 +3866,7 @@ ella, antes de decidir. Van por familia:
 | `git mv -f` / `mv -f` y `--force` | 4 | Una equivalente y la otra no leída, para lo mismo |
 | `git merge --message` | 1 | **Tomaba el mensaje por la rama a fusionar**: `merge: hola - not something we can merge`. `-m` sí funciona |
 | `git tag -l` / `--list`, `-n` | 3 | `git tag -l "v1*"` **no devolvía nada**; `-n` no mostraba el mensaje de cada etiqueta |
-| `git reflog -n`, `--all` | 2 | `git reflog -n 1` **no devolvía nada**; `--all` mostraba sólo `HEAD` |
+| `git reflog -n`, `--all` | 2 | `git reflog -n 1` **no devolvía nada**, porque tomaba el `1` por una rama; `-10` mostraba el registro entero; `--all` mostraba sólo `HEAD` |
 | `git show --oneline` | 1 | Mostraba la cabecera larga, como si no estuviera |
 | `git cat-file -s` | 1 | Respondía con un uso inventado, `usage: git cat-file (-t \| -p)` |
 | `ls -l` | 1 | Listaba en formato corto |
@@ -3886,7 +3886,10 @@ la lectura no estaba donde debía:
 
 La regla fue la misma para todas, y no hubo que decidir caso por caso:
 
-- **La que el guion usa, se implementa.** Sólo `git rebase --abort`.
+- **La que el guion usa, se implementa.** Dos: `git rebase --abort` y el
+  número de `git reflog`, que los laboratorios 06 y 07 escriben como `-10`,
+  `-15` y `-20`. Ésta la saqué primero del contrato por error, y lo que lo
+  destapó está en 59.6.
 - **La que coincide con Git sin código, pasa a equivalente con su orden.**
   Tres: `git rev-parse --short`, porque los identificadores del simulador ya
   son cortos, y `git ls-files --cached` y `-c`, que son el modo por omisión.
@@ -3895,6 +3898,10 @@ La regla fue la misma para todas, y no hubo que decidir caso por caso:
   respuestas y la única honesta sin escribir código nuevo. Ninguna aparece en
   un enunciado que el simulador recorra: el único uso es `git branch -a` del
   laboratorio 08, que va entero en la terminal.
+- **`git rebase --continue`**, que ya había salido de las opciones en la
+  sección 58, pasa a `SIN_SOPORTE` con su motivo. El rescate del 07 la nombra,
+  y «no implementa la opción» no le decía al participante por qué: el rebase
+  del simulador nunca se detiene, el que se detiene es el de la terminal.
 - **La agrupación de cortas** queda sólo para `ls`, `grep` y `wc`, que son las
   que las leen por su letra (`AGRUPABLES`). Una prueba exige que cada corta de
   esas tres se lea con `has('x')`, y otra que `git commit -am` se responda como
@@ -3913,4 +3920,27 @@ así que la prueba del contrato la da por buena. Queda anotada y sin tocar:
 sacarla haría que el simulador dijera «en la terminal sí funciona», que es
 falso, y la respuesta correcta, la tercera, pide un mensaje de error por
 opción que el contrato hoy no tiene.
+
+### 59.6 · La prueba del guion se aprobaba sola, y le faltaba un laboratorio
+
+Al sacar `-n` de `git reflog` la suite quedó en verde. Lo que avisó fue el
+informe de movimiento del laboratorio 06, que perdió una fila: `git reflog -10`
+había dejado de ejecutarse en el simulador y nadie lo dijo.
+
+**Es otra vez el patrón de las secciones 11 y 32.** La prueba «el guion no usa
+ninguna opción que el contrato no nombre» mira sólo las órdenes comparadas, y
+quien decide si una orden es comparada o declarada es el mismo contrato. Sacar
+una opción de la tabla convierte en declarada la orden que la usa, y la prueba
+sigue en verde mirando una orden menos.
+
+Una prueba nueva lo cierra: **ninguna orden del guion puede quedar fuera por
+una opción**. Lo único que puede dejarla fuera es una forma de `SIN_SOPORTE`,
+que lleva su motivo escrito. Se vio fallar con `git reflog -10` antes de
+arreglarlo, y con `git rebase --continue`, que es lo que la llevó a su forma
+propia.
+
+Y la lista de laboratorios que esas pruebas recorren **terminaba en el 06**.
+El 07 está armado y con escenario desde la sección 56, y ninguna de las
+pruebas del guion miraba sus órdenes. Entró, y pasó entero salvo el
+`--continue` de arriba.
 

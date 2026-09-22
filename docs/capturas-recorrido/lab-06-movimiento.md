@@ -25,6 +25,7 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 021 | `git status` | tiempo |
 | 022 | `ls` | tiempo |
 | 023 | `git reflog` | tiempo |
+| 024 | `git reflog -10` | tiempo |
 | 025 | `git log --oneline -3` | tiempo |
 | 026 | `ls` | tiempo |
 | 028 | `git log --oneline` | tiempo |

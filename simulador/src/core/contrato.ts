@@ -99,6 +99,14 @@ export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
     motivo:
       'el rebase interactivo. Abre un editor con la lista de confirmaciones y se eligen las acciones linea por linea: no es una orden que falte, es un modo de trabajo que esta pantalla no tiene. La parte 3 del laboratorio 07 se hace en tu terminal',
   },
+  {
+    // Salio de las opciones en la seccion 58 y paso aqui en la 59: el
+    // laboratorio 07 la nombra en su rescate, y la respuesta generica de
+    // opcion no implementada no le decia al participante por que.
+    patron: /^git rebase\b.*\s--continue(\s|$)/,
+    motivo:
+      'continuar un rebase detenido. El rebase del simulador nunca se detiene a medias, asi que no hay nada que continuar: el que se detiene por un conflicto es el de tu terminal, y ahi esta orden si funciona',
+  },
   // --- La carpeta oculta (punto 3.3) ---------------------------------------
   {
     // `cat` y `wc` sobre un archivo del proyecto si funcionan desde el
@@ -161,7 +169,7 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   // `-u` salio: guardar tambien lo que no esta en seguimiento pide mover del
   // directorio a la pila archivos que la entrada no sabe llevar.
   stash: ['-m', '--message', '--stat', '--index', '-p', '--patch'],
-  reflog: [],
+  reflog: ['-n'],
   // `--continue` salio con `-i`: el rebase del motor no se detiene nunca, de
   // modo que no hay nada que continuar. `--abort` se queda porque el
   // laboratorio 07 lo nombra, y responde lo mismo que Git sin rebase en curso.

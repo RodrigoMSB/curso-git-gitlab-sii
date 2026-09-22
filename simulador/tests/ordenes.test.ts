@@ -1151,6 +1151,15 @@ describe('las opciones que el contrato aceptaba y nadie leia', () => {
     expect(resultado.estado).toBe(estado);
   });
 
+  it('git reflog se queda con las entradas mas recientes que se le piden', () => {
+    // Los laboratorios 06 y 07 escriben `git reflog -10`. Antes se mostraba
+    // el registro entero, y `-n 1` tomaba el `1` por una rama.
+    const estado = escenarioPorId('lab-02');
+    const todas = texto(ejecutar(estado, 'git reflog')).split('\n');
+    expect(texto(ejecutar(estado, 'git reflog -2')).split('\n')).toEqual(todas.slice(0, 2));
+    expect(texto(ejecutar(estado, 'git reflog -n 1')).split('\n')).toEqual(todas.slice(0, 1));
+  });
+
   it('ls lee -a por su letra, tambien agrupada', () => {
     const estado = escenarioPorId('lab-02');
     expect(texto(ejecutar(estado, 'ls -aR'))).toContain('.git/');
@@ -1166,7 +1175,6 @@ describe('las opciones que el contrato aceptaba y nadie leia', () => {
       [lab02, 'git switch -q -c nueva'],
       [lab02, 'git rm -q platos.md'],
       [lab02, 'git show --oneline HEAD'],
-      [lab02, 'git reflog -n 1'],
       [lab02, 'git cat-file -s HEAD'],
       [lab02, 'git mv -v platos.md p.md'],
       [lab02, 'ls -l'],

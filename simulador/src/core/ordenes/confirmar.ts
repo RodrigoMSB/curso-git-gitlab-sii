@@ -254,8 +254,8 @@ function cadenaBuscada(argumentos: readonly string[]): string | null {
   return valorDeOpcion(argumentos, '-S');
 }
 
-/** Limite de confirmaciones pedido con `-n 3` o con `-3`. */
-function limitePedido(argumentos: readonly string[]): number | null {
+/** Limite de confirmaciones pedido con `-n 3` o con `-3`. Lo usan tambien `git reflog`. */
+export function limitePedido(argumentos: readonly string[]): number | null {
   const explicito = valorDeOpcion(argumentos, '-n', '--max-count');
   if (explicito !== null) {
     const numero = Number.parseInt(explicito, 10);
