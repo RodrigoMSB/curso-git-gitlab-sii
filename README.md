@@ -290,11 +290,11 @@ laboratorio tiene su escenario.
 | Lab 05 | 4 | Los cuatro casos de fusion: `tailandesa` avanza rapido, `azteca` une sin chocar, `criolla` toca el mismo archivo que main y se fusiona sola, y `andina` choca sobre la misma linea |
 | Lab 06 | 4 | Siete confirmaciones, con un error tres confirmaciones atras |
 | Lab 07 | 5 | Rama de trabajo con mensajes que no dicen nada y algo a medias encima |
-| Lab 08 | 5 | *sin escenario*: de terminal pura, por los remotos, el submodulo y el gancho |
+| Lab 08 | 5 | *sin escenario*: de terminal pura, por los remotos y el gancho |
 | Lab 09 | 6 | Ocho confirmaciones, archivo de exclusiones y una version etiquetada |
 
-El laboratorio 08 no lleva escenario: enseña remotos, un submodulo y un gancho,
-y el motor no implementa ninguna de las tres cosas. Es de terminal pura. Los del
+El laboratorio 08 no lleva escenario: enseña dos remotos y un gancho, y el
+motor no implementa ninguna de las dos cosas. Es de terminal pura. Los del
 10 en adelante ocurren en la plataforma o en la tuberia de integracion, y no
 tienen repositorio local que reflejar.
 

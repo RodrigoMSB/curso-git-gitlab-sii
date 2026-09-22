@@ -68,7 +68,9 @@ export const ordenLs: Manejador = (estado, argumentos) => {
     return fallo(estado, `ls: ${prefijoPedido}: No such file or directory`);
   }
 
-  if (prefijo === '' && tieneOpcion(argumentos, '-a', '--all') && estado.iniciado) {
+  // `-a` se lee por su letra, como `-R`: `ls -aR` es una sola palabra.
+  const todos = letrasCortas(argumentos).has('a') || tieneOpcion(argumentos, '--all');
+  if (prefijo === '' && todos && estado.iniciado) {
     entradas.add('.git/');
   }
 

@@ -189,6 +189,7 @@ export function despachar(
       subOrden,
       expandida.argumentos.slice(1),
       `git ${subOrden}`,
+      'git',
     );
     if (revision !== null) return limite(estado, revision);
 
@@ -210,6 +211,7 @@ export function despachar(
     orden.programa,
     orden.argumentos,
     orden.programa,
+    'interprete',
   );
   if (revision !== null) return limite(estado, revision);
 
@@ -241,11 +243,12 @@ function revisarContrato(
   nombre: string,
   argumentos: readonly string[],
   comoSeLlama: string,
+  lado: 'git' | 'interprete',
 ): string | null {
   const forma = formaSinSoporte(linea);
   if (forma !== undefined) return forma.motivo;
 
-  const fuera = opcionesNoReconocidas(nombre, argumentos);
+  const fuera = opcionesNoReconocidas(nombre, argumentos, lado);
   if (fuera.length === 0) return null;
   const lista = fuera.map((opcion) => `«${opcion}»`).join(', ');
   const plural = fuera.length === 1 ? 'la opcion' : 'las opciones';

@@ -5,8 +5,8 @@
  * y tienen grafo que mirar. Los del 10 en adelante ocurren en la plataforma o
  * en la tuberia de integracion, y no hay repositorio local que reflejar.
  *
- * El 08 tampoco lleva, aunque ocurra en disco: enseña remotos, un submodulo y
- * un gancho, y el motor no implementa ninguna de las tres cosas.
+ * El 08 tampoco lleva, aunque ocurra en disco: enseña dos remotos y un gancho,
+ * y el motor no implementa ninguna de las dos cosas.
  */
 
 import type { EstadoRepositorio } from '../core/tipos';

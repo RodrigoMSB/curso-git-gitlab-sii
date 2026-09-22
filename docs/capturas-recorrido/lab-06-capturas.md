@@ -29,7 +29,7 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 021 | movio | tiempo |
 | 022 | movio | tiempo |
 | 023 | movio | tiempo |
-| 024 | movio | tiempo |
+| 024 | movio | — |
 | 025 | movio | tiempo |
 | 026 | movio | tiempo |
 | 027 | movio | — |

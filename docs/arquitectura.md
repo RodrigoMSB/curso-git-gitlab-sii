@@ -1654,6 +1654,11 @@ Esto es lo que el motor de hoy no puede mostrar:
   `.gitmodules`, ni un repositorio dentro de otro.
 - **El gancho de pre-confirmacion.** El motor no ejecuta ganchos.
 
+> **El submodulo salio del laboratorio** (seccion 58.1, desajuste 5) y el
+> titulo paso a ser «Dos remotos y un gancho» (seccion 59). Lo que sigue
+> faltando para darle escenario son las ramas de seguimiento remoto, las
+> ordenes de red y los ganchos.
+
 **No se invento soporte nuevo**, como el SPEC 007 pidio. Si alguna vez se quiere
 que ese laboratorio se pueda seguir en el simulador, lo que hace falta es al
 menos ramas de seguimiento remoto y las ordenes de red, y eso es un spec propio.
@@ -2157,7 +2162,7 @@ caja», deja de existir como laboratorio propio y su contenido util queda como
 | 06 | 05 | Fusionar y resolver |
 | 07 | 06 | Retroceder, revertir y etiquetar |
 | 08 | 07 | Interrumpir y limpiar la historia |
-| 09 | 08 | Dos remotos, un submodulo y un gancho |
+| 09 | 08 | Dos remotos y un gancho |
 | 10 | 09 | Conectar y publicar |
 | 11 al 15 | 10 al 14 | los de la plataforma y la tuberia |
 
@@ -2918,7 +2923,7 @@ la anterior. **Ninguna de las cinco que quedan es por contenido.**
 | `git --version` | No es una instalación de Git, es un modelo de cómo funciona |
 
 Y lo que sigue fuera del simulador entero: **el laboratorio 08**, con sus dos
-remotos, su submódulo y su gancho (sección 24).
+remotos y su gancho (sección 24).
 
 ### Lo que el archivo de exclusiones cubre, y lo que no
 
@@ -3226,7 +3231,7 @@ toca.
 
 | Fuera | Por qué, y si el contenido cambia algo |
 |---|---|
-| **08** · remotos, submódulo y gancho | Necesita ramas de seguimiento remoto, órdenes de red, submódulos y ganchos. **El contenido no aporta nada.** Sigue siendo un spec propio, el mismo que la sección 24 describe |
+| **08** · dos remotos y un gancho | Necesita ramas de seguimiento remoto, órdenes de red y ganchos. **El contenido no aporta nada.** Sigue siendo un spec propio, el mismo que la sección 24 describe |
 | **10, 11, 13, 14** · plataforma | Ocurren en GitLab. No hay repositorio local que reflejar |
 | **12** · integración continua | Lo mismo |
 | El tramo de la carpeta oculta del **02** | Se deja fuera **a propósito**, y la razón es pedagógica: ese tramo termina diciéndole al participante que lo que acaba de leer es texto en archivos de verdad. Un `.git` fabricado enseña lo contrario. Es la sección 6.1 del spec y no cambió |
@@ -3773,6 +3778,9 @@ en la confirmación aunque el nombre sea el de una rama.
 alguna parte, no que la lea el subcomando que la declara. Cerrarla del todo
 pide leer el código por función, que es otro trabajo.
 
+> **Cerrada en la sección 59**, y lo que destapó fueron cuarenta y una
+> opciones más.
+
 ### 58.4 · Dos cosas que no se cambiaron, y por qué
 
 **El título del laboratorio 08 sigue prometiendo un submódulo.** Dice «Dos
@@ -3781,8 +3789,128 @@ título es el del material del arquitecto y es el que la sección 31 fija, así
 que no se toca sin que él lo diga. El enunciado explica en su primer párrafo
 que la parte del submódulo se lee y no se ejecuta.
 
+> **Cambiado por el product owner**: hoy es «Dos remotos y un gancho».
+> Sección 59.
+
 **El `git status` largo del simulador imprime una línea en blanco después de
 `On branch X` que Git no imprime.** Es una diferencia de una línea, no cambia
 nada de lo que el participante aprende, y tocarla mueve la comparación contra
 disco de varios escenarios. Queda anotada para cuando haya otra razón para
 entrar ahí.
+
+---
+
+## 59. El contrato leído por función, y las cuarenta y una opciones que aparecieron
+
+Dos encargos del product owner.
+
+### 59.1 · El laboratorio 08 se llama «Dos remotos y un gancho»
+
+El submódulo salió del ejercicio en la sección 58.1 y el título lo seguía
+prometiendo. Cambió en el enunciado, en el encabezado del verificador, en la
+tabla de la sección 31 y en toda mención viva: los dos `README.md`, los
+comentarios de `escenarios/`, las pruebas y las secciones 48 y 52. Las
+secciones 24 y 58.4 llevan una nota en vez de reescribirse, porque son
+registro. `labs/README.md` mostraba además un `condimentos.bundle` que
+`preparar.sh` ya no arma; hoy muestra `upstream.bundle`, que es el que arma.
+
+La sección «Sobre los submódulos» del enunciado se quedó: se lee y no se
+ejecuta, y el primer párrafo lo dice.
+
+### 59.2 · La prueba lee el código por función
+
+`tests/codigo-por-funcion.ts` parte `src/core` en declaraciones de primer
+nivel, sin comentarios, y sigue quién nombra a quién resolviendo las
+importaciones. Para cada orden, la prueba toma su manejador de la tabla del
+despachador y junta el texto de todo lo que alcanza, **sin entrar en
+`contrato.ts` ni en el manejador de otra orden**. La opción tiene que estar
+ahí. TypeScript 7 no tiene API programática (sección 1), así que no hay árbol
+de sintaxis: alcanza con que el motor declare todo en la columna cero, que lo
+cumple entero.
+
+Cierra cuatro formas del mismo agujero, y la prueba las arma a propósito para
+verse fallar con cada una:
+
+1. **La opción leída en otro subcomando.** Es el caso de `checkout --detach`.
+   Quitándole la lectura a `git checkout`, la prueba falla con
+   `git checkout --detach`; la versión anterior pasaba.
+2. **La opción citada en un comentario.** Hoy ninguna, pero citar no es leer.
+3. **La equivalencia de una orden que eximía a otra.** `EQUIVALENTES` iba
+   por opción sola, así que el motivo de `-q` en `git init` eximía a
+   `git commit`. Ahora la clave es la orden y la opción juntas, y una prueba
+   exige que cada equivalencia nombre una opción que el contrato declara.
+4. **El nombre repetido en los dos lados.** `rm` y `mv` existen en Git y en el
+   intérprete, y compartían tabla: `rm --cached`, que en bash no existe, pasaba
+   por la opción de `git rm`. El intérprete tiene ahora su tabla,
+   `OPCIONES_INTERPRETE`.
+
+**Sigue siendo una cota por arriba.** Dice que el código que la orden puede
+ejecutar lee la opción, no que la lea con los argumentos de esa orden: eso es
+flujo de datos. Si un manejador llama a una función compartida que lee
+`--detach` sólo cuando la llama otro, esta prueba no lo ve. Hoy no hay ningún
+caso así, y cerrarlo del todo ya no es leer por función sino ejecutar.
+
+### 59.3 · Lo que apareció
+
+**Cuarenta y una opciones** que el contrato aceptaba y el manejador de su orden
+no leía, o leía otro. Se comprobó cada una en el motor, con la opción y sin
+ella, antes de decidir. Van por familia:
+
+| Familia | Opciones | Qué pasaba |
+|---|---|---|
+| `-q` / `--quiet` | `git init`, `commit`, `rm`, `branch`, `switch`, `checkout` y `rm` del intérprete | Declaradas equivalentes porque «no hay ruido que callar». `git commit -q` imprime el resumen igual, `git switch -q` imprime `Switched to…` y `git rm -q` imprime `rm '…'`. Git calla las tres |
+| `git commit -a` / `--all` | 2 | **Confirmaba sólo lo preparado.** En el escenario del 02, `git commit -a` deja fuera `ingredientes.md`, que Git incluye |
+| `git commit -am` | la agrupación | El contrato aceptaba las cortas agrupadas letra por letra en toda orden, y `git commit` lee palabras enteras: `-am` llegaba sin `-a` ni `-m` y respondía `Aborting commit due to empty commit message` |
+| `git branch -v` / `--verbose`, `-a` / `--all` | 4 | `-v` se declaraba equivalente, «la salida ya es la detallada», y no lo es: en Git lleva identificador y mensaje, y el simulador lista sólo nombres. `-a` no la leía nadie |
+| `git mv -v` / `mv -v` | 4 | Lo mismo: Git dice `Renaming a to b`, el `mv` de macOS `a -> b`; el simulador no dice nada |
+| `git mv -f` / `mv -f` y `--force` | 4 | Una equivalente y la otra no leída, para lo mismo |
+| `git merge --message` | 1 | **Tomaba el mensaje por la rama a fusionar**: `merge: hola - not something we can merge`. `-m` sí funciona |
+| `git tag -l` / `--list`, `-n` | 3 | `git tag -l "v1*"` **no devolvía nada**; `-n` no mostraba el mensaje de cada etiqueta |
+| `git reflog -n`, `--all` | 2 | `git reflog -n 1` **no devolvía nada**; `--all` mostraba sólo `HEAD` |
+| `git show --oneline` | 1 | Mostraba la cabecera larga, como si no estuviera |
+| `git cat-file -s` | 1 | Respondía con un uso inventado, `usage: git cat-file (-t \| -p)` |
+| `ls -l` | 1 | Listaba en formato corto |
+| `rm` del intérprete: `--cached`, `-r`, `-f`, `--force` | 4 | Venían de la tabla de `git rm`. `--cached` no existe en bash |
+
+Y dos que **no** eran opciones descartadas pero la prueba señaló igual, porque
+la lectura no estaba donde debía:
+
+- **`git rebase --abort`** respondía bien por casualidad: el manejador no la
+  leía, veía que no había base y decía `No rebase in progress?`.
+  **`git rebase --abort main` rebasaba sobre `main`.** El laboratorio 07 la
+  nombra, así que se implementó: se lee primero y responde lo de Git.
+- **`ls -a`** se leía como palabra entera, así que `ls -aR` escondía `.git`.
+  Se lee por su letra, como `-R`.
+
+### 59.4 · Qué se hizo con cada una
+
+La regla fue la misma para todas, y no hubo que decidir caso por caso:
+
+- **La que el guion usa, se implementa.** Sólo `git rebase --abort`.
+- **La que coincide con Git sin código, pasa a equivalente con su orden.**
+  Tres: `git rev-parse --short`, porque los identificadores del simulador ya
+  son cortos, y `git ls-files --cached` y `-c`, que son el modo por omisión.
+- **Todas las demás salen del contrato** y responden que no están
+  implementadas y que en la terminal sí funcionan. Es la segunda de las tres
+  respuestas y la única honesta sin escribir código nuevo. Ninguna aparece en
+  un enunciado que el simulador recorra: el único uso es `git branch -a` del
+  laboratorio 08, que va entero en la terminal.
+- **La agrupación de cortas** queda sólo para `ls`, `grep` y `wc`, que son las
+  que las leen por su letra (`AGRUPABLES`). Una prueba exige que cada corta de
+  esas tres se lea con `has('x')`, y otra que `git commit -am` se responda como
+  límite.
+
+Las que más convendría implementar, si el product owner quiere, son
+`git commit -a` y `-q`, que el participante escribe por costumbre aunque el
+guion no las use. Implementarlas es devolverlas a la tabla con su lectura; la
+prueba impide volver a ponerlas sin ella.
+
+### 59.5 · Lo que la prueba no ve, y apareció igual
+
+**`git add -a`** lo acepta el simulador como `--all`. En Git no existe:
+`error: unknown switch 'a'`. No es una opción descartada sino una inventada,
+así que la prueba del contrato la da por buena. Queda anotada y sin tocar:
+sacarla haría que el simulador dijera «en la terminal sí funciona», que es
+falso, y la respuesta correcta, la tercera, pide un mensaje de error por
+opción que el contrato hoy no tiene.
+

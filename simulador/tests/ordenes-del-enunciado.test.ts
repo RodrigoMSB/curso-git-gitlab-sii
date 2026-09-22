@@ -9,11 +9,10 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
 import { ORDENES_GIT } from '../src/core';
 import { ejecutar } from '../src/core/motor';
-import { EQUIVALENTES, OPCIONES } from '../src/core/contrato';
+import { AGRUPABLES, EQUIVALENTES, OPCIONES, OPCIONES_INTERPRETE } from '../src/core/contrato';
+import { CodigoPorFuncion, sinComentarios } from './codigo-por-funcion';
 import { ALIAS_DEL_TALLER, escenarioPorId } from '../src/escenarios';
 import {
   bloquesDe,
@@ -28,6 +27,59 @@ import {
 } from '../cypress/soporte/ordenes';
 
 const MOTOR = fileURLToPath(new URL('../src/core', import.meta.url));
+
+/** El motor partido en declaraciones, para leer que alcanza cada manejador. */
+const codigo = new CodigoPorFuncion(MOTOR);
+const MANEJADORES = {
+  git: codigo.tabla('ordenes/registro.ts', 'ORDENES_GIT'),
+  interprete: codigo.tabla('ordenes/registro.ts', 'ORDENES_INTERPRETE'),
+};
+const TODOS_LOS_MANEJADORES = new Set([...MANEJADORES.git.values(), ...MANEJADORES.interprete.values()]);
+
+/** Lo que no se recorre: el contrato, que declara, y el manejador de otra orden. */
+const excluidas = (declaracion: { readonly archivo: string }): boolean =>
+  declaracion.archivo === 'contrato.ts' || TODOS_LOS_MANEJADORES.has(declaracion as never);
+
+function manejadorDe(lado: 'git' | 'interprete', nombre: string) {
+  const manejador = MANEJADORES[lado].get(nombre);
+  if (manejador === undefined) throw new Error(`${lado} ${nombre} no tiene manejador`);
+  return manejador;
+}
+
+type Tabla = Readonly<Record<string, readonly string[]>>;
+
+/**
+ * Las opciones declaradas que el manejador de su orden no lee y que no estan
+ * declaradas como equivalentes, escritas como `git show --oneline`.
+ *
+ * Recibe las tablas para que la prueba se pueda ver fallar con una opcion
+ * agregada a proposito, sin tocar el contrato.
+ */
+function opcionesSinLector(
+  tablas: { readonly git?: Tabla; readonly interprete?: Tabla } = { git: OPCIONES, interprete: OPCIONES_INTERPRETE },
+): string[] {
+  const faltan: string[] = [];
+  for (const lado of ['git', 'interprete'] as const) {
+    for (const [nombre, opciones] of Object.entries(tablas[lado] ?? {})) {
+      // Una orden sin manejador, como `cd`, nunca llega a ejecutarse: el
+      // contrato la responde antes, con su forma declarada.
+      if (!MANEJADORES[lado].has(nombre)) continue;
+      const texto = codigo.alcanzable(manejadorDe(lado, nombre), excluidas);
+      const como = lado === 'git' ? `git ${nombre}` : nombre;
+      for (const opcion of opciones) {
+        if (opcion === '--' || Object.hasOwn(EQUIVALENTES, `${como} ${opcion}`)) continue;
+        // Las cortas de una orden agrupable se leen por su letra, con
+        // `letrasCortas`: `wc -w` se consulta como `has('w')`.
+        const porLetra =
+          lado === 'interprete' && AGRUPABLES.has(nombre) && /^-[a-zA-Z]$/.test(opcion)
+            ? texto.includes(`has('${opcion.slice(1)}')`)
+            : false;
+        if (!texto.includes(`'${opcion}'`) && !porLetra) faltan.push(`${como} ${opcion}`);
+      }
+    }
+  }
+  return faltan;
+}
 
 const LABS = fileURLToPath(new URL('../../labs', import.meta.url));
 const enunciado = (numero: string): string =>
@@ -159,37 +211,73 @@ describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
     }
   });
 
-  it('toda opcion que el contrato reconoce la lee alguien, o esta declarada como equivalente', () => {
-    // Una opcion listada como reconocida que ningun manejador consulta es,
-    // literalmente, una opcion aceptada y descartada. Esto lo detecta sin
-    // depender de que alguien se acuerde de mirarlo.
+  it('toda opcion que el contrato reconoce la lee el manejador de su orden, o esta declarada como equivalente', () => {
+    // Una opcion listada como reconocida que su manejador no consulta es,
+    // literalmente, una opcion aceptada y descartada.
     //
-    // **`contrato.ts` se excluye de la busqueda.** Mientras estuvo dentro, una
-    // opcion declarada y jamas leida se encontraba a si misma en la propia
-    // lista que la declaraba, y la prueba pasaba: asi `rebase -i` estuvo
-    // aceptada y descartada desde que se escribio. Al sacarlo quedaron
-    // diecinueve al descubierto, anotadas en la seccion 58.
-    const fuentes = readdirSync(MOTOR, { recursive: true, encoding: 'utf8' })
-      .filter((nombre) => nombre.endsWith('.ts') && nombre !== 'contrato.ts')
-      .map((nombre) => readFileSync(join(MOTOR, nombre), 'utf8'))
-      .join('\n');
+    // **Se lee el codigo por funcion, no por archivo** (seccion 59). La
+    // version anterior buscaba la opcion en todo `src/core` junto, y
+    // `git checkout --detach` pasaba porque `'--detach'` aparecia en la
+    // funcion de `git switch`. Ahora cada opcion se busca en lo que el
+    // manejador de **su** orden alcanza: su cuerpo y lo que nombra, sin
+    // entrar en `contrato.ts`, que declara y no ejecuta, ni en el manejador
+    // de otra orden. Los comentarios se quitan antes, porque citar una opcion
+    // no es leerla.
+    const faltan = opcionesSinLector();
+    expect(faltan, faltan.join('\n')).toEqual([]);
+  });
 
-    /**
-     * Las opciones cortas agrupables no se comparan como palabra entera: el
-     * motor las lee por su letra, con `letrasCortas`, de modo que `wc -w` se
-     * consulta como `cortas.has('w')` y nunca aparece escrita como `'-w'`.
-     */
-    const laLeeAlguien = (opcion: string): boolean => {
-      if (fuentes.includes(`'${opcion}'`)) return true;
-      return /^-[a-zA-Z]$/.test(opcion) && fuentes.includes(`has('${opcion.slice(1)}')`);
-    };
+  it('la prueba anterior ve fallar lo que tiene que ver fallar', () => {
+    // Las tres formas del agujero, armadas a proposito. Una prueba que nunca
+    // se vio fallar no prueba nada.
+    //
+    // 1. La opcion leida en otro subcomando del mismo archivo: `--detach`
+    //    esta en `git switch` y en `git checkout`; `--oneline` esta en
+    //    `git log` y no en `git show`.
+    expect(opcionesSinLector({ git: { show: ['--oneline'] } })).toEqual(['git show --oneline']);
+    // 2. La opcion citada solo en un comentario. Hoy el motor no tiene
+    //    ninguna asi, de modo que se comprueba el filtro directamente.
+    const citada = sinComentarios("// lee '--all'\n/* y '-q' */\nconst x = 'a // b';");
+    expect(citada).not.toContain("'--all'");
+    expect(citada).not.toContain("'-q'");
+    expect(citada).toContain("'a // b'");
+    // 3. La equivalencia de una orden que eximia a otra: `-q` estaba
+    //    declarada con un motivo de `git init` y valia para `git commit`.
+    expect(opcionesSinLector({ git: { commit: ['-q'] } })).toEqual(['git commit -q']);
+    // Y el nombre repetido en los dos lados: `rm --cached` lo lee `git rm`,
+    // no el `rm` del interprete.
+    expect(opcionesSinLector({ interprete: { rm: ['--cached'] } })).toEqual(['rm --cached']);
+  });
 
-    for (const [verbo, opciones] of Object.entries(OPCIONES)) {
-      for (const opcion of opciones) {
-        if (opcion === '--' || Object.hasOwn(EQUIVALENTES, opcion)) continue;
-        expect(laLeeAlguien(opcion), `${verbo} ${opcion}`).toBe(true);
+  it('las opciones agrupables se leen por su letra', () => {
+    // El contrato acepta `-rn` letra por letra solo en `AGRUPABLES`. Si el
+    // manejador leyera `-r` como palabra entera, `-rn` pasaria el contrato y
+    // llegaria sin `-r` a la vista: aceptada y descartada otra vez.
+    for (const nombre of AGRUPABLES) {
+      const texto = codigo.alcanzable(manejadorDe('interprete', nombre), excluidas);
+      for (const opcion of OPCIONES_INTERPRETE[nombre] ?? []) {
+        if (!/^-[a-zA-Z]$/.test(opcion)) continue;
+        expect(texto.includes(`has('${opcion.slice(1)}')`), `${nombre} ${opcion}`).toBe(true);
       }
     }
+  });
+
+  it('en Git una opcion agrupada no pasa el contrato', () => {
+    const estado = escenarioPorId('lab-02');
+    const resultado = ejecutar(estado, 'git commit -am "x"');
+    expect(resultado.salida.some((linea) => linea.tipo === 'limite')).toBe(true);
+    expect(resultado.estado).toBe(estado);
+  });
+
+  it('cada equivalencia nombra una opcion que el contrato declara', () => {
+    // Una equivalencia que sobrevive a su opcion es una excusa esperando que
+    // alguien la vuelva a poner.
+    const declaradas = new Set(
+      Object.entries(OPCIONES).flatMap(([verbo, opciones]) =>
+        opciones.map((opcion) => `git ${verbo} ${opcion}`),
+      ),
+    );
+    for (const clave of Object.keys(EQUIVALENTES)) expect(declaradas.has(clave), clave).toBe(true);
   });
 
   it('el guion no usa ninguna opcion que el contrato no nombre', () => {

@@ -1,4 +1,4 @@
-# Laboratorio 08 · Dos remotos, un submódulo y un gancho
+# Laboratorio 08 · Dos remotos y un gancho
 
 **Sesión 5 · 65 minutos**
 
@@ -16,7 +16,7 @@ Todo ocurre en tu máquina. Todavía no hay plataforma ni red, eso empieza en la
 
 ## Preparación
 
-**Este laboratorio entero va en tu terminal.** Es el único del taller que no se puede seguir en el simulador, y no es un descuido: lo que enseña son dos remotos, un submódulo y un gancho, y el simulador no modela ninguna de las tres cosas. No tiene ramas de seguimiento remoto, ni órdenes de red, ni repositorios dentro de otros, ni ejecuta ganchos. Un escenario suyo te mostraría la historia local y nada de lo que vienes a aprender.
+**Este laboratorio entero va en tu terminal.** Es el único del taller que no se puede seguir en el simulador, y no es un descuido: lo que enseña son dos remotos y un gancho, y el simulador no modela ninguna de las dos cosas. No tiene ramas de seguimiento remoto, ni órdenes de red, ni ejecuta ganchos. Un escenario suyo te mostraría la historia local y nada de lo que vienes a aprender.
 
 Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
 

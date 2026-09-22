@@ -30,8 +30,8 @@ function declaracion(id: string): EscenarioDeclarado {
 
 describe('escenarios de laboratorio', () => {
   it('hay uno por cada laboratorio del 01 al 10', () => {
-    // El 09 no lleva: enseña remotos, un submodulo y un gancho, y el motor no
-    // implementa ninguna de las tres cosas.
+    // El 08 no lleva: enseña dos remotos y un gancho, y el motor no
+    // implementa ninguna de las dos cosas.
     expect(ESCENARIOS.map((escenario) => escenario.laboratorio)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 9,
     ]);
@@ -196,8 +196,8 @@ describe('escenarios de laboratorio', () => {
   });
 
   it('el laboratorio 08 no tiene escenario, y es a proposito', () => {
-    // Enseña dos remotos, un submodulo y un gancho. El motor no implementa
-    // ninguna de las tres cosas, asi que un escenario suyo mostraria la
+    // Enseña dos remotos y un gancho. El motor no implementa
+    // ninguna de las dos cosas, asi que un escenario suyo mostraria la
     // historia local y nada de lo que el laboratorio viene a enseñar.
     expect(declaracionPorId('lab-08')).toBeUndefined();
   });

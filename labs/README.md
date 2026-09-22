@@ -32,8 +32,8 @@ GIT-GITLAB/
     ├── ...
     └── lab-08/
         ├── recetario/
-        ├── recetario.bundle      el remoto del laboratorio 08
-        └── condimentos.bundle    su submodulo
+        ├── recetario.bundle      el origin del laboratorio 08
+        └── upstream.bundle       su segundo remoto
 ```
 
 La razon esta en la seccion 17 de [`docs/arquitectura.md`](../docs/arquitectura.md),
@@ -57,9 +57,8 @@ una direccion como `SIMULADOR.html?lab=04`. El `preparar.sh` lo repite al
 terminar.
 
 **El laboratorio 08 es la excepcion y va entero en la terminal.** Lo que enseña
-son dos remotos, un submodulo y un gancho, y el motor no modela ninguna de las
-tres cosas: no tiene ramas de seguimiento remoto, ni ordenes de red, ni
-repositorios dentro de otros, ni ejecuta ganchos. Su enunciado lo dice en la
+son dos remotos y un gancho, y el motor no modela ninguna de las dos cosas: no
+tiene ramas de seguimiento remoto, ni ordenes de red, ni ejecuta ganchos. Su enunciado lo dice en la
 Preparacion y no lleva escenario.
 
 ## Correr el verificador

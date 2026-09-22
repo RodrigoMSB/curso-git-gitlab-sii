@@ -240,6 +240,11 @@ export const ordenReflog: Manejador = (estado, argumentos) => {
 export const ordenRebase: Manejador = (estado, argumentos) => {
   if (!estado.iniciado) return sinRepositorio(estado);
 
+  // El rebase del motor nunca se detiene a medias, asi que nunca hay uno en
+  // curso que abortar. Se lee aparte y no se deduce de que falte la base:
+  // `git rebase --abort main` rebasaba sobre main.
+  if (tieneOpcion(argumentos, '--abort')) return fallo(estado, 'fatal: No rebase in progress?');
+
   const referencia = posicionales(argumentos)[0];
   if (referencia === undefined) {
     return fallo(estado, 'fatal: No rebase in progress?');

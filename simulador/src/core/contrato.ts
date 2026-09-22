@@ -111,44 +111,48 @@ export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
 ];
 
 /**
- * Opciones que cada suborden entiende.
+ * Opciones que cada suborden de Git entiende.
  *
- * La clave es el nombre de la suborden de Git, o el de la orden del interprete
- * cuando no lleva `git` delante. Lo que no aparezca aqui se responde como no
- * implementado en vez de ejecutarse a medias.
+ * La clave es el nombre de la suborden. Lo que no aparezca aqui se responde
+ * como no implementado en vez de ejecutarse a medias.
  *
  * Hay opciones que estan en la lista y no cambian nada porque **el motor ya se
  * comporta asi**: `--decorate` en `git log` es el ejemplo, porque el simulador
  * siempre decora, igual que Git cuando escribe a un terminal. Aceptarlas no es
- * ignorarlas: es coincidir. Van anotadas donde ocurre.
+ * ignorarlas: es coincidir. Cada una esta en `EQUIVALENTES`, con su motivo.
+ *
+ * La seccion 59 de docs/arquitectura.md saco de aqui y de la tabla del
+ * interprete cuarenta y una opciones que el manejador de su orden no leia,
+ * cuando la prueba del contrato paso a leer el codigo por subcomando. Entre
+ * ellas `-q` en todas partes, declarada equivalente porque «no hay ruido que
+ * callar» cuando `git commit` si lo hace; `-a` de `git commit`, que confirmaba
+ * solo lo preparado; y `git tag -l` y `git reflog -n`, que no devolvian nada.
  */
 export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
-  init: ['-b', '--initial-branch', '-q', '--quiet'],
+  init: ['-b', '--initial-branch'],
   config: ['--global', '--local', '--list', '-l', '--get', '--unset'],
-  // `--source` salio: `git restore --source=<ref> <archivo>` restaura desde
-  // otra confirmacion y el motor restauraba desde la actual, en silencio.
   status: ['-s', '--short', '--long'],
   add: ['-A', '--all', '-a', '-f', '--force'],
+  // `--source` salio: `git restore --source=<ref> <archivo>` restaura desde
+  // otra confirmacion y el motor restauraba desde la actual, en silencio.
   restore: ['--staged', '--cached', '--worktree'],
-  // Vale para `git rm` y para el `rm` del interprete: comparten opciones.
-  rm: ['--cached', '-r', '-f', '--force', '-q', '--quiet'],
-  mv: ['-f', '--force', '-v', '--verbose'],
+  rm: ['--cached', '-r', '-f', '--force'],
+  mv: [],
   // `--allow-empty` salio: el motor responde «nothing to commit» y Git crea la
   // confirmacion vacia. Es la diferencia que la seccion 28 dejo anotada.
-  commit: ['-m', '--message', '-a', '--all', '--amend', '--no-edit', '-c', '-C', '-q', '--quiet'],
-  // `--decorate` y `--date-order`: el motor ya se comporta asi siempre.
+  commit: ['-m', '--message', '--amend', '--no-edit', '-c', '-C'],
   log: [
     '--oneline', '--graph', '--all', '--decorate', '--no-decorate', '--date-order',
     '-n', '--max-count', '--author', '--since', '--after', '--until', '--before',
     '--format', '--pretty', '--date', '--', '-S', '--stat', '-p', '--patch',
   ],
-  show: ['--oneline', '--format', '--pretty', '--no-patch', '-s', '--stat', '-p', '--patch'],
+  show: ['--format', '--pretty', '--no-patch', '-s', '--stat', '-p', '--patch'],
   diff: ['--staged', '--cached', '--stat'],
-  branch: ['-a', '--all', '-d', '--delete', '-D', '-m', '--move', '-v', '--verbose', '-q', '--quiet'],
-  switch: ['-c', '--create', '-C', '--force-create', '--detach', '-q', '--quiet'],
-  checkout: ['-b', '-B', '--detach', '-q', '--quiet', '--'],
-  merge: ['--abort', '--continue', '--no-ff', '--ff-only', '-m', '--message', '--no-edit'],
-  tag: ['-a', '--annotate', '-m', '--message', '-d', '--delete', '-l', '--list', '-n'],
+  branch: ['-d', '--delete', '-D', '-m', '--move'],
+  switch: ['-c', '--create', '-C', '--force-create', '--detach'],
+  checkout: ['-b', '-B', '--detach', '--'],
+  merge: ['--abort', '--continue', '--no-ff', '--ff-only', '-m', '--no-edit'],
+  tag: ['-a', '--annotate', '-m', '--message', '-d', '--delete'],
   reset: ['--soft', '--mixed', '--hard'],
   // La reversion del motor nunca choca, asi que no hay nada que continuar ni
   // que abortar; `-n` aplicaba y confirmaba igual, que es lo contrario de lo
@@ -157,17 +161,30 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   // `-u` salio: guardar tambien lo que no esta en seguimiento pide mover del
   // directorio a la pila archivos que la entrada no sabe llevar.
   stash: ['-m', '--message', '--stat', '--index', '-p', '--patch'],
-  reflog: ['--all', '-n'],
+  reflog: [],
   // `--continue` salio con `-i`: el rebase del motor no se detiene nunca, de
-  // modo que no hay nada que continuar.
+  // modo que no hay nada que continuar. `--abort` se queda porque el
+  // laboratorio 07 lo nombra, y responde lo mismo que Git sin rebase en curso.
   rebase: ['--abort'],
   remote: ['-v', '--verbose'],
   'rev-parse': ['--short', '--abbrev-ref', '--is-inside-work-tree', '--git-dir'],
   'merge-base': [],
-  'cat-file': ['-t', '-p', '-s'],
+  'cat-file': ['-t', '-p'],
   'ls-files': ['--cached', '-c', '--others', '-o'],
-  ls: ['-a', '--all', '-l', '-R'],
+};
+
+/**
+ * Opciones de las ordenes del interprete.
+ *
+ * Van aparte de las de Git porque dos nombres se repiten: `rm` y `mv` existen
+ * en los dos lados y no aceptan lo mismo. Con una sola tabla, `rm --cached`
+ * del interprete, que en bash no existe, pasaba por la opcion de `git rm`.
+ */
+export const OPCIONES_INTERPRETE: Readonly<Record<string, readonly string[]>> = {
+  ls: ['-a', '--all', '-R'],
   mkdir: ['-p'],
+  mv: [],
+  rm: [],
   wc: ['-c', '-l', '-w'],
   grep: ['-n', '-r', '-R'],
   cd: [],
@@ -178,6 +195,16 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
+ * Ordenes del interprete que aceptan opciones cortas agrupadas, como `-rn`.
+ *
+ * Son las que las leen letra por letra, con `letrasCortas`. En el resto, y en
+ * todas las de Git, una opcion agrupada se responde como no implementada: sus
+ * manejadores comparan palabras enteras, y `git commit -am` se aceptaba y
+ * llegaba al manejador sin `-a` ni `-m` a la vista.
+ */
+export const AGRUPABLES: ReadonlySet<string> = new Set(['ls', 'grep', 'wc']);
+
+/**
  * Opciones que el motor reconoce **sin tener que hacer nada**, porque el
  * comportamiento que piden ya es el que tiene siempre.
  *
@@ -185,29 +212,33 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
  * es coincidir con Git, que decora por omision cuando escribe a un terminal.
  * Aceptar `--author` y no filtrar si lo era.
  *
+ * **La clave es la orden y la opcion juntas.** Hasta la seccion 59 la clave
+ * era la opcion sola, y el motivo de una orden eximia a todas: `-q` valia
+ * para `git init` y con eso tambien para `git commit`, que si imprime algo
+ * que callar.
+ *
  * Cada una lleva escrito por que no necesita codigo, y una prueba exige que
- * toda opcion declarada en `OPCIONES` o aparezca en el motor o este aqui. Esa
- * es la garantia mecanica del punto 1: ninguna opcion se acepta y se descarta.
+ * toda opcion declarada o la lea el manejador de su orden o este aqui. Esa es
+ * la garantia mecanica del punto 1: ninguna opcion se acepta y se descarta.
  */
 export const EQUIVALENTES: Readonly<Record<string, string>> = {
-  '--decorate': 'el simulador decora siempre, igual que Git contra un terminal',
-  '--no-decorate': 'no se puede apagar la decoracion: el grafo la necesita para explicarse',
-  '--date-order': 'la historia ya se recorre por fecha, de la mas reciente a la mas antigua',
-  '--long': 'es la forma larga de git status, que es la de por omision',
-  '--worktree': 'es el ambito por omision de git restore',
-  '--quiet': 'el simulador no tiene ruido que callar',
-  '-q': 'el simulador no tiene ruido que callar',
-  '--verbose': 'la salida ya es la detallada',
-  '-v': 'en git remote si se lee; en git branch y git mv la salida ya es la detallada',
-  '--force': 'en git add pasa por encima del archivo de exclusiones, que si se lee; en git rm y git mv no hay proteccion del sistema de archivos que forzar',
-  '--no-edit': 'el simulador no abre editor: acepta el mensaje propuesto',
-  '--initial-branch': 'la rama inicial es main, que es lo unico que el taller usa',
-  '-b': 'en git init nombra la rama inicial, que ya es main',
-  '--local': 'es el ambito por omision de git config, el que se usa sin --global',
-  '--get': 'es la forma explicita de consultar, que es lo que git config hace sin ella',
-  '--mixed': 'es el modo por omision de git reset',
-  '-p': 'en git show y git diff el parche es la forma por omision; en git stash show si se lee',
-  '--patch': 'lo mismo que -p',
+  'git init -b': 'nombra la rama inicial, que ya es main',
+  'git init --initial-branch': 'lo mismo que -b',
+  'git config --local': 'es el ambito por omision de git config, el que se usa sin --global',
+  'git config --get': 'es la forma explicita de consultar, que es lo que git config hace sin ella',
+  'git status --long': 'es la forma larga de git status, que es la de por omision',
+  'git restore --worktree': 'es el ambito por omision de git restore',
+  'git commit --no-edit': 'el simulador no abre editor: acepta el mensaje propuesto',
+  'git log --decorate': 'el simulador decora siempre, igual que Git contra un terminal',
+  'git log --no-decorate': 'no se puede apagar la decoracion: el grafo la necesita para explicarse',
+  'git log --date-order': 'la historia ya se recorre por fecha, de la mas reciente a la mas antigua',
+  'git show -p': 'el parche es la forma por omision de git show',
+  'git show --patch': 'lo mismo que -p',
+  'git reset --mixed': 'es el modo por omision de git reset',
+  'git revert --no-edit': 'el simulador no abre editor: acepta el mensaje propuesto',
+  'git rev-parse --short': 'los identificadores del simulador ya son cortos: no hay forma larga que acortar',
+  'git ls-files --cached': 'es el modo por omision de git ls-files',
+  'git ls-files -c': 'lo mismo que --cached',
 };
 
 /**
@@ -244,8 +275,9 @@ const SIN_OPCIONES: ReadonlySet<string> = new Set(['echo']);
 export function opcionesNoReconocidas(
   nombre: string,
   argumentos: readonly string[],
+  lado: 'git' | 'interprete',
 ): readonly string[] {
-  const reconocidas = OPCIONES[nombre];
+  const reconocidas = (lado === 'git' ? OPCIONES : OPCIONES_INTERPRETE)[nombre];
   if (reconocidas === undefined) return [];
   if (SIN_OPCIONES.has(nombre)) return [];
 
@@ -260,8 +292,9 @@ export function opcionesNoReconocidas(
     if (reconocidas.includes(clave)) continue;
     // `-3` es la forma corta de `-n 3`, y Git la acepta en log y en show.
     if (/^-\d+$/.test(clave) && reconocidas.includes('-n')) continue;
-    // Las opciones cortas agrupadas, como `-am`, se miran letra por letra.
-    if (/^-[a-zA-Z]{2,}$/.test(clave)) {
+    // Las opciones cortas agrupadas, como `-rn`, se miran letra por letra en
+    // las ordenes que las leen asi, y solo en esas.
+    if (lado === 'interprete' && AGRUPABLES.has(nombre) && /^-[a-zA-Z]{2,}$/.test(clave)) {
       const sueltas = [...clave.slice(1)].map((letra) => `-${letra}`);
       if (sueltas.every((suelta) => reconocidas.includes(suelta))) continue;
     }

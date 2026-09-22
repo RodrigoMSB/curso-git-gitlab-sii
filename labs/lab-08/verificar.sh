@@ -63,7 +63,7 @@ echo
 if [ "$MODO" = escenario ]; then
   echo "Comprobando el escenario inicial del laboratorio 08"
 else
-  echo "Verificador del laboratorio 08 · dos remotos, un submodulo y un gancho"
+  echo "Verificador del laboratorio 08 · dos remotos y un gancho"
 fi
 echo
 

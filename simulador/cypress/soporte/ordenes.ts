@@ -129,7 +129,7 @@ export function motivoDeclarado(
   const esGit = piezas[0] === 'git';
   const nombre = (esGit ? piezas[1] : piezas[0]) ?? '';
   const argumentos = piezas.slice(esGit ? 2 : 1);
-  const fuera = opcionesNoReconocidas(nombre, argumentos);
+  const fuera = opcionesNoReconocidas(nombre, argumentos, esGit ? 'git' : 'interprete');
   if (fuera.length === 0) return null;
   const como = esGit ? `git ${nombre}` : nombre;
   return `${fuera.map((opcion) => `«${opcion}»`).join(', ')} de ${como}`;

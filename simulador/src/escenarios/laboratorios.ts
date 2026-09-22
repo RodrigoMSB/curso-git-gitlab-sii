@@ -1028,9 +1028,8 @@ export const LAB07: EscenarioDeclarado = {
 // ---------------------------------------------------------------------------
 //
 // Se saco del simulador a proposito. Lo que ese laboratorio enseña son dos
-// remotos, un submodulo y un gancho, y el motor no implementa ninguna de las
-// tres cosas: no tiene ramas de seguimiento remoto, ni ordenes de red, ni
-// submodulos, ni ejecuta ganchos. Un escenario suyo mostraria la historia
+// remotos y un gancho, y el motor no implementa ninguna de las dos cosas: no
+// tiene ramas de seguimiento remoto, ni ordenes de red, ni ejecuta ganchos. Un escenario suyo mostraria la historia
 // local y nada de lo que el laboratorio viene a enseñar.
 //
 // Es de terminal pura, como el 08 en su parte avanzada. El detalle esta en la

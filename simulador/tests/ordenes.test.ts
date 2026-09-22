@@ -1130,3 +1130,52 @@ describe('git remote', () => {
     expect(ejecutar(estado, 'git remote remove origin').estado.remotos).toHaveLength(0);
   });
 });
+
+/**
+ * Lo que aparecio al leer el contrato por funcion (seccion 59).
+ *
+ * Cada caso es una opcion que el contrato aceptaba y su manejador no leia. Se
+ * fijan con la orden y no con la tabla, porque lo que importa es lo que el
+ * participante ve: o la ejecuta bien, o dice que no la implementa.
+ */
+describe('las opciones que el contrato aceptaba y nadie leia', () => {
+  const esLimite = (estado: EstadoRepositorio, linea: string): boolean => {
+    const resultado = ejecutar(estado, linea);
+    return resultado.salida.some((renglon) => renglon.tipo === 'limite') && resultado.estado === estado;
+  };
+
+  it('git rebase --abort no rebasa aunque lleve una rama detras', () => {
+    const estado = escenarioPorId('lab-07');
+    const resultado = ejecutar(estado, 'git rebase --abort main');
+    expect(texto(resultado)).toContain('No rebase in progress');
+    expect(resultado.estado).toBe(estado);
+  });
+
+  it('ls lee -a por su letra, tambien agrupada', () => {
+    const estado = escenarioPorId('lab-02');
+    expect(texto(ejecutar(estado, 'ls -aR'))).toContain('.git/');
+  });
+
+  it('lo que salio del contrato lo dice en vez de hacer otra cosa', () => {
+    const lab02 = escenarioPorId('lab-02');
+    const lab05 = escenarioPorId('lab-05');
+    const casos: readonly [EstadoRepositorio, string][] = [
+      [lab02, 'git commit -a -m "x"'],
+      [lab02, 'git commit -am "x"'],
+      [lab02, 'git commit -q -m "x"'],
+      [lab02, 'git switch -q -c nueva'],
+      [lab02, 'git rm -q platos.md'],
+      [lab02, 'git show --oneline HEAD'],
+      [lab02, 'git reflog -n 1'],
+      [lab02, 'git cat-file -s HEAD'],
+      [lab02, 'git mv -v platos.md p.md'],
+      [lab02, 'ls -l'],
+      [lab02, 'rm --cached platos.md'],
+      [lab02, 'mv -f platos.md p.md'],
+      [lab05, 'git branch -v'],
+      [lab05, 'git merge --message "hola" azteca'],
+      [lab05, 'git tag -l'],
+    ];
+    for (const [estado, linea] of casos) expect(esLimite(estado, linea), linea).toBe(true);
+  });
+});
