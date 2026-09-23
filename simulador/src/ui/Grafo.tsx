@@ -59,7 +59,7 @@ function colorDeNodo(nodo: NodoGrafo): string {
 
 function colorDeEtiqueta(etiqueta: EtiquetaGrafo): string {
   if (etiqueta.forma === 'puntero') return 'var(--puntero)';
-  if (etiqueta.forma === 'version') return 'var(--texto-apagado)';
+  if (etiqueta.forma === 'version' || etiqueta.forma === 'remota') return 'var(--texto-apagado)';
   return etiqueta.principal ? 'var(--rama-principal)' : 'var(--rama-derivada)';
 }
 
@@ -327,6 +327,9 @@ export function Grafo({
                     fill={llena ? color : 'var(--fondo-panel)'}
                     stroke={color}
                     strokeWidth={esPuntero ? 2 : 1.5}
+                    // La remota va punteada: es la ultima noticia que se tiene
+                    // del remoto, no una rama sobre la que se trabaje.
+                    strokeDasharray={etiqueta.forma === 'remota' ? '4 3' : undefined}
                   />
                 )}
                 <text

@@ -75,7 +75,9 @@ describe('cada repositorio, como lo ve Git', () => {
           : lineas(git(dir, 'rev-list', ...new Set(recordadas), '--not', '--branches', '--tags', '--remotes', 'HEAD'));
       expect([...historia.huerfanas].sort()).toEqual([...new Set(huerfanas)].sort());
 
-      expect(referencias.guardados).toEqual(lineas(git(dir, 'stash', 'list', '--format=%H')));
+      expect(referencias.guardados.map((g) => `${g.sha} ${g.mensaje}`)).toEqual(
+        lineas(git(dir, 'stash', 'list', '--format=%H %gs')),
+      );
       expect(referencias.rotas).toEqual([]);
     });
   }

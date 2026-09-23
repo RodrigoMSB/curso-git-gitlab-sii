@@ -45,6 +45,13 @@ export interface OpcionesDisposicion {
    * se tocan.
    */
   readonly anchoMaximo: number | null;
+  /**
+   * Ramas de seguimiento remoto, como `origin/main` (SPEC 020, 2.2). Solo las
+   * trae un repositorio real: el motor no modela remotos, y los escenarios no
+   * las tienen. Se dibujan como ramas con otra forma, y lo que alcanzan cuenta
+   * como vivo.
+   */
+  readonly ramasRemotas: readonly { readonly nombre: string; readonly id: string }[];
 }
 
 const POR_DEFECTO: OpcionesDisposicion = {
@@ -52,6 +59,7 @@ const POR_DEFECTO: OpcionesDisposicion = {
   previsualizadas: [],
   altoMaximo: null,
   anchoMaximo: null,
+  ramasRemotas: [],
 };
 
 /**
@@ -315,7 +323,7 @@ function disponerCon(
 ): Disposicion {
   const espacioFila = geometria.fila;
   const anchoIdentificador = geometria.identificadores ? MEDIDAS.anchoIdentificador : 0;
-  const { limite, previsualizadas } = opciones;
+  const { limite, previsualizadas, ramasRemotas } = opciones;
   const enPrevisualizacion = new Set(previsualizadas);
 
   const proyectadas = previsualizadas
@@ -329,7 +337,7 @@ function disponerCon(
   const visibles = todas.slice(0, limite);
   const idsVisibles = new Set(visibles.map((confirmacion) => confirmacion.id));
 
-  const vivas = new Set(alcanzablesDesdeReferencias(estado));
+  const vivas = new Set(alcanzablesDesdeReferencias(estado, ramasRemotas.map((rama) => rama.id)));
   // Lo que la orden en curso produciria cuenta como vivo mientras se dibuja.
   for (const id of enPrevisualizacion) vivas.add(id);
 
@@ -338,7 +346,7 @@ function disponerCon(
   const carriles = repartirCarriles(
     visibles,
     vivas,
-    estado.ramas.map((rama) => rama.id),
+    [...estado.ramas.map((rama) => rama.id), ...ramasRemotas.map((rama) => rama.id)],
   );
 
   const posicion = new Map<string, { x: number; y: number }>();
@@ -397,6 +405,7 @@ function disponerCon(
 
   const { etiquetas, enlacePuntero } = disponerEtiquetas(
     estado,
+    ramasRemotas,
     posicion,
     espacioFila >= FILA_PUNTERO_DEBAJO,
     anchoIdentificador,
@@ -477,7 +486,10 @@ function rotularHuerfanas(nodos: readonly NodoGrafo[]): RotuloGrafo | null {
  * Se recorre el modelo tal como esta, sin decidir nada: las puntas son las que
  * el estado ya declara, y de ahi se sube por los padres.
  */
-function alcanzablesDesdeReferencias(estado: EstadoRepositorio): ReadonlySet<string> {
+function alcanzablesDesdeReferencias(
+  estado: EstadoRepositorio,
+  otrasPuntas: readonly string[] = [],
+): ReadonlySet<string> {
   const padresDe = new Map(
     estado.confirmaciones.map((confirmacion) => [confirmacion.id, confirmacion.padres]),
   );
@@ -486,6 +498,7 @@ function alcanzablesDesdeReferencias(estado: EstadoRepositorio): ReadonlySet<str
     ...estado.ramas.map((rama) => rama.id),
     ...estado.etiquetas.map((etiqueta) => etiqueta.id),
     ...estado.guardados.map((guardado) => guardado.idBase),
+    ...otrasPuntas,
   ];
   if (estado.puntero.tipo === 'confirmacion') puntas.push(estado.puntero.id);
 
@@ -506,6 +519,7 @@ function alcanzablesDesdeReferencias(estado: EstadoRepositorio): ReadonlySet<str
  */
 function disponerEtiquetas(
   estado: EstadoRepositorio,
+  ramasRemotas: OpcionesDisposicion['ramasRemotas'],
   posicion: ReadonlyMap<string, { x: number; y: number }>,
   punteroDebajo: boolean,
   anchoIdentificador: number,
@@ -516,9 +530,17 @@ function disponerEtiquetas(
   const etiquetas: EtiquetaGrafo[] = [];
 
   const ramaActual = estado.puntero.tipo === 'rama' ? estado.puntero.rama : null;
-  const ramasPorConfirmacion = new Map<string, string[]>();
-  for (const rama of estado.ramas) {
-    ramasPorConfirmacion.set(rama.id, [...(ramasPorConfirmacion.get(rama.id) ?? []), rama.nombre]);
+  const ramasPorConfirmacion = new Map<string, { nombre: string; remota: boolean }[]>();
+  // Las locales primero y despues las remotas, cada grupo por nombre.
+  const todas = [
+    ...[...estado.ramas].sort((una, otra) => una.nombre.localeCompare(otra.nombre)).map((rama) => ({ ...rama, remota: false })),
+    ...[...ramasRemotas].sort((una, otra) => una.nombre.localeCompare(otra.nombre)).map((rama) => ({ ...rama, remota: true })),
+  ];
+  for (const rama of todas) {
+    ramasPorConfirmacion.set(rama.id, [
+      ...(ramasPorConfirmacion.get(rama.id) ?? []),
+      { nombre: rama.nombre, remota: rama.remota },
+    ]);
   }
 
   let etiquetaSeguida: EtiquetaGrafo | null = null;
@@ -527,18 +549,18 @@ function disponerEtiquetas(
     const punto = posicion.get(id);
     if (punto === undefined) continue;
     let desplazamiento = punto.x + MEDIDAS.radio + MEDIDAS.separacionEtiqueta;
-    for (const nombre of [...nombres].sort((una, otra) => una.localeCompare(otra))) {
+    for (const { nombre, remota } of nombres) {
       const ancho = anchoDeTexto(nombre);
       const etiqueta: EtiquetaGrafo = {
-        clave: `rama:${nombre}`,
+        clave: `${remota ? 'remota' : 'rama'}:${nombre}`,
         texto: nombre,
-        forma: 'rama',
+        forma: remota ? 'remota' : 'rama',
         x: desplazamiento,
         y: punto.y - MEDIDAS.altoEtiqueta / 2,
         ancho,
         alto: MEDIDAS.altoEtiqueta,
-        actual: nombre === ramaActual,
-        principal: nombre === RAMA_POR_DEFECTO,
+        actual: !remota && nombre === ramaActual,
+        principal: !remota && nombre === RAMA_POR_DEFECTO,
         anotada: false,
         idConfirmacion: id,
       };

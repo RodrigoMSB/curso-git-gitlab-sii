@@ -55,7 +55,7 @@ export interface Referencias {
   /** `origin/main` y compania, sin las `HEAD` simbolicas de cada remoto. */
   readonly remotas: ReadonlyMap<string, string>;
   /** Las entradas del guardado temporal, la mas nueva primero, como `stash@{n}`. */
-  readonly guardados: readonly string[];
+  readonly guardados: readonly { readonly sha: string; readonly mensaje: string }[];
   /** El registro de movimientos de HEAD, en el orden del archivo: el mas viejo primero. */
   readonly movimientos: readonly Movimiento[];
   /** Referencias que no se pudieron resolver, con su motivo. */
@@ -193,10 +193,10 @@ export class LectorDeReferencias {
     }
 
     // `git stash list` lee el registro de refs/stash, el mas nuevo primero.
-    const guardados = (await this.registro(['refs', 'stash'])).map((m) => m.nuevo).reverse();
+    const guardados = (await this.registro(['refs', 'stash'])).map((m) => ({ sha: m.nuevo, mensaje: m.mensaje })).reverse();
     if (guardados.length === 0) {
       const unico = await this.resolver('refs/stash').catch(() => null);
-      if (unico !== null) guardados.push(unico);
+      if (unico !== null) guardados.push({ sha: unico, mensaje: '' });
     }
 
     return { cabeza, ramas, etiquetas, remotas, guardados, movimientos: await this.registro(['HEAD']), rotas };

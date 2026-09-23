@@ -36,7 +36,8 @@ export interface AristaGrafo {
   readonly derivada: boolean;
 }
 
-export type FormaEtiqueta = 'rama' | 'version' | 'puntero';
+/** `remota` es una rama de seguimiento remoto, que solo trae un repositorio real (SPEC 020). */
+export type FormaEtiqueta = 'rama' | 'remota' | 'version' | 'puntero';
 
 export interface EtiquetaGrafo {
   readonly clave: string;

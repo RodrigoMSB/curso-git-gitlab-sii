@@ -13,49 +13,19 @@
  * lo que Git imprimio, como los copia el participante.
  */
 
-import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { configuracionDelTaller } from '../../cypress/soporte/enunciado';
-import { aliasDelTaller, ordenesDe, ordenPara, resolverMarcadores } from '../../cypress/soporte/ordenes';
+import { ordenPara } from '../../cypress/soporte/ordenes';
 import { LectorReal } from '../../src/real/lector';
 import { adaptadorDeDisco } from './disco';
+import { CLON, correr, entorno, guion, LABORATORIOS, preparar } from './laboratorio';
 import { comoPorcelana, lineas, porcelana } from './repos';
 
-const CLON = join(__dirname, '..', '..', '..');
-const LABORATORIOS = ['02', '03', '04', '05', '06', '07', '08'];
 const montados: string[] = [];
 const informe: string[] = [];
 const notas: string[] = [];
-
-function enunciado(numero: string): string {
-  return readFileSync(join(CLON, 'labs', `lab-${numero}`, 'README.md'), 'utf8');
-}
-
-function entorno(configGlobal: string): NodeJS.ProcessEnv {
-  return { ...process.env, GIT_CONFIG_GLOBAL: configGlobal, GIT_CONFIG_SYSTEM: '/dev/null' };
-}
-
-/** Lo mismo que hace el arnes de Cypress: un clon de mentira con el laboratorio y su `preparar.sh` corrido. */
-function preparar(numero: string): { recetario: string; configGlobal: string } {
-  const raiz = mkdtempSync(join(tmpdir(), 'lector-lab-'));
-  montados.push(raiz);
-  const carpeta = join(raiz, 'curso-git-gitlab-sii', 'labs', `lab-${numero}`);
-  mkdirSync(carpeta, { recursive: true });
-  for (const archivo of ['preparar.sh', 'verificar.sh']) {
-    cpSync(join(CLON, 'labs', `lab-${numero}`, archivo), join(carpeta, archivo));
-    chmodSync(join(carpeta, archivo), 0o755);
-  }
-  const configGlobal = join(raiz, 'gitconfig-de-mentira');
-  writeFileSync(configGlobal, '');
-  for (const [clave, valor] of configuracionDelTaller(enunciado('01'))) {
-    execFileSync('git', ['config', '--global', clave, valor], { env: entorno(configGlobal), stdio: 'ignore' });
-  }
-  execFileSync('bash', ['./preparar.sh', '--forzar'], { cwd: carpeta, env: entorno(configGlobal), stdio: 'ignore' });
-  return { recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'), configGlobal };
-}
 
 async function leer(dir: string) {
   const lectura = await new LectorReal(adaptadorDeDisco(dir), { autocrlfPorDefecto: 'false' }).leer();
@@ -87,11 +57,15 @@ afterAll(() => {
 
 describe.each(LABORATORIOS)('laboratorio %s', (numero) => {
   it('historia, referencias y areas iguales a Git despues de cada orden del guion', async () => {
-    const alias = aliasDelTaller(enunciado('01'));
-    const ordenes = resolverMarcadores(ordenesDe(enunciado(numero), alias), numero, alias);
-    const { recetario, configGlobal } = preparar(numero);
+    const { ordenes, saltadas } = guion(numero);
+    const lab = preparar(numero);
+    montados.push(lab.raiz);
+    const { recetario, configGlobal } = lab;
     const git = (...args: string[]): string =>
-      execFileSync('git', ['-c', 'i18n.logOutputEncoding=UTF-8', ...args], { cwd: recetario, env: entorno(configGlobal) }).toString();
+      execFileSync('git', ['-c', 'i18n.logOutputEncoding=UTF-8', ...args], {
+        cwd: recetario,
+        env: entorno(configGlobal),
+      }).toString();
 
     // CA1: el punto de partida, contra `git log --all` y `git for-each-ref`.
     const inicial = await leer(recetario);
@@ -104,7 +78,7 @@ describe.each(LABORATORIOS)('laboratorio %s', (numero) => {
       ...[...inicial.referencias.ramas].map(([n, s]) => `refs/heads/${n} ${s}`),
       ...[...inicial.referencias.etiquetas].map(([n, e]) => `refs/tags/${n} ${e.objeto}`),
       ...[...inicial.referencias.remotas].map(([n, s]) => `refs/remotes/${n} ${s}`),
-      ...(inicial.referencias.guardados.length > 0 ? [`refs/stash ${inicial.referencias.guardados[0]}`] : []),
+      ...(inicial.referencias.guardados.length > 0 ? [`refs/stash ${inicial.referencias.guardados[0]?.sha}`] : []),
     ];
     expect(leidas.sort()).toEqual(referencias.filter((r) => !/\/HEAD /.test(r)).sort());
 
@@ -113,31 +87,11 @@ describe.each(LABORATORIOS)('laboratorio %s', (numero) => {
     const distintas: string[] = [];
     const tiempos: number[] = [];
     let iguales = 0;
-    // La seccion de rescate trae ordenes para quien se perdio, con marcadores
-    // que dependen de su estado (`git add <archivo>` tras un rebase detenido).
-    // En los laboratorios con escenario el soporte las resuelve; en el 07 no
-    // hay escenario de donde sacar el archivo, y esa orden se salta con su
-    // motivo en el informe. Cualquier otra omitida hace fallar la prueba.
-    const rescate = enunciado(numero)
-      .split('\n')
-      .findIndex((linea) => /^##\s+Si algo sali/.test(linea));
-    const saltadas: string[] = [];
     for (const orden of ordenes) {
-      if (orden.clase === 'omitida' && rescate >= 0 && orden.linea > rescate) {
-        saltadas.push(`linea ${orden.linea} «${orden.texto}»: seccion de rescate, ${orden.motivo}`);
-        continue;
-      }
-      expect(orden.clase, `«${orden.texto}» (linea ${orden.linea}) se saltaria`).not.toBe('omitida');
       const eleccion = orden.eleccion;
       const identificador = eleccion === undefined ? null : eleccion.elegir(salidas.get(eleccion.de) ?? '');
-      const corrida = spawnSync('bash', ['-c', ordenPara(orden, identificador)], {
-        cwd: recetario,
-        encoding: 'utf8',
-        env: entorno(configGlobal),
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 60_000,
-      });
-      salidas.set(orden.texto, `${corrida.stdout ?? ''}${corrida.stderr ?? ''}`);
+      const { salida } = correr(lab, ordenPara(orden, identificador));
+      salidas.set(orden.texto, salida);
 
       const repositorio = await leer(recetario);
       tiempos.push(repositorio.tiempos.total ?? 0);
@@ -149,7 +103,7 @@ describe.each(LABORATORIOS)('laboratorio %s', (numero) => {
 
     const media = tiempos.reduce((a, b) => a + b, 0) / Math.max(1, tiempos.length);
     informe.push(
-      `| ${numero} | ${ordenes.length - saltadas.length} | ${iguales} | ${distintas.length} | ${media.toFixed(1)} | ${Math.max(...tiempos).toFixed(1)} |`,
+      `| ${numero} | ${ordenes.length} | ${iguales} | ${distintas.length} | ${media.toFixed(1)} | ${Math.max(...tiempos).toFixed(1)} |`,
     );
     for (const saltada of saltadas) notas.push(`- Laboratorio ${numero}, ${saltada}.`);
     expect(distintas).toEqual([]);

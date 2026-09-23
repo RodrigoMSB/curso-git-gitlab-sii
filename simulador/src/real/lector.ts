@@ -16,6 +16,7 @@ import { type Autocrlf, leerAtributos } from './finales';
 import { type Historia, leerHistoria } from './historia';
 import { type Indice, leerIndice } from './indice';
 import { leerConfirmacion } from './objetosGit';
+import { type ConfiguracionGlobal, type EstadoDelMotor, estadoDelMotor } from './puente';
 import { LectorDeReferencias, leerSuperficiales, type Referencias } from './referencias';
 import { type Cambio, LectorDeTrabajo } from './trabajo';
 
@@ -33,6 +34,10 @@ export interface RepositorioReal {
   readonly operacion: Operacion;
   /** Las confirmaciones que la fusion en curso une con HEAD (MERGE_HEAD). */
   readonly fusionando: readonly string[];
+  /** El mensaje que Git preparo para cerrar la fusion o la reversion (MERGE_MSG). */
+  readonly mensajeFusion: string | null;
+  /** Donde estaba HEAD antes del ultimo reset, merge o rebase (ORIG_HEAD). */
+  readonly origHead: string | null;
   /** Cuanto tardo cada parte, en milisegundos. */
   readonly tiempos: Readonly<Record<string, number>>;
 }
@@ -108,6 +113,41 @@ export class LectorReal {
     this.referencias = new LectorDeReferencias(fs, GIT);
   }
 
+  /**
+   * El estado del motor para lo leido: lo que el grafo dibuja y sobre lo que
+   * la consola previsualiza (punto 2.8).
+   */
+  async estadoDelMotor(
+    repositorio: RepositorioReal,
+    opciones: { readonly directorio: string; readonly configuracionGlobal: ConfiguracionGlobal },
+  ): Promise<EstadoDelMotor> {
+    const fs = this.fs;
+    const archivosDe = async (carpeta: string): Promise<string[]> => {
+      const salida: string[] = [];
+      for (const entrada of (await fs.listar(carpeta === '' ? [] : carpeta.split('/'))) ?? []) {
+        const ruta = carpeta === '' ? entrada.nombre : `${carpeta}/${entrada.nombre}`;
+        if (entrada.nombre === '.git') continue;
+        if (entrada.esDirectorio) salida.push(...(await archivosDe(ruta)));
+        else salida.push(ruta);
+      }
+      return salida;
+    };
+    return estadoDelMotor(
+      repositorio,
+      {
+        aplanar: (arbol) => this.trabajo.aplanar(arbol),
+        texto: async (sha) => decodificador.decode((await this.almacen.objeto(sha)).datos),
+        trabajo: async (ruta) => {
+          const b = await fs.leer(ruta.split('/'));
+          return b === null ? null : decodificador.decode(b);
+        },
+        confirmacion: async (sha) => leerConfirmacion(sha, (await this.almacen.objeto(sha)).datos),
+        archivosDe,
+      },
+      opciones,
+    );
+  }
+
   async leer(): Promise<Lectura> {
     const motivo = await motivoParaNoLeer(this.fs);
     if (motivo !== null) return { tipo: 'no-soportado', motivo };
@@ -175,6 +215,8 @@ export class LectorReal {
         configuracion,
         operacion,
         fusionando: (fusion ?? '').split('\n').filter((l) => /^[0-9a-f]{40}$/.test(l.trim())).map((l) => l.trim()),
+        mensajeFusion: await texto([...GIT, 'MERGE_MSG']),
+        origHead: (await texto([...GIT, 'ORIG_HEAD']))?.trim().match(/^[0-9a-f]{40}$/)?.[0] ?? null,
         tiempos,
       },
     };
