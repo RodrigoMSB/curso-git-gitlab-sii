@@ -1,0 +1,31 @@
+# SPEC 021 · Los scripts de los laboratorios, corridos como los corre el
+# participante, en Windows con Git Bash y en Mac.
+#
+# El codigo se baja como lo baja el participante: con la configuracion que
+# trae Git en cada sistema, sin tocar `core.autocrlf`. En Windows eso es
+# `true`, y los scripts llegan como llegan a un equipo del SII.
+name: laboratorios-en-windows-y-mac
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  scripts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: simulador
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Versiones
+        run: git --version && bash --version | head -1 && git config --get core.autocrlf || true
+      - name: preparar.sh y verificar.sh de cada laboratorio, y la proteccion contra el anidamiento
+        run: npx vitest run tests/scripts-de-laboratorio.test.ts
