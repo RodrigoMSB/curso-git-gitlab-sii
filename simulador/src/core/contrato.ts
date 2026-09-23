@@ -118,6 +118,15 @@ export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
     motivo:
       'mirar dentro de la carpeta .git. Ese tramo del laboratorio 02 se hace en la terminal a proposito: fabricar una carpeta oculta de mentira enseñaria lo contrario de lo que viene a enseñar',
   },
+  {
+    // Escribir ahi, como el gancho del laboratorio 08. El simulador lo tomaba
+    // como una carpeta `.git/` sin seguimiento del directorio de trabajo, que
+    // es justo lo que nunca puede ser (SPEC 022). Cualquier orden con una ruta
+    // dentro de la carpeta, o que la nombre entera; `.gitignore` no cuenta.
+    patron: /(^|[\s>])\.git(\/|\s|$)/,
+    motivo:
+      'escribir o cambiar algo dentro de la carpeta .git. El simulador no la modela, y lo que se escribe ahi no es parte del directorio de trabajo: los ganchos del laboratorio 08 se hacen en tu terminal',
+  },
 ];
 
 /**
@@ -431,3 +440,41 @@ export function opcionesNoReconocidas(
   }
   return fuera;
 }
+
+/**
+ * Las ordenes que existen en Git (SPEC 022).
+ *
+ * Una orden de esta lista que el simulador no tiene se responde con el
+ * mensaje de limite: el simulador no la implementa y en la terminal si
+ * funciona. Antes todas recibian `git: 'fetch' is not a git command`, que es
+ * falso y le enseña al participante que la orden no existe.
+ *
+ * Sale de `git --list-cmds=main,nohelpers` de Git 2.54, mas la ayuda de
+ * credenciales de Windows. Una prueba la compara con el Git de la maquina.
+ */
+export const ORDENES_DE_GIT: ReadonlySet<string> = new Set([
+  'add', 'am', 'annotate', 'apply', 'archive', 'backfill', 'bisect', 'blame', 'branch',
+  'bugreport', 'bundle', 'cat-file', 'check-attr', 'check-ignore', 'check-mailmap',
+  'check-ref-format', 'checkout', 'checkout-index', 'cherry', 'cherry-pick', 'clean', 'clone',
+  'column', 'commit', 'commit-graph', 'commit-tree', 'config', 'count-objects', 'credential',
+  'credential-cache', 'credential-osxkeychain', 'credential-store', 'credential-wincred', 'daemon',
+  'describe', 'diagnose', 'diff', 'diff-files', 'diff-index', 'diff-pairs', 'diff-tree',
+  'difftool', 'fast-export', 'fast-import', 'fetch', 'fetch-pack', 'filter-branch',
+  'fmt-merge-msg', 'for-each-ref', 'for-each-repo', 'format-patch', 'fsck', 'fsck-objects', 'gc',
+  'get-tar-commit-id', 'grep', 'hash-object', 'help', 'history', 'hook', 'http-backend',
+  'http-fetch', 'http-push', 'imap-send', 'index-pack', 'init', 'init-db', 'interpret-trailers',
+  'last-modified', 'log', 'ls-files', 'ls-remote', 'ls-tree', 'mailinfo', 'mailsplit',
+  'maintenance', 'merge', 'merge-base', 'merge-file', 'merge-index', 'merge-octopus',
+  'merge-one-file', 'merge-ours', 'merge-recursive', 'merge-recursive-ours',
+  'merge-recursive-theirs', 'merge-resolve', 'merge-subtree', 'merge-tree', 'mergetool', 'mktag',
+  'mktree', 'multi-pack-index', 'mv', 'name-rev', 'notes', 'p4', 'pack-objects', 'pack-redundant',
+  'pack-refs', 'patch-id', 'pickaxe', 'prune', 'prune-packed', 'pull', 'push', 'quiltimport',
+  'range-diff', 'read-tree', 'rebase', 'receive-pack', 'reflog', 'refs', 'remote', 'remote-ext',
+  'remote-fd', 'remote-ftp', 'remote-ftps', 'remote-http', 'remote-https', 'repack', 'replace',
+  'replay', 'repo', 'request-pull', 'rerere', 'reset', 'restore', 'rev-list', 'rev-parse',
+  'revert', 'rm', 'send-email', 'send-pack', 'shell', 'shortlog', 'show', 'show-branch',
+  'show-index', 'show-ref', 'sparse-checkout', 'stage', 'stash', 'status', 'stripspace',
+  'submodule', 'subtree', 'switch', 'symbolic-ref', 'tag', 'unpack-file', 'unpack-objects',
+  'update-index', 'update-ref', 'update-server-info', 'upload-archive', 'upload-pack', 'var',
+  'verify-commit', 'verify-pack', 'verify-tag', 'version', 'whatchanged', 'worktree', 'write-tree',
+]);

@@ -8,7 +8,7 @@
 import type { OrdenAnalizada } from '../analizador';
 import { tokenizar } from '../analizador';
 import { desagrupar, esOperador } from '../analizador';
-import { AGRUPABLES_GIT, formaSinSoporte, type Revision, revisarOpciones } from '../contrato';
+import { AGRUPABLES_GIT, formaSinSoporte, ORDENES_DE_GIT, type Revision, revisarOpciones } from '../contrato';
 import { archivoPorNombre, establecerArchivo } from '../estado';
 import { fallo, limite } from '../salida';
 import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
@@ -195,6 +195,8 @@ export function despachar(
     if (revision !== null) return responder(estado, revision);
 
     const manejador = ORDENES_GIT[subOrden];
+    // Existe en Git y el simulador no la tiene: se dice asi, no que no existe.
+    if (manejador === undefined && ORDENES_DE_GIT.has(subOrden)) return limite(estado, `git ${subOrden}`);
     if (manejador === undefined) {
       return fallo(
         estado,

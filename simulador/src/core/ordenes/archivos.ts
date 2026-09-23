@@ -12,6 +12,7 @@ import { posicionales, tieneOpcion } from '../analizador';
 import { textoDeTrabajo } from '../contenido';
 import { archivoPorNombre, archivosSeguidos, estaSeguido } from '../estado';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
+import { emparejarRenombrados } from '../renombrados';
 import type { Archivo, EstadoRepositorio, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
 
@@ -95,7 +96,8 @@ export const ordenRm: Manejador = (estado, argumentos) => {
   const salida = siguiente.borrados
     .filter((nombre) => !estado.borrados.includes(nombre))
     .map((nombre) => `rm '${nombre}'`);
-  return ok(siguiente, lineas(...salida));
+  // Si ya habia preparado un archivo con el mismo contenido, es un renombrado.
+  return ok(emparejarRenombrados(siguiente), lineas(...salida));
 };
 
 /**

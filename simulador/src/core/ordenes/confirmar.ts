@@ -22,7 +22,8 @@ import {
   ramaActual,
   transformarArchivos,
 } from '../estado';
-import { arbolDe, comparacionesEntre } from '../contenido';
+import { arbolDe, comparacionesEntre, textoDeTrabajo, textoEnCabeza } from '../contenido';
+import { rotuloDeRenombrado } from '../renombrados';
 import { formatearEstadisticasDe, formatearParches } from '../diferencias';
 import { formatearEstadoLargo, formatearHistorial } from '../formato';
 import { historia } from '../grafo';
@@ -235,11 +236,23 @@ export const ordenCommit: Manejador = (estadoRecibido, argumentos) => {
     rama: ramaActual(siguiente),
   });
 
+  // Un renombrado sin cambios de contenido es un solo archivo para Git, y lo
+  // nombra aparte (SPEC 022). Si la confirmacion no trae nada mas, Git dice
+  // tambien que no hubo lineas agregadas ni quitadas.
+  const renombrados = estado.archivos.filter(
+    (archivo) =>
+      archivo.estado === 'preparado' &&
+      archivo.renombradoDe !== undefined &&
+      textoEnCabeza(estado, archivo.renombradoDe) === textoDeTrabajo(estado, archivo.nombre),
+  );
+  const tocados = [...preparados, ...borrados].filter((nombre) => !renombrados.some((r) => r.renombradoDe === nombre));
+  const soloRenombrados = renombrados.length > 0 && tocados.length === renombrados.length;
   return ok(
     siguiente,
     lineas(
       `[${rotuloPosicion(siguiente, cabeza === null)} ${creado.confirmacion.id}] ${mensaje}`,
-      resumenArchivos([...preparados, ...borrados]),
+      `${resumenArchivos(tocados)}${soloRenombrados ? ', 0 insertions(+), 0 deletions(-)' : ''}`,
+      ...renombrados.map((r) => ` rename ${rotuloDeRenombrado(r.renombradoDe ?? '', r.nombre)} (100%)`),
     ),
   );
 };

@@ -126,7 +126,9 @@ describe('consola', () => {
 
 describe('sesion y linea de tiempo', () => {
   it('7.1 retroceder devuelve el estado y la consola de ese momento', () => {
-    const sesion = correrSesion('lab-07', 'git switch trabajo', 'git switch main');
+    // El curry modificado no deja cambiar a main (SPEC 022, como en Git): se
+    // descarta antes, que es una de las salidas que el enunciado del 07 ofrece.
+    const sesion = correrSesion('lab-07', 'git restore .', 'git switch main');
     expect(sesion.pasos).toHaveLength(3);
 
     const atras = retroceder(sesion);

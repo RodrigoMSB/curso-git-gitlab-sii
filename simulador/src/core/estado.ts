@@ -330,6 +330,8 @@ export function sinSeguimientoAgrupado(estado: EstadoRepositorio): readonly stri
   for (const archivo of estado.archivos) {
     if (archivo.estado !== 'sin-seguimiento') continue;
     if (estaExcluida(exclusiones, archivo.nombre)) continue;
+    // Lo que esta dentro de `.git` nunca es del directorio de trabajo (SPEC 022).
+    if (archivo.nombre === '.git' || archivo.nombre.startsWith('.git/')) continue;
 
     // De la carpeta mas alta hacia abajo: la primera que no contenga nada
     // conocido es la que Git muestra.

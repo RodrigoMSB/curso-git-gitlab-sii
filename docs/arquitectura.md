@@ -4791,3 +4791,58 @@ diferencia conocida exacta.
 laboratorio 08, ni las «agrega una línea al final de…» del 01, y toma como
 órdenes dos líneas de dentro del gancho del 08. No afecta al recorrido del
 simulador, que no pasa por el 01, el 07 ni el 08.
+
+## 68. Cuatro defectos del motor
+
+SPEC 022. Salieron al comparar la previsualización con Git sobre repositorios
+reales (sección 66, en la rama de la prueba de concepto). Pruebas en
+`simulador/tests/defectos-del-motor.test.ts`, contra Git de verdad.
+
+### 68.1 · Lo que hacía cada caso y lo que hace ahora
+
+| Caso | Antes | Ahora |
+|---|---|---|
+| `git switch`/`git checkout` con trabajo que la otra rama tiene distinto | cambiaba igual y el trabajo quedaba encima de la otra rama | se niega con el texto de Git: una lista con lo preparado, otra con lo del directorio, un solo `Aborting` |
+| El mismo cambio sin choque | cambiaba sin decir nada | cambia y lista lo que se lleva (`M`, `A`, `D`) antes de decir de dónde salió, como Git |
+| `git add .` con una baja y un alta de contenido idéntico | `D` y `A` (salvo que el alta viniera de un `mv` del simulador) | `R  viejo -> nuevo`; al confirmar, un archivo, `0 insertions(+), 0 deletions(-)` y `rename viejo => nuevo (100%)` |
+| Escribir dentro de `.git` (`echo … > .git/hooks/commit-msg`) | aparecía una carpeta `.git/` sin seguimiento | forma declarada: el simulador no lo implementa y en la terminal sí; además lo no seguido nunca lista rutas bajo `.git/` |
+| `git fetch` y otras 141 órdenes de Git | `git: 'fetch' is not a git command` | el simulador no la implementa, y en la terminal sí funciona |
+
+El renombrado se detecta solo con contenido idéntico, que es el caso del
+laboratorio 03. Git también empareja archivos que se parecen en más de la
+mitad; eso no se modela.
+
+La lista de órdenes de Git (`ORDENES_DE_GIT`, en el contrato) sale de
+`git --list-cmds=main,nohelpers`. Una prueba recorre las del Git de la
+máquina y exige que ninguna responda que no existe. Las 142 que la recibían:
+todas las de esa lista que el motor no tiene, de `am` a `upload-pack`,
+entre ellas `fetch`, `pull`, `push`, `clone`, `cherry-pick`,
+`bisect`, `blame`, `clean`, `grep`, `shortlog`, `submodule` y
+`worktree`.
+
+### 68.2 · Lo que se tocó fuera de los cuatro casos
+
+- **`repoConRamaDesdeMain()`**, el ayudante de las pruebas, cambiaba de rama
+  sobre el escenario del 07 con el curry modificado: dependía del defecto. Ahora
+  descarta el cambio antes. Lo mismo dos pruebas de la vista y de `checkout`.
+- La prueba «sin nada suelto» ahora espera las líneas `M` que Git imprime.
+
+### 68.3 · Encontrado y sin tocar
+
+- **El resumen de `git commit` no cuenta líneas**: dice `1 file changed`
+  donde Git dice `1 file changed, 1 insertion(+)` y, en un archivo nuevo,
+  `create mode 100644 a.md`.
+- **`cat a.md > c.md`** responde `cat: >: No such file or directory`: el
+  intérprete toma `>` como un archivo.
+- **`git branch --show-current` y `-q` en `switch` y `commit`** siguen
+  declaradas como no implementadas; son de uso común en guiones de terceros.
+
+### 68.4 · Las cifras
+
+| | Antes | Después |
+|---|---|---|
+| Pruebas de unidad | 762 | 943 |
+| Pruebas de punta a punta | 173 | 173 |
+| Cobertura de unidad (líneas, ramas, funciones, sentencias) | 91,76 · 82,93 · 92,72 · 94,47 | 92,22 · 83,55 · 93,90 · 94,92 |
+| Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
+| Artefacto | 331434 bytes | 335577 bytes |
