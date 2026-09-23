@@ -942,7 +942,9 @@ describe('git revert', () => {
   it('revertir la confirmacion que creo un archivo lo retira, como en Git', () => {
     // La punta del escenario es la que agrega la receta del pastel de choclo,
     // asi que revertirla la saca del seguimiento y del directorio.
-    const resultado = ejecutar(repoLineal(), 'git revert HEAD');
+    // Sobre un repositorio limpio: con cambios preparados Git se niega a
+    // revertir, y el simulador tambien desde el SPEC 019.
+    const resultado = ejecutar(correr(repoLineal(), 'git stash'), 'git revert HEAD');
     const ultima = resultado.estado.confirmaciones.at(-1);
 
     expect(ultima?.archivos).toEqual([]);

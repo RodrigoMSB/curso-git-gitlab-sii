@@ -40,6 +40,7 @@ export function estadoVacio(directorio: string = DIRECTORIO_POR_DEFECTO): Estado
     remotos: [],
     config: { local: {}, global: {} },
     fusion: null,
+    reversion: null,
     origHead: null,
     carriles: [{ rama: RAMA_POR_DEFECTO, carril: 0 }],
     contador: 0,

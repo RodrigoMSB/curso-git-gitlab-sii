@@ -39,6 +39,7 @@ import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
 import type { Confirmacion, EstadoRepositorio, ResultadoOrden } from '../tipos';
 import type { Manejador } from './basicas';
+import { confirmarReversion } from './revertir';
 
 /** Etiqueta que Git antepone al identificador tras confirmar. */
 function rotuloPosicion(estado: EstadoRepositorio, raiz: boolean): string {
@@ -190,6 +191,9 @@ export const ordenCommit: Manejador = (estadoRecibido, argumentos) => {
   const mensaje = valorDeOpcion(argumentos, '-m', '--message') ?? (heredado as string | null);
 
   if (estado.fusion !== null) return confirmarFusion(estado, mensaje);
+  // Durante una reversion que choco, confirmar la cierra, como en Git
+  // (SPEC 019): con el mensaje pedido o con el que la reversion preparo.
+  if (estado.reversion !== null) return confirmarReversion(estado, mensaje);
   if (tieneOpcion(argumentos, '--amend')) return enmendar(estado, mensaje);
 
   const preparados = archivosEn(estado, 'preparado').map((archivo) => archivo.nombre);

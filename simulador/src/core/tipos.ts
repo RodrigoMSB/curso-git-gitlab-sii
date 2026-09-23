@@ -177,6 +177,21 @@ export interface FusionEnCurso {
   readonly archivosPrevios: readonly Archivo[];
 }
 
+/**
+ * Reversion que choco y espera que el participante resuelva (SPEC 019).
+ *
+ * Es lo que Git guarda en `REVERT_HEAD`: que confirmacion se estaba
+ * revirtiendo, con que mensaje se va a cerrar, y lo necesario para que
+ * `git revert --abort` deje todo como estaba.
+ */
+export interface ReversionEnCurso {
+  readonly idObjetivo: string;
+  readonly mensaje: string;
+  readonly archivosPrevios: readonly Archivo[];
+  readonly borradosPrevios: readonly string[];
+  readonly borradosSinPrepararPrevios: readonly string[];
+}
+
 /** Carril de dibujo asignado a una rama. */
 export interface Carril {
   readonly rama: string;
@@ -210,6 +225,7 @@ export interface EstadoRepositorio {
   readonly remotos: readonly Remoto[];
   readonly config: Configuracion;
   readonly fusion: FusionEnCurso | null;
+  readonly reversion: ReversionEnCurso | null;
   /**
    * Donde estaba la posicion antes de la ultima orden que la movio de golpe:
    * `reset`, `merge` o `rebase`. Git la guarda con el nombre `ORIG_HEAD` y es

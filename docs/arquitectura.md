@@ -4645,3 +4645,87 @@ ahora se comparan:
 | 05 | 98 % | 98 % |
 | 06 | 88 % | **94 %** |
 
+---
+
+# SPEC 019 · Un git revert que deshace todo
+
+## 65. Revertir es una fusión de tres vías
+
+### 65.1 · Qué hacía antes y qué hace ahora
+
+`git revert` vive ahora en su propio módulo, `ordenes/revertir.ts`. Revierte
+como Git: una fusión de tres vías donde la base es la confirmación que se
+revierte, lo nuestro es la posición actual y lo de ellos es su padre. Cada
+texto se copió de una corrida de Git 2.54.
+
+| Caso | Antes | Ahora |
+|---|---|---|
+| La confirmación **borró** un archivo | no volvía; el resumen decía ` 0 files changed` | vuelve con su contenido de antes, ` 1 file changed, 1 insertion(+)` y ` create mode` |
+| La confirmación **agregó** un archivo | se iba, con el resumen de archivos | se va, con líneas y ` delete mode` |
+| La confirmación **modificó** un archivo | volvía **entero** a su versión previa y se llevaba los cambios posteriores | se deshace sólo lo que ella cambió, línea por línea, y dice `Auto-merging` |
+| Deshacer **choca** con un cambio posterior | nunca chocaba: pisaba | conflicto con el texto de Git, marcadores `HEAD` / `parent of <id> (<mensaje>)`, y la posición no se mueve |
+| Lo agregado se modificó después | se borraba igual | conflicto de modificado y borrado; queda la versión de `HEAD` |
+| Lo modificado se borró después | reaparecía sin aviso | conflicto al revés; queda la versión del padre |
+| Lo borrado volvió distinto | se pisaba | conflicto de agregado en los dos lados |
+| Revertir una reversión | el archivo borrado no volvía a irse, el agregado no volvía | devuelve lo original, con `Reapply` |
+| Cambios sin confirmar en un archivo que toca | los pisaba | se niega: `would be overwritten by merge` |
+| Cambios preparados | los confirmaba dentro de la reversión | se niega: `your local changes would be overwritten by revert` |
+| El resumen | ` N files changed`, sin líneas | el de Git: ` Date:`, líneas, `create mode` y `delete mode` |
+
+Con conflicto, la reversión queda **en curso**, como la fusión: un estado
+propio, `reversion`, con lo necesario para abortarla. Se cierra con
+`git revert --continue` —que volvió al contrato— o con `git commit`, y
+`git revert --abort` deja todo como estaba. Revertir otra vez sin resolver se
+niega, como en Git.
+
+### 65.2 · Cómo se vieron fallar
+
+- **`revert.test.ts`**: catorce pruebas con los textos copiados de Git. Contra
+  el motor anterior fallaron las catorce, cada una por el comportamiento que
+  describe: se comprobó que la falla era de `git revert` y no de cómo se
+  armaba el repositorio de la prueba.
+- **`revert-contra-git.test.ts`**: catorce más, que corren **las mismas
+  órdenes en un repositorio real y en el simulador** y comparan la salida de
+  cada `git revert` y el texto de cada archivo al final, normalizando sólo
+  identificadores y fecha. Pasaron a la primera, y por eso se comprobó aparte
+  que Git de verdad producía la salida del conflicto y no una vacía, y que
+  contra el motor anterior fallaban las catorce. Vuelven a correr Git en cada
+  corrida de la suite: si una versión de Git cambia algo, se nota ahí.
+- **Dos pruebas viejas** revertían sobre el escenario del laboratorio 02, que
+  trae un archivo preparado y otro modificado. Git se niega a revertir así, y
+  ahora el simulador también: se movieron al mismo escenario con los cambios
+  guardados en la pila, que deja la misma punta y el directorio limpio.
+
+### 65.3 · Lo que se tocó fuera de `git revert`, y por qué
+
+Dos líneas, las dos del flujo de la reversión:
+
+- **El estado** lleva `reversion`, como lleva `fusion`.
+- **`git commit`** cierra una reversión en curso, como en Git. Sin eso, un
+  participante que resuelve y confirma dejaba una reversión colgada.
+
+### 65.4 · Lo que apareció y no se tocó
+
+Por el punto 3.1, todo en `git status`, que no es `git revert`:
+
+- **No dice que hay una reversión en curso.** Git agrega `You are currently
+  reverting commit <id>.` y tres líneas de ayuda.
+- **`both modified:a.md` va sin separación.** Git escribe
+  `both modified:   a.md`. **Pasa también en los conflictos de fusión**, así
+  que el laboratorio 05 lo muestra así desde siempre; el recorrido no lo vio
+  porque compara estado y no texto.
+- **Los conflictos de modificado y borrado dicen `both modified`**, donde Git
+  dice `deleted by them` o `deleted by us`.
+- **Los archivos sin seguimiento no salen ordenados** como los ordena Git.
+- **`git commit` con archivos sin resolver durante una fusión** no lista los
+  archivos con `U`, que Git pone antes del error. Durante una reversión sí.
+
+### 65.5 · Las cifras
+
+| | |
+|---|---|
+| Pruebas de unidad | 746, veintiocho nuevas |
+| Pruebas de punta a punta | 173 |
+| Cobertura de los recorridos | igual: 71, 97, 95, 98 y 94 %; el guion no pasa por los casos nuevos |
+| Artefacto | 331 434 bytes, 4 747 más |
+

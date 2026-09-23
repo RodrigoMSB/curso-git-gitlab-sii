@@ -24,7 +24,8 @@ import {
 import { ordenLsFiles, ordenMv, ordenRm } from './archivos';
 import { ordenCommit, ordenLog } from './confirmar';
 import { ordenStash } from './guardado';
-import { ordenRebase, ordenReflog, ordenReset, ordenRevert } from './historia';
+import { ordenRebase, ordenReflog, ordenReset } from './historia';
+import { ordenRevert } from './revertir';
 import {
   ordenCatFile,
   ordenMergeBase,

@@ -11,7 +11,7 @@
  */
 
 import { posicionales, tieneOpcion } from '../analizador';
-import { agregarConfirmacion, resumenArchivos } from '../confirmaciones';
+import { agregarConfirmacion } from '../confirmaciones';
 import {
   anotarMovimiento,
   archivoPorNombre,
@@ -155,73 +155,6 @@ export const ordenReset: Manejador = (estado, argumentos) => {
   );
 };
 
-/** `git revert`, con referencia. Crea una confirmacion nueva y conserva la original. */
-export const ordenRevert: Manejador = (estado, argumentos) => {
-  if (!estado.iniciado) return sinRepositorio(estado);
-
-  const referencia = posicionales(argumentos)[0];
-  if (referencia === undefined) {
-    return fallo(estado, 'fatal: empty commit set passed');
-  }
-
-  const id = resolverReferencia(estado, referencia);
-  const objetivo = id === null ? undefined : confirmacionPorId(estado, id);
-  if (id === null || objetivo === undefined) {
-    return fallo(estado, `fatal: bad revision '${referencia}'`);
-  }
-
-  const cabeza = idActual(estado);
-  if (cabeza === null) return fallo(estado, 'fatal: Failed to resolve HEAD as a valid ref.');
-
-  // Revertir es devolver cada archivo al texto que tenia **antes** de la
-  // confirmacion que se revierte, no al que tiene ahora. Un archivo que esa
-  // confirmacion creo no tiene version anterior: revertirla lo retira.
-  const previa = objetivo.padres[0] ?? null;
-  const devueltos: Record<string, string> = {};
-  const retirados: string[] = [];
-  for (const nombre of objetivo.archivos) {
-    const antes = textoEnConfirmacion(estado, previa, nombre);
-    if (antes === null) retirados.push(nombre);
-    else devueltos[nombre] = antes;
-  }
-  const registrados = objetivo.archivos.filter((nombre) => !retirados.includes(nombre));
-
-  // Revertir una reversion la vuelve a aplicar, y desde Git 2.43 el mensaje lo
-  // dice: `Reapply "X"` y no `Revert "Revert "X""`. Revertir esa, en cambio,
-  // vuelve a ser un `Revert` comun. Comprobado con Git 2.54.
-  const reaplicado = /^Revert "(.*)"$/.exec(objetivo.mensaje);
-  const mensaje = reaplicado === null ? `Revert "${objetivo.mensaje}"` : `Reapply "${reaplicado[1]}"`;
-  const creado = agregarConfirmacion(estado, {
-    mensaje,
-    padres: [cabeza],
-    archivos: registrados,
-    borrados: retirados,
-    contenidos: devueltos,
-    carril: confirmacionPorId(estado, cabeza)?.carril ?? 0,
-    matiz: `revert:${objetivo.id}`,
-  });
-
-  // El directorio de trabajo queda como la confirmacion nueva, que es lo que
-  // hace Git: la reversion no deja nada pendiente.
-  let siguiente = sincronizarDirectorio(
-    moverPosicionActual(creado.estado, creado.confirmacion.id),
-  );
-  siguiente = anotarMovimiento(siguiente, {
-    id: creado.confirmacion.id,
-    idAnterior: cabeza,
-    operacion: 'revert',
-    descripcion: mensaje,
-    rama: ramaActual(siguiente),
-  });
-
-  return ok(
-    siguiente,
-    lineas(
-      `[${ramaActual(siguiente) ?? 'detached HEAD'} ${creado.confirmacion.id}] ${mensaje}`,
-      resumenArchivos([...registrados, ...retirados]),
-    ),
-  );
-};
 
 /**
  * `git reflog`. Muestra las posiciones por las que paso `HEAD`.

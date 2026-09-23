@@ -176,7 +176,9 @@ describe('seccion 8 del SPEC 001, comportamientos que el motor debe respetar', (
   });
 
   it('8.7 la reversion no reescribe historia: crea una confirmacion nueva y conserva la original', () => {
-    const partida = repoLineal();
+    // Sobre un repositorio limpio: con cambios preparados Git se niega a
+    // revertir, y el simulador tambien desde el SPEC 019.
+    const partida = correr(repoLineal(), 'git stash');
     const revertida = idActual(partida) ?? '';
 
     const resultado = ejecutar(partida, 'git revert HEAD');

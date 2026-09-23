@@ -172,10 +172,10 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   merge: ['--abort', '--continue', '--no-ff', '--ff-only', '-m', '--no-edit'],
   tag: ['-a', '--annotate', '-m', '--message', '-d', '--delete'],
   reset: ['--soft', '--mixed', '--hard'],
-  // La reversion del motor nunca choca, asi que no hay nada que continuar ni
-  // que abortar; `-n` aplicaba y confirmaba igual, que es lo contrario de lo
-  // que pide.
-  revert: ['--no-edit'],
+  // `--continue` y `--abort` volvieron con el SPEC 019: la reversion ahora
+  // choca como en Git. `-n` sigue fuera: aplicaba y confirmaba igual, que es
+  // lo contrario de lo que pide.
+  revert: ['--no-edit', '--continue', '--abort'],
   // `-u` salio: guardar tambien lo que no esta en seguimiento pide mover del
   // directorio a la pila archivos que la entrada no sabe llevar.
   stash: ['-m', '--message', '--stat', '--index', '-p', '--patch'],
