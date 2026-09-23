@@ -16,6 +16,7 @@ import {
   aliasDelTaller,
   direccionDelSimulador,
   ordenesDe,
+  ordenPara,
   resolverMarcadores,
   resumen,
 } from '../soporte/ordenes';
@@ -239,6 +240,44 @@ function capturar(laboratorio: string, paso: number, orden: string): void {
 }
 
 /** Escribe la orden en la consola y la ejecuta, como lo haria el participante. */
+/** Lo que la consola del simulador imprimio en respuesta a la ultima orden. */
+function salidaDelSimulador(): Cypress.Chainable<string> {
+  return cy.document().then((doc) => {
+    const renglones = [...doc.querySelectorAll<HTMLElement>('[data-color]')];
+    const ultimoEco = renglones.map((renglon) => renglon.dataset.color).lastIndexOf('orden');
+    return renglones
+      .slice(ultimoEco + 1)
+      .map((renglon) => renglon.textContent ?? '')
+      .join('\n');
+  });
+}
+
+/**
+ * El identificador que el participante copiaria para esta orden, en un lado.
+ *
+ * Sale de lo que **ese lado** imprimio la ultima vez que corrio la orden de la
+ * que el enunciado manda copiarlo. Si esa orden no corrio, o su salida no trae
+ * lo que el enunciado dice que trae, la prueba falla con los dos datos: una
+ * orden del guion que no se puede seguir no se salta en silencio.
+ */
+function identificadorEn(
+  lado: 'Git' | 'el simulador',
+  orden: OrdenDelEnunciado,
+  salidas: ReadonlyMap<string, string>,
+): string | null {
+  const eleccion = orden.eleccion;
+  if (eleccion === undefined) return null;
+  const donde = `«${orden.texto}» (enunciado, linea ${orden.linea})`;
+  const salida = salidas.get(eleccion.de);
+  expect(salida, `${donde} copia el identificador de la salida de «${eleccion.de}», que en ${lado} no corrio antes`).to.be.a('string');
+  const identificador = eleccion.elegir(salida ?? '');
+  expect(
+    identificador,
+    `${donde}: en ${lado} no se pudo elegir el identificador —${eleccion.como}— de la salida de «${eleccion.de}»:\n${salida}`,
+  ).to.be.a('string');
+  return identificador;
+}
+
 function ejecutarEnElSimulador(orden: string): void {
   // Con retardo cero el campo controlado por React llega a perder el primer
   // caracter, y la prueba termina comparando una orden que nadie escribio.
@@ -371,26 +410,60 @@ function recorrer(numero: string): void {
     });
   });
 
+  it('ninguna orden del guion se salta', () => {
+    // Toda orden del enunciado se ejecuta en los dos lados. Una que lleve un
+    // marcador de identificador necesita su eleccion en `ELECCIONES`; sin
+    // ella, queda omitida y esto falla nombrandola.
+    cy.then(() => {
+      const saltadas = ordenes
+        .filter((orden) => orden.clase === 'omitida')
+        .map((orden) => `linea ${orden.linea}: ${orden.texto} (${orden.motivo})`);
+      expect(saltadas, 'ordenes del guion que el recorrido saltaria').to.deep.equal([]);
+    });
+  });
+
   it('cada orden del enunciado deja los dos lados en el mismo estado', () => {
     cy.visit(direccion);
     capturar(numero, 0, 'estado inicial');
 
     cy.then(() => {
       let paso = 0;
+      // Lo que cada lado imprimio, por orden, para que una orden con marcador
+      // de identificador copie el suyo de ahi, como lo copia el participante.
+      const salidas = { simulador: new Map<string, string>(), git: new Map<string, string>() };
       for (const orden of ordenes) {
-        if (orden.clase === 'omitida') continue;
+        // Ninguna orden del guion se salta. Hasta aqui las que llevaban un
+        // marcador de identificador se omitian, y el recorrido del laboratorio
+        // 04 seguia sin la rama `peruana` en los dos lados, igual de mal.
+        if (orden.clase === 'omitida') {
+          cy.then(() => {
+            expect(
+              orden.clase,
+              `«${orden.texto}» (enunciado, linea ${orden.linea}) se saltaria: ${orden.motivo}`,
+            ).to.not.equal('omitida');
+          });
+          continue;
+        }
         paso += 1;
         const numeroDePaso = paso;
 
-        ejecutarEnElSimulador(orden.texto);
+        cy.then(() => {
+          ejecutarEnElSimulador(ordenPara(orden, identificadorEn('el simulador', orden, salidas.simulador)));
+        });
+        salidaDelSimulador().then((salida) => {
+          salidas.simulador.set(orden.texto, salida);
+        });
         // La captura va aqui, despues de cada orden y antes de comparar: si la
         // comparacion falla, la imagen del momento ya quedo guardada.
         capturar(numero, numeroDePaso, orden.texto);
-        cy.task<{ salida: string; fallo: boolean; cambio: boolean }>('ejecutarEnGit', {
-          lab,
-          orden: orden.texto,
-          medirCambio: false,
-        }).then((resultado) => {
+        cy.then(() =>
+          cy.task<{ salida: string; fallo: boolean; cambio: boolean }>('ejecutarEnGit', {
+            lab,
+            orden: ordenPara(orden, identificadorEn('Git', orden, salidas.git)),
+            medirCambio: false,
+          }),
+        ).then((resultado) => {
+          salidas.git.set(orden.texto, resultado.salida);
           if (orden.clase === 'declarada') {
             // Lo declarado no se ejecuta: se comprueba que el simulador diga
             // que no lo implementa, con su motivo, y que el estado no cambie.

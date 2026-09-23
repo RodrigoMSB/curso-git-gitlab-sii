@@ -53,17 +53,18 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 048 | `git ls-files` | tiempo |
 | 049 | `git status` | tiempo |
 | 050 | `git log --oneline -- credenciales.txt` | tiempo |
-| 051 | `echo "prueba" > temporal.tmp` | tiempo |
-| 052 | `git status` | tiempo |
-| 053 | `rm temporal.tmp` | tiempo |
-| 054 | `echo "esta si va" > importante.tmp` | tiempo |
-| 055 | `git status` | tiempo |
-| 056 | `git add -f importante.tmp` | areas, tiempo |
-| 057 | `git status` | tiempo |
-| 058 | `git restore --staged importante.tmp` | areas, tiempo |
-| 059 | `rm importante.tmp` | tiempo |
-| 061 | `git ls-files` | tiempo |
-| 062 | `ls` | tiempo |
-| 063 | `ls recetas/principales recetas/postres` | tiempo |
-| 064 | `git status` | tiempo |
-| 065 | `git checkout HEAD~1 -- notas.tmp` | areas, tiempo |
+| 051 | `git show <identificador-de-la-confirmacion-que-la-agrego>` | tiempo |
+| 052 | `echo "prueba" > temporal.tmp` | tiempo |
+| 053 | `git status` | tiempo |
+| 054 | `rm temporal.tmp` | tiempo |
+| 055 | `echo "esta si va" > importante.tmp` | tiempo |
+| 056 | `git status` | tiempo |
+| 057 | `git add -f importante.tmp` | areas, tiempo |
+| 058 | `git status` | tiempo |
+| 059 | `git restore --staged importante.tmp` | areas, tiempo |
+| 060 | `rm importante.tmp` | tiempo |
+| 062 | `git ls-files` | tiempo |
+| 063 | `ls` | tiempo |
+| 064 | `ls recetas/principales recetas/postres` | tiempo |
+| 065 | `git status` | tiempo |
+| 066 | `git checkout HEAD~1 -- notas.tmp` | areas, tiempo |

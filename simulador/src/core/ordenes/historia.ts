@@ -186,7 +186,11 @@ export const ordenRevert: Manejador = (estado, argumentos) => {
   }
   const registrados = objetivo.archivos.filter((nombre) => !retirados.includes(nombre));
 
-  const mensaje = `Revert "${objetivo.mensaje}"`;
+  // Revertir una reversion la vuelve a aplicar, y desde Git 2.43 el mensaje lo
+  // dice: `Reapply "X"` y no `Revert "Revert "X""`. Revertir esa, en cambio,
+  // vuelve a ser un `Revert` comun. Comprobado con Git 2.54.
+  const reaplicado = /^Revert "(.*)"$/.exec(objetivo.mensaje);
+  const mensaje = reaplicado === null ? `Revert "${objetivo.mensaje}"` : `Reapply "${reaplicado[1]}"`;
   const creado = agregarConfirmacion(estado, {
     mensaje,
     padres: [cabeza],

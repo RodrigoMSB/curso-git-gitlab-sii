@@ -28,7 +28,7 @@ import {
 } from '../estado';
 import { comparacionesEntre, textoEnConfirmacion } from '../contenido';
 import { formatearEstadisticasDe, fusionarTresVias } from '../diferencias';
-import { antepasados, archivosCambiados, baseComun, esAntepasado } from '../grafo';
+import { antepasados, antepasadosDeVarias, archivosCambiados, baseComun, esAntepasado, historia } from '../grafo';
 import { resolverReferencia } from '../referencias';
 import { fallo, lineas, ok, sinRepositorio } from '../salida';
 import type { EstadoRepositorio, ResultadoOrden } from '../tipos';
@@ -174,6 +174,43 @@ export const ordenBranch: Manejador = (estado, argumentos) => {
  * estado desconectado con su parrafo, y `--detach` solo dice donde quedo la
  * posicion. Es la diferencia que Git hace y que el participante ve.
  */
+/**
+ * Lo que Git dice al salir de una posicion desconectada, antes de cambiar.
+ *
+ * Si las confirmaciones hechas ahi quedan sin ninguna referencia que las
+ * alcance, avisa, las lista y da el identificador para rescatarlas: es de
+ * donde el laboratorio 04 hace copiarlo en su punto 3.5. Si no queda nada
+ * suelto, solo dice donde estaba. Texto comprobado contra Git 2.54.
+ */
+function avisoAlDejar(estado: EstadoRepositorio, idNuevo: string): readonly string[] {
+  if (estado.puntero.tipo !== 'confirmacion') return [];
+  const anterior = estado.puntero.id;
+  if (anterior === idNuevo) return [];
+  const alcanzadas = antepasadosDeVarias(estado, [
+    idNuevo,
+    ...estado.ramas.map((rama) => rama.id),
+    ...estado.etiquetas.map((etiqueta) => etiqueta.id),
+  ]);
+  const sueltas = historia(estado, [anterior]).filter((confirmacion) => !alcanzadas.has(confirmacion.id));
+  if (sueltas.length === 0) {
+    const previa = confirmacionPorId(estado, anterior);
+    return [`Previous HEAD position was ${anterior} ${previa?.mensaje ?? ''}`.trimEnd()];
+  }
+  const una = sueltas.length === 1;
+  return [
+    `Warning: you are leaving ${sueltas.length} commit${una ? '' : 's'} behind, not connected to`,
+    'any of your branches:',
+    '',
+    ...sueltas.map((confirmacion) => `  ${confirmacion.id} ${confirmacion.mensaje}`),
+    '',
+    `If you want to keep ${una ? 'it' : 'them'} by creating a new branch, this may be a good time`,
+    'to do so with:',
+    '',
+    ` git branch <new-branch-name> ${anterior}`,
+    '',
+  ];
+}
+
 function cambiarA(
   estado: EstadoRepositorio,
   destino: string,
@@ -206,7 +243,10 @@ function cambiarA(
     );
     return ok(
       siguiente,
-      lineas(nueva ? `Switched to a new branch '${destino}'` : `Switched to branch '${destino}'`),
+      lineas(
+        ...avisoAlDejar(estado, rama.id),
+        nueva ? `Switched to a new branch '${destino}'` : `Switched to branch '${destino}'`,
+      ),
     );
   }
 
@@ -227,7 +267,7 @@ function cambiarA(
   if (desconectar) {
     return ok(
       siguiente,
-      lineas(`HEAD is now at ${id} ${confirmacion?.mensaje ?? ''}`.trimEnd()),
+      lineas(...avisoAlDejar(estado, id), `HEAD is now at ${id} ${confirmacion?.mensaje ?? ''}`.trimEnd()),
     );
   }
   return ok(

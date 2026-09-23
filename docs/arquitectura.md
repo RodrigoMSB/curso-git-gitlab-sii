@@ -1748,6 +1748,11 @@ resolver: los del simulador y los de Git no coinciden por diseño, asi que no
 hay un unico valor que sirva en los dos lados. Todos ellos son ordenes de solo
 mirar, de modo que no desalinean nada.
 
+> **Era falso, y se corrigió en la sección 64.** `git branch peruana
+> <identificador>` crea una rama, y `git reset --hard <identificador>` mueve
+> una. Hoy cada lado resuelve el identificador con su propia salida y ninguna
+> orden del guion se salta.
+
 **No hizo falta modificar ningun enunciado.**
 
 ### Que se compara y que no
@@ -4559,4 +4564,84 @@ falta es que el arnés resuelva ese marcador —el identificador sale del
 `git log` del paso anterior en cada lado, y cada lado usa el suyo— o que
 distinga las órdenes con marcador que modifican el repositorio y se niegue a
 seguir comparando después de ellas. Queda para el arquitecto.
+
+> **Resuelto en la sección 64**, con el primero de los dos caminos.
+
+---
+
+# El recorrido deja de saltarse órdenes
+
+## 64. Cada lado copia su identificador
+
+Pedido del product owner tras la sección 63.8: que el arnés resuelva el
+identificador en cada lado, con el de Git para Git y el del simulador para el
+simulador, ejecute la orden, y que la prueba falle si una orden del guion se
+salta.
+
+### 64.1 · Cómo se resuelve
+
+El enunciado dice en prosa qué confirmación copiar —«Elige la segunda
+confirmación de esa lista»—, y el arnés no interpreta prosa. Cada una quedó
+traducida en `ELECCIONES`, en `cypress/soporte/ordenes.ts`: de qué orden
+anterior se copia y cómo se elige la línea. Lo que no se escribe a mano es el
+identificador: durante el recorrido se guarda lo que cada lado imprimió, y cada
+lado lo toma de lo suyo.
+
+| Laboratorio | Orden | De dónde |
+|---|---|---|
+| 03 | `git show <…que-la-agrego>` | la más antigua de `git log --oneline -- credenciales.txt` |
+| 04 | `git branch peruana <identificador>` | la segunda de `git log --oneline main` |
+| 04 | `git switch --detach <identificador>` | la tercera de `git log --oneline main` |
+| 04 | `git branch rescate <identificador>` | la advertencia de `git switch main` |
+| 06 | `git reset --hard <identificador>` | `HEAD@{1}` de `git reflog -10` |
+| 06 | `git show` y `git revert <identificador>` | la de `git log -S "sal marina en polvo"` |
+
+Del lado de Git, la salida lleva ahora también lo que Git escribe por el canal
+de errores cuando la orden funciona: la advertencia de `git switch` va por ahí,
+y se perdía.
+
+### 64.2 · La prueba que falla si una orden se salta
+
+Dos lugares. Una prueba por laboratorio, «ninguna orden del guion se salta»,
+lista las omitidas y exige que no haya ninguna. Y el recorrido, en lugar de
+pasar de largo, falla en la orden omitida nombrándola. Si una elección no
+encuentra en la salida lo que el enunciado dice que hay, también falla, con la
+salida a la vista.
+
+Se vio fallar quitando la regla del rescate: las dos del laboratorio 04 fallan
+nombrando `git branch rescate <identificador>`, y las de unidad también. De
+unidad hay además una que exige que la orden de la que se copia haya corrido
+antes en el mismo guion, y que ninguna elección escrita sobre.
+
+### 64.3 · Lo que el salto escondía
+
+Al dejar de saltar, el recorrido falló en dos lugares. Eran defectos del
+simulador, y se corrigieron con el texto de Git 2.54 copiado de una corrida:
+
+- **El simulador no avisaba al dejar confirmaciones sueltas.** Al salir de una
+  posición desconectada, Git lista lo que queda sin referencia y da el
+  identificador para rescatarlo. El punto 3.5 del laboratorio 04 hace copiarlo
+  de ahí, y en el simulador no había de dónde. Ahora avisa igual, en singular o
+  plural, y sin nada suelto dice `Previous HEAD position was …`.
+- **Revertir una reversión.** Git la llama `Reapply "X"` desde la versión 2.43;
+  el simulador decía `Revert "Revert "X""`. Lo destapó el laboratorio 06: con
+  su `git revert <identificador>` ejecutado de verdad, el `git revert HEAD`
+  siguiente revierte una reversión.
+
+Y uno que **no se tocó**, porque el guion no pasa por él: `git revert` no
+deshace los borrados de la confirmación que revierte. Reaplicar una reversión
+que había retirado un archivo dice `0 files changed` y no lo devuelve.
+
+### 64.4 · La cobertura
+
+Ninguna orden queda ya con marcador sin resolver, y las que antes se omitían
+ahora se comparan:
+
+| Laboratorio | Antes | Ahora |
+|---|---|---|
+| 02 | 71 % | 71 % |
+| 03 | 95 % | **97 %** |
+| 04 | 92 % | **95 %** |
+| 05 | 98 % | 98 % |
+| 06 | 88 % | **94 %** |
 

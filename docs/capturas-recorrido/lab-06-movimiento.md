@@ -26,26 +26,29 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 022 | `ls` | tiempo |
 | 023 | `git reflog` | tiempo |
 | 024 | `git reflog -10` | tiempo |
-| 025 | `git log --oneline -3` | tiempo |
-| 026 | `ls` | tiempo |
-| 028 | `git log --oneline` | tiempo |
-| 029 | `git log -S "sal marina en polvo" --oneline` | tiempo |
-| 030 | `git log --oneline -3` | tiempo |
-| 031 | `git lg` | tiempo |
-| 032 | `git show HEAD` | tiempo |
-| 033 | `git tag v0.9` | nodos, ramas, puntero, tiempo |
-| 034 | `git tag` | tiempo |
-| 035 | `git lg` | tiempo |
-| 036 | `git tag -a v1.0 -m "primera version completa del recetario"` | nodos, ramas, puntero, tiempo |
+| 025 | `git reset --hard <identificador>` | nodos, ramas, puntero, tiempo |
+| 026 | `git log --oneline -3` | tiempo |
+| 027 | `ls` | tiempo |
+| 029 | `git log --oneline` | tiempo |
+| 030 | `git log -S "sal marina en polvo" --oneline` | tiempo |
+| 031 | `git show <identificador>` | tiempo |
+| 032 | `git revert <identificador>` | nodos, ramas, puntero, areas, tiempo |
+| 033 | `git log --oneline -3` | tiempo |
+| 034 | `git lg` | tiempo |
+| 035 | `git show HEAD` | tiempo |
+| 036 | `git tag v0.9` | nodos, ramas, puntero, tiempo |
 | 037 | `git tag` | tiempo |
-| 038 | `git cat-file -t v0.9` | tiempo |
-| 039 | `git cat-file -t v1.0` | tiempo |
-| 040 | `git show v1.0` | tiempo |
-| 041 | `git tag -d v0.9` | nodos, ramas, puntero, tiempo |
-| 042 | `git tag` | tiempo |
-| 043 | `git log --oneline` | tiempo |
-| 044 | `git tag` | tiempo |
-| 045 | `git show v1.0` | tiempo |
-| 046 | `git log -S "sal marina en polvo" --oneline` | tiempo |
-| 047 | `git status` | tiempo |
-| 048 | `git revert HEAD` | nodos, ramas, puntero, areas, tiempo |
+| 038 | `git lg` | tiempo |
+| 039 | `git tag -a v1.0 -m "primera version completa del recetario"` | nodos, ramas, puntero, tiempo |
+| 040 | `git tag` | tiempo |
+| 041 | `git cat-file -t v0.9` | tiempo |
+| 042 | `git cat-file -t v1.0` | tiempo |
+| 043 | `git show v1.0` | tiempo |
+| 044 | `git tag -d v0.9` | nodos, ramas, puntero, tiempo |
+| 045 | `git tag` | tiempo |
+| 046 | `git log --oneline` | tiempo |
+| 047 | `git tag` | tiempo |
+| 048 | `git show v1.0` | tiempo |
+| 049 | `git log -S "sal marina en polvo" --oneline` | tiempo |
+| 050 | `git status` | tiempo |
+| 051 | `git revert HEAD` | nodos, ramas, puntero, areas, tiempo |

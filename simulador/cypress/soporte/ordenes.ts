@@ -70,6 +70,103 @@ export interface OrdenDelEnunciado {
    * el simulador una orden que el enunciado saca del simulador.
    */
   readonly terminal: boolean;
+  /**
+   * Como elige el participante el identificador que la orden lleva como
+   * marcador de posicion. Cada lado lo resuelve con **su** salida: el de Git
+   * con lo que imprimio Git, el del simulador con lo que imprimio el
+   * simulador. Los identificadores no coinciden por diseño.
+   */
+  readonly eleccion?: EleccionDeIdentificador;
+}
+
+/**
+ * La instruccion del enunciado para elegir un identificador, traducida.
+ *
+ * El enunciado la da en prosa —«Elige la segunda confirmacion de esa lista»—
+ * y el participante la cumple leyendo una salida anterior. Esto hace lo mismo:
+ * lee la salida de la orden `de` en cada lado y aplica `elegir`.
+ */
+export interface EleccionDeIdentificador {
+  /** El marcador tal como lo escribe el enunciado, con los angulos. */
+  readonly marcador: string;
+  /** La orden del guion de cuya salida sale el identificador; manda la ultima vez que se ejecuto. */
+  readonly de: string;
+  /** Lo que dice el enunciado, para el mensaje cuando no se puede resolver. */
+  readonly como: string;
+  readonly elegir: (salida: string) => string | null;
+}
+
+/** El identificador del principio de la linea `n` (desde uno) de una lista `--oneline`. */
+function enLaLinea(n: number | 'ultima'): (salida: string) => string | null {
+  return (salida) => {
+    const lineas = salida.split('\n').filter((linea) => /^[0-9a-f]{7,40}\b/.test(linea));
+    const linea = n === 'ultima' ? lineas.at(-1) : lineas[n - 1];
+    return linea?.match(/^[0-9a-f]{7,40}/)?.[0] ?? null;
+  };
+}
+
+/**
+ * Las elecciones de identificador de los guiones, una por orden con marcador.
+ *
+ * Se escriben a mano porque el enunciado las da en prosa, y el arnes no
+ * interpreta prosa. Lo que no se escribe a mano es el identificador: sale de
+ * lo que cada lado imprimio. Una orden con marcador que no este aqui queda
+ * omitida, y la prueba falla (el recorrido no salta ninguna orden).
+ *
+ * Hasta ahora estas ordenes se omitian con la justificacion de que eran «de
+ * solo mirar» y no desalineaban nada. `git branch peruana <identificador>`
+ * crea una rama: sin ella, el recorrido del laboratorio 04 confirmaba la
+ * cocina peruana en `mexicana`, en los dos lados por igual, y daba verde.
+ */
+export const ELECCIONES: Readonly<Record<string, EleccionDeIdentificador>> = {
+  '03 git show <identificador-de-la-confirmacion-que-la-agrego>': {
+    marcador: '<identificador-de-la-confirmacion-que-la-agrego>',
+    de: 'git log --oneline -- credenciales.txt',
+    como: 'la confirmacion que agrego el archivo, la mas antigua de la lista',
+    elegir: enLaLinea('ultima'),
+  },
+  '04 git branch peruana <identificador>': {
+    marcador: '<identificador>',
+    de: 'git log --oneline main',
+    como: '«Elige la segunda confirmacion de esa lista»',
+    elegir: enLaLinea(2),
+  },
+  '04 git switch --detach <identificador>': {
+    marcador: '<identificador>',
+    de: 'git log --oneline main',
+    como: '«Copia el identificador de la tercera confirmacion de la lista»',
+    elegir: enLaLinea(3),
+  },
+  '04 git branch rescate <identificador>': {
+    marcador: '<identificador>',
+    de: 'git switch main',
+    como: '«Copia el identificador que Git te ofrecio en la advertencia»',
+    elegir: (salida) => salida.match(/git branch <new-branch-name> ([0-9a-f]{7,40})/)?.[1] ?? null,
+  },
+  '06 git reset --hard <identificador>': {
+    marcador: '<identificador>',
+    de: 'git reflog -10',
+    como: '«Busca la entrada anterior al reset --hard», que es HEAD@{1}',
+    elegir: (salida) => salida.match(/^([0-9a-f]{7,40}) HEAD@\{1\}/m)?.[1] ?? null,
+  },
+  '06 git show <identificador>': {
+    marcador: '<identificador>',
+    de: 'git log -S "sal marina en polvo" --oneline',
+    como: 'la confirmacion que metio la sal marina en polvo',
+    elegir: enLaLinea(1),
+  },
+  '06 git revert <identificador>': {
+    marcador: '<identificador>',
+    de: 'git log -S "sal marina en polvo" --oneline',
+    como: 'la confirmacion que metio la sal marina en polvo',
+    elegir: enLaLinea(1),
+  },
+};
+
+/** La orden lista para un lado: con el marcador reemplazado por el identificador de ese lado. */
+export function ordenPara(orden: OrdenDelEnunciado, identificador: string | null): string {
+  if (orden.eleccion === undefined) return orden.texto;
+  return orden.texto.replace(orden.eleccion.marcador, identificador ?? orden.eleccion.marcador);
 }
 
 
@@ -339,10 +436,10 @@ export function resumen(ordenes: readonly OrdenDelEnunciado[]): {
  * ya es la unica fuente de la forma del laboratorio (SPEC 007). Si el escenario
  * cambia de archivo, esto cambia con el.
  *
- * Los marcadores que nombran un identificador de confirmacion se quedan sin
- * resolver: los identificadores del simulador y los de Git no coinciden por
- * diseño, asi que no hay un unico valor que sirva en los dos lados. Son las
- * excepciones declaradas del punto 7.3.
+ * Los marcadores que nombran un identificador de confirmacion no tienen un
+ * unico valor que sirva en los dos lados, porque los identificadores no
+ * coinciden por diseño. Se resuelven por lado durante el recorrido, con la
+ * eleccion de `ELECCIONES`.
  */
 export function resolverMarcadores(
   ordenes: readonly OrdenDelEnunciado[],
@@ -362,6 +459,14 @@ export function resolverMarcadores(
 
   return ordenes.map((orden) => {
     if (orden.clase !== 'omitida') return orden;
+    const eleccion = ELECCIONES[`${numeroDeLaboratorio} ${orden.texto}`];
+    if (eleccion !== undefined) {
+      // Se clasifica con una referencia cualquiera en lugar del marcador, para
+      // saber si el motor la ejecuta o la declara; el texto queda con el
+      // marcador, que cada lado reemplaza con su identificador.
+      const clasificada = clasificar(orden.texto.replace(eleccion.marcador, 'HEAD'), orden.linea, alias);
+      return { ...clasificada, texto: orden.texto, eleccion };
+    }
     const sustitucion = sustituciones.find((candidata) => candidata.patron.test(orden.texto));
     if (sustitucion === undefined || sustitucion.valor === undefined) return orden;
     return clasificar(orden.texto.replace('<archivo>', sustitucion.valor), orden.linea, alias);

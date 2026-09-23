@@ -33,52 +33,55 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 028 | `git commit -m "se abre la cocina mexicana"` | nodos, ramas, puntero, areas, tiempo |
 | 029 | `git lg` | tiempo |
 | 030 | `git log --oneline main` | tiempo |
-| 031 | `git switch peruana` | tiempo |
-| 032 | `git lg` | tiempo |
-| 033 | `mkdir -p recetas` | tiempo |
-| 034 | `echo "# Ceviche" > recetas/ceviche.md` | areas, tiempo |
-| 035 | `echo "" >> recetas/ceviche.md` | tiempo |
-| 036 | `echo "Pescado blanco, limon, cebolla morada, aji y camote." >> recetas/ceviche.md` | tiempo |
-| 037 | `git add recetas/ceviche.md` | areas, tiempo |
-| 038 | `git commit -m "se abre la cocina peruana"` | nodos, ramas, puntero, areas, tiempo |
-| 039 | `git lg` | tiempo |
-| 040 | `git branch` | tiempo |
-| 041 | `git branch -m peruana andina` | tiempo |
-| 042 | `git branch` | tiempo |
-| 043 | `git lg` | tiempo |
-| 045 | `git branch -m mexicana azteca` | ramas, areas, tiempo |
-| 046 | `git branch` | tiempo |
-| 047 | `git branch temporal` | ramas, areas, tiempo |
-| 048 | `git branch` | tiempo |
-| 049 | `git branch -d temporal` | ramas, areas, tiempo |
-| 050 | `git branch` | tiempo |
-| 051 | `git switch main` | ramas, puntero, areas, tiempo |
-| 052 | `git branch -d azteca` | tiempo |
-| 053 | `git log --oneline main` | tiempo |
-| 054 | `git status` | tiempo |
-| 055 | `git branch` | tiempo |
-| 057 | `mkdir -p recetas` | tiempo |
-| 058 | `echo "# Humita" > recetas/humita.md` | areas, tiempo |
-| 059 | `echo "" >> recetas/humita.md` | tiempo |
-| 060 | `echo "Choclo molido, albahaca, cebolla, cocida en las mismas hojas." >> recetas/humita.md` | tiempo |
-| 061 | `git add recetas/humita.md` | areas, tiempo |
-| 062 | `git commit -m "se agrega la humita"` | nodos, ramas, puntero, areas, tiempo |
-| 063 | `git log --oneline -2` | tiempo |
-| 064 | `git lg` | tiempo |
-| 065 | `git switch main` | tiempo |
+| 031 | `git branch peruana <identificador>` | ramas, areas, tiempo |
+| 032 | `git switch peruana` | ramas, puntero, areas, tiempo |
+| 033 | `git lg` | tiempo |
+| 034 | `mkdir -p recetas` | tiempo |
+| 035 | `echo "# Ceviche" > recetas/ceviche.md` | areas, tiempo |
+| 036 | `echo "" >> recetas/ceviche.md` | tiempo |
+| 037 | `echo "Pescado blanco, limon, cebolla morada, aji y camote." >> recetas/ceviche.md` | tiempo |
+| 038 | `git add recetas/ceviche.md` | areas, tiempo |
+| 039 | `git commit -m "se abre la cocina peruana"` | nodos, ramas, puntero, areas, tiempo |
+| 040 | `git lg` | tiempo |
+| 041 | `git branch` | tiempo |
+| 042 | `git branch -m peruana andina` | ramas, areas, tiempo |
+| 043 | `git branch` | tiempo |
+| 044 | `git lg` | tiempo |
+| 046 | `git branch -m mexicana azteca` | ramas, areas, tiempo |
+| 047 | `git branch` | tiempo |
+| 048 | `git branch temporal` | ramas, areas, tiempo |
+| 049 | `git branch` | tiempo |
+| 050 | `git branch -d temporal` | ramas, areas, tiempo |
+| 051 | `git branch` | tiempo |
+| 052 | `git switch main` | ramas, puntero, areas, tiempo |
+| 053 | `git branch -d azteca` | tiempo |
+| 054 | `git log --oneline main` | tiempo |
+| 055 | `git switch --detach <identificador>` | ramas, puntero, areas, tiempo |
+| 056 | `git status` | tiempo |
+| 057 | `git branch` | tiempo |
+| 059 | `mkdir -p recetas` | tiempo |
+| 060 | `echo "# Humita" > recetas/humita.md` | areas, tiempo |
+| 061 | `echo "" >> recetas/humita.md` | tiempo |
+| 062 | `echo "Choclo molido, albahaca, cebolla, cocida en las mismas hojas." >> recetas/humita.md` | tiempo |
+| 063 | `git add recetas/humita.md` | areas, tiempo |
+| 064 | `git commit -m "se agrega la humita"` | nodos, ramas, puntero, areas, tiempo |
+| 065 | `git log --oneline -2` | tiempo |
 | 066 | `git lg` | tiempo |
-| 067 | `git lg` | tiempo |
-| 068 | `git reflog` | tiempo |
-| 069 | `git switch --detach HEAD~2` | nodos, ramas, puntero, areas, tiempo |
-| 070 | `mkdir -p recetas` | tiempo |
-| 071 | `echo "# Sopaipillas" > recetas/sopaipillas.md` | areas, tiempo |
-| 072 | `echo "" >> recetas/sopaipillas.md` | tiempo |
-| 073 | `echo "Harina, zapallo, manteca. Fritas y con pebre." >> recetas/sopaipillas.md` | nodos, ramas, puntero, tiempo |
-| 074 | `git add recetas/sopaipillas.md` | nodos, ramas, puntero, areas, tiempo |
-| 075 | `git commit -m "se agregan las sopaipillas"` | nodos, ramas, puntero, areas, tiempo |
-| 076 | `git switch -c fritangas` | ramas, puntero, areas, tiempo |
-| 077 | `git lg` | tiempo |
-| 078 | `git switch main` | ramas, puntero, areas, tiempo |
-| 079 | `git branch` | tiempo |
+| 067 | `git switch main` | nodos, ramas, puntero, areas, tiempo |
+| 068 | `git lg` | tiempo |
+| 069 | `git branch rescate <identificador>` | nodos, ramas, puntero, areas, tiempo |
+| 070 | `git lg` | tiempo |
+| 071 | `git reflog` | tiempo |
+| 072 | `git switch --detach HEAD~2` | nodos, ramas, puntero, areas, tiempo |
+| 073 | `mkdir -p recetas` | tiempo |
+| 074 | `echo "# Sopaipillas" > recetas/sopaipillas.md` | areas, tiempo |
+| 075 | `echo "" >> recetas/sopaipillas.md` | tiempo |
+| 076 | `echo "Harina, zapallo, manteca. Fritas y con pebre." >> recetas/sopaipillas.md` | nodos, ramas, puntero, tiempo |
+| 077 | `git add recetas/sopaipillas.md` | nodos, ramas, puntero, areas, tiempo |
+| 078 | `git commit -m "se agregan las sopaipillas"` | nodos, ramas, puntero, areas, tiempo |
+| 079 | `git switch -c fritangas` | nodos, ramas, puntero, areas, tiempo |
 | 080 | `git lg` | tiempo |
-| 082 | `git status` | tiempo |
+| 081 | `git switch main` | ramas, puntero, areas, tiempo |
+| 082 | `git branch` | tiempo |
+| 083 | `git lg` | tiempo |
+| 085 | `git status` | tiempo |

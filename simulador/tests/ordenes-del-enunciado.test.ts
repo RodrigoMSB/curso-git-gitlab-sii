@@ -24,6 +24,7 @@ import {
   resolverMarcadores,
   resumen,
   type OrdenDelEnunciado,
+  ELECCIONES,
 } from '../cypress/soporte/ordenes';
 
 const MOTOR = fileURLToPath(new URL('../src/core', import.meta.url));
@@ -330,20 +331,49 @@ describe('7.5 · ninguna orden del guion se acepta y se ignora', () => {
 });
 
 describe('lo que queda declarado, y por que', () => {
-  it('las excepciones del punto 7.3 son las de los marcadores', () => {
-    // Los pasos donde el participante copia un identificador de una salida
-    // anterior. No se automatizan porque los identificadores del simulador y
-    // los de Git no coinciden por diseño.
-    const conMarcador: string[] = [];
+  it('ninguna orden de los guiones queda omitida: los marcadores se resuelven por lado', () => {
+    // Hasta aqui los pasos donde el participante copia un identificador se
+    // omitian, con el argumento de que eran de solo mirar. `git branch
+    // peruana <identificador>` crea una rama, y sin ella el recorrido del
+    // laboratorio 04 seguia mal en los dos lados por igual. Ahora cada uno
+    // lleva su eleccion, y ninguna orden se salta.
+    const omitidas: string[] = [];
+    const usadas = new Set<string>();
     for (const numero of ['01', '02', '03', '04', '05', '06']) {
-      const texto = enunciado(numero);
-      for (const orden of resolverMarcadores(ordenesDe(texto, ALIAS), numero, ALIAS)) {
-        if (orden.clase === 'omitida' && orden.motivo.includes('marcador')) {
-          conMarcador.push(`${numero}: ${orden.texto}`);
-        }
-      }
+      const ordenes = resolverMarcadores(ordenesDe(enunciado(numero), ALIAS), numero, ALIAS);
+      ordenes.forEach((orden, indice) => {
+        if (orden.clase === 'omitida') omitidas.push(`${numero}: ${orden.texto}`);
+        if (orden.eleccion === undefined) return;
+        usadas.add(`${numero} ${orden.texto}`);
+        // La orden de la que se copia tiene que haber corrido antes en el
+        // mismo guion: si no, el recorrido no tiene de donde sacarlo.
+        const antes = ordenes.slice(0, indice).map((previa) => previa.texto);
+        expect(antes, `${numero}: ${orden.texto} copia de «${orden.eleccion.de}»`).toContain(orden.eleccion.de);
+      });
     }
-    expect(conMarcador).toHaveLength(7);
+    expect(omitidas).toEqual([]);
+    // Y ninguna eleccion escrita sobra: una que no se usa es una copia
+    // esperando quedar vieja.
+    expect([...usadas].sort()).toEqual(Object.keys(ELECCIONES).sort());
+  });
+
+  it('cada eleccion lee lo que el enunciado dice, en salidas con la forma de las dos', () => {
+    const lista = 'f8fa947 (HEAD -> main) quinta\n9600dc5 cuarta\n88700ff tercera';
+    expect(ELECCIONES['04 git branch peruana <identificador>']?.elegir(lista)).toBe('9600dc5');
+    expect(ELECCIONES['04 git switch --detach <identificador>']?.elegir(lista)).toBe('88700ff');
+    expect(ELECCIONES['03 git show <identificador-de-la-confirmacion-que-la-agrego>']?.elegir(lista)).toBe('88700ff');
+    expect(
+      ELECCIONES['04 git branch rescate <identificador>']?.elegir(
+        'Warning: you are leaving 1 commit behind\n\n git branch <new-branch-name> 57027cd\n',
+      ),
+    ).toBe('57027cd');
+    expect(
+      ELECCIONES['06 git reset --hard <identificador>']?.elegir(
+        'aaaaaaa HEAD@{0}: reset: moving to HEAD~1\nbbbbbbb HEAD@{1}: commit: se pierde',
+      ),
+    ).toBe('bbbbbbb');
+    // Sin lo que buscan, no inventan: devuelven nada y el recorrido falla.
+    expect(ELECCIONES['04 git branch rescate <identificador>']?.elegir('Switched to branch main')).toBeNull();
   });
 
   it('lo demas que se declara es por contenido, por la carpeta oculta o por el disco', () => {

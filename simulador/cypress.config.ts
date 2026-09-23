@@ -11,7 +11,7 @@
  * doble clic.
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -172,18 +172,17 @@ function ejecutarEnGit({
   // ejecuta, que son las unicas que pueden desalinear los dos lados: leer el
   // estado cuesta una decena de invocaciones a Git y hay cientos de ordenes.
   const antes = medirCambio ? JSON.stringify(estadoDeGit(lab)) : '';
-  let salida: string;
-  try {
-    salida = execFileSync('bash', ['-c', orden], {
-      cwd: lab.recetario,
-      encoding: 'utf8',
-      env: entorno(lab.configGlobal),
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-  } catch (error) {
-    const fallo = error as { stdout?: string; stderr?: string };
-    salida = `${fallo.stdout ?? ''}${fallo.stderr ?? ''}`;
-  }
+  // La salida lleva lo que Git escribe en los dos canales, tambien cuando la
+  // orden funciona: la advertencia de `git switch` al dejar confirmaciones
+  // sueltas va por el de errores, y de ahi saca el participante el
+  // identificador para rescatarlas. Con solo la salida normal se perdia.
+  const corrida = spawnSync('bash', ['-c', orden], {
+    cwd: lab.recetario,
+    encoding: 'utf8',
+    env: entorno(lab.configGlobal),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const salida = `${corrida.stdout ?? ''}${corrida.stderr ?? ''}`;
   const despues = medirCambio ? JSON.stringify(estadoDeGit(lab)) : '';
   return { salida, fallo: rechazada(salida), cambio: medirCambio && despues !== antes };
 }

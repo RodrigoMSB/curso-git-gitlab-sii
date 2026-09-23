@@ -61,15 +61,16 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 053 | movio | tiempo |
 | 054 | movio | tiempo |
 | 055 | movio | tiempo |
-| 056 | movio | areas, tiempo |
-| 057 | movio | tiempo |
-| 058 | movio | areas, tiempo |
-| 059 | movio | tiempo |
-| 060 | movio | — |
-| 061 | movio | tiempo |
+| 056 | movio | tiempo |
+| 057 | movio | areas, tiempo |
+| 058 | movio | tiempo |
+| 059 | movio | areas, tiempo |
+| 060 | movio | tiempo |
+| 061 | movio | — |
 | 062 | movio | tiempo |
 | 063 | movio | tiempo |
 | 064 | movio | tiempo |
-| 065 | movio | areas, tiempo |
+| 065 | movio | tiempo |
+| 066 | movio | areas, tiempo |
 
 Ningun paso quedo sin pintar: todo lo que se movio se ve en la imagen.

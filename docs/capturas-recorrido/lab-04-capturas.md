@@ -36,57 +36,60 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 028 | movio | nodos, ramas, puntero, areas, tiempo |
 | 029 | movio | tiempo |
 | 030 | movio | tiempo |
-| 031 | movio | tiempo |
-| 032 | movio | tiempo |
+| 031 | movio | ramas, areas, tiempo |
+| 032 | movio | ramas, puntero, areas, tiempo |
 | 033 | movio | tiempo |
-| 034 | movio | areas, tiempo |
-| 035 | movio | tiempo |
+| 034 | movio | tiempo |
+| 035 | movio | areas, tiempo |
 | 036 | movio | tiempo |
-| 037 | movio | areas, tiempo |
-| 038 | movio | nodos, ramas, puntero, areas, tiempo |
-| 039 | movio | tiempo |
+| 037 | movio | tiempo |
+| 038 | movio | areas, tiempo |
+| 039 | movio | nodos, ramas, puntero, areas, tiempo |
 | 040 | movio | tiempo |
 | 041 | movio | tiempo |
-| 042 | movio | tiempo |
+| 042 | movio | ramas, areas, tiempo |
 | 043 | movio | tiempo |
-| 044 | movio | — |
-| 045 | movio | ramas, areas, tiempo |
-| 046 | movio | tiempo |
-| 047 | movio | ramas, areas, tiempo |
-| 048 | movio | tiempo |
-| 049 | movio | ramas, areas, tiempo |
-| 050 | movio | tiempo |
-| 051 | movio | ramas, puntero, areas, tiempo |
-| 052 | movio | tiempo |
+| 044 | movio | tiempo |
+| 045 | movio | — |
+| 046 | movio | ramas, areas, tiempo |
+| 047 | movio | tiempo |
+| 048 | movio | ramas, areas, tiempo |
+| 049 | movio | tiempo |
+| 050 | movio | ramas, areas, tiempo |
+| 051 | movio | tiempo |
+| 052 | movio | ramas, puntero, areas, tiempo |
 | 053 | movio | tiempo |
 | 054 | movio | tiempo |
-| 055 | movio | tiempo |
-| 056 | movio | — |
+| 055 | movio | ramas, puntero, areas, tiempo |
+| 056 | movio | tiempo |
 | 057 | movio | tiempo |
-| 058 | movio | areas, tiempo |
+| 058 | movio | — |
 | 059 | movio | tiempo |
-| 060 | movio | tiempo |
-| 061 | movio | areas, tiempo |
-| 062 | movio | nodos, ramas, puntero, areas, tiempo |
-| 063 | movio | tiempo |
-| 064 | movio | tiempo |
+| 060 | movio | areas, tiempo |
+| 061 | movio | tiempo |
+| 062 | movio | tiempo |
+| 063 | movio | areas, tiempo |
+| 064 | movio | nodos, ramas, puntero, areas, tiempo |
 | 065 | movio | tiempo |
 | 066 | movio | tiempo |
-| 067 | movio | tiempo |
+| 067 | movio | nodos, ramas, puntero, areas, tiempo |
 | 068 | movio | tiempo |
 | 069 | movio | nodos, ramas, puntero, areas, tiempo |
 | 070 | movio | tiempo |
-| 071 | movio | areas, tiempo |
-| 072 | movio | tiempo |
-| 073 | movio | nodos, ramas, puntero, tiempo |
-| 074 | movio | nodos, ramas, puntero, areas, tiempo |
-| 075 | movio | nodos, ramas, puntero, areas, tiempo |
-| 076 | movio | ramas, puntero, areas, tiempo |
-| 077 | movio | tiempo |
-| 078 | movio | ramas, puntero, areas, tiempo |
-| 079 | movio | tiempo |
+| 071 | movio | tiempo |
+| 072 | movio | nodos, ramas, puntero, areas, tiempo |
+| 073 | movio | tiempo |
+| 074 | movio | areas, tiempo |
+| 075 | movio | tiempo |
+| 076 | movio | nodos, ramas, puntero, tiempo |
+| 077 | movio | nodos, ramas, puntero, areas, tiempo |
+| 078 | movio | nodos, ramas, puntero, areas, tiempo |
+| 079 | movio | nodos, ramas, puntero, areas, tiempo |
 | 080 | movio | tiempo |
-| 081 | movio | — |
+| 081 | movio | ramas, puntero, areas, tiempo |
 | 082 | movio | tiempo |
+| 083 | movio | tiempo |
+| 084 | movio | — |
+| 085 | movio | tiempo |
 
 Ningun paso quedo sin pintar: todo lo que se movio se ve en la imagen.

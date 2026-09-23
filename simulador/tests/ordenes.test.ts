@@ -1298,3 +1298,60 @@ describe('SPEC 015', () => {
     );
   });
 });
+
+/**
+ * Lo que aparecio cuando el recorrido dejo de saltarse las ordenes con
+ * marcador de identificador. Textos copiados de una corrida de Git 2.54.
+ */
+describe('las salidas que el guion necesita para copiar un identificador', () => {
+  const desconectadoConSuelta = (): EstadoRepositorio =>
+    ejecutarSecuencia(escenarioPorId('lab-02'), [
+      'git stash',
+      'git switch --detach HEAD~1',
+      'echo x > x.md',
+      'git add x.md',
+      'git commit -m "se agrega la humita"',
+    ]);
+
+  it('al dejar una confirmacion suelta, Git avisa y da el identificador para rescatarla', () => {
+    // El laboratorio 04 hace copiarlo de ahi en su punto 3.5. Sin el aviso,
+    // en el simulador no habia de donde.
+    const estado = desconectadoConSuelta();
+    const suelta = idActual(estado) ?? '';
+    expect(texto(ejecutar(estado, 'git switch main'))).toBe(
+      [
+        'Warning: you are leaving 1 commit behind, not connected to',
+        'any of your branches:',
+        '',
+        `  ${suelta} se agrega la humita`,
+        '',
+        'If you want to keep it by creating a new branch, this may be a good time',
+        'to do so with:',
+        '',
+        ` git branch <new-branch-name> ${suelta}`,
+        '',
+        "Switched to branch 'main'",
+      ].join('\n'),
+    );
+  });
+
+  it('sin nada suelto, solo dice donde estaba', () => {
+    const estado = ejecutarSecuencia(escenarioPorId('lab-02'), ['git switch --detach HEAD~1']);
+    const antes = idActual(estado) ?? '';
+    expect(texto(ejecutar(estado, 'git switch main'))).toBe(
+      `Previous HEAD position was ${antes} se suma la lista de cocineros\nSwitched to branch 'main'`,
+    );
+  });
+
+  it('revertir una reversion la reaplica, y el mensaje lo dice', () => {
+    const estado = ejecutarSecuencia(escenarioPorId('lab-06'), ['git revert --no-edit HEAD']);
+    const original = estado.confirmaciones.at(-2)?.mensaje ?? '';
+    expect(estado.confirmaciones.at(-1)?.mensaje).toBe(`Revert "${original}"`);
+    const otra = ejecutar(estado, 'git revert --no-edit HEAD').estado;
+    expect(otra.confirmaciones.at(-1)?.mensaje).toBe(`Reapply "${original}"`);
+    // Revertir la reaplicacion vuelve a ser un Revert comun, como en Git.
+    expect(ejecutar(otra, 'git revert --no-edit HEAD').estado.confirmaciones.at(-1)?.mensaje).toBe(
+      `Revert "Reapply "${original}""`,
+    );
+  });
+});
