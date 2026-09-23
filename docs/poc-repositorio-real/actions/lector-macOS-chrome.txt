@@ -1,44 +1,44 @@
 
 [1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90m/Users/runner/work/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador[39m
 
- [32m✓[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 18769[2mms[22m[39m
- [32m✓[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 18907[2mms[22m[39m
+ [32m✓[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 13059[2mms[22m[39m
    [32m✓[39m laboratorio 02 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2099[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1547[2mms[22m[39m
    [32m✓[39m laboratorio 03 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 4254[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1841[2mms[22m[39m
    [32m✓[39m laboratorio 04 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 3555[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2414[2mms[22m[39m
    [32m✓[39m laboratorio 05 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2562[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1954[2mms[22m[39m
    [32m✓[39m laboratorio 06 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1848[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1720[2mms[22m[39m
    [32m✓[39m laboratorio 07 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2634[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2125[2mms[22m[39m
    [32m✓[39m laboratorio 08 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1859[2mms[22m[39m
- [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 185[2mms[22m[39m
- [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 19433[2mms[22m[39m
- [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 178[2mms[22m[39m
- [32m✓[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 19885[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1389[2mms[22m[39m
+ [32m✓[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 13483[2mms[22m[39m
+ [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 239[2mms[22m[39m
+ [32m✓[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 13827[2mms[22m[39m
    [32m✓[39m laboratorio 02 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2168[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1586[2mms[22m[39m
    [32m✓[39m laboratorio 03 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 4651[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1989[2mms[22m[39m
    [32m✓[39m laboratorio 04 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 3478[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2641[2mms[22m[39m
    [32m✓[39m laboratorio 05 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2729[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2033[2mms[22m[39m
    [32m✓[39m laboratorio 06 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2058[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1743[2mms[22m[39m
    [32m✓[39m laboratorio 07 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2831[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2079[2mms[22m[39m
    [32m✓[39m laboratorio 08 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1909[2mms[22m[39m
- [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 10951[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1679[2mms[22m[39m
+ [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 186[2mms[22m[39m
+ [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 14067[2mms[22m[39m
+ [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 9211[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
 [2m      Tests [22m [1m[32m97 passed[39m[22m[90m (97)[39m
-[2m   Start at [22m 19:21:56
-[2m   Duration [22m 30.35s[2m (tests 99%, transform 1%)[22m
+[2m   Start at [22m 19:40:20
+[2m   Duration [22m 23.01s[2m (tests 99%, transform 1%)[22m
 
