@@ -31,7 +31,7 @@ import { pathToFileURL } from 'node:url';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ordenPara } from '../../cypress/soporte/ordenes';
-import { CLON, correr, guion, LABORATORIOS, preparar } from '../real/laboratorio';
+import { AVISOS_DE_PREPARAR, CLON, correr, guion, LABORATORIOS, preparar } from '../real/laboratorio';
 import { lineas, porcelana } from '../real/repos';
 
 const CANAL = process.env.CANAL ?? 'chrome';
@@ -273,6 +273,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   anotar('```');
+  anotar('');
+  for (const aviso of AVISOS_DE_PREPARAR) anotar(`- preparar.sh fallo con el repositorio armado: ${aviso}`);
   anotar('');
   anotar(fallas.length === 0 ? 'RESULTADO: todo igual' : `RESULTADO: ${fallas.length} diferencia(s)`);
   await navegador?.close();

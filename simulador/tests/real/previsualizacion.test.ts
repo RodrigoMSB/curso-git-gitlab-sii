@@ -23,7 +23,7 @@ import type { EstadoRepositorio } from '../../src/core/tipos';
 import { ALIAS_DEL_TALLER } from '../../src/escenarios';
 import { LectorReal } from '../../src/real/lector';
 import { adaptadorDeDisco } from './disco';
-import { CLON, correr, guion, LABORATORIOS, preparar } from './laboratorio';
+import { AVISOS_DE_PREPARAR, CLON, correr, guion, LABORATORIOS, preparar } from './laboratorio';
 import { porcelana } from './repos';
 
 const GLOBAL = {
@@ -111,6 +111,7 @@ afterAll(() => {
       '|---|---|---|---|---|---|---|',
       ...filas.sort(),
       '',
+      ...(AVISOS_DE_PREPARAR.length === 0 ? [] : ['preparar.sh fallo con el repositorio armado:', '', ...AVISOS_DE_PREPARAR.map((a) => `- ${a}`), '']),
       '## Diferencias conocidas',
       '',
       ...Object.entries(CONOCIDAS).map(([clave, motivo]) => `- ${clave}: ${motivo}.`),

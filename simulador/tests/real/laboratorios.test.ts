@@ -20,7 +20,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { ordenPara } from '../../cypress/soporte/ordenes';
 import { LectorReal } from '../../src/real/lector';
 import { adaptadorDeDisco } from './disco';
-import { CLON, correr, entorno, guion, LABORATORIOS, preparar } from './laboratorio';
+import { AVISOS_DE_PREPARAR, CLON, correr, entorno, guion, LABORATORIOS, preparar } from './laboratorio';
 import { comoPorcelana, lineas, porcelana } from './repos';
 
 const montados: string[] = [];
@@ -50,6 +50,7 @@ afterAll(() => {
       '|---|---|---|---|---|---|',
       ...informe.sort(),
       '',
+      ...(AVISOS_DE_PREPARAR.length === 0 ? [] : ['preparar.sh fallo con el repositorio armado:', '', ...AVISOS_DE_PREPARAR.map((a) => `- ${a}`), '']),
       ...(notas.length === 0 ? [] : ['Ordenes que no se ejecutaron:', '', ...notas, '']),
     ].join('\n'),
   );

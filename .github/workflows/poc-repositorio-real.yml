@@ -46,6 +46,17 @@ jobs:
       - run: npm ci
       - name: Versiones
         run: git --version && node --version
+      - name: Rutas de bash contra rutas de Git (diagnostico para verificar.sh)
+        run: |
+          d=$(mktemp -d) && git init -q "$d" && cd "$d"
+          echo "pwd -P:                    $(pwd -P)"
+          echo "git rev-parse --show-toplevel: $(git rev-parse --show-toplevel)"
+          [ "$(pwd -P)" = "$(git rev-parse --show-toplevel)" ] && echo "IGUALES" || echo "DISTINTAS"
+      - name: preparar.sh del laboratorio 02 tal como lo corre el participante
+        continue-on-error: true
+        run: |
+          d=$(mktemp -d) && mkdir -p "$d/curso-git-gitlab-sii/labs" && cp -r ../labs/lab-02 "$d/curso-git-gitlab-sii/labs/" && cp -r ../semillas "$d/curso-git-gitlab-sii/" 2>/dev/null || true
+          cd "$d/curso-git-gitlab-sii/labs/lab-02" && git config --global user.name P && git config --global user.email p@sii.cl && bash ./preparar.sh --forzar
       - name: Sin los resultados de corridas anteriores
         run: rm -f ../docs/poc-repositorio-real/navegador-*.md ../docs/poc-repositorio-real/lector-*.txt
       - name: SIMULADOR.html es el que corresponde al codigo

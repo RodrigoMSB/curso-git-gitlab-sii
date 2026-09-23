@@ -21,6 +21,9 @@ export function entorno(configGlobal: string): NodeJS.ProcessEnv {
   return { ...process.env, GIT_CONFIG_GLOBAL: configGlobal, GIT_CONFIG_SYSTEM: '/dev/null' };
 }
 
+/** Lo que preparar.sh dijo al fallar con el repositorio igual armado: va a los informes. */
+export const AVISOS_DE_PREPARAR: string[] = [];
+
 export interface LaboratorioPreparado {
   readonly raiz: string;
   readonly recetario: string;
@@ -42,10 +45,18 @@ export function preparar(numero: string): LaboratorioPreparado {
     execFileSync('git', ['config', '--global', clave, valor], { env: entorno(configGlobal), stdio: 'ignore' });
   }
   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { cwd: carpeta, env: entorno(configGlobal), encoding: 'utf8' });
+  const recetario = join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario');
   if (corrida.status !== 0) {
-    throw new Error(`preparar.sh del laboratorio ${numero} fallo (${corrida.status}):\n${corrida.stdout}\n${corrida.stderr}`);
+    // En Windows, la verificacion final de preparar.sh falla aunque el
+    // repositorio quede armado: compara la ruta de bash con la de Git (ver el
+    // informe del SPEC 020). Si el repositorio esta, el recorrido sigue y lo
+    // anota; si no esta, no hay nada que recorrer.
+    const armado = spawnSync('git', ['-C', recetario, 'rev-parse', '--git-dir']).status === 0;
+    const detalle = `${corrida.stdout}\n${corrida.stderr}`.split('\n').filter((l) => /✗|esperaba|encontro/.test(l)).join(' / ');
+    if (!armado) throw new Error(`preparar.sh del laboratorio ${numero} fallo (${corrida.status}):\n${corrida.stdout}\n${corrida.stderr}`);
+    AVISOS_DE_PREPARAR.push(`laboratorio ${numero}: preparar.sh termino con ${corrida.status}, con el repositorio armado — ${detalle.slice(0, 300)}`);
   }
-  return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'), configGlobal };
+  return { raiz, recetario, configGlobal };
 }
 
 /**
