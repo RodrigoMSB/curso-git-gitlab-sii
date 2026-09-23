@@ -18,11 +18,9 @@
 set -u
 
 LABORATORIO='lab-01'
-# `pwd -P` y no `pwd`: hace falta la ruta fisica, con los enlaces
-# simbolicos ya resueltos, porque contra ella se compara mas abajo lo que
-# responde `git rev-parse --show-toplevel`, que siempre viene resuelto. En
-# macOS, sin esto, cualquier laboratorio bajo /tmp o /var quedaba comparando
-# /var/... contra /private/var/... y no aprobaba nunca.
+# `pwd -P`, la ruta fisica con los enlaces simbolicos resueltos. Ya no se
+# compara contra lo que dice Git (SPEC 021), pero es la que se usa para
+# ubicar el trabajo del participante.
 RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 # Este script vive en <clon>/labs/lab-01, asi que el clon esta dos niveles mas
 # arriba y el trabajo del participante es hermano del clon, no parte de el.
@@ -59,7 +57,7 @@ echo
 # El repositorio tiene que ser el de la carpeta recetario y no otro. Preguntar
 # solo si Git responde ahi no sirve: recetario vive dentro del repositorio del
 # curso, y Git, cuando no encuentra un .git propio, sigue subiendo hasta dar
-# con el de mas arriba. Sin esta comparacion, olvidar el `git init` pasaba
+# con el de mas arriba. Sin esta comprobacion, olvidar el `git init` pasaba
 # inadvertido y los demas criterios se median contra la historia del curso.
 HAY_REPOSITORIO=no
 if [ ! -d "$REPOSITORIO" ]; then
@@ -67,8 +65,13 @@ if [ ! -d "$REPOSITORIO" ]; then
     "un repositorio Git en $REPOSITORIO_DICHO" \
     'la carpeta recetario no existe'
 else
-  CIMA=$(git -C "$REPOSITORIO" rev-parse --show-toplevel 2>/dev/null) || CIMA=''
-  if [ "$CIMA" = "$REPOSITORIO" ]; then
+  # Se le pregunta todo a Git, sin comparar rutas: `--git-dir` responde `.git`
+  # solo si la carpeta es la raiz de su propio repositorio; dentro de otro,
+  # responde la ruta del .git de mas arriba. Comparar la cima con la ruta de
+  # Bash fallaba en Windows, donde Bash escribe /c/Users/... y Git
+  # C:/Users/... (SPEC 021).
+  PROPIO=$(git -C "$REPOSITORIO" rev-parse --git-dir 2>/dev/null) || PROPIO=''
+  if [ "$PROPIO" = '.git' ]; then
     HAY_REPOSITORIO=si
     aprobado "existe el repositorio en $REPOSITORIO_DICHO"
   else
