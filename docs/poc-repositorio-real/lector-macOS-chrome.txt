@@ -1,0 +1,100 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90m/Users/runner/work/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador[39m
+
+ [32m✓[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 14551[2mms[22m[39m
+ [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 145[2mms[22m[39m
+ [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 15454[2mms[22m[39m
+ [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 222[2mms[22m[39m
+ [32m✓[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 16017[2mms[22m[39m
+   [32m✓[39m laboratorio 02 [2m(1)[22m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1997[2mms[22m[39m
+   [32m✓[39m laboratorio 03 [2m(1)[22m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2322[2mms[22m[39m
+   [32m✓[39m laboratorio 04 [2m(1)[22m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2964[2mms[22m[39m
+   [32m✓[39m laboratorio 05 [2m(1)[22m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2415[2mms[22m[39m
+   [32m✓[39m laboratorio 06 [2m(1)[22m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2244[2mms[22m[39m
+   [32m✓[39m laboratorio 07 [2m(1)[22m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2250[2mms[22m[39m
+   [32m✓[39m laboratorio 08 [2m(1)[22m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1751[2mms[22m[39m
+ [31m❯[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 17098[2mms[22m[39m
+   [32m✓[39m laboratorio 02 [2m(1)[22m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1987[2mms[22m[39m
+   [32m✓[39m laboratorio 03 [2m(1)[22m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2596[2mms[22m[39m
+   [32m✓[39m laboratorio 04 [2m(1)[22m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 3325[2mms[22m[39m
+   [31m❯[39m laboratorio 05 [2m(1)[22m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 2498[2mms[22m[39m
+   [31m❯[39m laboratorio 06 [2m(1)[22m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 2081[2mms[22m[39m
+   [32m✓[39m laboratorio 07 [2m(1)[22m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2492[2mms[22m[39m
+   [32m✓[39m laboratorio 08 [2m(1)[22m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2054[2mms[22m[39m
+ [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 10553[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 05[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
+[31m[1mAssertionError[22m: expected [ Array(4) ] to deeply equal [][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   "05:295:grafo",[39m
+[31m+   "05:295:areas",[39m
+[31m+   "05:371:grafo",[39m
+[31m+   "05:371:areas",[39m
+[31m+ ][39m
+
+[36m [2m❯[22m tests/real/previsualizacion.test.ts:[2m187:84[22m[39m
+    [90m185|[39m     );
+    [90m186|[39m     expect(cuenta.grafoIgual + cuenta.grafoDistinto + cuenta.noLaSabe)…
+    [90m187|[39m     expect([...new Set(nuevas)].filter((clave) => CONOCIDAS[clave] ===…
+    [90m   |[39m                                                                                    [31m^[39m
+    [90m188|[39m   }, 300_000);
+    [90m189|[39m });
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 06[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
+[31m[1mAssertionError[22m: expected [ '06:79:grafo', '06:79:areas', …(3) ] to deeply equal [][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   "06:79:grafo",[39m
+[31m+   "06:79:areas",[39m
+[31m+   "06:91:areas",[39m
+[31m+   "06:104:grafo",[39m
+[31m+   "06:104:areas",[39m
+[31m+ ][39m
+
+[36m [2m❯[22m tests/real/previsualizacion.test.ts:[2m187:84[22m[39m
+    [90m185|[39m     );
+    [90m186|[39m     expect(cuenta.grafoIgual + cuenta.grafoDistinto + cuenta.noLaSabe)…
+    [90m187|[39m     expect([...new Set(nuevas)].filter((clave) => CONOCIDAS[clave] ===…
+    [90m   |[39m                                                                                    [31m^[39m
+    [90m188|[39m   }, 300_000);
+    [90m189|[39m });
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m95 passed[39m[22m[90m (97)[39m
+[2m   Start at [22m 18:45:13
+[2m   Duration [22m 25.80s[2m (tests 99%, transform 1%)[22m
+
+
+::error file=/Users/runner/work/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/previsualizacion.test.ts,title=tests/real/previsualizacion.test.ts > laboratorio 05 > la previsualizacion de cada orden del guion contra lo que Git hace,line=187,column=84::AssertionError: expected [ Array(4) ] to deeply equal []%0A%0A- Expected%0A+ Received%0A%0A- []%0A+ [%0A+   "05:295:grafo",%0A+   "05:295:areas",%0A+   "05:371:grafo",%0A+   "05:371:areas",%0A+ ]%0A%0A ❯ tests/real/previsualizacion.test.ts:187:84%0A%0A
+
+::error file=/Users/runner/work/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/previsualizacion.test.ts,title=tests/real/previsualizacion.test.ts > laboratorio 06 > la previsualizacion de cada orden del guion contra lo que Git hace,line=187,column=84::AssertionError: expected [ '06:79:grafo', '06:79:areas', …(3) ] to deeply equal []%0A%0A- Expected%0A+ Received%0A%0A- []%0A+ [%0A+   "06:79:grafo",%0A+   "06:79:areas",%0A+   "06:91:areas",%0A+   "06:104:grafo",%0A+   "06:104:areas",%0A+ ]%0A%0A ❯ tests/real/previsualizacion.test.ts:187:84%0A%0A
