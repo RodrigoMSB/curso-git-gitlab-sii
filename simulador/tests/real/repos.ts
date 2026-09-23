@@ -26,12 +26,35 @@ export function armarRepos(): { raiz: string; ruta: (nombre: string) => string }
 }
 
 /** El estado corto de Git, una linea por cambio, con el origen de los renombrados. */
-export function porcelana(dir: string, configGlobal = '/dev/null'): string[] {
+/**
+ * El `core.autocrlf` que rige en esta maquina fuera de los repositorios. En
+ * Windows, Git lo deja en `true`; el lector no puede leerlo y lo supone, y las
+ * pruebas se lo pasan tal cual para comparar contra el mismo Git.
+ */
+export function autocrlfDeLaMaquina(): 'true' | 'input' | 'false' {
+  try {
+    const valor = execFileSync('git', ['config', '--get', 'core.autocrlf']).toString().trim().toLowerCase();
+    return valor === 'input' ? 'input' : ['true', 'yes', 'on', '1'].includes(valor) ? 'true' : 'false';
+  } catch {
+    return 'false';
+  }
+}
+
+/**
+ * El estado corto de Git. Sin `configGlobal` corre con la configuracion de la
+ * maquina, que es con la que el participante ve su repositorio; con uno, con
+ * esa, como en los laboratorios.
+ */
+export function porcelana(dir: string, configGlobal: string | null = null): string[] {
   const salida = execFileSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=normal'], {
     cwd: dir,
     // Sin el candado opcional, `git status` no reescribe el indice al
     // refrescarlo: mirar no tiene que cambiar lo que se esta mirando.
-    env: { ...process.env, GIT_CONFIG_GLOBAL: configGlobal, GIT_CONFIG_SYSTEM: '/dev/null', GIT_OPTIONAL_LOCKS: '0' },
+    env: {
+      ...process.env,
+      ...(configGlobal === null ? {} : { GIT_CONFIG_GLOBAL: configGlobal, GIT_CONFIG_SYSTEM: '/dev/null' }),
+      GIT_OPTIONAL_LOCKS: '0',
+    },
   }).toString();
   const partes = salida.split('\0');
   const lineas: string[] = [];

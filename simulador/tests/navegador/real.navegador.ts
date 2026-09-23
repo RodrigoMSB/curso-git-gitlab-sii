@@ -199,7 +199,7 @@ async function loQueMuestra(pagina: Page): Promise<Vista> {
 
 function loQueDiceGit(dir: string): Vista {
   const g = (...args: string[]): string =>
-    execFileSync('git', args, { cwd: dir, env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_OPTIONAL_LOCKS: '0' } }).toString();
+    execFileSync('git', args, { cwd: dir, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } }).toString();
   const corto = (sha: string): string => sha.slice(0, 7);
   const refs = (carpeta: string): string[] =>
     lineas(g('for-each-ref', '--format=%(refname:strip=2) %(objectname) %(symref)', `refs/${carpeta}`))

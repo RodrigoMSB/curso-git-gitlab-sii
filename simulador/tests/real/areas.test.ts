@@ -14,7 +14,7 @@ import type { Adaptador } from '../../src/real/adaptador';
 import { leerIndice } from '../../src/real/indice';
 import { type Lectura, LectorReal } from '../../src/real/lector';
 import { adaptadorDeDisco } from './disco';
-import { armarRepos, comoPorcelana, DE_LA_SONDA, DE_LAS_AREAS, DE_LOS_BORDES, porcelana } from './repos';
+import { armarRepos, autocrlfDeLaMaquina, comoPorcelana, DE_LA_SONDA, DE_LAS_AREAS, DE_LOS_BORDES, porcelana } from './repos';
 
 let repos: ReturnType<typeof armarRepos>;
 beforeAll(() => {
@@ -27,7 +27,7 @@ function ruta(nombre: string): string {
 }
 
 async function leer(dir: string): Promise<Lectura> {
-  return new LectorReal(adaptadorDeDisco(dir), { autocrlfPorDefecto: 'false' }).leer();
+  return new LectorReal(adaptadorDeDisco(dir), { autocrlfPorDefecto: autocrlfDeLaMaquina() }).leer();
 }
 
 describe('las areas de cada repositorio, como las ve git status', () => {

@@ -41,7 +41,10 @@ export function preparar(numero: string): LaboratorioPreparado {
   for (const [clave, valor] of configuracionDelTaller(enunciado('01'))) {
     execFileSync('git', ['config', '--global', clave, valor], { env: entorno(configGlobal), stdio: 'ignore' });
   }
-  execFileSync('bash', ['./preparar.sh', '--forzar'], { cwd: carpeta, env: entorno(configGlobal), stdio: 'ignore' });
+  const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { cwd: carpeta, env: entorno(configGlobal), encoding: 'utf8' });
+  if (corrida.status !== 0) {
+    throw new Error(`preparar.sh del laboratorio ${numero} fallo (${corrida.status}):\n${corrida.stdout}\n${corrida.stderr}`);
+  }
   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'), configGlobal };
 }
 
