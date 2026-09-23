@@ -108,5 +108,6 @@ iniciar partido; echo a > "$R/partido/a"; en partido add a; en partido commit -q
 iniciar disperso; mkdir -p "$R/disperso/dentro" "$R/disperso/fuera"; echo a > "$R/disperso/dentro/a"; echo b > "$R/disperso/fuera/b"
 en disperso add -A; en disperso commit -qm uno; en disperso sparse-checkout set --cone --sparse-index dentro
 git init -q -b main --object-format=sha256 "$R/sha256"; echo a > "$R/sha256/a"; en sha256 add a; en sha256 commit -qm uno
-git init -q -b main --ref-format=reftable "$R/reftable"; echo a > "$R/reftable/a"; en reftable add a; en reftable commit -qm uno
+# Git anterior a 2.45 no sabe crear reftable: entonces ese caso no se arma.
+if git init -q -b main --ref-format=reftable "$R/reftable" 2>/dev/null; then echo a > "$R/reftable/a"; en reftable add a; en reftable commit -qm uno; fi
 en completo worktree add -q "$R/enlazado" -b enlazada

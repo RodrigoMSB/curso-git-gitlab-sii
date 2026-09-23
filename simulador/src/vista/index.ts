@@ -37,3 +37,17 @@ export type {
   TonoElemento,
 } from './pantalla';
 export { construirPantalla, ESCALA_RELATOR, FILAS_VISIBLES, TEXTO_MINIMO } from './pantalla';
+
+export type { AvisosReales, ResultadoLectura, SesionReal } from './real';
+export {
+  actualizarSesionReal,
+  anotarOrdenReal,
+  avisosReales,
+  completarEnReal,
+  Conexion,
+  conectarRepositorio,
+  construirPantallaReal,
+  iniciarSesionReal,
+  navegadorPuedeConectar,
+  seleccionarEnReal,
+} from './real';

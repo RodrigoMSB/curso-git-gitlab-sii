@@ -1,0 +1,83 @@
+# SPEC 020 · Prueba de concepto: el simulador conectado al repositorio real.
+#
+# Corre en los tres navegadores que importan para el SII: Edge y Chrome en
+# Windows, y Chrome en Mac. Usa el navegador que ya trae la maquina, sin
+# descargar otro, y deja los resultados confirmados en la rama.
+name: poc-repositorio-real
+on:
+  push:
+    branches: [poc/repositorio-real]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probar:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            canal: msedge
+          - os: windows-latest
+            canal: chrome
+          - os: macos-latest
+            canal: chrome
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: simulador
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Versiones
+        run: git --version && node --version
+      - name: SIMULADOR.html es el que corresponde al codigo
+        run: npm run comprobar
+      - name: El lector contra Git en esta maquina (CA1, CA2, CA4, CA6, CA7)
+        continue-on-error: true
+        run: npx vitest run tests/real 2>&1 | tee "../docs/poc-repositorio-real/lector-${{ runner.os }}-${{ matrix.canal }}.txt"; exit ${PIPESTATUS[0]}
+      - name: La pagina en el navegador (CA1, CA2, CA3, CA5)
+        env:
+          CANAL: ${{ matrix.canal }}
+        run: npx vitest run -c vitest.navegador.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resultado-${{ matrix.os }}-${{ matrix.canal }}
+          path: docs/poc-repositorio-real/*-*.*
+  publicar:
+    needs: probar
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: resultados
+          merge-multiple: true
+      - name: Deja los resultados en la rama
+        run: |
+          cp resultados/navegador-*.md resultados/lector-*.txt docs/poc-repositorio-real/ 2>/dev/null || true
+          {
+            echo "# Resultados en GitHub Actions"
+            echo
+            echo "Ejecucion: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            echo "Confirmacion probada: ${{ github.sha }}"
+            echo
+            for f in docs/poc-repositorio-real/navegador-win32-*.md docs/poc-repositorio-real/navegador-darwin-*.md; do
+              [ -f "$f" ] && echo "- $(basename "$f"): $(tail -1 "$f")"
+            done
+            for f in docs/poc-repositorio-real/lector-*.txt; do
+              [ -f "$f" ] && echo "- $(basename "$f"): $(grep -E 'Tests ' "$f" | tail -1 | tr -s ' ')"
+            done
+          } > docs/poc-repositorio-real/actions.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/poc-repositorio-real
+          git commit -m "Resultados de la ejecucion ${{ github.run_id }} [skip ci]" || true
+          git push

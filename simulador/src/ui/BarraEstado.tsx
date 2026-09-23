@@ -23,6 +23,11 @@ interface Props {
   readonly onModoRelator: () => void;
   readonly onTemaClaro: () => void;
   readonly onReiniciar: () => void;
+  /** La pantalla esta mirando el repositorio real del alumno (SPEC 020). */
+  readonly conectado: boolean;
+  /** Una linea cuando no se pudo conectar, por ejemplo porque el navegador no deja. */
+  readonly avisoConexion: string | null;
+  readonly onConectar: () => void;
 }
 
 /**
@@ -75,6 +80,9 @@ export function BarraEstado({
   onModoRelator,
   onTemaClaro,
   onReiniciar,
+  conectado,
+  avisoConexion,
+  onConectar,
 }: Props): React.ReactElement {
   const colorRama = barra.desconectado ? 'var(--puntero)' : 'var(--rama-principal)';
   return (
@@ -117,6 +125,23 @@ export function BarraEstado({
           </select>
         </label>
 
+        <button
+          type="button"
+          onClick={onConectar}
+          data-prueba="conectar-repositorio"
+          aria-pressed={conectado}
+          className="interruptor t-pequeno"
+          title="Abre la carpeta de tu repositorio en modo lectura. La página nunca escribe en ella."
+        >
+          <i className="luz" aria-hidden="true" />
+          {conectado ? 'otra carpeta' : 'conectar a mi repositorio'}
+        </button>
+        {avisoConexion !== null && (
+          <p className="t-pequeno text-[var(--consola-amarillo)]" data-prueba="aviso-conexion" role="status">
+            {avisoConexion}
+          </p>
+        )}
+
         <div className="grupo-interruptores">
           <Interruptor
             etiqueta="previsualización"
@@ -126,13 +151,16 @@ export function BarraEstado({
           <Interruptor etiqueta="modo relator" activo={modoRelator} onCambiar={onModoRelator} />
         </div>
 
-        <button
-          type="button"
-          onClick={onReiniciar}
-          className="t-pequeno rounded-lg border border-[var(--borde)] bg-[var(--fondo)] px-3 py-2 text-[var(--texto-apagado)] hover:text-[var(--texto)]"
-        >
-          reiniciar escenario
-        </button>
+        {/* Con el repositorio real no hay escenario que reiniciar. */}
+        {!conectado && (
+          <button
+            type="button"
+            onClick={onReiniciar}
+            className="t-pequeno rounded-lg border border-[var(--borde)] bg-[var(--fondo)] px-3 py-2 text-[var(--texto-apagado)] hover:text-[var(--texto)]"
+          >
+            reiniciar escenario
+          </button>
+        )}
 
         <p className="t-min text-[var(--texto-tenue)]">Funciona en este equipo, sin red. Nada sale de aquí.</p>
       </div>

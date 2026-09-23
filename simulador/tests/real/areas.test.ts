@@ -7,7 +7,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Adaptador } from '../../src/real/adaptador';
@@ -107,8 +107,11 @@ describe('lo que no se sabe dibujar se dice, no se dibuja a medias (2.9)', () =>
     enlazado: /enlazado/,
   };
   for (const [nombre, motivo] of Object.entries(casos)) {
-    it(nombre, async () => {
-      const lectura = await leer(join(repos.raiz, 'bordes', nombre));
+    it(nombre, async (contexto) => {
+      const dir = join(repos.raiz, 'bordes', nombre);
+      // Un Git anterior a 2.45 no arma el caso de reftable: queda saltado, a la vista.
+      if (!existsSync(dir)) contexto.skip();
+      const lectura = await leer(dir);
       expect(lectura.tipo === 'no-soportado' ? lectura.motivo : 'se leyo').toMatch(motivo);
     });
   }

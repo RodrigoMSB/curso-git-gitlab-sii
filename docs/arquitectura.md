@@ -4729,3 +4729,108 @@ Por el punto 3.1, todo en `git status`, que no es `git revert`:
 | Cobertura de los recorridos | igual: 71, 97, 95, 98 y 94 %; el guion no pasa por los casos nuevos |
 | Artefacto | 331 434 bytes, 4 747 más |
 
+
+## 66. El simulador mirando el repositorio real (prueba de concepto)
+
+SPEC 020. Todo vive en la rama `poc/repositorio-real`; `main` no se tocó. Los
+escenarios siguen igual: el repositorio real es un modo aparte que se abre con
+el botón «conectar a mi repositorio», junto al selector de escenario.
+
+### 66.1 · Las piezas
+
+| Capa | Archivo | Qué hace |
+|---|---|---|
+| lector | `src/real/zlib.ts`, `sha1.ts` | descompresión y huellas, sin dependencias |
+| lector | `src/real/almacen.ts` | objetos sueltos y empaquetados, deltas por posición y por referencia |
+| lector | `src/real/objetosGit.ts` | confirmaciones (con su codificación), etiquetas anotadas, árboles |
+| lector | `src/real/referencias.ts`, `historia.ts` | HEAD, ramas, etiquetas, remotas, guardado, registro; lo alcanzable y lo huérfano |
+| lector | `src/real/config.ts`, `indice.ts` | `.git/config` y `.git/index` versiones 2 a 4 |
+| lector | `src/real/ignorar.ts`, `finales.ts`, `trabajo.ts` | las tres áreas como `git status`, con exclusiones y finales de línea |
+| lector | `src/real/lector.ts` | junta todo y dice qué no sabe leer (2.9) |
+| puente | `src/real/puente.ts` | del repositorio leído al `EstadoRepositorio` del motor |
+| navegador | `src/real/navegador.ts`, `vigilancia.ts` | la carpeta en modo lectura, y la marca que decide si releer |
+| vista | `src/vista/real.ts` | la sesión real: pantalla, consola que solo previsualiza, avisos |
+| interfaz | `Aplicacion.tsx`, `BarraEstado.tsx`, `AvisosDelRepositorio.tsx` | el botón, el sondeo cada 0,5 s, la franja de avisos |
+
+La regla de capas se mantiene: la interfaz solo habla con `src/vista`.
+
+### 66.2 · El núcleo de la sonda, revisado como código ajeno (1.5)
+
+Cada objeto de cada repositorio de prueba se compara byte a byte con
+`git cat-file --batch-all-objects`. Lo que apareció:
+
+**Defectos confirmados, con repositorio que los reproduce:**
+
+1. **La cabecera `encoding` se ignoraba.** Un mensaje en ISO-8859-1 salía con
+   caracteres rotos donde Git muestra `ñandú`.
+2. **Un ciclo de referencias simbólicas colgaba la página para siempre.** Es un
+   bucle de microtareas: ni un temporizador lo corta. Git corta a los cinco
+   saltos y da la referencia por rota; aquí igual. Git sigue cuatro saltos y
+   rechaza el quinto: la primera versión del arreglo aceptaba cinco, y lo
+   mostró una cadena `s1`…`s7` comparada con `git for-each-ref`.
+3. **Un `main.lock` aparecía como rama.** Ningún nombre de referencia termina
+   en `.lock`.
+4. **Un clon superficial fallaba** con «no encuentro el objeto»: buscaba los
+   padres del borde, que no están. Ahora se lee `.git/shallow`.
+
+**Verificado correcto:** desplazamientos de 64 bits, deltas por posición y por
+referencia, cadenas largas, objetos grandes con bloques sin comprimir.
+
+**Endurecido:** la descompresión no acotaba nada ante datos corruptos; el
+delta no comprobaba el largo de su base; cada objeto de una cadena volvía a
+descomprimir la cadena entera; los paquetes se volvían a listar en cada fallo.
+
+**Una corrección a lo que informé antes:** dije que las pruebas cubrían
+cadenas de «hasta trescientos deltas». Era falso: en ese repositorio las
+cadenas no pasaban de dos. El generador ahora cambia una línea distinta de un
+archivo de dos mil en cada versión y Git arma cadenas de hasta 89; la prueba
+de que cada objeto se resuelve una sola vez falla sin la memoria de bases.
+
+### 66.3 · Las áreas
+
+Son las dos comparaciones de `git status`: el árbol de HEAD contra el índice,
+y el índice contra el disco. Detalles que costaron:
+
+- **La fecha solo se cree si es anterior al índice.** Git lo mira en
+  nanosegundos; el navegador da milisegundos. Un archivo cambiado en el mismo
+  milisegundo en que se escribió el índice se veía limpio: pasó en la prueba
+  de finales de línea, y ahora ese milisegundo entero cuenta como dudoso.
+- **Finales de línea:** la conversión de `convert.c`, con sus salvedades (lo
+  binario no se toca, lo que ya tiene CRLF en el índice tampoco). Sin
+  `core.autocrlf` local, en Windows se supone `true`, que es lo que deja el
+  instalador: la configuración del sistema no está en la carpeta.
+- **Exclusiones:** la sintaxis entera de `gitignore`, con un `.gitignore` por
+  carpeta y `.git/info/exclude`. No se lee `core.excludesFile`, que vive fuera.
+- **`MM`:** un archivo preparado y después modificado sale en las dos
+  columnas. Por eso las áreas se arman del estado real y no del motor, cuyo
+  modelo le da un solo estado a cada archivo.
+
+### 66.4 · Lo que se tocó fuera de `src/real`
+
+- **El grafo** aprendió las ramas de seguimiento remoto (`origin/main`): una
+  opción nueva de `disponer`, vacía por omisión, y una forma de etiqueta
+  `remota`, punteada. Con los escenarios no cambia nada.
+- **`Referencias.guardados`** lleva el mensaje de cada entrada.
+- **`playwright-core`** como dependencia de desarrollo, para la prueba en el
+  navegador.
+
+### 66.5 · Cómo se prueba
+
+- `tests/real/*.test.ts`, dentro de `npm test`: el lector contra Git, las
+  áreas contra `git status`, los guiones de los laboratorios 02 a 08 en Git
+  con comparación después de cada orden, la previsualización contra lo que
+  Git hace, la vigilancia y la pantalla real.
+- `tests/navegador/real.navegador.ts`, aparte
+  (`npx vitest run -c vitest.navegador.config.ts`, con `CANAL`): la página
+  construida, en Chrome o Edge. La carpeta se entrega por programa, copiada a
+  la OPFS, porque el diálogo no se puede apretar (5.2). Por eso esa parte se
+  sirve por `http://localhost`; abierta como `file://` se comprueba aparte
+  que el navegador ofrezca elegir carpetas.
+- `.github/workflows/poc-repositorio-real.yml`: Windows con Edge, Windows con
+  Chrome y Mac con Chrome, y deja los resultados en la rama.
+
+Dos trampas que la prueba se ponía a sí misma, ya cerradas: `git status`
+reescribe el índice al refrescarlo, y esa escritura le avisaba a la página
+por otro camino (ahora se corre con `GIT_OPTIONAL_LOCKS=0`); y dos
+`git commit --amend` en el mismo segundo fabrican el mismo objeto, así que el
+recorrido adelanta el reloj del confirmador un minuto por orden.

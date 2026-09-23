@@ -8,8 +8,19 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
+  actualizarSesionReal,
+  anotarOrdenReal,
+  avisosReales,
   cambiarEscenario,
   completar,
+  completarEnReal,
+  type Conexion,
+  conectarRepositorio,
+  construirPantallaReal,
+  iniciarSesionReal,
+  navegadorPuedeConectar,
+  seleccionarEnReal,
+  type SesionReal,
   construirPantalla,
   ejecutarOrden,
   estadoDe,
@@ -22,6 +33,7 @@ import {
   type Sesion,
 } from '../vista';
 import { Areas, PanelesSecundarios } from './Areas';
+import { AvisosDelRepositorio } from './AvisosDelRepositorio';
 import { BarraEstado } from './BarraEstado';
 import { Consola } from './Consola';
 import { Grafo } from './Grafo';
@@ -45,6 +57,68 @@ export function Aplicacion(): React.ReactElement {
   useEffect(() => {
     document.documentElement.dataset.tema = temaClaro ? 'claro' : 'oscuro';
   }, [temaClaro]);
+
+  // El repositorio del alumno, cuando se conecto uno (SPEC 020). Mientras hay
+  // uno, la pantalla lo muestra a el y no al escenario.
+  const [real, setReal] = useState<SesionReal | null>(null);
+  const conexion = useRef<Conexion | null>(null);
+  const [avisoConexion, setAvisoConexion] = useState<string | null>(null);
+
+  // Cada medio segundo se mira si Git cambio algo; si cambio, se relee y la
+  // previsualizacion que estaba escrita se borra, porque ya paso (punto 2.8).
+  const conectado = real !== null;
+  useEffect(() => {
+    if (!conectado) return;
+    let vivo = true;
+    let ocupado = false;
+    let vueltas = 0;
+    const reloj = window.setInterval(() => {
+      const actual = conexion.current;
+      if (ocupado || actual === null) return;
+      ocupado = true;
+      actual
+        .revisar()
+        .then((lectura) => {
+          if (!vivo || lectura === null || conexion.current !== actual) return;
+          setReal((anterior) => (anterior === null ? anterior : actualizarSesionReal(anterior, lectura)));
+          setEntrada('');
+          setSugerencias([]);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          ocupado = false;
+          // Cuantas vueltas del sondeo terminaron: la prueba en el navegador
+          // lo usa para saber que la pagina ya miro despues de un cambio.
+          vueltas += 1;
+          document.documentElement.dataset.vueltas = String(vueltas);
+        });
+    }, 500);
+    return () => {
+      vivo = false;
+      window.clearInterval(reloj);
+    };
+  }, [conectado]);
+
+  const conectar = useCallback((): void => {
+    if (!navegadorPuedeConectar()) {
+      setAvisoConexion('Este navegador no deja abrir una carpeta: usa Chrome o Edge.');
+      return;
+    }
+    setAvisoConexion(null);
+    conectarRepositorio()
+      .then(async (nueva) => {
+        if (nueva === null) return;
+        const lectura = await nueva.leer();
+        conexion.current = nueva;
+        setReal(iniciarSesionReal(nueva.nombre, lectura));
+        setEntrada('');
+        setSugerencias([]);
+        setIndiceHistorial(0);
+      })
+      .catch((error: unknown) => {
+        setAvisoConexion(`No se pudo abrir la carpeta: ${error instanceof Error ? error.message : String(error)}`);
+      });
+  }, []);
 
   const movimientoReducido = useMovimientoReducido();
   const escala = modoRelator ? ESCALA_RELATOR : 1;
@@ -98,22 +172,28 @@ export function Aplicacion(): React.ReactElement {
   const altoGrafo = medidas === null ? null : medidas.alto / escala;
   const anchoGrafo = medidas === null ? null : medidas.ancho / escala;
 
-  const pantalla = useMemo(
-    () =>
-      construirPantalla(sesion, { previsualizacionActiva, entrada, modoRelator, altoGrafo, anchoGrafo }),
-    [sesion, previsualizacionActiva, entrada, modoRelator, altoGrafo, anchoGrafo],
+  const pantalla = useMemo(() => {
+    const opciones = { previsualizacionActiva, entrada, modoRelator, altoGrafo, anchoGrafo };
+    return real === null ? construirPantalla(sesion, opciones) : construirPantallaReal(real, opciones);
+  }, [sesion, real, previsualizacionActiva, entrada, modoRelator, altoGrafo, anchoGrafo]);
+
+  const ejecutar = useCallback(
+    (texto: string): void => {
+      // Con el repositorio real la orden no se ejecuta: se anota y se dice donde escribirla.
+      if (real !== null) setReal((anterior) => (anterior === null ? anterior : anotarOrdenReal(anterior, texto)));
+      else setSesion((anterior) => ejecutarOrden(anterior, texto));
+      setEntrada('');
+      setSugerencias([]);
+      setIndiceHistorial(0);
+    },
+    [real],
   );
 
-  const ejecutar = useCallback((texto: string): void => {
-    setSesion((anterior) => ejecutarOrden(anterior, texto));
-    setEntrada('');
-    setSugerencias([]);
-    setIndiceHistorial(0);
-  }, []);
+  const historial = real === null ? sesion.historial : real.historial;
 
   const completarOrden = useCallback(
     (texto: string): void => {
-      const resultado = completar(texto, estadoDe(sesion));
+      const resultado = real === null ? completar(texto, estadoDe(sesion)) : completarEnReal(texto, real);
       if (resultado.texto !== null) {
         setEntrada(resultado.texto);
         setSugerencias([]);
@@ -121,16 +201,16 @@ export function Aplicacion(): React.ReactElement {
       }
       setSugerencias(resultado.sugerencias);
     },
-    [sesion],
+    [sesion, real],
   );
 
   const recorrerHistorial = useCallback(
     (direccion: 'anterior' | 'siguiente'): void => {
-      const paso = navegarHistorial(sesion.historial, indiceHistorial, direccion);
+      const paso = navegarHistorial(historial, indiceHistorial, direccion);
       setIndiceHistorial(paso.indice);
       setEntrada(paso.texto);
     },
-    [sesion.historial, indiceHistorial],
+    [historial, indiceHistorial],
   );
 
   const descartar = useCallback((): void => {
@@ -139,6 +219,9 @@ export function Aplicacion(): React.ReactElement {
   }, []);
 
   const elegirEscenario = useCallback((id: string): void => {
+    // Elegir un escenario deja de mirar el repositorio real.
+    conexion.current = null;
+    setReal(null);
     setSesion(cambiarEscenario(id));
     setEntrada('');
     setSugerencias([]);
@@ -168,7 +251,12 @@ export function Aplicacion(): React.ReactElement {
         onPrevisualizacion={() => setPrevisualizacionActiva((valor) => !valor)}
         onModoRelator={() => setModoRelator((valor) => !valor)}
         onReiniciar={() => elegirEscenario(sesion.escenario)}
+        conectado={real !== null}
+        avisoConexion={avisoConexion}
+        onConectar={conectar}
       />
+
+      {real !== null && <AvisosDelRepositorio avisos={avisosReales(real)} nombre={real.nombre} />}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
         {/*
@@ -219,8 +307,12 @@ export function Aplicacion(): React.ReactElement {
               escala={escala}
               seleccion={pantalla.seleccion}
               animar={!movimientoReducido}
-              escenario={sesion.escenario}
-              onSeleccionar={(id) => setSesion((anterior) => seleccionarConfirmacion(anterior, id))}
+              escenario={real === null ? sesion.escenario : `real:${real.nombre}`}
+              onSeleccionar={(id) =>
+                real === null
+                  ? setSesion((anterior) => seleccionarConfirmacion(anterior, id))
+                  : setReal((anterior) => (anterior === null ? anterior : seleccionarEnReal(anterior, id)))
+              }
             />
           </section>
         </div>
@@ -228,10 +320,13 @@ export function Aplicacion(): React.ReactElement {
         <Areas columnas={pantalla.columnas} />
         <PanelesSecundarios paneles={pantalla.paneles} />
 
-        <LineaTiempo
-          segmentos={pantalla.segmentos}
-          onIr={(indice) => setSesion((anterior) => irAPaso(anterior, indice))}
-        />
+        {/* Con el repositorio real no hay pasos que recorrer: el pasado lo guarda Git. */}
+        {real === null && (
+          <LineaTiempo
+            segmentos={pantalla.segmentos}
+            onIr={(indice) => setSesion((anterior) => irAPaso(anterior, indice))}
+          />
+        )}
       </div>
     </div>
   );

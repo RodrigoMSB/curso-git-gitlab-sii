@@ -29,7 +29,9 @@ export function armarRepos(): { raiz: string; ruta: (nombre: string) => string }
 export function porcelana(dir: string, configGlobal = '/dev/null'): string[] {
   const salida = execFileSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=normal'], {
     cwd: dir,
-    env: { ...process.env, GIT_CONFIG_GLOBAL: configGlobal, GIT_CONFIG_SYSTEM: '/dev/null' },
+    // Sin el candado opcional, `git status` no reescribe el indice al
+    // refrescarlo: mirar no tiene que cambiar lo que se esta mirando.
+    env: { ...process.env, GIT_CONFIG_GLOBAL: configGlobal, GIT_CONFIG_SYSTEM: '/dev/null', GIT_OPTIONAL_LOCKS: '0' },
   }).toString();
   const partes = salida.split('\0');
   const lineas: string[] = [];

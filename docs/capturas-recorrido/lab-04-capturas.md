@@ -77,14 +77,14 @@ Cada imagen contra la del paso anterior. La fila que hay que buscar es
 | 069 | movio | nodos, ramas, puntero, areas, tiempo |
 | 070 | movio | tiempo |
 | 071 | movio | tiempo |
-| 072 | movio | nodos, ramas, puntero, areas, tiempo |
+| 072 | movio | ramas, puntero, areas, tiempo |
 | 073 | movio | tiempo |
 | 074 | movio | areas, tiempo |
 | 075 | movio | tiempo |
 | 076 | movio | nodos, ramas, puntero, tiempo |
 | 077 | movio | nodos, ramas, puntero, areas, tiempo |
 | 078 | movio | nodos, ramas, puntero, areas, tiempo |
-| 079 | movio | nodos, ramas, puntero, areas, tiempo |
+| 079 | movio | ramas, puntero, areas, tiempo |
 | 080 | movio | tiempo |
 | 081 | movio | ramas, puntero, areas, tiempo |
 | 082 | movio | tiempo |

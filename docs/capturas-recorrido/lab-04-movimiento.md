@@ -72,14 +72,14 @@ Piezas: nodos, ramas, puntero, previsualizacion, areas, guardado, tiempo.
 | 069 | `git branch rescate <identificador>` | nodos, ramas, puntero, areas, tiempo |
 | 070 | `git lg` | tiempo |
 | 071 | `git reflog` | tiempo |
-| 072 | `git switch --detach HEAD~2` | nodos, ramas, puntero, areas, tiempo |
+| 072 | `git switch --detach HEAD~2` | ramas, puntero, areas, tiempo |
 | 073 | `mkdir -p recetas` | tiempo |
 | 074 | `echo "# Sopaipillas" > recetas/sopaipillas.md` | areas, tiempo |
 | 075 | `echo "" >> recetas/sopaipillas.md` | tiempo |
 | 076 | `echo "Harina, zapallo, manteca. Fritas y con pebre." >> recetas/sopaipillas.md` | nodos, ramas, puntero, tiempo |
 | 077 | `git add recetas/sopaipillas.md` | nodos, ramas, puntero, areas, tiempo |
 | 078 | `git commit -m "se agregan las sopaipillas"` | nodos, ramas, puntero, areas, tiempo |
-| 079 | `git switch -c fritangas` | nodos, ramas, puntero, areas, tiempo |
+| 079 | `git switch -c fritangas` | ramas, puntero, areas, tiempo |
 | 080 | `git lg` | tiempo |
 | 081 | `git switch main` | ramas, puntero, areas, tiempo |
 | 082 | `git branch` | tiempo |
