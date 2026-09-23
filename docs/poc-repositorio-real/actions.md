@@ -1,12 +1,12 @@
 # Resultados en GitHub Actions
 
-Ejecucion: https://github.com/RodrigoMSB/curso-git-gitlab-sii/actions/runs/35905948766
+Ejecucion: https://github.com/RodrigoMSB/curso-git-gitlab-sii/actions/runs/35907414425
 
-Confirmacion probada: fe9c6a70f2b7c2ba8ebae3d1ea97dba4fa8f6146
+Confirmacion probada: 0198b127c7416d4554c40d4904c14f568463cd83
 
 - navegador-darwin-chrome.md: RESULTADO: todo igual
-- navegador-win32-chrome.md: RESULTADO: 7 diferencia(s)
-- navegador-win32-msedge.md: RESULTADO: 7 diferencia(s)
-- lector-Windows-chrome.txt:  Tests 18 failed | 79 passed (97)
-- lector-Windows-msedge.txt:  Tests 18 failed | 79 passed (97)
+- navegador-win32-chrome.md: RESULTADO: todo igual
+- navegador-win32-msedge.md: RESULTADO: todo igual
+- lector-Windows-chrome.txt:  Tests 14 failed | 83 passed (97)
+- lector-Windows-msedge.txt:  Tests 14 failed | 83 passed (97)
 - lector-macOS-chrome.txt:  Tests 97 passed (97)

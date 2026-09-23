@@ -1,253 +1,540 @@
 
 [1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90mD:/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador[39m
 
- [31m❯[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[33m 14965[2mms[22m[39m
+ [31m❯[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[33m 14317[2mms[22m[39m
    [31m❯[39m laboratorio 02 [2m(1)[22m
-[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 1767[2mms[22m[39m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 2089[2mms[22m[39m
    [31m❯[39m laboratorio 03 [2m(1)[22m
-[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 1848[2mms[22m[39m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 1672[2mms[22m[39m
    [31m❯[39m laboratorio 04 [2m(1)[22m
-[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 1645[2mms[22m[39m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 1698[2mms[22m[39m
    [31m❯[39m laboratorio 05 [2m(1)[22m
-[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 2261[2mms[22m[39m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 2334[2mms[22m[39m
    [31m❯[39m laboratorio 06 [2m(1)[22m
-[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 1606[2mms[22m[39m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 1886[2mms[22m[39m
    [31m❯[39m laboratorio 07 [2m(1)[22m
-[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 3302[2mms[22m[39m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 2145[2mms[22m[39m
    [31m❯[39m laboratorio 08 [2m(1)[22m
-[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 2530[2mms[22m[39m
- [31m❯[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[33m 50805[2mms[22m[39m
-   [31m❯[39m las areas de cada repositorio, como las ve git status [2m(23)[22m
-     [32m✓[39m estados[32m 44[2mms[22m[39m
-     [32m✓[39m conflicto[32m 28[2mms[22m[39m
-     [32m✓[39m finales[32m 26[2mms[22m[39m
-     [32m✓[39m finales-crlf[32m 31[2mms[22m[39m
-     [32m✓[39m finales-tocado[32m 29[2mms[22m[39m
-     [32m✓[39m indice3[32m 32[2mms[22m[39m
-     [32m✓[39m indice4[32m 28[2mms[22m[39m
-     [32m✓[39m lineal[32m 30[2mms[22m[39m
-     [32m✓[39m ramas[32m 37[2mms[22m[39m
-     [32m✓[39m empaquetado[32m 28[2mms[22m[39m
-     [32m✓[39m deltas[32m 29[2mms[22m[39m
-[31m     [31m×[31m desde-bundle[39m[32m 44[2mms[22m[39m
-[31m     [31m×[31m desconectada[39m[32m 29[2mms[22m[39m
-[31m     [31m×[31m empates[39m[32m 26[2mms[22m[39m
-     [32m✓[39m latin[32m 24[2mms[22m[39m
-     [32m✓[39m candado[32m 24[2mms[22m[39m
-     [32m✓[39m grande64[32m 26[2mms[22m[39m
-     [32m✓[39m cadena[32m 77[2mms[22m[39m
-     [32m✓[39m refdelta[32m 28[2mms[22m[39m
-     [32m✓[39m grandes[32m 45[2mms[22m[39m
-     [32m✓[39m superficial[32m 38[2mms[22m[39m
-[31m     [31m×[31m completo[39m[32m 49[2mms[22m[39m
-     [32m✓[39m clonado[32m 27[2mms[22m[39m
-   [32m✓[39m lo que el repositorio de estados tiene que mostrar [2m(4)[22m
-     [32m✓[39m cada codigo que el taller puede producir esta en el repositorio de prueba[32m 46[2mms[22m[39m
-     [32m✓[39m el conflicto se informa como fusion en curso[32m 5[2mms[22m[39m
-     [32m✓[39m un clon con autocrlf en true, sin tocar, se ve limpio (CA6)[32m 3[2mms[22m[39m
-     [32m✓[39m con autocrlf en true, pasar a CRLF un archivo LF no lo modifica[32m 26[2mms[22m[39m
-   [32m✓[39m la fecha de un archivo solo se cree si es anterior al indice [2m(1)[22m
-     [32m✓[39m un archivo cambiado en el mismo milisegundo en que se escribio el indice se vuelve a mirar[32m 6[2mms[22m[39m
-   [32m✓[39m lo que no se sabe dibujar se dice, no se dibuja a medias (2.9) [2m(6)[22m
-     [32m✓[39m partido[32m 2[2mms[22m[39m
-     [32m✓[39m disperso[32m 2[2mms[22m[39m
-     [32m✓[39m sha256[32m 0[2mms[22m[39m
-     [32m✓[39m reftable[32m 0[2mms[22m[39m
-     [32m✓[39m enlazado[32m 0[2mms[22m[39m
-     [32m✓[39m los indices de version 3 y 4 si se leen[32m 4[2mms[22m[39m
-   [32m✓[39m la lectura no escribe nada (CA7) [2m(3)[22m
-     [32m✓[39m estados[32m 21[2mms[22m[39m
-     [32m✓[39m conflicto[32m 12[2mms[22m[39m
-     [32m✓[39m clonado[32m 14[2mms[22m[39m
- [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 54081[2mms[22m[39m
- [31m❯[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[33m 14074[2mms[22m[39m
+[31m     [31m×[31m la previsualizacion de cada orden del guion contra lo que Git hace[39m[33m 2487[2mms[22m[39m
+warning: in the working copy of 'anunciado', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'anunciado', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'anunciado', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'anunciado', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 54222[2mms[22m[39m
+ [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 53826[2mms[22m[39m
+   [32m✓[39m cada repositorio, como lo ve Git [2m(16)[22m
+     [33m[2m✓[22m[39m cadena[33m 345[2mms[22m[39m
+ [31m❯[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[33m 12760[2mms[22m[39m
    [31m❯[39m laboratorio 02 [2m(1)[22m
-[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1413[2mms[22m[39m
+[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1499[2mms[22m[39m
    [31m❯[39m laboratorio 03 [2m(1)[22m
-[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1642[2mms[22m[39m
+[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1549[2mms[22m[39m
    [31m❯[39m laboratorio 04 [2m(1)[22m
-[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1598[2mms[22m[39m
+[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1593[2mms[22m[39m
    [31m❯[39m laboratorio 05 [2m(1)[22m
-[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 2252[2mms[22m[39m
+[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 2223[2mms[22m[39m
    [31m❯[39m laboratorio 06 [2m(1)[22m
-[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1693[2mms[22m[39m
+[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1614[2mms[22m[39m
    [31m❯[39m laboratorio 07 [2m(1)[22m
-[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 2559[2mms[22m[39m
+[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 1985[2mms[22m[39m
    [31m❯[39m laboratorio 08 [2m(1)[22m
-[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 2912[2mms[22m[39m
+[31m     [31m×[31m historia, referencias y areas iguales a Git despues de cada orden del guion[39m[33m 2291[2mms[22m[39m
 warning: in the working copy of 'a.md', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'b.md', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'a.md', LF will be replaced by CRLF the next time Git touches it
- [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 647[2mms[22m[39m
- [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 44217[2mms[22m[39m
- [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 472[2mms[22m[39m
+ [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 523[2mms[22m[39m
+ [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 41289[2mms[22m[39m
+ [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 619[2mms[22m[39m
 
-[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 18 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
-
-[41m[1m FAIL [22m[49m tests/real/areas.test.ts[2m > [22mlas areas de cada repositorio, como las ve git status[2m > [22mdesde-bundle
-[31m[1mAssertionError[22m: expected [] to deeply equal [ ' M a.md', ' M azteca.md', …(2) ][39m
-
-[32m- Expected[39m
-[31m+ Received[39m
-
-[32m- [[39m
-[32m-   " M a.md",[39m
-[32m-   " M azteca.md",[39m
-[32m-   " M criolla.md",[39m
-[32m-   " M tailandesa.md",[39m
-[32m- ][39m
-[31m+ [][39m
-
-[36m [2m❯[22m tests/real/areas.test.ts:[2m39:58[22m[39m
-    [90m 37|[39m       const lectura = await leer(dir);
-    [90m 38|[39m       if (lectura.tipo !== 'leido') throw new Error(lectura.motivo);
-    [90m 39|[39m       expect(comoPorcelana(lectura.repositorio.cambios)).toEqual(porce…
-    [90m   |[39m                                                          [31m^[39m
-    [90m 40|[39m     });
-    [90m 41|[39m   }
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m tests/real/areas.test.ts[2m > [22mlas areas de cada repositorio, como las ve git status[2m > [22mdesconectada
-[31m[1mAssertionError[22m: expected [] to deeply equal [ ' M tailandesa.md' ][39m
-
-[32m- Expected[39m
-[31m+ Received[39m
-
-[32m- [[39m
-[32m-   " M tailandesa.md",[39m
-[32m- ][39m
-[31m+ [][39m
-
-[36m [2m❯[22m tests/real/areas.test.ts:[2m39:58[22m[39m
-    [90m 37|[39m       const lectura = await leer(dir);
-    [90m 38|[39m       if (lectura.tipo !== 'leido') throw new Error(lectura.motivo);
-    [90m 39|[39m       expect(comoPorcelana(lectura.repositorio.cambios)).toEqual(porce…
-    [90m   |[39m                                                          [31m^[39m
-    [90m 40|[39m     });
-    [90m 41|[39m   }
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m tests/real/areas.test.ts[2m > [22mlas areas de cada repositorio, como las ve git status[2m > [22mempates
-[31m[1mAssertionError[22m: expected [] to deeply equal [ ' M b' ][39m
-
-[32m- Expected[39m
-[31m+ Received[39m
-
-[32m- [[39m
-[32m-   " M b",[39m
-[32m- ][39m
-[31m+ [][39m
-
-[36m [2m❯[22m tests/real/areas.test.ts:[2m39:58[22m[39m
-    [90m 37|[39m       const lectura = await leer(dir);
-    [90m 38|[39m       if (lectura.tipo !== 'leido') throw new Error(lectura.motivo);
-    [90m 39|[39m       expect(comoPorcelana(lectura.repositorio.cambios)).toEqual(porce…
-    [90m   |[39m                                                          [31m^[39m
-    [90m 40|[39m     });
-    [90m 41|[39m   }
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m tests/real/areas.test.ts[2m > [22mlas areas de cada repositorio, como las ve git status[2m > [22mcompleto
-[31m[1mAssertionError[22m: expected [] to deeply equal [ ' M a' ][39m
-
-[32m- Expected[39m
-[31m+ Received[39m
-
-[32m- [[39m
-[32m-   " M a",[39m
-[32m- ][39m
-[31m+ [][39m
-
-[36m [2m❯[22m tests/real/areas.test.ts:[2m39:58[22m[39m
-    [90m 37|[39m       const lectura = await leer(dir);
-    [90m 38|[39m       if (lectura.tipo !== 'leido') throw new Error(lectura.motivo);
-    [90m 39|[39m       expect(comoPorcelana(lectura.repositorio.cambios)).toEqual(porce…
-    [90m   |[39m                                                          [31m^[39m
-    [90m 40|[39m     });
-    [90m 41|[39m   }
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯[22m[39m
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 14 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
 
 [41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 02[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
-[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 03[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
-[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 04[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
-[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 05[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
-[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 06[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
-[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 07[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
-[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 08[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
-[31m[1mError[22m: Command failed: bash ./preparar.sh --forzar[39m
-[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m44:3[22m[39m
-    [90m 42|[39m     execFileSync('git', ['config', '--global', clave, valor], { env: e…
-    [90m 43|[39m   }
-    [90m 44|[39m   execFileSync('bash', ['./preparar.sh', '--forzar'], { cwd: carpeta, …
-    [90m   |[39m   [31m^[39m
-    [90m 45|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
-    [90m 46|[39m }
+[31m[1mError[22m: preparar.sh del laboratorio 02 fallo (1):
+
+Preparando el escenario del laboratorio 02
+
+
+Comprobando el escenario inicial del laboratorio 02
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-02/recetario
+      encontro: la carpeta existe pero no es un repositorio
+  ✗ cantidad de confirmaciones
+      esperaba: 5
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ la quinta confirmacion va mal escrita
+      esperaba: «se docuemnta la reseta del pastel de choclo»
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ cocineros.md preparado por error
+      esperaba: cocineros.md preparado
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ cocineros.md modificado y sin preparar
+      esperaba: cocineros.md con cambios sin preparar
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ solo existe la rama main
+      esperaba: main
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ HEAD apunta a main
+      esperaba: refs/heads/main
+      encontro: no se pudo comprobar, no hay repositorio
+
+  0 de 7 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 02: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
 [90m [2m❯[22m tests/real/laboratorios.test.ts:[2m61:17[22m[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯[22m[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 03[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
+[31m[1mError[22m: preparar.sh del laboratorio 03 fallo (1):
+
+Preparando el escenario del laboratorio 03
+
+
+Comprobando el escenario inicial del laboratorio 03
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-03/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 03: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/laboratorios.test.ts:[2m61:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 04[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
+[31m[1mError[22m: preparar.sh del laboratorio 04 fallo (1):
+
+Preparando el escenario del laboratorio 04
+
+
+Comprobando el escenario inicial del laboratorio 04
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-04/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 04: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/laboratorios.test.ts:[2m61:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 05[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
+[31m[1mError[22m: preparar.sh del laboratorio 05 fallo (1):
+
+Preparando el escenario del laboratorio 05
+
+
+Comprobando el escenario inicial del laboratorio 05
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-05/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 05: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/laboratorios.test.ts:[2m61:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 06[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
+[31m[1mError[22m: preparar.sh del laboratorio 06 fallo (1):
+
+Preparando el escenario del laboratorio 06
+
+
+Comprobando el escenario inicial del laboratorio 06
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-06/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 06: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/laboratorios.test.ts:[2m61:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 07[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
+[31m[1mError[22m: preparar.sh del laboratorio 07 fallo (1):
+
+Preparando el escenario del laboratorio 07
+
+
+Comprobando el escenario inicial del laboratorio 07
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-07/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 07: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/laboratorios.test.ts:[2m61:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/laboratorios.test.ts[2m > [22mlaboratorio 08[2m > [22mhistoria, referencias y areas iguales a Git despues de cada orden del guion
+[31m[1mError[22m: preparar.sh del laboratorio 08 fallo (1):
+
+Preparando el escenario del laboratorio 08
+
+
+Comprobando el escenario inicial del laboratorio 08
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-08/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 08: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/laboratorios.test.ts:[2m61:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯[22m[39m
 
 [41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 02[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
-[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 03[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
-[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 04[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
-[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 05[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
-[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 06[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
-[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 07[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
-[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 08[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
-[31m[1mError[22m: Command failed: bash ./preparar.sh --forzar[39m
-[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m44:3[22m[39m
-    [90m 42|[39m     execFileSync('git', ['config', '--global', clave, valor], { env: e…
-    [90m 43|[39m   }
-    [90m 44|[39m   execFileSync('bash', ['./preparar.sh', '--forzar'], { cwd: carpeta, …
-    [90m   |[39m   [31m^[39m
-    [90m 45|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
-    [90m 46|[39m }
+[31m[1mError[22m: preparar.sh del laboratorio 02 fallo (1):
+
+Preparando el escenario del laboratorio 02
+
+
+Comprobando el escenario inicial del laboratorio 02
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-02/recetario
+      encontro: la carpeta existe pero no es un repositorio
+  ✗ cantidad de confirmaciones
+      esperaba: 5
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ la quinta confirmacion va mal escrita
+      esperaba: «se docuemnta la reseta del pastel de choclo»
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ cocineros.md preparado por error
+      esperaba: cocineros.md preparado
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ cocineros.md modificado y sin preparar
+      esperaba: cocineros.md con cambios sin preparar
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ solo existe la rama main
+      esperaba: main
+      encontro: no se pudo comprobar, no hay repositorio
+  ✗ HEAD apunta a main
+      esperaba: refs/heads/main
+      encontro: no se pudo comprobar, no hay repositorio
+
+  0 de 7 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 02: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
 [90m [2m❯[22m tests/real/previsualizacion.test.ts:[2m129:17[22m[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯[22m[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 03[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
+[31m[1mError[22m: preparar.sh del laboratorio 03 fallo (1):
+
+Preparando el escenario del laboratorio 03
 
 
-[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (7)[39m
-[2m      Tests [22m [1m[31m18 failed[39m[22m[2m | [22m[1m[32m79 passed[39m[22m[90m (97)[39m
-[2m   Start at [22m 18:58:44
-[2m   Duration [22m 181.82s[2m (tests 99%, transform 1%)[22m
+Comprobando el escenario inicial del laboratorio 03
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-03/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
 
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/areas.test.ts,title=tests/real/areas.test.ts > las areas de cada repositorio%2C como las ve git status > desde-bundle,line=39,column=58::AssertionError: expected [] to deeply equal [ ' M a.md', ' M azteca.md', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   " M a.md",%0A-   " M azteca.md",%0A-   " M criolla.md",%0A-   " M tailandesa.md",%0A- ]%0A+ []%0A%0A ❯ tests/real/areas.test.ts:39:58%0A%0A
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/areas.test.ts,title=tests/real/areas.test.ts > las areas de cada repositorio%2C como las ve git status > desconectada,line=39,column=58::AssertionError: expected [] to deeply equal [ ' M tailandesa.md' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   " M tailandesa.md",%0A- ]%0A+ []%0A%0A ❯ tests/real/areas.test.ts:39:58%0A%0A
+  preparacion del laboratorio 03: el escenario no quedo como corresponde; no se entrega asi
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/areas.test.ts,title=tests/real/areas.test.ts > las areas de cada repositorio%2C como las ve git status > empates,line=39,column=58::AssertionError: expected [] to deeply equal [ ' M b' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   " M b",%0A- ]%0A+ []%0A%0A ❯ tests/real/areas.test.ts:39:58%0A%0A
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/previsualizacion.test.ts:[2m129:17[22m[39m
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/areas.test.ts,title=tests/real/areas.test.ts > las areas de cada repositorio%2C como las ve git status > completo,line=39,column=58::AssertionError: expected [] to deeply equal [ ' M a' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   " M a",%0A- ]%0A+ []%0A%0A ❯ tests/real/areas.test.ts:39:58%0A%0A
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯[22m[39m
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 02 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 4796, stdout: null, stderr: null }%0A
+[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 04[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
+[31m[1mError[22m: preparar.sh del laboratorio 04 fallo (1):
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 03 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 7788, stdout: null, stderr: null }%0A
+Preparando el escenario del laboratorio 04
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 04 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 3000, stdout: null, stderr: null }%0A
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 05 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 7752, stdout: null, stderr: null }%0A
+Comprobando el escenario inicial del laboratorio 04
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 06 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 6916, stdout: null, stderr: null }%0A
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-04/recetario
+      encontro: la carpeta existe pero no es un repositorio
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 07 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 6944, stdout: null, stderr: null }%0A
+  0 de 1 · el escenario NO quedo como corresponde
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 08 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 7924, stdout: null, stderr: null }%0A
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 02 > la previsualizacion de cada orden del guion contra lo que Git hace,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 5552, stdout: null, stderr: null }%0A
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 03 > la previsualizacion de cada orden del guion contra lo que Git hace,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 8356, stdout: null, stderr: null }%0A
+  preparacion del laboratorio 04: el escenario no quedo como corresponde; no se entrega asi
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 04 > la previsualizacion de cada orden del guion contra lo que Git hace,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 7312, stdout: null, stderr: null }%0A
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/previsualizacion.test.ts:[2m129:17[22m[39m
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 05 > la previsualizacion de cada orden del guion contra lo que Git hace,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 6180, stdout: null, stderr: null }%0A
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯[22m[39m
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 06 > la previsualizacion de cada orden del guion contra lo que Git hace,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 7948, stdout: null, stderr: null }%0A
+[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 05[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
+[31m[1mError[22m: preparar.sh del laboratorio 05 fallo (1):
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 07 > la previsualizacion de cada orden del guion contra lo que Git hace,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 7312, stdout: null, stderr: null }%0A
+Preparando el escenario del laboratorio 05
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 08 > la previsualizacion de cada orden del guion contra lo que Git hace,line=44,column=3::Error: Command failed: bash ./preparar.sh --forzar%0A ❯ preparar tests/real/laboratorio.ts:44:3%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯%0ASerialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 1224, stdout: null, stderr: null }%0A
+
+Comprobando el escenario inicial del laboratorio 05
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-05/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 05: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/previsualizacion.test.ts:[2m129:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 06[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
+[31m[1mError[22m: preparar.sh del laboratorio 06 fallo (1):
+
+Preparando el escenario del laboratorio 06
+
+
+Comprobando el escenario inicial del laboratorio 06
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-06/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 06: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/previsualizacion.test.ts:[2m129:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 07[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
+[31m[1mError[22m: preparar.sh del laboratorio 07 fallo (1):
+
+Preparando el escenario del laboratorio 07
+
+
+Comprobando el escenario inicial del laboratorio 07
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-07/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 07: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/previsualizacion.test.ts:[2m129:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/real/previsualizacion.test.ts[2m > [22mlaboratorio 08[2m > [22mla previsualizacion de cada orden del guion contra lo que Git hace
+[31m[1mError[22m: preparar.sh del laboratorio 08 fallo (1):
+
+Preparando el escenario del laboratorio 08
+
+
+Comprobando el escenario inicial del laboratorio 08
+
+  ✗ existe el repositorio
+      esperaba: un repositorio Git en taller-git-trabajo/lab-08/recetario
+      encontro: la carpeta existe pero no es un repositorio
+
+  0 de 1 · el escenario NO quedo como corresponde
+
+
+
+  preparacion del laboratorio 08: el escenario no quedo como corresponde; no se entrega asi
+
+[39m
+[36m [2m❯[22m preparar tests/real/laboratorio.ts:[2m46:11[22m[39m
+    [90m 44|[39m   const corrida = spawnSync('bash', ['./preparar.sh', '--forzar'], { c…
+    [90m 45|[39m   if (corrida.status !== 0) {
+    [90m 46|[39m     throw new Error(`preparar.sh del laboratorio ${numero} fallo (${co…
+    [90m   |[39m           [31m^[39m
+    [90m 47|[39m   }
+    [90m 48|[39m   return { raiz, recetario: join(raiz, 'taller-git-trabajo', `lab-${nu…
+[90m [2m❯[22m tests/real/previsualizacion.test.ts:[2m129:17[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/14]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m5 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[31m14 failed[39m[22m[2m | [22m[1m[32m83 passed[39m[22m[90m (97)[39m
+[2m   Start at [22m 19:11:39
+[2m   Duration [22m 180.42s[2m (tests 99%, transform 1%)[22m
+
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 02 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=46,column=11::Error: preparar.sh del laboratorio 02 fallo (1):%0A%0APreparando el escenario del laboratorio 02%0A%0A%0AComprobando el escenario inicial del laboratorio 02%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-02/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A  ✗ cantidad de confirmaciones%0A      esperaba: 5%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ la quinta confirmacion va mal escrita%0A      esperaba: «se docuemnta la reseta del pastel de choclo»%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ cocineros.md preparado por error%0A      esperaba: cocineros.md preparado%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ cocineros.md modificado y sin preparar%0A      esperaba: cocineros.md con cambios sin preparar%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ solo existe la rama main%0A      esperaba: main%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ HEAD apunta a main%0A      esperaba: refs/heads/main%0A      encontro: no se pudo comprobar, no hay repositorio%0A%0A  0 de 7 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 02: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 03 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=46,column=11::Error: preparar.sh del laboratorio 03 fallo (1):%0A%0APreparando el escenario del laboratorio 03%0A%0A%0AComprobando el escenario inicial del laboratorio 03%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-03/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 03: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 04 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=46,column=11::Error: preparar.sh del laboratorio 04 fallo (1):%0A%0APreparando el escenario del laboratorio 04%0A%0A%0AComprobando el escenario inicial del laboratorio 04%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-04/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 04: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 05 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=46,column=11::Error: preparar.sh del laboratorio 05 fallo (1):%0A%0APreparando el escenario del laboratorio 05%0A%0A%0AComprobando el escenario inicial del laboratorio 05%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-05/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 05: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 06 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=46,column=11::Error: preparar.sh del laboratorio 06 fallo (1):%0A%0APreparando el escenario del laboratorio 06%0A%0A%0AComprobando el escenario inicial del laboratorio 06%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-06/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 06: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 07 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=46,column=11::Error: preparar.sh del laboratorio 07 fallo (1):%0A%0APreparando el escenario del laboratorio 07%0A%0A%0AComprobando el escenario inicial del laboratorio 07%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-07/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 07: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/laboratorios.test.ts > laboratorio 08 > historia%2C referencias y areas iguales a Git despues de cada orden del guion,line=46,column=11::Error: preparar.sh del laboratorio 08 fallo (1):%0A%0APreparando el escenario del laboratorio 08%0A%0A%0AComprobando el escenario inicial del laboratorio 08%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-08/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 08: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/laboratorios.test.ts:61:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 02 > la previsualizacion de cada orden del guion contra lo que Git hace,line=46,column=11::Error: preparar.sh del laboratorio 02 fallo (1):%0A%0APreparando el escenario del laboratorio 02%0A%0A%0AComprobando el escenario inicial del laboratorio 02%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-02/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A  ✗ cantidad de confirmaciones%0A      esperaba: 5%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ la quinta confirmacion va mal escrita%0A      esperaba: «se docuemnta la reseta del pastel de choclo»%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ cocineros.md preparado por error%0A      esperaba: cocineros.md preparado%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ cocineros.md modificado y sin preparar%0A      esperaba: cocineros.md con cambios sin preparar%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ solo existe la rama main%0A      esperaba: main%0A      encontro: no se pudo comprobar, no hay repositorio%0A  ✗ HEAD apunta a main%0A      esperaba: refs/heads/main%0A      encontro: no se pudo comprobar, no hay repositorio%0A%0A  0 de 7 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 02: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 03 > la previsualizacion de cada orden del guion contra lo que Git hace,line=46,column=11::Error: preparar.sh del laboratorio 03 fallo (1):%0A%0APreparando el escenario del laboratorio 03%0A%0A%0AComprobando el escenario inicial del laboratorio 03%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-03/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 03: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 04 > la previsualizacion de cada orden del guion contra lo que Git hace,line=46,column=11::Error: preparar.sh del laboratorio 04 fallo (1):%0A%0APreparando el escenario del laboratorio 04%0A%0A%0AComprobando el escenario inicial del laboratorio 04%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-04/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 04: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 05 > la previsualizacion de cada orden del guion contra lo que Git hace,line=46,column=11::Error: preparar.sh del laboratorio 05 fallo (1):%0A%0APreparando el escenario del laboratorio 05%0A%0A%0AComprobando el escenario inicial del laboratorio 05%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-05/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 05: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 06 > la previsualizacion de cada orden del guion contra lo que Git hace,line=46,column=11::Error: preparar.sh del laboratorio 06 fallo (1):%0A%0APreparando el escenario del laboratorio 06%0A%0A%0AComprobando el escenario inicial del laboratorio 06%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-06/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 06: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 07 > la previsualizacion de cada orden del guion contra lo que Git hace,line=46,column=11::Error: preparar.sh del laboratorio 07 fallo (1):%0A%0APreparando el escenario del laboratorio 07%0A%0A%0AComprobando el escenario inicial del laboratorio 07%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-07/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 07: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A
+
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/real/laboratorio.ts,title=tests/real/previsualizacion.test.ts > laboratorio 08 > la previsualizacion de cada orden del guion contra lo que Git hace,line=46,column=11::Error: preparar.sh del laboratorio 08 fallo (1):%0A%0APreparando el escenario del laboratorio 08%0A%0A%0AComprobando el escenario inicial del laboratorio 08%0A%0A  ✗ existe el repositorio%0A      esperaba: un repositorio Git en taller-git-trabajo/lab-08/recetario%0A      encontro: la carpeta existe pero no es un repositorio%0A%0A  0 de 1 · el escenario NO quedo como corresponde%0A%0A%0A%0A  preparacion del laboratorio 08: el escenario no quedo como corresponde; no se entrega asi%0A%0A%0A ❯ preparar tests/real/laboratorio.ts:46:11%0A ❯ tests/real/previsualizacion.test.ts:129:17%0A%0A
