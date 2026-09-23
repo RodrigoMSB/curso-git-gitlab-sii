@@ -135,7 +135,7 @@ function bloqueDespuesDe(lineas: readonly string[], desde: number): string {
  * parado al participante. La carpeta actual se conserva de una orden a la
  * siguiente, como en una terminal.
  */
-function hacerElLaboratorio(numero: string, lab: Montado): readonly string[] {
+function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly string[]; registro: string } {
   const alias = aliasDelTaller(enunciado('01'));
   const ordenes = resolverMarcadores(ordenesDe(enunciado(numero), alias), numero, alias);
   const rescate = enunciado(numero)
@@ -145,6 +145,7 @@ function hacerElLaboratorio(numero: string, lab: Montado): readonly string[] {
   let actual = lab.clon;
   const salidas = new Map<string, string>();
   const problemas: string[] = [];
+  const registro: string[] = [];
   const lineas = enunciado(numero).split('\n');
   const pendientes = (A_MANO[numero] ?? []).map((paso) => {
     const linea = lineas.findIndex((l) => l.includes(paso.ancla));
@@ -192,11 +193,14 @@ function hacerElLaboratorio(numero: string, lab: Montado): readonly string[] {
     }
     const eleccion = orden.eleccion;
     const identificador = eleccion === undefined ? null : eleccion.elegir(salidas.get(eleccion.de) ?? '');
-    const corrida = correr(ordenPara(orden, identificador), extra);
-    salidas.set(orden.texto, `${corrida.stdout ?? ''}${corrida.stderr ?? ''}`);
+    const texto = ordenPara(orden, identificador);
+    const corrida = correr(texto, extra);
+    const salida = `${corrida.stdout ?? ''}${corrida.stderr ?? ''}`;
+    salidas.set(orden.texto, salida);
+    registro.push(`${orden.linea} [${corrida.status}] ${texto}${corrida.status === 0 ? '' : ` → ${salida.trim().split('\n').slice(0, 3).join(' / ')}`}`);
   }
   for (const paso of pendientes) problemas.push(`el paso a mano «${paso.ancla}» no llego a hacerse`);
-  return problemas;
+  return { problemas, registro: registro.join('\n') };
 }
 
 function dice(corrida: Corrida): string {
@@ -227,18 +231,21 @@ function criteriosFallidos(salida: string): string[] {
 }
 
 describe('cada laboratorio, preparado, hecho y verificado como lo hace el participante', () => {
-  it.each(TODOS)('laboratorio %s', (numero) => {
+  // Un laboratorio son decenas de procesos de Git y Bash; en Windows cada uno cuesta mas.
+  it.each(TODOS)('laboratorio %s', { timeout: 300_000 }, (numero) => {
     const lab = montar(numero);
     if (existsSync(join(lab.carpeta, 'preparar.sh'))) {
       const preparado = preparar({ ...lab }, '--forzar');
       expect(preparado.codigo, dice(preparado)).toBe(0);
       expect(preparado.salida).toMatch(/✓ existe el repositorio/);
     }
-    expect(hacerElLaboratorio(numero, lab)).toEqual([]);
+    const hecho = hacerElLaboratorio(numero, lab);
+    expect(hecho.problemas).toEqual([]);
     const verificado = verificar(lab.carpeta, lab.configGlobal);
     expect(verificado.salida).toMatch(/✓ existe el repositorio/);
     const conocidos = FALLAN_SIGUIENDO_EL_ENUNCIADO[numero] ?? [];
-    expect(criteriosFallidos(verificado.salida), dice(verificado)).toEqual(conocidos);
+    // Si reclama, se ve cada orden del recorrido con su codigo de salida.
+    expect(criteriosFallidos(verificado.salida), `${dice(verificado)}\n--- el recorrido ---\n${hecho.registro}`).toEqual(conocidos);
     expect(verificado.codigo, dice(verificado)).toBe(conocidos.length === 0 ? 0 : 1);
   });
 });
@@ -246,6 +253,7 @@ describe('cada laboratorio, preparado, hecho y verificado como lo hace el partic
 describe('la proteccion contra el anidamiento sigue funcionando', () => {
   it.each(TODOS.filter((n) => n !== '01'))(
     'laboratorio %s: un recetario sin .git propio dentro de otro repositorio se reclama',
+    { timeout: 120_000 },
     (numero) => {
       const lab = montar(numero);
       expect(preparar({ ...lab }, '--forzar').codigo).toBe(0);
@@ -260,7 +268,7 @@ describe('la proteccion contra el anidamiento sigue funcionando', () => {
     },
   );
 
-  it('laboratorio 01: olvidar el git init dentro de la carpeta del clon se reclama', () => {
+  it('laboratorio 01: olvidar el git init dentro de la carpeta del clon se reclama', { timeout: 120_000 }, () => {
     const lab = montar('01');
     // El recetario existe, sin `git init`, y su carpeta de trabajo queda dentro del repositorio de mas arriba.
     mkdirSync(lab.recetario, { recursive: true });

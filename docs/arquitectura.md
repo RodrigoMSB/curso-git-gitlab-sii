@@ -781,11 +781,16 @@ abstracta: las dos primeras salieron de errores encontrados al probar el
 laboratorio 01, la septima de uno encontrado en el 02 y la octava de una
 comprobacion que el 03 habria aprobado sin que nadie hiciera nada.
 
-### Regla 1 · la cima del repositorio se compara, no se pregunta
+### Regla 1 · la carpeta tiene que ser la raiz de su propio repositorio
 
 **Un verificador nunca da por existente un repositorio solo porque Git responde
-dentro de la carpeta.** Compara `git rev-parse --show-toplevel` contra la ruta
-que espera, y si no coincide, el criterio falla.
+dentro de la carpeta.** Comprueba que `git rev-parse --git-dir`, parado en la
+carpeta, responda `.git`: eso solo pasa si la carpeta es la raiz de su propio
+repositorio. Si no, el criterio falla.
+
+Hasta el SPEC 021 esto se hacia comparando `git rev-parse --show-toplevel`
+contra la ruta esperada. En Windows no coincidia nunca: Git Bash escribe
+`/c/Users/...` y Git para Windows `C:/Users/...`. Ver la seccion 67.
 
 El motivo es estructural y afecta a todos los laboratorios por igual: la carpeta
 del participante vive dentro del repositorio del curso, y Git, cuando no
@@ -4729,3 +4734,60 @@ Por el punto 3.1, todo en `git status`, que no es `git revert`:
 | Cobertura de los recorridos | igual: 71, 97, 95, 98 y 94 %; el guion no pasa por los casos nuevos |
 | Artefacto | 331 434 bytes, 4 747 más |
 
+
+## 67. Los laboratorios se preparan bien en Windows
+
+SPEC 021. (La sección 66 es la de la prueba de concepto, en su propia rama.)
+
+### 67.1 · El defecto
+
+Los ocho `verificar.sh` (laboratorios 01 a 08) comprobaban la regla 1
+comparando `git rev-parse --show-toplevel` con la ruta que arma Bash con
+`pwd -P`. En Git Bash de Windows esa ruta es `/c/Users/…` y la de Git es
+`C:/Users/…`: nunca coincidían. `preparar.sh` llama a `verificar.sh
+--escenario` al final, así que terminaba en error en todos los laboratorios,
+con el repositorio bien armado. Ningún otro script compara rutas: los demás
+usos de `pwd` solo ubican carpetas, y `semillas/lib/verificar.sh` mira si
+existe `.git`.
+
+### 67.2 · El arreglo, y por qué así
+
+Se le pregunta todo a Git: `git -C recetario rev-parse --git-dir` responde
+`.git` solo si `recetario` es la raíz de su propio repositorio; dentro de otro
+responde la ruta del `.git` de más arriba, y fuera de todo repositorio falla.
+Es una sola llamada, no depende de cómo escribe rutas ningún programa, y
+funciona igual en Bash 3.2 y en Git Bash. Se descartaron traducir la ruta con
+`cygpath` (no existe en macOS) y comparar con `pwd -W` (tampoco).
+
+### 67.3 · La prueba
+
+`simulador/tests/scripts-de-laboratorio.test.ts`, que corre GitHub Actions en
+Windows con Git Bash y en Mac en cada cambio (`laboratorios-en-windows-y-mac`).
+El código se baja como lo baja el participante, sin tocar `core.autocrlf`.
+
+- Por laboratorio: clon del curso que es un repositorio de verdad,
+  `preparar.sh`, el laboratorio hecho siguiendo su enunciado hasta antes de
+  «Si algo salió mal», y `verificar.sh`.
+- Lo que el enunciado pide hacer a mano (editar, resolver un conflicto, elegir
+  acciones en `rebase -i`) va declarado, anclado a la frase del enunciado que
+  lo pide: si la frase desaparece, la prueba falla.
+- Anidamiento: un recetario sin `.git` propio dentro de otro repositorio se
+  reclama, en los ocho laboratorios.
+
+Con el código de antes, Windows fallaba 15 de 16 y Mac pasaba; saboteando la
+comprobación para que siempre apruebe, fallan las 8 de anidamiento.
+
+### 67.4 · Encontrado en el camino, sin tocar
+
+**El laboratorio 07 no se puede aprobar siguiendo el enunciado**, en ningún
+sistema. Al llegar a la parte 3 la rama tiene cinco confirmaciones propias (la
+del punto 1.12 se suma a las cuatro de la semilla) y `git rebase -i HEAD~4`
+deja `wip` fuera de la lista. Siguiendo el enunciado quedan tres
+confirmaciones con `wip` y `cambios`; la comprobación del enunciado y el
+verificador esperan dos, con mensajes decentes. La prueba lo anota como
+diferencia conocida exacta.
+
+**El soporte que extrae las órdenes del enunciado** no ve el `chmod +x` del
+laboratorio 08, ni las «agrega una línea al final de…» del 01, y toma como
+órdenes dos líneas de dentro del gancho del 08. No afecta al recorrido del
+simulador, que no pasa por el 01, el 07 ni el 08.
