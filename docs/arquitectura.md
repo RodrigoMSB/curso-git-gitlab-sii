@@ -4834,3 +4834,56 @@ reescribe el índice al refrescarlo, y esa escritura le avisaba a la página
 por otro camino (ahora se corre con `GIT_OPTIONAL_LOCKS=0`); y dos
 `git commit --amend` en el mismo segundo fabrican el mismo objeto, así que el
 recorrido adelanta el reloj del confirmador un minuto por orden.
+
+Una tercera, que solo apareció en GitHub Actions: `git commit` sin `-m` y
+`git commit -c ORIG_HEAD` abren el editor. En esta máquina `GIT_EDITOR=true`
+venía del entorno; en el runner no hay editor y Git abortaba. El recorrido
+ahora fija `GIT_EDITOR=true`, que equivale a guardar el mensaje propuesto.
+
+### 66.6 · Resultados
+
+Ejecución de GitHub Actions: https://github.com/RodrigoMSB/curso-git-gitlab-sii/actions/runs/35908747453
+(detalle en `docs/poc-repositorio-real/actions/`).
+
+| | Mac + Chrome | Windows + Chrome | Windows + Edge |
+|---|---|---|---|
+| Lector contra Git (97 pruebas) | 97 | 97 | 97 |
+| 13 repositorios de prueba en la página (CA1) | iguales | iguales | iguales |
+| Órdenes del guion, áreas y grafo iguales (CA2) | 438/438 | 438/438 | 438/438 |
+| Demora máxima de una confirmación nueva (CA3) | 650 ms | 681 ms | 806 ms |
+
+Por laboratorio (las mismas cifras en las tres): 02: 52, 03: 66, 04: 85,
+05: 55, 06: 51, 07: 75, 08: 54 órdenes. Del 07 se saltan dos órdenes de la
+sección de rescate con marcadores que no tienen escenario de donde
+resolverse. Lectura del repositorio en Node: 1,3 a 1,5 ms de media por
+laboratorio, 2,7 ms de máxima.
+
+CA4, la previsualización sobre el estado real contra Git
+(`recorrido-previsualizacion.md`): una sola diferencia de grafo, dos de
+áreas, y las órdenes que el motor no sabe; todas del motor, ninguna del
+lector ni del puente:
+
+- **`git switch main` con trabajo que se pisaría** (lab 07): Git se niega, el
+  motor cambia de rama. El motor nunca hace esa comprobación.
+- **`git add .` después de un `mv`** (lab 03): Git lo ve como renombrado, el
+  motor como alta y baja.
+- **`echo … > .git/hooks/commit-msg`** (lab 08): el motor lo toma como una
+  carpeta `.git/` sin seguimiento.
+- **`git fetch`** (lab 08): el motor responde `'fetch' is not a git command`.
+  Eso es la cuarta respuesta que el contrato prohíbe: la orden existe y el
+  simulador la niega en vez de declararla no implementada.
+- **Las ramas remotas** (`upstream/main`) no existen para el motor: `git log`
+  y `git merge` sobre ellas fallan donde Git funciona.
+- Declaradas, respuesta válida: `cd`, mirar `.git`, escribir fuera del
+  repositorio, `rebase -i`, `rebase --continue`, `branch -a`, `--no-verify`.
+
+### 66.7 · Encontrado fuera del alcance, sin tocar
+
+**`preparar.sh` falla en Windows en todos los laboratorios.** La verificación
+compara `pwd -P` (`/c/Users/…` en Git Bash) con `git rev-parse
+--show-toplevel` (`C:/Users/…` en Git para Windows): nunca son iguales, y el
+script termina con «la carpeta existe pero no es un repositorio» aunque el
+repositorio quedó bien armado. Confirmado en el runner con un paso de
+diagnóstico que corre el `preparar.sh` del laboratorio 02 tal como lo corre el
+participante. Está en `main`, no es de este spec, y le pega al primer paso de
+cada laboratorio en los equipos del SII.
