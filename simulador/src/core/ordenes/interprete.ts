@@ -134,16 +134,24 @@ function existeCarpeta(estado: EstadoRepositorio, ruta: string): boolean {
  * laboratorio 02 se hace en la terminal a proposito.
  */
 export const ordenCat: Manejador = (estado, argumentos) => {
-  const rutas = posicionales(argumentos);
+  // `cat a.md > c.md`: lo que esta despues del operador no es un archivo a
+  // leer sino el destino de la redireccion (SPEC 023). Antes se leia `>` como
+  // un archivo y respondia que no existia.
+  const corte = argumentos.findIndex(esOperador);
+  const rutas = posicionales(corte < 0 ? argumentos : argumentos.slice(0, corte));
   if (rutas.length === 0) return fallo(estado, 'cat: falta el nombre del archivo');
 
-  const filas: string[] = [];
+  const textos: string[] = [];
   for (const ruta of rutas) {
     const texto = textoDeTrabajo(estado, ruta);
     if (texto === null) return fallo(estado, `cat: ${ruta}: No such file or directory`);
-    filas.push(...lineasDe(texto));
+    textos.push(texto);
   }
-  return ok(estado, lineas(...filas));
+  if (corte < 0) return ok(estado, lineas(...textos.flatMap(lineasDe)));
+
+  const destino = argumentos[corte + 1];
+  if (destino === undefined) return fallo(estado, "bash: syntax error near unexpected token `newline'");
+  return ok(escribirRedirigido(estado, destino, textos.join(''), argumentos[corte] === '>>'));
 };
 
 /**
@@ -382,18 +390,21 @@ export const ordenEcho: Manejador = (estado, argumentos) => {
   // linea en blanco, no un archivo vacio, y las listas del recetario llevan
   // lineas en blanco entre sus secciones.
   const escrito = normalizar(`${argumentos.slice(0, corte).join(' ')}\n`);
+  return ok(escribirRedirigido(estado, destino, escrito, anexa));
+};
+
+/**
+ * Lo que hace la redireccion de bash con lo que una orden imprime: `>`
+ * reemplaza el texto del archivo y `>>` lo agrega al final. La usan `echo` y,
+ * desde el SPEC 023, `cat`.
+ */
+function escribirRedirigido(estado: EstadoRepositorio, destino: string, escrito: string, anexa: boolean): EstadoRepositorio {
   const existente = archivoPorNombre(estado, destino);
   const previo = anexa ? (textoDeTrabajo(estado, destino) ?? '') : '';
   const texto = `${previo}${escrito}`;
 
   if (existente === undefined) {
-    return ok(
-      establecerContenido(
-        establecerArchivo(estado, destino, 'sin-seguimiento'),
-        destino,
-        texto,
-      ),
-    );
+    return establecerContenido(establecerArchivo(estado, destino, 'sin-seguimiento'), destino, texto);
   }
 
   // Escribir lo mismo que ya habia no ensucia el archivo, igual que en Git.
@@ -401,8 +412,8 @@ export const ordenEcho: Manejador = (estado, argumentos) => {
     existente.estado === 'limpio' && texto !== (textoDeTrabajo(estado, destino) ?? '')
       ? 'modificado'
       : existente.estado;
-  return ok(establecerContenido(establecerArchivo(estado, destino, destinoEstado), destino, texto));
-};
+  return establecerContenido(establecerArchivo(estado, destino, destinoEstado), destino, texto);
+}
 
 /** `git remote`, con `-v` y `add`. */
 export const ordenRemote: Manejador = (estado, argumentos) => {

@@ -363,8 +363,10 @@ Mensajes del tipo "wip", "arreglo", "más cosas". Nadie que revise esto va a ent
 ### 3.2 Abre el rebase interactivo
 
 ```
-git rebase -i HEAD~4
+git rebase -i main
 ```
+
+Con `main` la lista trae exactamente las confirmaciones propias de tu rama, sean cuantas sean.
 
 Git abre el editor con una lista. Cada línea es una confirmación con una acción delante.
 
@@ -380,7 +382,7 @@ Las tres que vas a usar hoy.
 
 ### 3.3 Cambia un mensaje
 
-Deja la primera línea con `pick` y cambia la segunda a `reword`. Las otras dos déjalas con `pick`.
+Cambia la primera línea a `reword`. Las demás déjalas con `pick`.
 
 Guarda y cierra.
 
@@ -392,17 +394,17 @@ Guarda y cierra otra vez.
 git log --oneline -6
 ```
 
-### 3.4 Une las últimas dos
+### 3.4 Une las del medio
 
 ```
-git rebase -i HEAD~4
+git rebase -i main
 ```
 
-Ahora deja las dos primeras con `pick` y cambia las dos últimas a `squash`.
+Ahora deja la primera y la última con `pick`, y cambia a `squash` todas las del medio.
 
 Guarda y cierra.
 
-Git te abre un editor con los tres mensajes juntos. Borra todo y escribe uno solo que describa el conjunto.
+Git te abre un editor con los mensajes juntos. Borra "cambios", "mas cambios" y "arreglos" y deja solo el que escribiste en el `reword`: si no, quedan dentro del mensaje nuevo.
 
 Guarda y cierra.
 
@@ -411,7 +413,7 @@ git log --oneline -6
 git lg
 ```
 
-Cuatro confirmaciones se convirtieron en dos.
+Cinco confirmaciones quedaron en dos: la que reescribiste y "se agrega el curry y sus ingredientes".
 
 ### 3.5 Comprueba
 

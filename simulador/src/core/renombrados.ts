@@ -50,29 +50,3 @@ export function emparejarRenombrados(estado: EstadoRepositorio): EstadoRepositor
     borrados: libres,
   };
 }
-
-/**
- * Como nombra Git un renombrado en el resumen de una confirmacion: lo comun al
- * comienzo y al final va una sola vez, y lo que cambia entre llaves.
- * `recetas/a.md` a `recetas/b.md` es `recetas/{a.md => b.md}`.
- */
-export function rotuloDeRenombrado(antes: string, despues: string): string {
-  let inicio = 0;
-  for (let i = 0; i < Math.min(antes.length, despues.length) && antes[i] === despues[i]; i += 1) {
-    if (antes[i] === '/') inicio = i + 1;
-  }
-  let fin = 0;
-  for (
-    let i = 1;
-    i <= Math.min(antes.length, despues.length) - inicio && antes[antes.length - i] === despues[despues.length - i];
-    i += 1
-  ) {
-    if (antes[antes.length - i] === '/') fin = i;
-  }
-  if (inicio === 0 && fin === 0) return `${antes} => ${despues}`;
-  const prefijo = antes.slice(0, inicio);
-  const sufijo = fin === 0 ? '' : antes.slice(antes.length - fin);
-  const medioAntes = antes.slice(inicio, antes.length - fin);
-  const medioDespues = despues.slice(inicio, despues.length - fin);
-  return `${prefijo}{${medioAntes} => ${medioDespues}}${sufijo}`;
-}

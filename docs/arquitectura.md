@@ -4846,3 +4846,60 @@ entre ellas `fetch`, `pull`, `push`, `clone`, `cherry-pick`,
 | Cobertura de unidad (líneas, ramas, funciones, sentencias) | 91,76 · 82,93 · 92,72 · 94,47 | 92,22 · 83,55 · 93,90 · 94,92 |
 | Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
 | Artefacto | 331434 bytes | 335577 bytes |
+
+## 69. El laboratorio 07 se puede aprobar, y dos detalles
+
+SPEC 023.
+
+### 69.1 · El laboratorio 07
+
+Al llegar al rebase interactivo la rama tiene cinco confirmaciones propias
+(`wip`, `cambios`, `mas cambios`, `arreglos` y la del punto 1.12), y
+`git rebase -i HEAD~4` dejaba `wip` afuera. Cambió el enunciado, no el
+verificador:
+
+- **3.2 y 3.4:** `git rebase -i main`. La lista trae exactamente las
+  confirmaciones propias de la rama, sean cuantas sean. `main` es la base
+  correcta en ese punto: el 2.3 hace `git rebase main`.
+- **3.3:** `reword` en la primera línea, el resto con `pick`.
+- **3.4:** `pick` en la primera y la última, `squash` en las del medio; en el
+  editor del squash queda solo el mensaje del `reword`.
+- Resultado: dos confirmaciones, la reescrita y «se agrega el curry y sus
+  ingredientes».
+
+La diferencia conocida que la prueba del SPEC 021 anotaba para el 07 se quitó:
+el laboratorio se aprueba siguiendo el enunciado, en Windows y en Mac.
+
+**El verificador no mira el cuerpo de los mensajes.** Revisa el asunto
+(`git log --format=%s`), y en un squash el asunto es el del `reword`: si el
+participante no borra «cambios», «mas cambios» y «arreglos», quedan en el
+cuerpo y el verificador igual aprueba. El enunciado pide borrarlos, sin decir
+que el verificador los encuentra.
+
+Ningún otro enunciado cuenta varias confirmaciones hacia atrás al reescribir
+historia: solo `git reset` a `HEAD~1` en el 01, 02, 06 y 08.
+
+### 69.2 · El resumen de `git commit`
+
+Imprime lo que Git: archivos, inserciones y eliminaciones con la regla de
+`print_stat_summary` (las inserciones se nombran si hay alguna o si no hay
+eliminaciones, y al revés), y las líneas `create mode`, `delete mode` y
+`rename`, ordenadas por ruta. `--amend` agrega la línea ` Date:` con la
+fecha original; cerrar una fusión imprime solo la primera línea. La regla de
+inserciones y eliminaciones se corrigió en la función compartida, así que vale
+también para `git merge`, `git revert` y `--stat`.
+
+### 69.3 · `cat` con redirección
+
+`cat a.md > c.md` y `cat a.md >> c.md` escriben como en bash, con la misma
+función que ya usaba `echo`.
+
+### 69.4 · Las cifras
+
+| | Antes | Después |
+|---|---|---|
+| Pruebas de unidad | 943 | 954 |
+| Pruebas de punta a punta | 173 | 173 |
+| Cobertura de unidad (líneas, ramas, funciones, sentencias) | 92,22 · 83,55 · 93,90 · 94,92 | 92,11 · 83,30 · 93,81 · 94,83 |
+| Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
+| Artefacto | 335 577 bytes | 336286 bytes |

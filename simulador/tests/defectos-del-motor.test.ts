@@ -7,66 +7,14 @@
  * identificadores, que el simulador genera con su propia huella.
  */
 
-import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { describe, expect, it } from 'vitest';
 import { ORDENES_DE_GIT } from '../src/core/contrato';
-import { estadoVacio, establecerArchivo, sinSeguimientoAgrupado } from '../src/core/estado';
+import { establecerArchivo, sinSeguimientoAgrupado } from '../src/core/estado';
 import { ejecutar } from '../src/core/motor';
-import type { EstadoRepositorio } from '../src/core/tipos';
 import { escenarioPorId } from '../src/escenarios';
+import { comparar } from './contra-git';
 
-const carpetas: string[] = [];
-afterAll(() => {
-  for (const carpeta of carpetas) rmSync(carpeta, { recursive: true, force: true });
-});
-
-function normalizar(salida: string): string {
-  return salida
-    .replace(/\r/g, '')
-    // La linea en blanco que el simulador deja tras «On branch» es una
-    // diferencia conocida de `git status`, que el product owner decidio dejar
-    // como esta; el SPEC 022 no toca `git status` (punto 3.2).
-    .replace(/^(On branch \S+)\n\n/, '$1\n')
-    .replace(/\b[0-9a-f]{7,40}\b/g, '<id>')
-    .trimEnd();
-}
-
-function enGit(ordenes: readonly string[]): string[] {
-  const carpeta = mkdtempSync(join(tmpdir(), 'defectos-'));
-  carpetas.push(carpeta);
-  const configuracion = join(carpeta, '.gitconfig-prueba');
-  writeFileSync(configuracion, '[user]\n\tname = Participante\n\temail = p@sii.cl\n[init]\n\tdefaultBranch = main\n');
-  const repo = join(carpeta, 'r');
-  const entorno = { ...process.env, GIT_CONFIG_GLOBAL: configuracion, GIT_CONFIG_NOSYSTEM: '1', LANG: 'C', LC_ALL: 'C' };
-  spawnSync('git', ['init', '-q', repo], { env: entorno });
-  return ordenes.map((orden) => {
-    const corrida = spawnSync('bash', ['-c', orden], { cwd: repo, env: entorno, encoding: 'utf8' });
-    return `${corrida.stdout ?? ''}${corrida.stderr ?? ''}`;
-  });
-}
-
-function enSimulador(ordenes: readonly string[]): string[] {
-  let estado: EstadoRepositorio = ejecutar(estadoVacio(), 'git init').estado;
-  return ordenes.map((orden) => {
-    const resultado = ejecutar(estado, orden);
-    estado = resultado.estado;
-    return resultado.salida.map((linea) => linea.texto).join('\n');
-  });
-}
-
-/** Corre todo en los dos lados y compara la salida de las ordenes marcadas con `?`. */
-function comparar(ordenes: readonly string[]): void {
-  const limpias = ordenes.map((orden) => orden.replace(/^\? /, ''));
-  const git = enGit(limpias);
-  const simulador = enSimulador(limpias);
-  ordenes.forEach((orden, indice) => {
-    if (!orden.startsWith('? ')) return;
-    expect(normalizar(simulador[indice] ?? ''), `salida de «${limpias[indice]}»`).toBe(normalizar(git[indice] ?? ''));
-  });
-}
 
 const PARTIDA = [
   'echo "uno" > a.md',

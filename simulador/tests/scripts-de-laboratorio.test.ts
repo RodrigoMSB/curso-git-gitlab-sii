@@ -119,12 +119,16 @@ const A_MANO: Readonly<Record<string, readonly PasoAMano[]>> = {
   ],
   '07': [
     {
-      ancla: 'Deja la primera línea con `pick` y cambia la segunda a `reword`',
-      editor: { lista: "sed -i.bak '2s/^pick/reword/' \"$1\"", mensaje: 'agrega la preparacion del curry massaman' },
+      ancla: 'Cambia la primera línea a `reword`',
+      editor: { lista: "sed -i.bak '1s/^pick/reword/' \"$1\"", mensaje: 'agrega la receta del curry massaman' },
     },
     {
-      ancla: 'Ahora deja las dos primeras con `pick` y cambia las dos últimas a `squash`',
-      editor: { lista: "sed -i.bak -e '3s/^pick/squash/' -e '4s/^pick/squash/' \"$1\"", mensaje: 'completa la receta del curry massaman' },
+      // En el editor del squash queda solo el mensaje del reword, como pide el enunciado.
+      ancla: 'Ahora deja la primera y la última con `pick`',
+      editor: {
+        lista: "n=$(grep -c '^pick' \"$1\"); sed -i.bak \"2,$((n - 1))s/^pick/squash/\" \"$1\"",
+        mensaje: 'agrega la receta del curry massaman',
+      },
     },
   ],
   '08': [
@@ -219,18 +223,11 @@ function dice(corrida: Corrida): string {
 
 /**
  * Criterios del verificador que fallan aunque el enunciado se siga al pie de
- * la letra. No son de Windows: pasan igual en Mac. Se anotan exactos para que
- * la prueba siga midiendo todo lo demas, y para que avise el dia que se
- * corrijan.
- *
- * Laboratorio 07: al llegar a la parte 3, la rama tiene cinco confirmaciones
- * propias (la del punto 1.12 se suma a las cuatro de la semilla), y
- * `git rebase -i HEAD~4` deja `wip` fuera de la lista. Siguiendo el enunciado
- * quedan tres confirmaciones, con `wip` y `cambios` intactos; la comprobacion
- * del enunciado y el verificador esperan dos, con mensajes decentes.
+ * la letra. Se anotan exactos para que la prueba siga midiendo todo lo demas,
+ * y para que avise el dia que se corrijan. Hoy no hay ninguno: el del 07 se
+ * corrigio en el SPEC 023.
  */
 const FALLAN_SIGUIENDO_EL_ENUNCIADO: Readonly<Record<string, readonly string[]>> = {
-  '07': ['confirmaciones propias de la rama de trabajo', 'los mensajes de la rama de trabajo'],
 };
 
 function criteriosFallidos(salida: string): string[] {
