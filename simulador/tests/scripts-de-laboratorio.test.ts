@@ -23,6 +23,7 @@ import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFi
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
+import { configuracionDelTaller } from '../cypress/soporte/enunciado';
 import { aliasDelTaller, ordenesDe, ordenPara, resolverMarcadores } from '../cypress/soporte/ordenes';
 import { type Corrida, carpetaTemporal, entorno, preparar, verificar } from './laboratorios-en-disco';
 
@@ -63,6 +64,15 @@ function montar(numero: string): Montado {
   const configGlobal = join(raiz, 'gitconfig-de-mentira');
   writeFileSync(configGlobal, '');
   const env = entorno(configGlobal);
+  // Desde el 02, el participante llega con lo que dejo puesto en el 01:
+  // identidad y alias, sacados de ese enunciado. En Mac, Git inventa una
+  // identidad con el nombre de la maquina y sin esto igual confirmaba; en
+  // Windows no, y la prueba fallaba por algo que ningun participante vive.
+  if (numero !== '01') {
+    for (const [clave, valor] of configuracionDelTaller(enunciado('01'))) {
+      execFileSync('git', ['config', '--global', clave, valor], { env, stdio: 'ignore' });
+    }
+  }
   const git = (...args: string[]): void => {
     execFileSync('git', ['-C', clon, '-c', 'user.name=Curso', '-c', 'user.email=curso@sii.cl', ...args], { env, stdio: 'ignore' });
   };
