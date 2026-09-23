@@ -89,7 +89,11 @@ export function correr(lab: LaboratorioPreparado, orden: string): { salida: stri
   const corrida = spawnSync('bash', ['-c', orden], {
     cwd: lab.recetario,
     encoding: 'utf8',
-    env: { ...entorno(lab.configGlobal), GIT_COMMITTER_DATE: `@${reloj} -0300` },
+    // El editor acepta el mensaje que Git propone, que es lo que hace el
+    // participante al guardar y cerrar. Sin fijarlo, la prueba dependia del
+    // editor de la maquina: en GitHub Actions no hay, y `git commit` sin `-m`
+    // se abortaba.
+    env: { ...entorno(lab.configGlobal), GIT_COMMITTER_DATE: `@${reloj} -0300`, GIT_EDITOR: 'true' },
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 60_000,
   });
