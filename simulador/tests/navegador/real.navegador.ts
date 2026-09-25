@@ -688,7 +688,8 @@ describe(`el modo real en ${CANAL}`, () => {
     const texto = ((await boton?.textContent()) ?? '').trim();
     comprobar(boton !== null && texto.includes('recetario'), `SPEC 024 · al recargar se ofrece «${texto}»`);
     if (boton !== null) {
-      await boton.click();
+      // Un localizador, no el elemento ya obtenido: React puede volver a montar el boton.
+      await c.pagina.locator('[data-prueba="reconectar-repositorio"]').click();
       await esperarConexion(c.pagina);
       await esperarVueltas(c.pagina);
       const indicador = await estadoDelIndicador(c.pagina);
@@ -773,7 +774,7 @@ describe(`el modo real en ${CANAL}`, () => {
       const prototipo = FileSystemHandle.prototype as unknown as { queryPermission: unknown; original?: unknown };
       prototipo.queryPermission = prototipo.original;
     });
-    await reconectar?.click();
+    if (reconectar !== null) await c.pagina.locator('[data-prueba="reconectar-repositorio"]').click();
     const devuelto = await esperarIndicador(c.pagina, 'en-vivo');
     comprobar(devuelto.estado === 'en-vivo', `SPEC 024 · con un clic vuelve: «${devuelto.texto}»`);
 
