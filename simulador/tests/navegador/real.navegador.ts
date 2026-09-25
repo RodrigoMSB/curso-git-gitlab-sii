@@ -758,11 +758,20 @@ describe(`el modo real en ${CANAL}`, () => {
       `SPEC 024 · conectada: el indicador dice «${vivo.texto}»`,
     );
 
-    // El permiso retirado: el navegador contesta que ya no lo concede.
+    // El permiso retirado: el navegador contesta que ya no lo concede, y solo
+    // lo devuelve cuando la pagina lo pide con requestPermission, como hace
+    // un navegador de verdad.
     await c.pagina.evaluate(() => {
-      const prototipo = FileSystemHandle.prototype as unknown as { queryPermission: unknown; original?: unknown };
-      prototipo.original = prototipo.queryPermission;
-      prototipo.queryPermission = async () => 'prompt';
+      const prototipo = FileSystemHandle.prototype as unknown as {
+        queryPermission: () => Promise<string>;
+        requestPermission: () => Promise<string>;
+      };
+      let permiso = 'prompt';
+      prototipo.queryPermission = async () => permiso;
+      prototipo.requestPermission = async () => {
+        permiso = 'granted';
+        return permiso;
+      };
     });
     const sinPermiso = await esperarIndicador(c.pagina, 'sin-permiso');
     // Diagnostico: si el estado alterna, el boton de reconectar se desmonta y no se puede apretar.
@@ -784,10 +793,6 @@ describe(`el modo real en ${CANAL}`, () => {
       sinPermiso.estado === 'sin-permiso' && reconectar !== null,
       `SPEC 024 · sin permiso: el indicador dice «${sinPermiso.texto}» y se ofrece reconectar`,
     );
-    await c.pagina.evaluate(() => {
-      const prototipo = FileSystemHandle.prototype as unknown as { queryPermission: unknown; original?: unknown };
-      prototipo.queryPermission = prototipo.original;
-    });
     if (reconectar !== null) await c.pagina.locator('[data-prueba="reconectar-repositorio"]').click();
     const devuelto = await esperarIndicador(c.pagina, 'en-vivo');
     comprobar(devuelto.estado === 'en-vivo', `SPEC 024 · con un clic vuelve: «${devuelto.texto}»`);
