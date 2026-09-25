@@ -5163,3 +5163,30 @@ Mac, Chrome y Edge, 19 de 19 pruebas en el navegador:
 
 La lectura en la página tarda decenas de milisegundos porque cada archivo se
 pide por la API del navegador; solo ocurre cuando algo cambió.
+
+En GitHub Actions (ejecución 36184697395, confirmación `810c33e`), 19 de 19 en
+las tres combinaciones, y los scripts del SPEC 021 en Windows y Mac:
+
+| | Mac + Chrome | Windows + Chrome | Windows + Edge |
+|---|---|---|---|
+| Archivo sin Git y `git init`, visto por la página | 210 a 274 ms | 14 a 395 ms | 56 a 161 ms |
+| Confirmación nueva, máxima | 309 ms | 560 ms | 449 ms |
+| Una vuelta de vigilancia | 12 a 24 ms | 13 a 19 ms | 14 a 19 ms |
+| Laboratorio 01 desde la carpeta vacía | 54 de 54 | 54 de 54 | 54 de 54 |
+
+Dos defectos de la prueba que solo aparecieron en Windows: el clic en
+«reconectar» usaba un elemento que React volvía a montar, y la prueba devolvía
+el permiso antes del clic, así que la página se reconectaba sola y el botón
+desaparecía. Ahora el permiso vuelve solo con `requestPermission`, como en un
+navegador de verdad.
+
+### 70.7 · Lo que no se pudo probar
+
+- **El diálogo real.** Todo se prueba con la OPFS. Una carpeta del disco
+  elegida con el diálogo, en un equipo del SII, se ve recién en la prueba en
+  vivo: si la política permite la API, si la fecha de modificación de NTFS
+  llega igual, y qué pasa con «reconectar» en incógnito.
+- **Pruebas que ya pasaban con la página de antes** (la detección sola de
+  archivos, `git init`, sin IndexedDB, los escenarios con la API bloqueada): se
+  vieron fallar con la página mutada (sin vigilar el directorio de trabajo;
+  sin la protección de IndexedDB) y con mutaciones del vigía en las de unidad.
