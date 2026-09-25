@@ -287,6 +287,50 @@ body {
 }
 
 /*
+  El indicador del modo conectado (SPEC 024, 5.1). El punto late mientras la
+  pagina lee la carpeta en vivo, se queda quieto y ambar sin repositorio, y
+  rojo si la carpeta se perdio. El color no es lo unico: el texto lo dice.
+*/
+.indicador-conexion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--escala) * 5px) calc(var(--escala) * 12px);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--fondo);
+  color: var(--texto);
+  white-space: nowrap;
+}
+.indicador-conexion > .pulso {
+  width: calc(var(--escala) * 9px);
+  height: calc(var(--escala) * 9px);
+  flex: none;
+  border-radius: 50%;
+  background: var(--consola-verde);
+  animation: latido 1.6s ease-in-out infinite;
+}
+.indicador-conexion[data-estado='sin-repositorio'] > .pulso,
+.indicador-conexion[data-estado='no-soportado'] > .pulso {
+  background: var(--consola-amarillo);
+}
+.indicador-conexion[data-estado='perdida'],
+.indicador-conexion[data-estado='sin-permiso'] {
+  border-color: var(--consola-rojo);
+  color: var(--consola-rojo);
+}
+.indicador-conexion[data-estado='perdida'] > .pulso,
+.indicador-conexion[data-estado='sin-permiso'] > .pulso {
+  background: var(--consola-rojo);
+  animation: none;
+}
+@keyframes latido {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/*
   Listas de la zona D.
 
   El tope es un numero entero de filas y cada fila mide exactamente lo mismo,

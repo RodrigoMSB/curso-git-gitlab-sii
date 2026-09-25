@@ -38,7 +38,9 @@ export type {
 } from './pantalla';
 export { construirPantalla, ESCALA_RELATOR, FILAS_VISIBLES, TEXTO_MINIMO } from './pantalla';
 
-export type { AvisosReales, ResultadoLectura, SesionReal } from './real';
+export type { AvisosReales, EstadoConexion, ResultadoLectura, SesionReal } from './real';
+export type { Carpeta } from '../real/navegador';
+export { carpetaRecordada, nombreRecordado, recordarCarpeta } from '../real/recordar';
 export {
   actualizarSesionReal,
   anotarOrdenReal,
@@ -47,7 +49,11 @@ export {
   Conexion,
   conectarRepositorio,
   construirPantallaReal,
+  estadoDeConexion,
   iniciarSesionReal,
+  motivoDeFalla,
   navegadorPuedeConectar,
+  reconectarRepositorio,
   seleccionarEnReal,
+  SIN_LA_API,
 } from './real';

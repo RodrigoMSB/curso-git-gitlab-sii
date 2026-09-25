@@ -12,14 +12,18 @@ import type { AvisosReales } from '../vista';
 export function AvisosDelRepositorio({
   avisos,
   nombre,
+  lecturas,
 }: {
   readonly avisos: AvisosReales;
   readonly nombre: string;
+  /** Cuantas veces se releyo: la prueba en el navegador mira que un archivo ignorado no provoque una lectura. */
+  readonly lecturas: number;
 }): React.ReactElement {
   return (
     <div
       className="flex flex-wrap items-baseline gap-x-5 gap-y-1 border-b border-[var(--borde)] px-6 py-2"
       data-prueba="avisos-repositorio"
+      data-lecturas={lecturas}
     >
       <p className="t-pequeno">
         Mirando <span className="font-mono font-semibold">{nombre}</span> en modo lectura. Las órdenes se escriben
@@ -31,7 +35,12 @@ export function AvisosDelRepositorio({
         </p>
       ))}
       {avisos.tiempos !== null && (
-        <p className="t-min text-[var(--texto-tenue)]" data-prueba="tiempo-lectura" data-ms={avisos.tiempos.total ?? 0}>
+        <p
+          className="t-min text-[var(--texto-tenue)]"
+          data-prueba="tiempo-lectura"
+          data-ms={avisos.tiempos.total ?? 0}
+          title={JSON.stringify(avisos.tiempos)}
+        >
           leído en {Math.round((avisos.tiempos.total ?? 0) + (avisos.tiempos.motor ?? 0))} ms
         </p>
       )}

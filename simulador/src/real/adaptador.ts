@@ -16,6 +16,11 @@ export interface EntradaDirectorio {
   readonly esDirectorio: boolean;
 }
 
+export interface EntradaConDatos extends EntradaDirectorio {
+  /** Null en una carpeta, o si el archivo desaparecio mientras se listaba. */
+  readonly datos: DatosArchivo | null;
+}
+
 export interface DatosArchivo {
   readonly tamano: number;
   /** Milisegundos desde la epoca, con la precision que dé el sistema. */
@@ -33,4 +38,18 @@ export interface Adaptador {
    * con lo que Git anoto en el indice sin calcular su huella.
    */
   datos(ruta: readonly string[]): Promise<DatosArchivo | null>;
+  /**
+   * Lo que hay en la carpeta, con el tamaño y la fecha de cada archivo, o
+   * `null` si no existe. Es lo que el vigia pide en cada vuelta: en el
+   * navegador, pedir los datos de un archivo por su ruta obliga a bajar desde
+   * la raiz, y listando se obtienen de una vez (SPEC 024, CA5).
+   */
+  listarConDatos(ruta: readonly string[]): Promise<readonly EntradaConDatos[] | null>;
+  /**
+   * Si la carpeta elegida se puede seguir leyendo (SPEC 024, 5.1). Sin esto,
+   * una carpeta borrada o un permiso retirado se verian como una carpeta vacia.
+   */
+  acceso(): Promise<Acceso>;
 }
+
+export type Acceso = 'ok' | 'no-existe' | 'sin-permiso';

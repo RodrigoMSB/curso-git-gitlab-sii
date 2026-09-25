@@ -41,7 +41,9 @@ export type TonoElemento =
   /** Archivo retirado del seguimiento, con la baja ya preparada. */
   | 'borrado-preparado'
   /** Archivo versionado que desaparecio del directorio y nadie preparo. */
-  | 'borrado-pendiente';
+  | 'borrado-pendiente'
+  /** Archivo de una carpeta que todavia no es repositorio: Git no lo ve (SPEC 024). */
+  | 'suelto';
 
 export interface ElementoArea {
   readonly texto: string;

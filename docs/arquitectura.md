@@ -5061,3 +5061,105 @@ función que ya usaba `echo`.
 | Cobertura de unidad (líneas, ramas, funciones, sentencias) | 92,22 · 83,55 · 93,90 · 94,92 | 92,11 · 83,30 · 93,81 · 94,83 |
 | Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
 | Artefacto | 335 577 bytes | 336286 bytes |
+
+## 70. El modo conectado, listo para clase
+
+SPEC 024. Todo en la rama `poc/repositorio-real`; `main` no se tocó. Antes de
+empezar se trajo `main` a la rama (SPEC 021, 022 y 023). De la prueba de la
+previsualización salieron las tres diferencias que el SPEC 022 arregló, y la
+línea del `cat` del laboratorio 07 pasó de la 420 a la 422 porque el SPEC 023
+cambió el enunciado.
+
+### 70.1 · Cómo se enteraba la página de un cambio en los archivos (2.2)
+
+**La prueba de concepto no pasaba sin comprobar lo que decía.** La marca que
+decide si releer (`vigilancia.ts`) ya incluía el tamaño y la fecha de cada
+archivo del directorio de trabajo, no solo lo de `.git`. Se comprobó corriendo
+la prueba nueva contra la página de antes: un archivo nuevo, uno modificado y
+uno borrado sin tocar Git aparecieron solos en 251 a 513 ms.
+
+Lo que sí estaba mal, o sin probar:
+
+- **La demora de un cambio sin Git nunca se midió.** La prueba del SPEC 020
+  medía solo la aparición de confirmaciones nuevas; lo demás lo miraba después
+  de esperar dos vueltas, sin plazo.
+- **La marca no respetaba el `.gitignore`.** Recorría todo, carpetas ignoradas
+  incluidas: un archivo ignorado hacía releer el repositorio entero.
+- **Cada lectura tiraba las huellas calculadas.** La conexión armaba un lector
+  nuevo por lectura, con su caché vacía: un archivo modificado se volvía a
+  calcular cada vez que cambiaba cualquier otro.
+- **La copia a la OPFS la hacía la misma página que se probaba**, con
+  `evaluate`. No empujaba estado a la pantalla, pero corría en su contexto.
+
+### 70.2 · Cómo se entera ahora (2.3)
+
+- **El vigía** (`Vigia` en `vigilancia.ts`) recorre el directorio de trabajo
+  como `git status`: salta lo excluido por cada `.gitignore` y por
+  `info/exclude`, salvo archivos que Git sigue igual. Qué sigue Git lo saca del
+  índice; el índice, `config` y cada `.gitignore` se releen solo si cambió su
+  tamaño o fecha. Tamaño y fecha son el primer filtro, como en Git.
+- **Lista cada carpeta una vez con los datos de sus archivos**
+  (`listarConDatos`), en paralelo. Pedir cada archivo por su ruta bajaba desde
+  la raíz en cada uno: una vuelta costaba 118 ms en Chrome; ahora 11 a 23 ms.
+- **Las huellas duran lo que dura la conexión.** `LectorDeTrabajo` recibe la
+  caché de la conexión.
+- **La vuelta es cada 300 ms** (antes 500).
+- **En la prueba, el disco lo cambia otra pestaña** del mismo navegador, que
+  comparte la OPFS. A la página que se prueba no se le toca nada.
+
+### 70.3 · Carpeta sin repositorio (3)
+
+El lector distingue «no hay `.git`» (`sin-repositorio`) de lo que no sabe
+leer. La página acepta la carpeta, dice que todavía no es un repositorio, y
+muestra sus archivos en el color del texto, ni rojos ni verdes, bajo «Carpeta, sin Git todavía» (tono `suelto`). El vigía
+sigue mirando; cuando aparece `.git`, la vuelta siguiente dibuja. El motor
+recibe un estado sin iniciar, así que `git init` se previsualiza como en el
+escenario.
+
+### 70.4 · Recordar la carpeta (4), y el incógnito
+
+El manejador se guarda en IndexedDB; su nombre, aparte. **En un perfil de
+incógnito, Chrome y Edge se cierran enteros al leer un manejador guardado**
+(visto con carpetas de la OPFS, con y sin ventana; con perfil normal no pasa;
+con una carpeta del diálogo no se pudo probar, porque el diálogo se puede
+interceptar pero no responder). La página no puede atraparlo ni saber si es
+incógnito: la cuota es la misma.
+
+Por eso **al cargar se lee solo el nombre**, y el manejador se lee al apretar
+«reconectar». Si el permiso se pierde con la página abierta, reconectar usa el
+manejador que está en memoria. Recargar nunca puede tumbar el navegador; en
+incógnito, apretar «reconectar» después de recargar sí podría.
+
+Sin IndexedDB, o si falla, la página funciona igual y pide la carpeta.
+
+### 70.5 · Lo que se ve (1.4 y 5)
+
+- Un indicador en la barra: la carpeta y su estado (leyendo en vivo, todavía
+  sin repositorio, no se puede dibujar, sin permiso, ya no existe). El punto
+  late en vivo; el texto lo dice sin depender del color.
+- El adaptador tiene `acceso()`: una carpeta borrada o un permiso retirado ya
+  no se ven como carpeta vacía. Se dice, y no queda el dibujo viejo.
+- La consola conectada abre con una línea: previsualiza y no ejecuta, las
+  órdenes van en Git Bash.
+- Sin la API: «usa Chrome o Edge». Con la API bloqueada por política
+  (`SecurityError` o `NotAllowedError`): «este equipo no permite que el
+  navegador abra carpetas». Las dos terminan en «los escenarios siguen
+  funcionando», y siguen.
+- Conectada, el selector de escenarios muestra «tu carpeta, conectada», para
+  que elegir cualquier escenario, también el que estaba, vuelva a ellos.
+
+### 70.6 · Las cifras
+
+Mac, Chrome y Edge, 19 de 19 pruebas en el navegador:
+
+| | SPEC 020 | SPEC 024 (Chrome) |
+|---|---|---|
+| Confirmación nueva visible, máxima | 650 ms | 451 ms |
+| Archivo nuevo, modificado o borrado sin Git | no se medía | 115 a 418 ms |
+| Una vuelta de vigilancia | no se medía (118 ms con la marca de antes) | 11 a 23 ms |
+| Lectura en Node, media por laboratorio | 1,3 a 1,5 ms | 1,4 a 1,6 ms |
+| Lectura en la página, con el motor | no se medía | 70 a 200 ms |
+| Laboratorio 01 desde la carpeta vacía | — | 54 de 54 órdenes iguales, una sola elección |
+
+La lectura en la página tarda decenas de milisegundos porque cada archivo se
+pide por la API del navegador; solo ocurre cuando algo cambió.

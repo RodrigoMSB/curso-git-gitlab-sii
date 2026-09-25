@@ -17,9 +17,13 @@ import {
   type Conexion,
   conectarRepositorio,
   construirPantallaReal,
+  estadoDeConexion,
   iniciarSesionReal,
+  motivoDeFalla,
   navegadorPuedeConectar,
+  reconectarRepositorio,
   seleccionarEnReal,
+  SIN_LA_API,
   type SesionReal,
   construirPantalla,
   ejecutarOrden,
@@ -31,6 +35,9 @@ import {
   seleccionarConfirmacion,
   ESCALA_RELATOR,
   type Sesion,
+  carpetaRecordada,
+  nombreRecordado,
+  recordarCarpeta,
 } from '../vista';
 import { Areas, PanelesSecundarios } from './Areas';
 import { AvisosDelRepositorio } from './AvisosDelRepositorio';
@@ -40,6 +47,12 @@ import { Grafo } from './Grafo';
 import { LineaTiempo } from './LineaTiempo';
 import { Tirador } from './Tirador';
 import { useMovimientoReducido } from './useMovimientoReducido';
+
+/**
+ * Cada cuanto se mira la carpeta conectada. Un cambio se ve, a mas tardar, una
+ * vuelta mas lo que tome leer: el SPEC 024 pide menos de un segundo.
+ */
+const INTERVALO_MS = 300;
 
 export function Aplicacion(): React.ReactElement {
   const [sesion, setSesion] = useState<Sesion>(() => iniciarSesion(escenarioDeArranque(window.location)));
@@ -63,9 +76,24 @@ export function Aplicacion(): React.ReactElement {
   const [real, setReal] = useState<SesionReal | null>(null);
   const conexion = useRef<Conexion | null>(null);
   const [avisoConexion, setAvisoConexion] = useState<string | null>(null);
+  // La ultima carpeta, que el navegador recuerda entre recargas (SPEC 024, 4).
+  // Al cargar se lee solo su nombre; el manejador, al apretar «reconectar»
+  // (ver src/real/recordar.ts).
+  const [recordada, setRecordada] = useState<string | null>(null);
 
-  // Cada medio segundo se mira si Git cambio algo; si cambio, se relee y la
-  // previsualizacion que estaba escrita se borra, porque ya paso (punto 2.8).
+  useEffect(() => {
+    let vivo = true;
+    nombreRecordado().then((nombre) => {
+      if (vivo) setRecordada(nombre);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  // Cada vuelta se mira si algo cambio, en Git o en los archivos; si cambio,
+  // se relee y la previsualizacion que estaba escrita se borra, porque ya paso
+  // (punto 2.8 del SPEC 020 y 2.3 del SPEC 024).
   const conectado = real !== null;
   useEffect(() => {
     if (!conectado) return;
@@ -87,38 +115,62 @@ export function Aplicacion(): React.ReactElement {
         .catch(() => undefined)
         .finally(() => {
           ocupado = false;
-          // Cuantas vueltas del sondeo terminaron: la prueba en el navegador
-          // lo usa para saber que la pagina ya miro despues de un cambio.
+          // Cuantas vueltas del sondeo terminaron, y cuanto costo la ultima:
+          // la prueba en el navegador lo usa para saber que la pagina ya miro
+          // despues de un cambio, y para medir (CA5 del SPEC 024).
           vueltas += 1;
           document.documentElement.dataset.vueltas = String(vueltas);
+          document.documentElement.dataset.vigilancia = JSON.stringify(actual.vigilancia);
         });
-    }, 500);
+    }, INTERVALO_MS);
     return () => {
       vivo = false;
       window.clearInterval(reloj);
     };
   }, [conectado]);
 
+  const empezar = useCallback(async (nueva: Conexion): Promise<void> => {
+    const lectura = await nueva.leer();
+    conexion.current = nueva;
+    setReal(iniciarSesionReal(nueva.nombre, lectura));
+    setEntrada('');
+    setSugerencias([]);
+    setIndiceHistorial(0);
+    if (nueva.carpeta !== null) {
+      const carpeta = nueva.carpeta;
+      void recordarCarpeta(carpeta).then((guardada) => setRecordada(guardada ? carpeta.name : null));
+    }
+  }, []);
+
   const conectar = useCallback((): void => {
     if (!navegadorPuedeConectar()) {
-      setAvisoConexion('Este navegador no deja abrir una carpeta: usa Chrome o Edge.');
+      setAvisoConexion(SIN_LA_API);
       return;
     }
     setAvisoConexion(null);
     conectarRepositorio()
-      .then(async (nueva) => {
-        if (nueva === null) return;
-        const lectura = await nueva.leer();
-        conexion.current = nueva;
-        setReal(iniciarSesionReal(nueva.nombre, lectura));
-        setEntrada('');
-        setSugerencias([]);
-        setIndiceHistorial(0);
+      .then((nueva) => (nueva === null ? undefined : empezar(nueva)))
+      .catch((error: unknown) => setAvisoConexion(motivoDeFalla(error)));
+  }, [empezar]);
+
+  // Un solo clic: es el que el navegador exige para devolver el permiso (4.1).
+  const reconectar = useCallback((): void => {
+    if (recordada === null) return;
+    setAvisoConexion(null);
+    // Si el permiso se perdio con la pagina abierta, el manejador sigue en
+    // memoria: no hace falta leerlo del almacenamiento.
+    const enMemoria = conexion.current?.carpeta ?? null;
+    (enMemoria === null ? carpetaRecordada() : Promise.resolve(enMemoria))
+      .then((carpeta) => (carpeta === null ? null : reconectarRepositorio(carpeta)))
+      .then((nueva) => {
+        if (nueva === null) {
+          setAvisoConexion(`No se pudo volver a abrir ${recordada}. Elige la carpeta de nuevo.`);
+          return undefined;
+        }
+        return empezar(nueva);
       })
-      .catch((error: unknown) => {
-        setAvisoConexion(`No se pudo abrir la carpeta: ${error instanceof Error ? error.message : String(error)}`);
-      });
-  }, []);
+      .catch((error: unknown) => setAvisoConexion(motivoDeFalla(error)));
+  }, [recordada, empezar]);
 
   const movimientoReducido = useMovimientoReducido();
   const escala = modoRelator ? ESCALA_RELATOR : 1;
@@ -251,12 +303,14 @@ export function Aplicacion(): React.ReactElement {
         onPrevisualizacion={() => setPrevisualizacionActiva((valor) => !valor)}
         onModoRelator={() => setModoRelator((valor) => !valor)}
         onReiniciar={() => elegirEscenario(sesion.escenario)}
-        conectado={real !== null}
+        conexion={real === null ? null : estadoDeConexion(real)}
         avisoConexion={avisoConexion}
+        recordada={recordada}
         onConectar={conectar}
+        onReconectar={reconectar}
       />
 
-      {real !== null && <AvisosDelRepositorio avisos={avisosReales(real)} nombre={real.nombre} />}
+      {real !== null && <AvisosDelRepositorio avisos={avisosReales(real)} nombre={real.nombre} lecturas={real.lecturas} />}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
         {/*

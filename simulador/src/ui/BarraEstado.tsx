@@ -10,7 +10,7 @@
  * extremo derecho, que es donde la gente lo busca.
  */
 
-import type { ResumenBarra } from '../vista';
+import type { EstadoConexion, ResumenBarra } from '../vista';
 
 interface Props {
   readonly barra: ResumenBarra;
@@ -23,11 +23,17 @@ interface Props {
   readonly onModoRelator: () => void;
   readonly onTemaClaro: () => void;
   readonly onReiniciar: () => void;
-  /** La pantalla esta mirando el repositorio real del alumno (SPEC 020). */
-  readonly conectado: boolean;
+  /**
+   * A que carpeta mira la pagina y en que estado esta (SPEC 024, 5.1), o null
+   * si la pantalla muestra un escenario.
+   */
+  readonly conexion: { readonly estado: EstadoConexion; readonly texto: string } | null;
   /** Una linea cuando no se pudo conectar, por ejemplo porque el navegador no deja. */
   readonly avisoConexion: string | null;
+  /** La carpeta que el navegador recuerda, para reconectarla con un clic (SPEC 024, 4.1). */
+  readonly recordada: string | null;
   readonly onConectar: () => void;
+  readonly onReconectar: () => void;
 }
 
 /**
@@ -80,10 +86,15 @@ export function BarraEstado({
   onModoRelator,
   onTemaClaro,
   onReiniciar,
-  conectado,
+  conexion,
   avisoConexion,
+  recordada,
   onConectar,
+  onReconectar,
 }: Props): React.ReactElement {
+  const conectado = conexion !== null;
+  // Reconectar se ofrece al volver a la pagina y cuando el navegador retiro el permiso.
+  const ofrecerReconectar = recordada !== null && (conexion === null || conexion.estado === 'sin-permiso');
   const colorRama = barra.desconectado ? 'var(--puntero)' : 'var(--rama-principal)';
   return (
     // Tres bloques: el repositorio a la izquierda, los controles al medio, que
@@ -93,6 +104,7 @@ export function BarraEstado({
       <div className="flex min-h-10 flex-none items-center gap-3">
         <h1 className="t-titulo font-semibold">{barra.repositorio}</h1>
         <span
+          data-prueba="rama-actual"
           className="t-pequeno rounded-full border px-3 py-0.5 font-mono font-semibold"
           style={{
             color: colorRama,
@@ -113,10 +125,17 @@ export function BarraEstado({
         <label className="flex items-center gap-2">
           <span className="rotulo">escenario</span>
           <select
-            value={escenario}
+            // Conectado, el selector no marca ningun escenario: asi elegir
+            // cualquiera, tambien el que estaba, vuelve a los escenarios.
+            value={conectado ? '' : escenario}
             onChange={(evento) => onEscenario(evento.target.value)}
             className="t-medio rounded-lg border border-[var(--borde)] bg-[var(--fondo)] px-3 py-2 text-[var(--texto)]"
           >
+            {conectado && (
+              <option value="" disabled>
+                tu carpeta, conectada
+              </option>
+            )}
             {barra.escenarios.map((opcion) => (
               <option key={opcion.id} value={opcion.id}>
                 {`Lab ${String(opcion.laboratorio).padStart(2, '0')}`} · {opcion.titulo}
@@ -124,6 +143,32 @@ export function BarraEstado({
             ))}
           </select>
         </label>
+
+        {conexion !== null && (
+          <p
+            className="indicador-conexion t-pequeno"
+            data-prueba="indicador-conexion"
+            data-estado={conexion.estado}
+            role="status"
+            title="La página lee tu carpeta en modo lectura y se actualiza sola cuando algo cambia."
+          >
+            <i className="pulso" aria-hidden="true" />
+            <span className="font-mono">{conexion.texto}</span>
+          </p>
+        )}
+
+        {ofrecerReconectar && (
+          <button
+            type="button"
+            onClick={onReconectar}
+            data-prueba="reconectar-repositorio"
+            className="interruptor t-pequeno"
+            title="El navegador pide un clic para devolver el permiso de lectura de la carpeta."
+          >
+            <i className="luz" aria-hidden="true" />
+            reconectar «{recordada}»
+          </button>
+        )}
 
         <button
           type="button"
@@ -134,7 +179,7 @@ export function BarraEstado({
           title="Abre la carpeta de tu repositorio en modo lectura. La página nunca escribe en ella."
         >
           <i className="luz" aria-hidden="true" />
-          {conectado ? 'otra carpeta' : 'conectar a mi repositorio'}
+          {conectado ? 'otra carpeta' : ofrecerReconectar ? 'elegir otra carpeta' : 'conectar a mi repositorio'}
         </button>
         {avisoConexion !== null && (
           <p className="t-pequeno text-[var(--consola-amarillo)]" data-prueba="aviso-conexion" role="status">

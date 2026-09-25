@@ -16,11 +16,11 @@ import { estadoVacio } from '../core/estado';
 import type { EstadoRepositorio, Previsualizacion } from '../core/tipos';
 import { ALIAS_DEL_TALLER } from '../escenarios';
 import { disponer } from '../grafico/disposicion';
-import type { Adaptador } from '../real/adaptador';
+import type { Acceso, Adaptador } from '../real/adaptador';
 import { LectorReal, type Operacion } from '../real/lector';
-import { elegirCarpeta, puedeAbrirCarpetas } from '../real/navegador';
+import { type Carpeta, type CarpetaElegida, elegirCarpeta, puedeAbrirCarpetas, reabrirCarpeta } from '../real/navegador';
 import type { Cambio } from '../real/trabajo';
-import { marcaDelRepositorio } from '../real/vigilancia';
+import { type EstadisticaDeVigilancia, Vigia } from '../real/vigilancia';
 import { type Completado, completar, indicadorDe, type Renglon } from './consola';
 import { type ColumnaArea, type ElementoArea, type OpcionesPantalla, type Pantalla, resumenBarra } from './pantalla';
 
@@ -34,11 +34,17 @@ export interface DatosReales {
   readonly tiempos: Readonly<Record<string, number>>;
 }
 
+/** En que esta la conexion, para el indicador de la barra (SPEC 024, 5.1). */
+export type EstadoConexion = 'en-vivo' | 'sin-repositorio' | 'no-soportado' | 'perdida' | 'sin-permiso';
+
 export interface SesionReal {
   readonly nombre: string;
   readonly datos: DatosReales | null;
   /** Por que no se dibuja, si no se dibuja (punto 2.9). */
   readonly motivo: string | null;
+  /** Los archivos de una carpeta que todavia no es repositorio (SPEC 024, 3), o null si lo es. */
+  readonly sueltos: readonly string[] | null;
+  readonly conexion: EstadoConexion;
   readonly renglones: readonly Renglon[];
   readonly historial: readonly string[];
   /** La ultima orden que se escribio con Enter, que sigue previsualizada hasta que Git la haga. */
@@ -56,35 +62,90 @@ const CONFIGURACION_DEL_TALLER = {
   'alias.lg': ALIAS_DEL_TALLER.lg,
 };
 
-export type ResultadoLectura = { readonly tipo: 'leido'; readonly datos: DatosReales } | { readonly tipo: 'no-soportado'; readonly motivo: string };
+export type ResultadoLectura =
+  | { readonly tipo: 'leido'; readonly datos: DatosReales }
+  | { readonly tipo: 'no-soportado'; readonly motivo: string }
+  | { readonly tipo: 'sin-repositorio'; readonly archivos: readonly string[] }
+  | { readonly tipo: 'perdida' | 'sin-permiso'; readonly motivo: string };
+
+/** Todos los archivos de la carpeta, con su ruta: los de una carpeta que todavia no es repositorio. */
+async function archivosSueltos(fs: Adaptador, carpeta: readonly string[] = []): Promise<string[]> {
+  const salida: string[] = [];
+  for (const entrada of (await fs.listar(carpeta)) ?? []) {
+    const ruta = [...carpeta, entrada.nombre];
+    if (entrada.esDirectorio) salida.push(...(await archivosSueltos(fs, ruta)));
+    else salida.push(ruta.join('/'));
+  }
+  return salida.sort();
+}
+
+function sinAcceso(acceso: Exclude<Acceso, 'ok'>, nombre: string): ResultadoLectura {
+  return acceso === 'no-existe'
+    ? { tipo: 'perdida', motivo: `La carpeta ${nombre} ya no existe, o se movió. Conecta la carpeta de nuevo.` }
+    : {
+        tipo: 'sin-permiso',
+        motivo: `El navegador ya no deja leer ${nombre}. Aprieta «reconectar» para devolverle el permiso.`,
+      };
+}
 
 /**
  * La carpeta conectada: la lee y vigila si cambio. Cada lectura arma un lector
- * nuevo, para no arrastrar nada de la anterior; lo que se reutiliza entre
- * vueltas es la marca, que decide si hace falta leer.
+ * nuevo, para no arrastrar nada de la anterior. De una vuelta a otra se
+ * guardan dos cosas: el vigia, que decide si hace falta leer, y las huellas
+ * de los archivos del directorio de trabajo, para no volver a calcular las de
+ * los que no cambiaron (SPEC 024, 2.3).
  */
 export class Conexion {
   private marca: string | null = null;
+  private ultimo: ResultadoLectura['tipo'] | null = null;
+  private readonly vigia: Vigia;
+  private readonly huellas = new Map<string, string>();
 
   constructor(
     readonly nombre: string,
     private readonly fs: Adaptador,
     private readonly windows: boolean,
-  ) {}
+    /** El manejador de la carpeta en el navegador, para recordarla (SPEC 024, 4). */
+    readonly carpeta: Carpeta | null = null,
+  ) {
+    this.vigia = new Vigia(fs);
+  }
+
+  /** Lo que costo la ultima vuelta del vigia (CA5). */
+  get vigilancia(): EstadisticaDeVigilancia {
+    return this.vigia.estadistica;
+  }
 
   async leer(): Promise<ResultadoLectura> {
-    this.marca = await marcaDelRepositorio(this.fs);
-    const lector = new LectorReal(this.fs, { autocrlfPorDefecto: this.windows ? 'true' : 'false' });
+    const acceso = await this.fs.acceso();
+    if (acceso !== 'ok') return this.anotar(sinAcceso(acceso, this.nombre));
+    return this.leerCon(await this.vigia.marca());
+  }
+
+  private anotar(resultado: ResultadoLectura): ResultadoLectura {
+    this.ultimo = resultado.tipo;
+    return resultado;
+  }
+
+  private async leerCon(marca: string | null): Promise<ResultadoLectura> {
+    this.marca = marca;
+    const lector = new LectorReal(this.fs, {
+      autocrlfPorDefecto: this.windows ? 'true' : 'false',
+      huellas: this.huellas,
+    });
     try {
       const lectura = await lector.leer();
-      if (lectura.tipo !== 'leido') return lectura;
+      if (lectura.tipo === 'sin-repositorio') {
+        return this.anotar({ tipo: 'sin-repositorio', archivos: await archivosSueltos(this.fs) });
+      }
+      if (lectura.tipo !== 'leido') return this.anotar(lectura);
       const inicio = performance.now();
       const { estado, ramasRemotas } = await lector.estadoDelMotor(lectura.repositorio, {
         directorio: this.nombre,
         configuracionGlobal: CONFIGURACION_DEL_TALLER,
       });
       const repositorio = lectura.repositorio;
-      return {
+      return this.anotar({
         tipo: 'leido',
         datos: {
           estado,
@@ -93,17 +154,35 @@ export class Conexion {
           operacion: repositorio.operacion,
           tiempos: { ...repositorio.tiempos, motor: Math.round((performance.now() - inicio) * 10) / 10 },
         },
-      };
+      });
     } catch (error) {
-      return { tipo: 'no-soportado', motivo: `no se pudo leer el repositorio: ${error instanceof Error ? error.message : String(error)}` };
+      return this.anotar({
+        tipo: 'no-soportado',
+        motivo: `no se pudo leer el repositorio: ${error instanceof Error ? error.message : String(error)}`,
+      });
     }
   }
 
-  /** Relee solo si algo cambio. Devuelve null si no cambio nada, o si Git esta escribiendo. */
+  /**
+   * Relee solo si algo cambio. Devuelve null si no cambio nada, o si Git esta
+   * escribiendo. Si la carpeta se perdio, lo dice una vez y despues espera.
+   */
   async revisar(): Promise<ResultadoLectura | null> {
-    const marca = await marcaDelRepositorio(this.fs);
+    const acceso = await this.fs.acceso();
+    if (acceso !== 'ok') {
+      const perdida = sinAcceso(acceso, this.nombre);
+      return perdida.tipo === this.ultimo ? null : this.anotar(perdida);
+    }
+    if (this.ultimo === 'perdida' || this.ultimo === 'sin-permiso') return this.leer();
+    let marca: string | null;
+    try {
+      marca = await this.vigia.marca();
+    } catch {
+      // La carpeta cambio mientras se recorria: la vuelta siguiente lo vera.
+      return null;
+    }
     if (marca === null || marca === this.marca) return null;
-    return this.leer();
+    return this.leerCon(marca);
   }
 }
 
@@ -111,30 +190,87 @@ export function navegadorPuedeConectar(): boolean {
   return puedeAbrirCarpetas();
 }
 
+function nuevaConexion(elegida: CarpetaElegida): Conexion {
+  const windows = typeof navigator !== 'undefined' && /Windows/.test(navigator.userAgent);
+  return new Conexion(elegida.nombre, elegida.adaptador, windows, elegida.carpeta);
+}
+
 /** Pide la carpeta. Null si el alumno cancelo. */
 export async function conectarRepositorio(): Promise<Conexion | null> {
   const carpeta = await elegirCarpeta();
-  if (carpeta === null) return null;
-  const windows = typeof navigator !== 'undefined' && /Windows/.test(navigator.userAgent);
-  return new Conexion(carpeta.nombre, carpeta.adaptador, windows);
+  return carpeta === null ? null : nuevaConexion(carpeta);
 }
+
+/** Vuelve a conectar una carpeta guardada, con el clic que el navegador exige. Null si no dio permiso. */
+export async function reconectarRepositorio(carpeta: Carpeta): Promise<Conexion | null> {
+  const elegida = await reabrirCarpeta(carpeta);
+  return elegida === null ? null : nuevaConexion(elegida);
+}
+
+/** Lo que dice la barra cuando el navegador no deja abrir la carpeta (SPEC 024, 1.4). */
+export const SIN_LA_API = 'Este navegador no deja abrir una carpeta: usa Chrome o Edge. Los escenarios siguen funcionando.';
+
+/** Una linea clara para cualquier falla al pedir la carpeta. */
+export function motivoDeFalla(error: unknown): string {
+  const nombre = typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : '';
+  if (nombre === 'SecurityError' || nombre === 'NotAllowedError') {
+    return 'Este equipo no permite que el navegador abra carpetas (lo bloquea una política o un permiso). Los escenarios siguen funcionando.';
+  }
+  const mensaje = (error instanceof Error ? error.message : String(error)).replace(/\.$/, '');
+  return `No se pudo abrir la carpeta: ${mensaje}. Los escenarios siguen funcionando.`;
+}
+
+const AVISO_DE_CONSOLA: Renglon = {
+  clave: 'modo-conectado',
+  texto:
+    'Modo conectado: esta consola previsualiza sobre tu repositorio y no ejecuta nada. Las órdenes se escriben en Git Bash.',
+  color: 'limite',
+};
 
 export function iniciarSesionReal(nombre: string, lectura: ResultadoLectura): SesionReal {
   return actualizarSesionReal(
-    { nombre, datos: null, motivo: null, renglones: [], historial: [], pendiente: null, seleccion: null, lecturas: 0 },
+    {
+      nombre,
+      datos: null,
+      motivo: null,
+      sueltos: null,
+      conexion: 'en-vivo',
+      renglones: [AVISO_DE_CONSOLA],
+      historial: [],
+      pendiente: null,
+      seleccion: null,
+      lecturas: 0,
+    },
     lectura,
   );
 }
 
 /** Lo que Git cambio llego: se redibuja y la previsualizacion pendiente se borra (punto 2.8). */
 export function actualizarSesionReal(sesion: SesionReal, lectura: ResultadoLectura): SesionReal {
-  return {
-    ...sesion,
-    datos: lectura.tipo === 'leido' ? lectura.datos : null,
-    motivo: lectura.tipo === 'leido' ? null : lectura.motivo,
-    pendiente: null,
-    lecturas: sesion.lecturas + 1,
+  const base = { ...sesion, pendiente: null, lecturas: sesion.lecturas + 1 };
+  switch (lectura.tipo) {
+    case 'leido':
+      return { ...base, datos: lectura.datos, motivo: null, sueltos: null, conexion: 'en-vivo' };
+    case 'sin-repositorio':
+      return { ...base, datos: null, motivo: null, sueltos: lectura.archivos, conexion: 'sin-repositorio' };
+    case 'no-soportado':
+      return { ...base, datos: null, motivo: lectura.motivo, sueltos: null, conexion: 'no-soportado' };
+    default:
+      // Sin carpeta no se deja el dibujo viejo como si fuera el de ahora.
+      return { ...base, datos: null, motivo: lectura.motivo, sueltos: null, conexion: lectura.tipo };
+  }
+}
+
+/** El indicador de la barra: a que carpeta mira la pagina y si la esta leyendo en vivo (SPEC 024, 5.1). */
+export function estadoDeConexion(sesion: SesionReal): { readonly estado: EstadoConexion; readonly texto: string } {
+  const textos: Readonly<Record<EstadoConexion, string>> = {
+    'en-vivo': `${sesion.nombre} · leyendo en vivo`,
+    'sin-repositorio': `${sesion.nombre} · en vivo, todavía sin repositorio`,
+    'no-soportado': `${sesion.nombre} · en vivo, pero no se puede dibujar`,
+    perdida: `${sesion.nombre} ya no existe`,
+    'sin-permiso': `${sesion.nombre} · sin permiso para leer`,
   };
+  return { estado: sesion.conexion, texto: textos[sesion.conexion] };
 }
 
 /** Enter en la consola: no se ejecuta, se dice donde escribirla. */
@@ -227,7 +363,11 @@ export interface AvisosReales {
   readonly tiempos: Readonly<Record<string, number>> | null;
 }
 
+export const AVISO_SIN_REPOSITORIO =
+  'Esta carpeta todavía no es un repositorio: no tiene carpeta .git. Cuando hagas git init, la pantalla empieza a dibujar sola.';
+
 export function avisosReales(sesion: SesionReal): AvisosReales {
+  if (sesion.sueltos !== null) return { lineas: [AVISO_SIN_REPOSITORIO], tiempos: null };
   if (sesion.datos === null) return { lineas: [sesion.motivo ?? 'leyendo…'], tiempos: null };
   const lineas: string[] = [];
   const operacion = sesion.datos.operacion;
@@ -244,11 +384,30 @@ function previsualizacionReal(estado: EstadoRepositorio, orden: string): Previsu
 }
 
 /** La pantalla completa en modo real, con la misma forma que la de un escenario. */
+/**
+ * Las areas de una carpeta que todavia no es repositorio (SPEC 024, 3.2): los
+ * archivos estan, pero no son de Git todavia, ni nuevos ni nada.
+ */
+function columnasSinRepositorio(sueltos: readonly string[]): readonly ColumnaArea[] {
+  return [
+    {
+      clave: 'trabajo',
+      titulo: 'Carpeta, sin Git todavía',
+      orden: 'git init',
+      elementos: sueltos.map((ruta) => ({ texto: ruta, tono: 'suelto' as const })),
+      vacio: 'carpeta vacía',
+    },
+    { clave: 'preparacion', titulo: 'Área de preparación', orden: 'git add', elementos: [], vacio: 'no hay repositorio' },
+    { clave: 'local', titulo: 'Repositorio local', orden: 'git commit', elementos: [], vacio: 'no hay repositorio' },
+  ];
+}
+
 export function construirPantallaReal(sesion: SesionReal, opciones: OpcionesPantalla): Pantalla {
   // Lo que no se sabe representar no se dibuja a medias (punto 2.9): la
   // pantalla queda vacia y el aviso dice por que.
   const datos: DatosReales = sesion.datos ?? {
-    estado: { ...estadoVacio(sesion.nombre), iniciado: true },
+    // Sin repositorio el motor tambien lo sabe: asi `git init` se previsualiza como en el escenario.
+    estado: { ...estadoVacio(sesion.nombre), iniciado: sesion.sueltos === null },
     ramasRemotas: [],
     cambios: [],
     operacion: null,
@@ -273,7 +432,7 @@ export function construirPantallaReal(sesion: SesionReal, opciones: OpcionesPant
     renglones: sesion.renglones,
     grafo,
     aviso: vista === null ? null : { confirmacionesNuevas: vista.confirmacionesNuevas.length, punteroMovido: vista.punteroMovido },
-    columnas: columnasReales(datos),
+    columnas: sesion.sueltos === null ? columnasReales(datos) : columnasSinRepositorio(sesion.sueltos),
     paneles: opciones.modoRelator
       ? { guardado: null, diferencias: null, objetos: null }
       : {

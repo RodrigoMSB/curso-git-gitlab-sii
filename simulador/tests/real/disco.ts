@@ -5,7 +5,7 @@
  * alumno: leer, listar y el tamaño y la fecha de cada archivo. Solo lectura.
  */
 
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Adaptador } from '../../src/real/adaptador';
 
@@ -35,6 +35,27 @@ export function adaptadorDeDisco(raiz: string): Adaptador {
       } catch {
         return null;
       }
+    },
+    async listarConDatos(ruta) {
+      try {
+        return readdirSync(join(raiz, ...ruta), { withFileTypes: true }).map((entrada) => {
+          let datos = null;
+          if (entrada.isFile()) {
+            try {
+              const stat = statSync(join(raiz, ...ruta, entrada.name));
+              datos = { tamano: stat.size, modificado: stat.mtimeMs };
+            } catch {
+              datos = null;
+            }
+          }
+          return { nombre: entrada.name, esDirectorio: entrada.isDirectory(), datos };
+        });
+      } catch {
+        return null;
+      }
+    },
+    async acceso() {
+      return existsSync(raiz) ? 'ok' : 'no-existe';
     },
   };
 }

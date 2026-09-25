@@ -21,6 +21,7 @@ const COLOR_POR_TONO: Readonly<Record<TonoElemento, string>> = {
   neutro: 'var(--texto-apagado)',
   'borrado-preparado': 'var(--consola-verde)',
   'borrado-pendiente': 'var(--consola-rojo)',
+  suelto: 'var(--texto)',
 };
 
 export function Areas({

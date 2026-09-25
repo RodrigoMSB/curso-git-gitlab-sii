@@ -44,9 +44,18 @@ export interface RepositorioReal {
 
 export type Lectura =
   | { readonly tipo: 'leido'; readonly repositorio: RepositorioReal }
-  | { readonly tipo: 'no-soportado'; readonly motivo: string };
+  | { readonly tipo: 'no-soportado'; readonly motivo: string }
+  /** La carpeta todavia no tiene `.git`: el laboratorio 01 empieza asi (SPEC 024, 3). */
+  | { readonly tipo: 'sin-repositorio'; readonly motivo: string };
+
+export const SIN_REPOSITORIO = 'en esta carpeta no hay un repositorio: no tiene carpeta .git';
 
 export interface OpcionesLectura {
+  /**
+   * Las huellas ya calculadas de los archivos del directorio de trabajo. La
+   * conexion pasa las suyas para que duren de una lectura a la siguiente.
+   */
+  readonly huellas?: Map<string, string>;
   /**
    * El valor de `core.autocrlf` si el repositorio no lo fija. La configuracion
    * del sistema y la del usuario no estan en la carpeta y no se pueden leer:
@@ -78,7 +87,7 @@ export async function motivoParaNoLeer(fs: Adaptador): Promise<string | null> {
     if ((await fs.datos(['HEAD'])) !== null && (await fs.listar(['objects'])) !== null) {
       return 'elegiste la carpeta .git; elige la carpeta del proyecto, la que la contiene';
     }
-    return 'en esta carpeta no hay un repositorio: no tiene carpeta .git';
+    return SIN_REPOSITORIO;
   }
   const config = leerConfiguracion(decodificador.decode((await fs.leer([...GIT, 'config'])) ?? new Uint8Array()));
   const formato = valor(config, 'extensions.objectformat');
@@ -109,7 +118,7 @@ export class LectorReal {
     private readonly opciones: OpcionesLectura,
   ) {
     this.almacen = new Almacen(fs, GIT);
-    this.trabajo = new LectorDeTrabajo(fs, GIT, this.almacen);
+    this.trabajo = new LectorDeTrabajo(fs, GIT, this.almacen, opciones.huellas);
     this.referencias = new LectorDeReferencias(fs, GIT);
   }
 
@@ -150,6 +159,7 @@ export class LectorReal {
 
   async leer(): Promise<Lectura> {
     const motivo = await motivoParaNoLeer(this.fs);
+    if (motivo === SIN_REPOSITORIO) return { tipo: 'sin-repositorio', motivo };
     if (motivo !== null) return { tipo: 'no-soportado', motivo };
 
     const tiempos: Record<string, number> = {};

@@ -67,8 +67,12 @@ const CONFLICTOS: Readonly<Record<string, string>> = {
 const decodificador = new TextDecoder('utf-8');
 
 export class LectorDeTrabajo {
-  /** Huellas ya calculadas, por ruta, tamaño y fecha: el sondeo repite lecturas cada medio segundo. */
-  private readonly huellas = new Map<string, string>();
+  /**
+   * Huellas ya calculadas, por ruta, tamaño y fecha. La conexion pasa la suya
+   * para que dure de una lectura a otra: sin eso, un archivo modificado se
+   * volvia a calcular cada vez que cambiaba cualquier otro (SPEC 024, 2.3).
+   */
+  private readonly huellas: Map<string, string>;
   private readonly arboles = new Map<string, ReadonlyMap<string, EnArbol>>();
   readonly estadistica = { huellasCalculadas: 0 };
 
@@ -76,7 +80,10 @@ export class LectorDeTrabajo {
     private readonly fs: Adaptador,
     private readonly gitDir: readonly string[],
     private readonly almacen: Almacen,
-  ) {}
+    huellas: Map<string, string> = new Map(),
+  ) {
+    this.huellas = huellas;
+  }
 
   /** Todas las rutas de un arbol, con su identificador y modo. */
   async aplanar(arbol: string): Promise<ReadonlyMap<string, EnArbol>> {
