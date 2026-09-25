@@ -41,60 +41,57 @@ warning: in the working copy of 'a.md', LF will be replaced by CRLF the next tim
 warning: in the working copy of 'b.md', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'c.md', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'construido/seguido.txt', LF will be replaced by CRLF the next time Git touches it
- [32m✓[39m tests/real/vigilar.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 3105[2mms[22m[39m
-   [32m✓[39m la marca respeta el .gitignore (2.3) [2m(5)[22m
-     [33m[2m✓[22m[39m no cambia con un archivo ignorado[33m 682[2mms[22m[39m
-     [33m[2m✓[22m[39m no cambia con un archivo nuevo dentro de una carpeta ignorada[33m 498[2mms[22m[39m
-     [33m[2m✓[22m[39m si cambia con un archivo seguido dentro de una carpeta ignorada, porque git status si lo ve[33m 344[2mms[22m[39m
-   [32m✓[39m la consola en modo conectado (5.2) [2m(1)[22m
-     [33m[2m✓[22m[39m antes de escribir nada, dice que previsualiza y no ejecuta[33m 498[2mms[22m[39m
- [32m✓[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 47330[2mms[22m[39m
+ [32m✓[39m tests/real/vigilar.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 2160[2mms[22m[39m
+   [32m✓[39m la carpeta que se pierde (5.1) [2m(1)[22m
+     [33m[2m✓[22m[39m si la carpeta deja de existir, la sesion lo dice y no se queda con el dibujo viejo[33m 392[2mms[22m[39m
+ [32m✓[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 59395[2mms[22m[39m
    [32m✓[39m laboratorio 02 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 5595[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 7000[2mms[22m[39m
    [32m✓[39m laboratorio 03 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 6395[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 7924[2mms[22m[39m
    [32m✓[39m laboratorio 04 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 7540[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 10237[2mms[22m[39m
    [32m✓[39m laboratorio 05 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 6547[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 8815[2mms[22m[39m
    [32m✓[39m laboratorio 06 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 6373[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 7006[2mms[22m[39m
    [32m✓[39m laboratorio 07 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 8114[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 10353[2mms[22m[39m
    [32m✓[39m laboratorio 08 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 5953[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 7802[2mms[22m[39m
 warning: in the working copy of 'anunciado', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'anunciado', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'anunciado', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'anunciado', LF will be replaced by CRLF the next time Git touches it
- [32m✓[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 122265[2mms[22m[39m
- [32m✓[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 69185[2mms[22m[39m
+ [32m✓[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 50404[2mms[22m[39m
+ [32m✓[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 56163[2mms[22m[39m
    [32m✓[39m laboratorio 02 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 6598[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 9526[2mms[22m[39m
    [32m✓[39m laboratorio 03 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 13393[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 7328[2mms[22m[39m
    [32m✓[39m laboratorio 04 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 10288[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 9146[2mms[22m[39m
    [32m✓[39m laboratorio 05 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 9451[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 7863[2mms[22m[39m
    [32m✓[39m laboratorio 06 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 8341[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 6185[2mms[22m[39m
    [32m✓[39m laboratorio 07 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 9827[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 9222[2mms[22m[39m
    [32m✓[39m laboratorio 08 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 11100[2mms[22m[39m
- [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 118771[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 6632[2mms[22m[39m
+ [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 57543[2mms[22m[39m
+   [32m✓[39m cada repositorio, como lo ve Git [2m(16)[22m
+     [33m[2m✓[22m[39m cadena[33m 366[2mms[22m[39m
+     [33m[2m✓[22m[39m completo[33m 305[2mms[22m[39m
 warning: in the working copy of 'a.md', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'b.md', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'a.md', LF will be replaced by CRLF the next time Git touches it
- [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1247[2mms[22m[39m
-   [32m✓[39m la pantalla del repositorio real [2m(5)[22m
-     [33m[2m✓[22m[39m un archivo preparado y despues modificado aparece en las dos areas, como en git status[33m 508[2mms[22m[39m
- [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 46299[2mms[22m[39m
- [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 548[2mms[22m[39m
+ [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 617[2mms[22m[39m
+ [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 40251[2mms[22m[39m
+ [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 508[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m8 passed[39m[22m[90m (8)[39m
 [2m      Tests [22m [1m[32m110 passed[39m[22m[90m (110)[39m
-[2m   Start at [22m 19:57:01
-[2m   Duration [22m 411.05s[2m (tests 100%)[22m
+[2m   Start at [22m 20:17:56
+[2m   Duration [22m 269.95s[2m (tests 99%)[22m
 
