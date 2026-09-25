@@ -1,45 +1,45 @@
 
 [1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90m/Users/runner/work/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador[39m
 
- [32m✓[39m tests/real/vigilar.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 775[2mms[22m[39m
- [32m✓[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 14779[2mms[22m[39m
+ [32m✓[39m tests/real/vigilar.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 911[2mms[22m[39m
+ [32m✓[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 16765[2mms[22m[39m
+ [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 159[2mms[22m[39m
+ [32m✓[39m tests/real/laboratorios.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 17900[2mms[22m[39m
    [32m✓[39m laboratorio 02 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1800[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2355[2mms[22m[39m
    [32m✓[39m laboratorio 03 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1859[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2517[2mms[22m[39m
    [32m✓[39m laboratorio 04 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2605[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2923[2mms[22m[39m
    [32m✓[39m laboratorio 05 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2399[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2987[2mms[22m[39m
    [32m✓[39m laboratorio 06 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1653[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2396[2mms[22m[39m
    [32m✓[39m laboratorio 07 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2871[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 2832[2mms[22m[39m
    [32m✓[39m laboratorio 08 [2m(1)[22m
-     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1501[2mms[22m[39m
- [32m✓[39m tests/real/areas.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 15106[2mms[22m[39m
- [32m✓[39m tests/real/vista-real.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 217[2mms[22m[39m
- [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 165[2mms[22m[39m
- [32m✓[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 15537[2mms[22m[39m
+     [33m[2m✓[22m[39m historia, referencias y areas iguales a Git despues de cada orden del guion[33m 1820[2mms[22m[39m
+ [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 16975[2mms[22m[39m
+ [32m✓[39m tests/real/vigilancia.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 228[2mms[22m[39m
+ [32m✓[39m tests/real/previsualizacion.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 18697[2mms[22m[39m
    [32m✓[39m laboratorio 02 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1839[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2351[2mms[22m[39m
    [32m✓[39m laboratorio 03 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1949[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2803[2mms[22m[39m
    [32m✓[39m laboratorio 04 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2884[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 3158[2mms[22m[39m
    [32m✓[39m laboratorio 05 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2478[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 3187[2mms[22m[39m
    [32m✓[39m laboratorio 06 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1831[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2487[2mms[22m[39m
    [32m✓[39m laboratorio 07 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2817[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 2924[2mms[22m[39m
    [32m✓[39m laboratorio 08 [2m(1)[22m
-     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1681[2mms[22m[39m
- [32m✓[39m tests/real/referencias.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 15525[2mms[22m[39m
- [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 9672[2mms[22m[39m
+     [33m[2m✓[22m[39m la previsualizacion de cada orden del guion contra lo que Git hace[33m 1723[2mms[22m[39m
+ [32m✓[39m tests/real/almacen.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 11371[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m8 passed[39m[22m[90m (8)[39m
 [2m      Tests [22m [1m[32m110 passed[39m[22m[90m (110)[39m
-[2m   Start at [22m 19:36:55
-[2m   Duration [22m 25.28s[2m (tests 98%, transform 2%)[22m
+[2m   Start at [22m 19:55:25
+[2m   Duration [22m 28.91s[2m (tests 98%, transform 2%)[22m
 
