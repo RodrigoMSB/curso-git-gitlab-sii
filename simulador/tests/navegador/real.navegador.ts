@@ -765,6 +765,20 @@ describe(`el modo real en ${CANAL}`, () => {
       prototipo.queryPermission = async () => 'prompt';
     });
     const sinPermiso = await esperarIndicador(c.pagina, 'sin-permiso');
+    // Diagnostico: si el estado alterna, el boton de reconectar se desmonta y no se puede apretar.
+    const muestras = await c.pagina.evaluate(async () => {
+      const vistos: string[] = [];
+      for (let k = 0; k < 40; k += 1) {
+        const indicador = document.querySelector<HTMLElement>('[data-prueba="indicador-conexion"]');
+        const lecturas = document.querySelector<HTMLElement>('[data-prueba="avisos-repositorio"]')?.dataset.lecturas;
+        const boton = document.querySelector('[data-prueba="reconectar-repositorio"]') !== null;
+        const caja = document.querySelector('[data-prueba="reconectar-repositorio"]')?.getBoundingClientRect();
+        vistos.push(`${indicador?.dataset.estado}/${lecturas}/${boton ? 'boton' : 'sin boton'}/${caja ? `${Math.round(caja.x)},${Math.round(caja.y)}` : '-'}`);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      return [...new Set(vistos)];
+    });
+    anotar(`MEDIDA   SPEC 024 · sin permiso, estados vistos en 2 s: ${muestras.join(' | ')}`);
     const reconectar = await c.pagina.$('[data-prueba="reconectar-repositorio"]');
     comprobar(
       sinPermiso.estado === 'sin-permiso' && reconectar !== null,
