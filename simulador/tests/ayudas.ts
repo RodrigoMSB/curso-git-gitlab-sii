@@ -86,5 +86,12 @@ export function repoConRamaDeTrabajo(): EstadoRepositorio {
  * cambian de rama, fusionan sin conflicto o reordenan.
  */
 export function repoConRamaDesdeMain(): EstadoRepositorio {
-  return ejecutar(escenarioPorId('lab-07'), 'git switch main').estado;
+  // El escenario del 07 trae el curry modificado sin confirmar, y `main` lo
+  // tiene distinto: Git no deja cambiar asi, y desde el SPEC 022 el simulador
+  // tampoco. Se descarta el cambio antes, que es una de las dos salidas que el
+  // enunciado ofrece.
+  const limpio = ejecutar(escenarioPorId('lab-07'), 'git restore .').estado;
+  const resultado = ejecutar(limpio, 'git switch main');
+  if (resultado.error) throw new Error(resultado.salida.map((linea) => linea.texto).join('\n'));
+  return resultado.estado;
 }

@@ -17,7 +17,7 @@
 import { posicionales, tieneOpcion } from '../analizador';
 import { agregarConfirmacion } from '../confirmaciones';
 import { arbolDe, comparacionesEntre } from '../contenido';
-import { formatearEstadisticasDe, fusionarTresVias } from '../diferencias';
+import { fusionarTresVias, resumenDeConfirmacion } from '../diferencias';
 import {
   anotarMovimiento,
   archivoPorNombre,
@@ -73,10 +73,8 @@ function sinResolver(estado: EstadoRepositorio, queSeIntento: 'commit' | 'revert
  * El resumen que Git imprime al confirmar: el total y los modos, sin el
  * detalle por archivo que si lleva `git merge`.
  */
-function resumenDeConfirmacion(estado: EstadoRepositorio, antes: string, despues: string): readonly string[] {
-  return formatearEstadisticasDe(comparacionesEntre(estado, antes, despues), true).filter(
-    (linea) => !linea.includes(' | '),
-  );
+function resumenDeReversion(estado: EstadoRepositorio, antes: string, despues: string): readonly string[] {
+  return resumenDeConfirmacion(comparacionesEntre(estado, antes, despues));
 }
 
 /** Como queda un archivo tras revertir, y si choco. */
@@ -195,7 +193,7 @@ export function confirmarReversion(estado: EstadoRepositorio, mensajePedido: str
     siguiente,
     lineas(
       `[${ramaActual(siguiente) ?? 'detached HEAD'} ${creado.confirmacion.id}] ${mensaje}`,
-      ...resumenDeConfirmacion(creado.estado, cabeza, creado.confirmacion.id),
+      ...resumenDeReversion(creado.estado, cabeza, creado.confirmacion.id),
     ),
   );
 }
@@ -339,7 +337,7 @@ export const ordenRevert: Manejador = (estado, argumentos) => {
       ...avisos,
       `[${ramaActual(siguiente) ?? 'detached HEAD'} ${creado.confirmacion.id}] ${mensaje}`,
       ` Date: ${creado.confirmacion.fecha}`,
-      ...resumenDeConfirmacion(creado.estado, cabeza, creado.confirmacion.id),
+      ...resumenDeReversion(creado.estado, cabeza, creado.confirmacion.id),
     ),
   );
 };

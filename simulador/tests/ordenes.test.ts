@@ -740,7 +740,9 @@ describe('git switch y git checkout', () => {
   });
 
   it('git checkout sobre un identificador deja la posicion desconectada', () => {
-    const partida = repoLineal();
+    // El escenario del 02 trae cambios en archivos que esa confirmacion tiene
+    // distintos, y Git no deja cambiar asi (SPEC 022): se guardan antes.
+    const partida = ejecutar(repoLineal(), 'git stash').estado;
     const objetivo = partida.confirmaciones[1]?.id ?? '';
     const resultado = ejecutar(partida, `git checkout ${objetivo}`);
 
@@ -1340,8 +1342,10 @@ describe('las salidas que el guion necesita para copiar un identificador', () =>
   it('sin nada suelto, solo dice donde estaba', () => {
     const estado = ejecutarSecuencia(escenarioPorId('lab-02'), ['git switch --detach HEAD~1']);
     const antes = idActual(estado) ?? '';
+    // Los dos archivos con cambios viajan con el participante, y Git los
+    // lista antes de decir de donde salio (comprobado contra Git, SPEC 022).
     expect(texto(ejecutar(estado, 'git switch main'))).toBe(
-      `Previous HEAD position was ${antes} se suma la lista de cocineros\nSwitched to branch 'main'`,
+      `M\tcocineros.md\nM\tingredientes.md\nPrevious HEAD position was ${antes} se suma la lista de cocineros\nSwitched to branch 'main'`,
     );
   });
 

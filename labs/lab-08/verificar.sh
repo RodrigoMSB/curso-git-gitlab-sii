@@ -75,8 +75,13 @@ if [ ! -d "$REPOSITORIO" ]; then
     "un repositorio Git en $REPOSITORIO_DICHO" \
     'la carpeta recetario no existe, falta preparar el laboratorio'
 else
-  CIMA=$(g rev-parse --show-toplevel) || CIMA=''
-  if [ "$CIMA" = "$REPOSITORIO" ]; then
+  # Se le pregunta todo a Git, sin comparar rutas: `--git-dir` responde `.git`
+  # solo si la carpeta es la raiz de su propio repositorio; dentro de otro,
+  # responde la ruta del .git de mas arriba. Comparar la cima con la ruta de
+  # Bash fallaba en Windows, donde Bash escribe /c/Users/... y Git
+  # C:/Users/... (SPEC 021).
+  PROPIO=$(g rev-parse --git-dir) || PROPIO=''
+  if [ "$PROPIO" = '.git' ]; then
     HAY_REPOSITORIO=si
     aprobado "existe el repositorio en $REPOSITORIO_DICHO"
   else

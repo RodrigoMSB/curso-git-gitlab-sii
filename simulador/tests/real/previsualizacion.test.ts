@@ -39,16 +39,10 @@ const GLOBAL = {
  * prueba: o es un defecto nuevo, o hay que entenderla y anotarla.
  */
 const CONOCIDAS: Readonly<Record<string, string>> = {
-  '07:71:grafo': 'el motor no se niega a cambiar de rama cuando el cambio pisaria trabajo sin confirmar',
-  '03:105:areas': 'el motor no detecta el renombrado cuando se prepara con git add . despues de un mv',
-  '08:161:areas': 'el motor trata lo escrito en .git/hooks como una carpeta .git/ no seguida',
   '06:39:error': 'cat de un archivo que la orden anterior escribio fuera del repositorio, cosa que el motor declara no hacer',
   '07:287:error': 'cat de un archivo escrito fuera del repositorio, como el anterior',
   '07:318:error': 'cat de un archivo escrito fuera del repositorio, como el anterior',
-  '07:420:error': 'cat de un archivo escrito fuera del repositorio, como el anterior',
-  '08:54:error': 'el motor responde que git fetch no existe: no modela remotos, y deberia declararlo en vez de negarlo',
-  '08:76:error': 'git fetch, como el anterior',
-  '08:118:error': 'git fetch, como el anterior',
+  '07:422:error': 'cat de un archivo escrito fuera del repositorio, como el anterior',
   '08:86:error': 'upstream/main es una rama remota, que el motor no modela',
   '08:92:error': 'upstream/main, como el anterior',
   '08:103:error': 'upstream/main, como el anterior',

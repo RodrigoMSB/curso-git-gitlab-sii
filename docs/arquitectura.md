@@ -781,11 +781,16 @@ abstracta: las dos primeras salieron de errores encontrados al probar el
 laboratorio 01, la septima de uno encontrado en el 02 y la octava de una
 comprobacion que el 03 habria aprobado sin que nadie hiciera nada.
 
-### Regla 1 · la cima del repositorio se compara, no se pregunta
+### Regla 1 · la carpeta tiene que ser la raiz de su propio repositorio
 
 **Un verificador nunca da por existente un repositorio solo porque Git responde
-dentro de la carpeta.** Compara `git rev-parse --show-toplevel` contra la ruta
-que espera, y si no coincide, el criterio falla.
+dentro de la carpeta.** Comprueba que `git rev-parse --git-dir`, parado en la
+carpeta, responda `.git`: eso solo pasa si la carpeta es la raiz de su propio
+repositorio. Si no, el criterio falla.
+
+Hasta el SPEC 021 esto se hacia comparando `git rev-parse --show-toplevel`
+contra la ruta esperada. En Windows no coincidia nunca: Git Bash escribe
+`/c/Users/...` y Git para Windows `C:/Users/...`. Ver la seccion 67.
 
 El motivo es estructural y afecta a todos los laboratorios por igual: la carpeta
 del participante vive dentro del repositorio del curso, y Git, cuando no
@@ -4887,3 +4892,172 @@ repositorio quedó bien armado. Confirmado en el runner con un paso de
 diagnóstico que corre el `preparar.sh` del laboratorio 02 tal como lo corre el
 participante. Está en `main`, no es de este spec, y le pega al primer paso de
 cada laboratorio en los equipos del SII.
+
+## 67. Los laboratorios se preparan bien en Windows
+
+SPEC 021. (La sección 66 es la de la prueba de concepto, en su propia rama.)
+
+### 67.1 · El defecto
+
+Los ocho `verificar.sh` (laboratorios 01 a 08) comprobaban la regla 1
+comparando `git rev-parse --show-toplevel` con la ruta que arma Bash con
+`pwd -P`. En Git Bash de Windows esa ruta es `/c/Users/…` y la de Git es
+`C:/Users/…`: nunca coincidían. `preparar.sh` llama a `verificar.sh
+--escenario` al final, así que terminaba en error en todos los laboratorios,
+con el repositorio bien armado. Ningún otro script compara rutas: los demás
+usos de `pwd` solo ubican carpetas, y `semillas/lib/verificar.sh` mira si
+existe `.git`.
+
+### 67.2 · El arreglo, y por qué así
+
+Se le pregunta todo a Git: `git -C recetario rev-parse --git-dir` responde
+`.git` solo si `recetario` es la raíz de su propio repositorio; dentro de otro
+responde la ruta del `.git` de más arriba, y fuera de todo repositorio falla.
+Es una sola llamada, no depende de cómo escribe rutas ningún programa, y
+funciona igual en Bash 3.2 y en Git Bash. Se descartaron traducir la ruta con
+`cygpath` (no existe en macOS) y comparar con `pwd -W` (tampoco).
+
+### 67.3 · La prueba
+
+`simulador/tests/scripts-de-laboratorio.test.ts`, que corre GitHub Actions en
+Windows con Git Bash y en Mac en cada cambio (`laboratorios-en-windows-y-mac`).
+El código se baja como lo baja el participante, sin tocar `core.autocrlf`.
+
+- Por laboratorio: clon del curso que es un repositorio de verdad,
+  `preparar.sh`, el laboratorio hecho siguiendo su enunciado hasta antes de
+  «Si algo salió mal», y `verificar.sh`.
+- Lo que el enunciado pide hacer a mano (editar, resolver un conflicto, elegir
+  acciones en `rebase -i`) va declarado, anclado a la frase del enunciado que
+  lo pide: si la frase desaparece, la prueba falla.
+- Anidamiento: un recetario sin `.git` propio dentro de otro repositorio se
+  reclama, en los ocho laboratorios.
+
+Con el código de antes, Windows fallaba 15 de 16 y Mac pasaba; saboteando la
+comprobación para que siempre apruebe, fallan las 8 de anidamiento.
+
+### 67.4 · Encontrado en el camino, sin tocar
+
+**El laboratorio 07 no se puede aprobar siguiendo el enunciado**, en ningún
+sistema. Al llegar a la parte 3 la rama tiene cinco confirmaciones propias (la
+del punto 1.12 se suma a las cuatro de la semilla) y `git rebase -i HEAD~4`
+deja `wip` fuera de la lista. Siguiendo el enunciado quedan tres
+confirmaciones con `wip` y `cambios`; la comprobación del enunciado y el
+verificador esperan dos, con mensajes decentes. La prueba lo anota como
+diferencia conocida exacta.
+
+**El soporte que extrae las órdenes del enunciado** no ve el `chmod +x` del
+laboratorio 08, ni las «agrega una línea al final de…» del 01, y toma como
+órdenes dos líneas de dentro del gancho del 08. No afecta al recorrido del
+simulador, que no pasa por el 01, el 07 ni el 08.
+
+## 68. Cuatro defectos del motor
+
+SPEC 022. Salieron al comparar la previsualización con Git sobre repositorios
+reales (sección 66, en la rama de la prueba de concepto). Pruebas en
+`simulador/tests/defectos-del-motor.test.ts`, contra Git de verdad.
+
+### 68.1 · Lo que hacía cada caso y lo que hace ahora
+
+| Caso | Antes | Ahora |
+|---|---|---|
+| `git switch`/`git checkout` con trabajo que la otra rama tiene distinto | cambiaba igual y el trabajo quedaba encima de la otra rama | se niega con el texto de Git: una lista con lo preparado, otra con lo del directorio, un solo `Aborting` |
+| El mismo cambio sin choque | cambiaba sin decir nada | cambia y lista lo que se lleva (`M`, `A`, `D`) antes de decir de dónde salió, como Git |
+| `git add .` con una baja y un alta de contenido idéntico | `D` y `A` (salvo que el alta viniera de un `mv` del simulador) | `R  viejo -> nuevo`; al confirmar, un archivo, `0 insertions(+), 0 deletions(-)` y `rename viejo => nuevo (100%)` |
+| Escribir dentro de `.git` (`echo … > .git/hooks/commit-msg`) | aparecía una carpeta `.git/` sin seguimiento | forma declarada: el simulador no lo implementa y en la terminal sí; además lo no seguido nunca lista rutas bajo `.git/` |
+| `git fetch` y otras 141 órdenes de Git | `git: 'fetch' is not a git command` | el simulador no la implementa, y en la terminal sí funciona |
+
+El renombrado se detecta solo con contenido idéntico, que es el caso del
+laboratorio 03. Git también empareja archivos que se parecen en más de la
+mitad; eso no se modela.
+
+La lista de órdenes de Git (`ORDENES_DE_GIT`, en el contrato) sale de
+`git --list-cmds=main,nohelpers`. Una prueba recorre las del Git de la
+máquina y exige que ninguna responda que no existe. Las 142 que la recibían:
+todas las de esa lista que el motor no tiene, de `am` a `upload-pack`,
+entre ellas `fetch`, `pull`, `push`, `clone`, `cherry-pick`,
+`bisect`, `blame`, `clean`, `grep`, `shortlog`, `submodule` y
+`worktree`.
+
+### 68.2 · Lo que se tocó fuera de los cuatro casos
+
+- **`repoConRamaDesdeMain()`**, el ayudante de las pruebas, cambiaba de rama
+  sobre el escenario del 07 con el curry modificado: dependía del defecto. Ahora
+  descarta el cambio antes. Lo mismo dos pruebas de la vista y de `checkout`.
+- La prueba «sin nada suelto» ahora espera las líneas `M` que Git imprime.
+
+### 68.3 · Encontrado y sin tocar
+
+- **El resumen de `git commit` no cuenta líneas**: dice `1 file changed`
+  donde Git dice `1 file changed, 1 insertion(+)` y, en un archivo nuevo,
+  `create mode 100644 a.md`.
+- **`cat a.md > c.md`** responde `cat: >: No such file or directory`: el
+  intérprete toma `>` como un archivo.
+- **`git branch --show-current` y `-q` en `switch` y `commit`** siguen
+  declaradas como no implementadas; son de uso común en guiones de terceros.
+
+### 68.4 · Las cifras
+
+| | Antes | Después |
+|---|---|---|
+| Pruebas de unidad | 762 | 943 |
+| Pruebas de punta a punta | 173 | 173 |
+| Cobertura de unidad (líneas, ramas, funciones, sentencias) | 91,76 · 82,93 · 92,72 · 94,47 | 92,22 · 83,55 · 93,90 · 94,92 |
+| Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
+| Artefacto | 331434 bytes | 335577 bytes |
+
+## 69. El laboratorio 07 se puede aprobar, y dos detalles
+
+SPEC 023.
+
+### 69.1 · El laboratorio 07
+
+Al llegar al rebase interactivo la rama tiene cinco confirmaciones propias
+(`wip`, `cambios`, `mas cambios`, `arreglos` y la del punto 1.12), y
+`git rebase -i HEAD~4` dejaba `wip` afuera. Cambió el enunciado, no el
+verificador:
+
+- **3.2 y 3.4:** `git rebase -i main`. La lista trae exactamente las
+  confirmaciones propias de la rama, sean cuantas sean. `main` es la base
+  correcta en ese punto: el 2.3 hace `git rebase main`.
+- **3.3:** `reword` en la primera línea, el resto con `pick`.
+- **3.4:** `pick` en la primera y la última, `squash` en las del medio; en el
+  editor del squash queda solo el mensaje del `reword`.
+- Resultado: dos confirmaciones, la reescrita y «se agrega el curry y sus
+  ingredientes».
+
+La diferencia conocida que la prueba del SPEC 021 anotaba para el 07 se quitó:
+el laboratorio se aprueba siguiendo el enunciado, en Windows y en Mac.
+
+**El verificador no mira el cuerpo de los mensajes.** Revisa el asunto
+(`git log --format=%s`), y en un squash el asunto es el del `reword`: si el
+participante no borra «cambios», «mas cambios» y «arreglos», quedan en el
+cuerpo y el verificador igual aprueba. El enunciado pide borrarlos, sin decir
+que el verificador los encuentra.
+
+Ningún otro enunciado cuenta varias confirmaciones hacia atrás al reescribir
+historia: solo `git reset` a `HEAD~1` en el 01, 02, 06 y 08.
+
+### 69.2 · El resumen de `git commit`
+
+Imprime lo que Git: archivos, inserciones y eliminaciones con la regla de
+`print_stat_summary` (las inserciones se nombran si hay alguna o si no hay
+eliminaciones, y al revés), y las líneas `create mode`, `delete mode` y
+`rename`, ordenadas por ruta. `--amend` agrega la línea ` Date:` con la
+fecha original; cerrar una fusión imprime solo la primera línea. La regla de
+inserciones y eliminaciones se corrigió en la función compartida, así que vale
+también para `git merge`, `git revert` y `--stat`.
+
+### 69.3 · `cat` con redirección
+
+`cat a.md > c.md` y `cat a.md >> c.md` escriben como en bash, con la misma
+función que ya usaba `echo`.
+
+### 69.4 · Las cifras
+
+| | Antes | Después |
+|---|---|---|
+| Pruebas de unidad | 943 | 954 |
+| Pruebas de punta a punta | 173 | 173 |
+| Cobertura de unidad (líneas, ramas, funciones, sentencias) | 92,22 · 83,55 · 93,90 · 94,92 | 92,11 · 83,30 · 93,81 · 94,83 |
+| Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
+| Artefacto | 335 577 bytes | 336286 bytes |

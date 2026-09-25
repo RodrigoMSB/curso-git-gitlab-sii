@@ -10,7 +10,7 @@ import {
   valorDeOpcion,
   valorDeOpcionPegado,
 } from '../analizador';
-import { agregarConfirmacion, resumenArchivos } from '../confirmaciones';
+import { agregarConfirmacion } from '../confirmaciones';
 import {
   archivosEn,
   carrilDeRama,
@@ -22,8 +22,8 @@ import {
   ramaActual,
   transformarArchivos,
 } from '../estado';
-import { arbolDe, comparacionesEntre } from '../contenido';
-import { formatearEstadisticasDe, formatearParches } from '../diferencias';
+import { arbolDe, comparacionesEntre, textoDeTrabajo, textoEnCabeza } from '../contenido';
+import { formatearEstadisticasDe, formatearParches, resumenDeConfirmacion } from '../diferencias';
 import { formatearEstadoLargo, formatearHistorial } from '../formato';
 import { historia } from '../grafo';
 import {
@@ -103,10 +103,8 @@ function confirmarFusion(
 
   return ok(
     siguiente,
-    lineas(
-      `[${rotuloPosicion(siguiente, false)} ${creado.confirmacion.id}] ${mensaje}`,
-      resumenArchivos(afectados),
-    ),
+    // Al cerrar una fusion, Git imprime solo esta linea (comprobado contra Git 2.54).
+    lineas(`[${rotuloPosicion(siguiente, false)} ${creado.confirmacion.id}] ${mensaje}`),
   );
 }
 
@@ -153,7 +151,9 @@ function enmendar(estado: EstadoRepositorio, mensajePedido: string | null): Resu
     siguiente,
     lineas(
       `[${rotuloPosicion(siguiente, anterior.padres.length === 0)} ${creado.confirmacion.id}] ${mensaje}`,
-      resumenArchivos(archivos),
+      // Git enmienda conservando la fecha de la confirmacion original, y la dice.
+      ` Date: ${anterior.fecha}`,
+      ...resumenDeConfirmacion(comparacionesEntre(siguiente, anterior.padres[0] ?? null, creado.confirmacion.id)),
     ),
   );
 }
@@ -235,11 +235,22 @@ export const ordenCommit: Manejador = (estadoRecibido, argumentos) => {
     rama: ramaActual(siguiente),
   });
 
+  // Un renombrado sin cambios de contenido es un solo archivo para Git, y lo
+  // nombra aparte (SPEC 022).
+  const renombrados = estado.archivos.filter(
+    (archivo) =>
+      archivo.estado === 'preparado' &&
+      archivo.renombradoDe !== undefined &&
+      textoEnCabeza(estado, archivo.renombradoDe) === textoDeTrabajo(estado, archivo.nombre),
+  );
   return ok(
     siguiente,
     lineas(
       `[${rotuloPosicion(siguiente, cabeza === null)} ${creado.confirmacion.id}] ${mensaje}`,
-      resumenArchivos([...preparados, ...borrados]),
+      ...resumenDeConfirmacion(
+        comparacionesEntre(siguiente, cabeza, creado.confirmacion.id),
+        renombrados.map((r) => ({ antes: r.renombradoDe ?? '', despues: r.nombre })),
+      ),
     ),
   );
 };

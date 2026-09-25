@@ -11,6 +11,7 @@ import { posicionales, tieneOpcion, valorDeOpcion } from '../analizador';
 import { agregarConfirmacion, reservarId } from '../confirmaciones';
 import {
   anotarMovimiento,
+  archivoPorNombre,
   anotarReflog,
   asignarCarril,
   confirmacionPorId,
@@ -211,6 +212,46 @@ function avisoAlDejar(estado: EstadoRepositorio, idNuevo: string): readonly stri
   ];
 }
 
+/** Los archivos con trabajo sin confirmar: modificados, preparados, en conflicto o borrados. */
+function conTrabajo(estado: EstadoRepositorio): readonly string[] {
+  return [
+    ...new Set([
+      ...estado.archivos
+        .filter((archivo) => archivo.estado === 'modificado' || archivo.estado === 'preparado' || archivo.estado === 'en-conflicto')
+        .map((archivo) => archivo.nombre),
+      ...estado.borrados,
+      ...estado.borradosSinPreparar,
+    ]),
+  ].sort();
+}
+
+/**
+ * Lo que cambiar a `idDestino` pisaria (SPEC 022): los archivos con trabajo
+ * sin confirmar que la otra confirmacion tiene distintos de HEAD. Si el
+ * archivo es igual en las dos, Git deja cambiar y se lleva el trabajo.
+ */
+function pisaria(estado: EstadoRepositorio, idDestino: string): readonly string[] {
+  const idCabeza = idActual(estado);
+  return conTrabajo(estado).filter(
+    (nombre) =>
+      (idCabeza === null ? undefined : textoEnConfirmacion(estado, idCabeza, nombre)) !==
+      textoEnConfirmacion(estado, idDestino, nombre),
+  );
+}
+
+/**
+ * El trabajo que se lleva a la otra rama, como lo lista Git antes de decir a
+ * donde cambio: una letra por archivo, `M`, `A` o `D`, ordenados por ruta.
+ */
+function trabajoQueSeLleva(estado: EstadoRepositorio): readonly string[] {
+  const idCabeza = idActual(estado);
+  return conTrabajo(estado).map((nombre) => {
+    const borrado = estado.borrados.includes(nombre) || estado.borradosSinPreparar.includes(nombre);
+    const enCabeza = idCabeza !== null && textoEnConfirmacion(estado, idCabeza, nombre) !== null;
+    return `${borrado ? 'D' : enCabeza ? 'M' : 'A'}\t${nombre}`;
+  });
+}
+
 function cambiarA(
   estado: EstadoRepositorio,
   destino: string,
@@ -219,6 +260,35 @@ function cambiarA(
 ): ResultadoOrden {
   const origen = ramaActual(estado) ?? idActual(estado) ?? 'HEAD';
   const rama = desconectar ? undefined : ramaPorNombre(estado, destino);
+
+  // Git no cambia si el cambio pisaria trabajo sin confirmar, y lo dice con
+  // estas palabras en `switch` y en `checkout`. Una rama recien creada sale de
+  // donde se esta, y ahi no hay nada que pisar.
+  const idDestino = rama?.id ?? resolverReferencia(estado, destino);
+  if (!nueva && idDestino !== null) {
+    const pisados = pisaria(estado, idDestino);
+    if (pisados.length > 0) {
+      // Git hace una lista con lo preparado y otra con lo que solo esta en el
+      // directorio, en ese orden, y un solo «Aborting» al final.
+      const preparado = (nombre: string): boolean =>
+        estado.borrados.includes(nombre) || archivoPorNombre(estado, nombre)?.estado === 'preparado';
+      const bloque = (nombres: readonly string[]): readonly string[] =>
+        nombres.length === 0
+          ? []
+          : [
+              'error: Your local changes to the following files would be overwritten by checkout:',
+              ...nombres.map((nombre) => `\t${nombre}`),
+              'Please commit your changes or stash them before you switch branches.',
+            ];
+      return fallo(
+        estado,
+        ...bloque(pisados.filter(preparado)),
+        ...bloque(pisados.filter((nombre) => !preparado(nombre))),
+        'Aborting',
+      );
+    }
+  }
+  const llevados = nueva ? [] : trabajoQueSeLleva(estado);
 
   if (rama !== undefined) {
     // Cambiarse a la rama en la que ya se esta no mueve nada: Git lo dice y no
@@ -244,6 +314,8 @@ function cambiarA(
     return ok(
       siguiente,
       lineas(
+        // Git lista el trabajo que se lleva antes de decir de donde salio.
+        ...llevados,
         ...avisoAlDejar(estado, rama.id),
         nueva ? `Switched to a new branch '${destino}'` : `Switched to branch '${destino}'`,
       ),
@@ -267,12 +339,13 @@ function cambiarA(
   if (desconectar) {
     return ok(
       siguiente,
-      lineas(...avisoAlDejar(estado, id), `HEAD is now at ${id} ${confirmacion?.mensaje ?? ''}`.trimEnd()),
+      lineas(...llevados, ...avisoAlDejar(estado, id), `HEAD is now at ${id} ${confirmacion?.mensaje ?? ''}`.trimEnd()),
     );
   }
   return ok(
     siguiente,
     lineas(
+      ...llevados,
       `Note: switching to '${destino}'.`,
       '',
       "You are in 'detached HEAD' state. You can look around, make experimental",

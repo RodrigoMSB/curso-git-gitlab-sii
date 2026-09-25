@@ -21,6 +21,7 @@ import { archivosEn, establecerArchivo, establecerContenido, estaSeguido } from 
 import { estaExcluida, exclusionesDe, patronesFuera } from '../exclusiones';
 import { formatearEstadoCorto, formatearEstadoLargo } from '../formato';
 import { resolverReferencia } from '../referencias';
+import { emparejarRenombrados } from '../renombrados';
 import { fallo, lineaLimite, lineas, ok, sinRepositorio } from '../salida';
 import type { Archivo, EstadoRepositorio, ResultadoOrden } from '../tipos';
 
@@ -204,6 +205,8 @@ export const ordenAdd: Manejador = (estado, argumentos) => {
   // lista ya podada: el nombre viejo de un renombrado salio de ahi arriba y
   // volver a tomarlo lo contaria dos veces, como baja y como renombrado.
   siguiente = prepararBorrados(siguiente, todo, rutas);
+  // Una baja y un alta del mismo contenido, preparadas, son un renombrado.
+  siguiente = emparejarRenombrados(siguiente);
 
   // Resolver el ultimo conflicto no cierra la fusion: falta confirmar.
   return ok(siguiente);

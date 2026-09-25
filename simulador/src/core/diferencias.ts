@@ -260,20 +260,13 @@ export function formatearEstadisticasDe(
   });
 
   const ancho = filas.reduce((mayor, fila) => Math.max(mayor, fila.ruta.length), 0);
-  const palabra = filas.length === 1 ? 'file' : 'files';
   const agregadas = filas.reduce(
     (suma, fila) => suma + (fila.marcas.match(/\+/g)?.length ?? 0),
     0,
   );
   const quitadas = filas.reduce((suma, fila) => suma + (fila.marcas.match(/-/g)?.length ?? 0), 0);
 
-  const cierre = [` ${filas.length} ${palabra} changed`];
-  if (agregadas > 0) {
-    cierre.push(`${agregadas} ${agregadas === 1 ? 'insertion' : 'insertions'}(+)`);
-  }
-  if (quitadas > 0) {
-    cierre.push(`${quitadas} ${quitadas === 1 ? 'deletion' : 'deletions'}(-)`);
-  }
+  const cierre = cierreDeEstadisticas(filas.length, agregadas, quitadas);
 
   const modos = conModos
     ? utiles.flatMap((comparacion) => {
@@ -285,7 +278,7 @@ export function formatearEstadisticasDe(
 
   return [
     ...filas.map((fila) => ` ${fila.ruta.padEnd(ancho)} | ${fila.total} ${fila.marcas}`),
-    cierre.join(', '),
+    cierre,
     ...modos,
   ];
 }
@@ -392,4 +385,74 @@ export function fusionarTresVias(
   }
 
   return { texto: salida.length === 0 ? '' : `${salida.join('\n')}\n`, choco };
+}
+
+/**
+ * La linea final de un resumen, con la regla de Git (`print_stat_summary`):
+ * las inserciones se nombran si hay alguna o si no hay eliminaciones, y al
+ * reves. Por eso un archivo vacio dice `0 insertions(+), 0 deletions(-)`
+ * (SPEC 023).
+ */
+function cierreDeEstadisticas(archivos: number, agregadas: number, quitadas: number): string {
+  const partes = [` ${archivos} ${archivos === 1 ? 'file' : 'files'} changed`];
+  if (agregadas > 0 || quitadas === 0) partes.push(`${agregadas} ${agregadas === 1 ? 'insertion' : 'insertions'}(+)`);
+  if (quitadas > 0 || agregadas === 0) partes.push(`${quitadas} ${quitadas === 1 ? 'deletion' : 'deletions'}(-)`);
+  return partes.join(', ');
+}
+
+/**
+ * Como nombra Git un renombrado en un resumen: lo comun al comienzo y al final
+ * va una sola vez, y lo que cambia entre llaves. `recetas/a.md` a
+ * `recetas/b.md` es `recetas/{a.md => b.md}`.
+ */
+export function rotuloDeRenombrado(antes: string, despues: string): string {
+  let inicio = 0;
+  for (let i = 0; i < Math.min(antes.length, despues.length) && antes[i] === despues[i]; i += 1) {
+    if (antes[i] === '/') inicio = i + 1;
+  }
+  let fin = 0;
+  for (
+    let i = 1;
+    i <= Math.min(antes.length, despues.length) - inicio && antes[antes.length - i] === despues[despues.length - i];
+    i += 1
+  ) {
+    if (antes[antes.length - i] === '/') fin = i;
+  }
+  if (inicio === 0 && fin === 0) return `${antes} => ${despues}`;
+  const prefijo = antes.slice(0, inicio);
+  const sufijo = fin === 0 ? '' : antes.slice(antes.length - fin);
+  return `${prefijo}{${antes.slice(inicio, antes.length - fin)} => ${despues.slice(inicio, despues.length - fin)}}${sufijo}`;
+}
+
+/**
+ * El resumen que Git imprime al confirmar (SPEC 023): el total de archivos,
+ * lineas agregadas y quitadas, y una linea por archivo creado, borrado o
+ * renombrado, ordenadas por ruta. Sin el detalle por archivo que lleva
+ * `git merge`. Texto copiado de una corrida de Git 2.54.
+ *
+ * Un renombrado sin cambios de contenido cuenta como un archivo y no suma
+ * lineas.
+ */
+export function resumenDeConfirmacion(
+  comparaciones: readonly Comparacion[],
+  renombrados: readonly { readonly antes: string; readonly despues: string }[] = [],
+): readonly string[] {
+  const enRenombrado = new Set(renombrados.flatMap((r) => [r.antes, r.despues]));
+  const resto = comparaciones.filter((una) => una.antes !== una.despues && !enRenombrado.has(una.ruta));
+  let agregadas = 0;
+  let quitadas = 0;
+  for (const comparacion of resto) {
+    const comparadas = compararLineas(lineasDe(comparacion.antes ?? ''), lineasDe(comparacion.despues ?? ''));
+    agregadas += comparadas.filter((linea) => linea.marca === 'agregada').length;
+    quitadas += comparadas.filter((linea) => linea.marca === 'quitada').length;
+  }
+  const modos = [
+    ...resto.flatMap((comparacion) => {
+      if (comparacion.antes === null) return [{ ruta: comparacion.ruta, linea: ` create mode 100644 ${comparacion.ruta}` }];
+      if (comparacion.despues === null) return [{ ruta: comparacion.ruta, linea: ` delete mode 100644 ${comparacion.ruta}` }];
+      return [];
+    }),
+    ...renombrados.map((r) => ({ ruta: r.despues, linea: ` rename ${rotuloDeRenombrado(r.antes, r.despues)} (100%)` })),
+  ].sort((a, b) => (a.ruta < b.ruta ? -1 : a.ruta > b.ruta ? 1 : 0));
+  return [cierreDeEstadisticas(resto.length + renombrados.length, agregadas, quitadas), ...modos.map((m) => m.linea)];
 }
