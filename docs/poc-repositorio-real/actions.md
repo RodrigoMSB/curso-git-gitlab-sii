@@ -1,8 +1,8 @@
 # Resultados en GitHub Actions
 
-Ejecucion: https://github.com/RodrigoMSB/curso-git-gitlab-sii/actions/runs/36178817401
+Ejecucion: https://github.com/RodrigoMSB/curso-git-gitlab-sii/actions/runs/36180707453
 
-Confirmacion probada: ab648906782ffda9d40b794dd357990bb16b60be
+Confirmacion probada: f38ddbf36cfc14dd3d9d334cebcc868f11311460
 
 - navegador-darwin-chrome.md: RESULTADO: todo igual
 - navegador-win32-chrome.md: RESULTADO: todo igual
