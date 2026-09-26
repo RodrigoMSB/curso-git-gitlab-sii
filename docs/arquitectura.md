@@ -5030,3 +5030,38 @@ los cubre en sus filas 5 y 6, con qué hacer si fallan.
   `cd`. El recorrido escribe esos `cd` como pasos del arnés.
 - El doble clic en `taller-java.command` desde Finder no se probó en la
   integración continua, que no tiene Finder.
+
+### 71.6 · Las cifras
+
+Recorrido de los ocho laboratorios, 470 órdenes y pasos de editor por
+plataforma, con tres marcadores de posición del laboratorio 07 omitidos porque
+el participante los reemplaza a mano.
+
+| Plataforma | Página igual a Git | Procesos en 60 s de reposo | Cambio de afuera visible, mediana |
+|---|---|---|---|
+| Mac M1 del product owner, Chrome | 469 de 469 | 0 | 517 ms |
+| macOS en GitHub, Chrome | 469 de 469 | 0 | 664 ms |
+| Windows en GitHub, Chrome | 469 de 469 | 0 | 997 ms |
+| Windows en GitHub, Chrome, Git fuera del PATH | 469 de 469 | 0 | 1067 ms |
+| Windows en GitHub, Edge | 460 de 469 | 0 | 631 ms |
+
+Las nueve de Edge son el laboratorio 08 y no son del programa: son el
+`preparar.sh` del punto 71.2 que no es determinista en Windows. El recorrido
+ahora lo anota y deja al gemelo partir de la misma preparación.
+
+Las cifras de Windows son de la corrida `36224554725`, anterior a la espera de
+la lectura en curso (sección 71.1), que baja la demora en Windows y no alcanzó
+a medirse allí: desde las 07:36 del 26 de septiembre GitHub Actions no inicia
+trabajos en esta cuenta, por un problema de pago. Por lo mismo quedaron sin
+verificar en Windows el cierre de la franja con el programa muerto y la corrida
+como un usuario de Windows con espacio y tilde, cuya primera versión quedó
+colgada y se canceló.
+
+| | |
+|---|---|
+| Pruebas de unidad de Java | 61, y 24 mutaciones que las hacen fallar |
+| Pruebas del modelo del modo taller | 18, y 9 mutaciones |
+| Suite del simulador | 972 |
+| Mutaciones del recorrido de punta a punta | 4 de 4 atrapadas |
+| `taller-java/taller.jar` | 77 552 bytes |
+| Runtimes | 31 MB cada uno en disco, 17,4 y 18,7 MB comprimidos |
