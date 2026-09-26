@@ -61,6 +61,9 @@ public final class Procesos {
         if (entrada == null) pb.redirectInput(ProcessBuilder.Redirect.from(nulo()));
         LANZADOS.incrementAndGet();
         Process p = pb.start();
+        // Una orden entra al trabajo del motor antes de recibir lo que tiene
+        // que hacer: bash no lanza nada hasta leerlo.
+        if (entrada != null) Custodio.sumar(p);
         if (entrada != null) {
             try (var in = p.getOutputStream()) {
                 in.write(entrada.getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -102,6 +105,17 @@ public final class Procesos {
         pb.redirectError(ProcessBuilder.Redirect.DISCARD);
         LANZADOS.incrementAndGet();
         pb.start();
+    }
+
+    /**
+     * Lanza el custodio de Windows: con la entrada y la salida abiertas para
+     * hablar con el, y sin esperarlo. Cuenta como un proceso lanzado.
+     */
+    static Process lanzarAyudante(List<String> orden) throws IOException {
+        ProcessBuilder pb = new ProcessBuilder(orden);
+        pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+        LANZADOS.incrementAndGet();
+        return pb.start();
     }
 
     static void matarArbol(Process p) {

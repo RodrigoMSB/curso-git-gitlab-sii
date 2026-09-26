@@ -1,0 +1,139 @@
+package taller;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Base64;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * En Windows, que nada de lo que abren las ordenes sobreviva al motor.
+ *
+ * Java lanza cada proceso con CREATE_NO_WINDOW, en una consola propia y
+ * oculta: al cerrar la ventana de TALLER.cmd el motor recibe CTRL_CLOSE y
+ * termina, pero un bash, un git o un sleep a medio correr no se enteran, y
+ * quedaban vivos parados en la carpeta del laboratorio. Lo mismo si el motor
+ * muere de golpe.
+ *
+ * Windows tiene para eso los objetos de trabajo marcados con
+ * KILL_ON_JOB_CLOSE: al cerrarse su ultima manija, terminan todos sus
+ * procesos. Java 21 no los alcanza sin codigo nativo, asi que el motor lanza al
+ * arrancar un ayudante de PowerShell que crea el trabajo y le va sumando cada
+ * orden. El ayudante lee numeros de proceso por su entrada y sale cuando esa
+ * entrada se cierra, que es cuando el motor termina, de cualquier forma: con
+ * el ayudante se cierra la manija y Windows termina el trabajo entero.
+ *
+ * El numero se manda antes de escribirle la orden a bash, y bash no hace nada
+ * hasta leerla, asi que nada de lo que la orden lanza queda fuera.
+ */
+final class Custodio {
+
+    private static final String GUION = """
+            $ErrorActionPreference = 'Stop'
+            Add-Type -TypeDefinition @'
+            using System; using System.Runtime.InteropServices;
+            public static class Custodio {
+              [DllImport("kernel32.dll")] static extern IntPtr CreateJobObjectW(IntPtr a, IntPtr n);
+              [DllImport("kernel32.dll")] static extern bool SetInformationJobObject(IntPtr j, int c, ref Extendida i, int l);
+              [DllImport("kernel32.dll")] static extern bool AssignProcessToJobObject(IntPtr j, IntPtr p);
+              [DllImport("kernel32.dll")] static extern IntPtr OpenProcess(int a, bool i, int p);
+              [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+              [StructLayout(LayoutKind.Sequential)] struct Basica { public long a; public long b; public int Limites; public UIntPtr c; public UIntPtr d; public int e; public UIntPtr f; public int g; public int h; }
+              [StructLayout(LayoutKind.Sequential)] struct Contadores { public ulong a, b, c, d, e, f; }
+              [StructLayout(LayoutKind.Sequential)] struct Extendida { public Basica B; public Contadores C; public UIntPtr p1, p2, p3, p4; }
+              static IntPtr trabajo;
+              public static bool Crear() {
+                trabajo = CreateJobObjectW(IntPtr.Zero, IntPtr.Zero);
+                if (trabajo == IntPtr.Zero) return false;
+                var i = new Extendida();
+                i.B.Limites = 0x2000 | 0x800;
+                return SetInformationJobObject(trabajo, 9, ref i, Marshal.SizeOf(typeof(Extendida)));
+              }
+              public static bool Sumar(int pid) {
+                IntPtr p = OpenProcess(0x0101, false, pid);
+                if (p == IntPtr.Zero) return false;
+                bool ok = AssignProcessToJobObject(trabajo, p);
+                CloseHandle(p);
+                return ok;
+              }
+            }
+            '@
+            if (-not [Custodio]::Crear()) { [Console]::Out.WriteLine('no'); exit 1 }
+            [Console]::Out.WriteLine('listo')
+            [Console]::Out.Flush()
+            while ($null -ne ($linea = [Console]::In.ReadLine())) {
+              [Console]::Out.WriteLine([string][Custodio]::Sumar([int]$linea))
+              [Console]::Out.Flush()
+            }
+            """;
+
+    private static final CountDownLatch LISTO = new CountDownLatch(1);
+    private static Process ayudante;
+    private static Writer escritor;
+    private static BufferedReader lector;
+    private static volatile boolean activo;
+
+    private Custodio() {}
+
+    /** Lanza el ayudante sin esperarlo: Add-Type compila y tarda un par de segundos. */
+    static synchronized void arrancar() {
+        if (Sistema.actual() != Sistema.WINDOWS || ayudante != null) {
+            LISTO.countDown();
+            return;
+        }
+        String raiz = System.getenv().getOrDefault("SystemRoot", "C:\\Windows");
+        Path powershell = Path.of(raiz, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+        String codificado = Base64.getEncoder().encodeToString(GUION.getBytes(StandardCharsets.UTF_16LE));
+        try {
+            ayudante = Procesos.lanzarAyudante(List.of(powershell.toString(), "-NoLogo", "-NoProfile",
+                    "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", codificado));
+            escritor = new OutputStreamWriter(ayudante.getOutputStream(), StandardCharsets.US_ASCII);
+            lector = new BufferedReader(new InputStreamReader(ayudante.getInputStream(), StandardCharsets.US_ASCII));
+        } catch (IOException e) {
+            Registro.escribir("no arranco el custodio de procesos: " + e);
+            LISTO.countDown();
+            return;
+        }
+        Thread espera = new Thread(() -> {
+            try {
+                activo = "listo".equals(lector.readLine());
+                if (!activo) Registro.escribir("el custodio de procesos no pudo crear su trabajo");
+            } catch (IOException e) {
+                Registro.escribir("el custodio de procesos no respondio: " + e);
+            } finally {
+                LISTO.countDown();
+            }
+        }, "custodio");
+        espera.setDaemon(true);
+        espera.start();
+    }
+
+    /**
+     * Suma un proceso al trabajo del motor y espera la respuesta. Sin
+     * custodio, porque no es Windows o porque no arranco, no hace nada.
+     */
+    static synchronized boolean sumar(Process p) {
+        if (Sistema.actual() != Sistema.WINDOWS) return false;
+        try {
+            if (!LISTO.await(20, TimeUnit.SECONDS) || !activo) return false;
+            escritor.write(p.pid() + "\n");
+            escritor.flush();
+            boolean ok = "True".equals(lector.readLine());
+            if (!ok) Registro.escribir("el custodio no pudo sumar el proceso " + p.pid());
+            return ok;
+        } catch (IOException e) {
+            activo = false;
+            Registro.escribir("el custodio de procesos dejo de responder: " + e);
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+}

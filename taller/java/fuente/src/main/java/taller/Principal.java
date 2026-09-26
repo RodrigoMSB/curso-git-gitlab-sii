@@ -63,6 +63,8 @@ public final class Principal {
             return;
         }
 
+        // En Windows, lo que abran las ordenes muere con el motor.
+        Custodio.arrancar();
         long tiempo = tiempoMaximo();
         Ejecutor ejecutor = new Ejecutor(sistema, git, limite, propia, tiempo);
         LectorEstado lector = new LectorEstado(sistema, git, propia);

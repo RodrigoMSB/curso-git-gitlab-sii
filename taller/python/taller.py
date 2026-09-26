@@ -154,7 +154,57 @@ class Trabajo:
     En Windows, un objeto de trabajo: los hijos lo heredan, y taskkill /T no
     alcanza a los procesos que abre Git Bash. En Mac y Linux, el grupo de
     procesos de una sesion nueva.
+
+    En Windows cada orden entra ademas en el trabajo del motor, uno solo para
+    toda la vida del programa, marcado para matar todo lo suyo cuando se
+    cierra su ultima manija. Esa manija la tiene este proceso y nadie mas: si
+    el motor termina de cualquier forma, al cerrar la ventana, por un error o
+    muerto de golpe, Windows la cierra y termina todo lo que abrieron las
+    ordenes. Sin esto un bash, un git o un sleep a medio correr quedaban
+    vivos, parados en la carpeta del laboratorio, y el siguiente arranque no
+    la podia borrar.
     """
+
+    _del_motor: Optional[int] = None
+    _cerrojo = threading.Lock()
+
+    @classmethod
+    def del_motor(cls, kernel32) -> Optional[int]:
+        import ctypes
+        from ctypes import wintypes
+
+        with cls._cerrojo:
+            if cls._del_motor is not None:
+                return cls._del_motor
+
+            class Basica(ctypes.Structure):
+                _fields_ = [("tiempo_proceso", ctypes.c_int64), ("tiempo_trabajo", ctypes.c_int64),
+                            ("limites", wintypes.DWORD), ("minimo", ctypes.c_size_t), ("maximo", ctypes.c_size_t),
+                            ("procesos", wintypes.DWORD), ("afinidad", ctypes.c_size_t),
+                            ("prioridad", wintypes.DWORD), ("planificacion", wintypes.DWORD)]
+
+            class Contadores(ctypes.Structure):
+                _fields_ = [(n, ctypes.c_uint64) for n in ("a", "b", "c", "d", "e", "f")]
+
+            class Extendida(ctypes.Structure):
+                _fields_ = [("basica", Basica), ("contadores", Contadores), ("memoria_proceso", ctypes.c_size_t),
+                            ("memoria_trabajo", ctypes.c_size_t), ("pico_proceso", ctypes.c_size_t),
+                            ("pico_trabajo", ctypes.c_size_t)]
+
+            manija = kernel32.CreateJobObjectW(None, None)
+            if not manija:
+                return None
+            info = Extendida()
+            # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, y BREAKAWAY_OK para lo que
+            # pida salir, como un editor que se abre y sigue solo.
+            info.basica.limites = 0x2000 | 0x800
+            # JobObjectExtendedLimitInformation
+            if not kernel32.SetInformationJobObject(ctypes.c_void_p(manija), 9, ctypes.byref(info),
+                                                    ctypes.sizeof(info)):
+                kernel32.CloseHandle(ctypes.c_void_p(manija))
+                return None
+            cls._del_motor = manija
+            return manija
 
     def __init__(self, proceso: subprocess.Popen) -> None:
         self.proceso = proceso
@@ -165,8 +215,12 @@ class Trabajo:
 
                 self.kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
                 self.kernel32.CreateJobObjectW.restype = ctypes.c_void_p
-                manija = self.kernel32.CreateJobObjectW(None, None)
                 proceso_manija = ctypes.c_void_p(int(proceso._handle))  # type: ignore[attr-defined]
+                # Primero el del motor; el de la orden queda anidado dentro.
+                del_motor = Trabajo.del_motor(self.kernel32)
+                if del_motor:
+                    self.kernel32.AssignProcessToJobObject(ctypes.c_void_p(del_motor), proceso_manija)
+                manija = self.kernel32.CreateJobObjectW(None, None)
                 if manija and self.kernel32.AssignProcessToJobObject(ctypes.c_void_p(manija), proceso_manija):
                     self.manija = manija
             except (OSError, AttributeError, ValueError):
