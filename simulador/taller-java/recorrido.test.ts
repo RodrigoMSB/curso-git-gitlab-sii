@@ -550,6 +550,29 @@ describe('el modo taller, laboratorio por laboratorio', () => {
           }
           rmSync(carpetaB, { recursive: true, force: true });
           copiar(carpetaA, carpetaB);
+          // Los remotos de la copia apuntan a la carpeta del participante: en
+          // el gemelo tienen que apuntar a la suya.
+          for (const nombre of readdirSync(carpetaB).filter((n) => existsSync(join(carpetaB, n, '.git')))) {
+            const repo = join(carpetaB, nombre);
+            let urls = '';
+            try {
+              urls = execFileSync(herramientas().git, ['config', '--get-regexp', '^remote\\..*\\.url$'], {
+                cwd: repo,
+                encoding: 'utf8',
+              });
+            } catch {
+              // Sin remotos, git config termina con 1.
+            }
+            for (const linea of urls.split('\n').filter(Boolean)) {
+              const [clave = '', ...resto] = linea.split(' ');
+              const url = resto.join(' ');
+              // Una sola pasada: la ruta del gemelo contiene a la de la copia como
+              // prefijo, y reemplazar forma por forma la volvia a tocar.
+              const patron = new RegExp(formas(A.limite).map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
+              const nueva = url.replace(patron, B.limite.replaceAll('\\', '/'));
+              if (nueva !== url) execFileSync(herramientas().git, ['config', clave, nueva], { cwd: repo });
+            }
+          }
         }
         A.salidas.set(p.orden.texto, consola.git);
         B.salidas.set(p.orden.texto, salidaB);
