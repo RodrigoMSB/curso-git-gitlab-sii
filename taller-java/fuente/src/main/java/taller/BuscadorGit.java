@@ -160,7 +160,7 @@ public final class BuscadorGit {
         String path = entorno.variable("PATH");
         if (path == null) path = entorno.variable("Path");
         if (path == null) return Optional.empty();
-        String separador = sistema == Sistema.WINDOWS ? ";" : File.pathSeparator;
+        String separador = sistema == Sistema.WINDOWS ? ";" : ":";
         for (String carpeta : path.split(java.util.regex.Pattern.quote(separador))) {
             if (carpeta.isBlank()) continue;
             Path candidata = Path.of(carpeta.replace("\"", "")).resolve(nombre);

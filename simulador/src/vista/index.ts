@@ -37,3 +37,23 @@ export type {
   TonoElemento,
 } from './pantalla';
 export { construirPantalla, ESCALA_RELATOR, FILAS_VISIBLES, TEXTO_MINIMO } from './pantalla';
+
+export type {
+  BarraTaller,
+  DocumentoTaller,
+  EstadoGit,
+  RespuestaOrden,
+  SesionGit,
+} from './modoTaller';
+export {
+  barraDelTaller,
+  claveDelTaller,
+  columnasDelTaller,
+  completarEnTaller,
+  grafoDelTaller,
+  guardadosDelTaller,
+  indicadorDelTaller,
+  presentacion,
+  renglonDelPrograma,
+  renglonesDeOrden,
+} from './modoTaller';

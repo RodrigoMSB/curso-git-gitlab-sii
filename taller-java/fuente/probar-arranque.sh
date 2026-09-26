@@ -47,13 +47,19 @@ codigo=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/estado")
 codigo=$(curl -s -o /dev/null -w '%{http_code}' "$DIRECCION")
 [ "$codigo" = 200 ] || falla "la pagina respondio $codigo"
 
+# El cuerpo va por archivo y no como argumento: en Windows, curl recibe sus
+# argumentos en la codificacion de la consola y las tildes se pierden antes de
+# salir, que no es lo que hace el navegador.
+CUERPO=$(mktemp)
 orden() {
-  curl -s -H "X-Taller-Clave: $CLAVE" -H 'Content-Type: application/json' \
-    --data "{\"orden\":\"$1\"}" "$BASE/api/orden"
+  printf '{"orden":"%s"}' "$1" > "$CUERPO"
+  curl -s -H "X-Taller-Clave: $CLAVE" -H 'Content-Type: application/json; charset=utf-8' \
+    --data-binary "@$CUERPO" "$BASE/api/orden"
   echo
 }
 orden 'mkdir -p \"prueba ñandú\" && cd \"prueba ñandú\" && git init -q && echo canción > canción.md && git add . && git -c user.name=Ana -c user.email=a@b.cl commit -qm \"señal ñ\" && git log --format=%s && pwd'
-estado=$(curl -s -H "X-Taller-Clave: $CLAVE" "$BASE/api/estado")
+curl -s -H "X-Taller-Clave: $CLAVE" -o "$CUERPO.estado" "$BASE/api/estado"
+estado=$(cat "$CUERPO.estado")
 echo "$estado" | head -c 1500; echo
 echo "$estado" | grep -q '"asunto":"señal ñ"' || falla "el estado no trae la confirmacion con tildes"
 echo "$estado" | grep -q '"relativa":"taller-git-trabajo/prueba ñandú"' || falla "la consola no quedo en la carpeta nueva"

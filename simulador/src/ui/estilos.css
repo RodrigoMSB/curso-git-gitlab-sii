@@ -369,3 +369,20 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+  Modo taller (SPEC 026, punto 4.3). El anillo de foco del campo de la consola
+  se sale dos pixeles hacia arriba y pisa la linea del indicador. Aqui el foco
+  se marca con una barra a la izquierda del bloque de entrada, que no tapa
+  nada.
+*/
+[data-modo='taller'] .terminal input:focus-visible {
+  outline: none;
+}
+[data-modo='taller'] .terminal [aria-busy] {
+  border-left: 3px solid transparent;
+  padding-left: calc(1.25rem - 3px);
+}
+[data-modo='taller'] .terminal [aria-busy]:focus-within {
+  border-left-color: var(--puntero);
+}

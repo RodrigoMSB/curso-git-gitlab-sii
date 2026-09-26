@@ -37,6 +37,14 @@ interface Props {
   readonly onCompletar: (texto: string) => void;
   readonly onHistorial: (direccion: 'anterior' | 'siguiente') => void;
   readonly onDescartar: () => void;
+  /**
+   * La consola no acepta ordenes en el modo taller: una esta corriendo, o no
+   * hay conexion. La entrada se deshabilita y en su lugar se muestra este
+   * texto (punto 4.3 del SPEC 026).
+   */
+  readonly ocupado?: string | null;
+  /** Las lineas de ayuda bajo la entrada. El modo taller no las lleva (punto 4.7). */
+  readonly ayuda?: boolean;
 }
 
 const CLASE_POR_COLOR: Readonly<Record<ColorConsola, string>> = {
@@ -47,6 +55,7 @@ const CLASE_POR_COLOR: Readonly<Record<ColorConsola, string>> = {
   limite: 'text-[var(--consola-azul)] italic',
   orden: 'text-[var(--texto)]',
   apagado: 'text-[var(--texto-apagado)]',
+  programa: 'text-[var(--consola-azul)] font-sans',
 };
 
 export function Consola({
@@ -63,6 +72,8 @@ export function Consola({
   onCompletar,
   onHistorial,
   onDescartar,
+  ocupado = null,
+  ayuda = true,
 }: Props): React.ReactElement {
   const campo = useRef<HTMLInputElement>(null);
   const desplazable = useRef<HTMLDivElement>(null);
@@ -72,7 +83,13 @@ export function Consola({
   // Las dos lineas de ayuda solo tienen sentido en el momento en que sirven:
   // con el cursor puesto y todavia sin escribir nada. Permanentes se vuelven
   // ruido, sobre todo en proyeccion.
-  const mostrarAyuda = enfocado && entrada === '';
+  const mostrarAyuda = enfocado && entrada === '' && ayuda;
+
+  // Al terminar una orden larga el cursor vuelve solo a la entrada.
+  const corriendo = ocupado !== null;
+  useEffect(() => {
+    if (!corriendo) campo.current?.focus();
+  }, [corriendo]);
 
   // El cursor recibe el foco al cargar la pagina (punto 4.3).
   useEffect(() => {
@@ -170,7 +187,7 @@ export function Consola({
         {renglones.map((renglon) =>
           renglon.color === 'orden' ? (
             <div key={renglon.clave} className="mt-4 first:mt-0" data-color="orden">
-              <LineaIndicador indicador={indicador} />
+              <LineaIndicador indicador={renglon.indicador ?? indicador} />
               <div className="text-[var(--texto)]">
                 <span className="text-[var(--consola-verde)]">$ </span>
                 {renglon.texto}
@@ -210,11 +227,18 @@ export function Consola({
         </p>
       )}
 
-      <div className="shrink-0 border-t border-[var(--borde-suave)] px-5 py-4">
+      <div className="shrink-0 border-t border-[var(--borde-suave)] px-5 py-4" aria-busy={corriendo}>
         <LineaIndicador indicador={indicador} />
         <div className="t-normal flex items-baseline gap-2 font-mono">
           <span className="text-[var(--consola-verde)]">$</span>
+          {corriendo && (
+            <span className="t-normal min-w-0 flex-1 truncate font-mono text-[var(--texto-apagado)]" role="status" data-prueba="orden-corriendo">
+              {ocupado}
+            </span>
+          )}
           <input
+            hidden={corriendo}
+            disabled={corriendo}
             ref={campo}
             value={entrada}
             onChange={(evento) => onEntrada(evento.target.value)}

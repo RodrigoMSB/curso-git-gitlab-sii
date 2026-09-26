@@ -147,7 +147,10 @@ describe('la ayuda de la consola no es permanente', () => {
   const consola = readFileSync(join(RAIZ, 'ui', 'Consola.tsx'), 'utf8');
 
   it('las dos lineas dependen de que el campo este enfocado y vacio', () => {
-    expect(consola).toContain("const mostrarAyuda = enfocado && entrada === '';");
+    // El modo taller no lleva ayuda al pie (punto 4.7 del SPEC 026): la
+    // condicion suma `ayuda`, que en el modo de escenarios vale siempre true.
+    expect(consola).toContain("const mostrarAyuda = enfocado && entrada === '' && ayuda;");
+    expect(consola).toContain('ayuda = true,');
     expect(consola).toContain('{mostrarAyuda && (');
     expect(consola).toContain('onFocus={() => setEnfocado(true)}');
     expect(consola).toContain('onBlur={() => setEnfocado(false)}');

@@ -16,12 +16,20 @@ export type ColorConsola =
   | 'aviso'
   | 'limite'
   | 'orden'
-  | 'apagado';
+  | 'apagado'
+  /** Lo que dice el programa del modo taller, que no es salida de Git (SPEC 026). */
+  | 'programa';
 
 export interface Renglon {
   readonly clave: string;
   readonly texto: string;
   readonly color: ColorConsola;
+  /**
+   * El indicador que habia cuando se escribio la orden. Solo lo lleva el eco
+   * de una orden del modo taller, donde `cd` cambia la carpeta de verdad y
+   * cada orden tiene que seguir mostrando donde se escribio (SPEC 026).
+   */
+  readonly indicador?: Indicador;
 }
 
 export interface Indicador {

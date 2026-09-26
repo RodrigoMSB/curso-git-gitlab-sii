@@ -63,9 +63,13 @@ public final class Procesos {
             termino = false;
         }
         if (!termino) matarArbol(p);
+        // Terminada la orden, lo que falte por leer llega enseguida. Muerta por
+        // tiempo, un nieto que no murio puede tener el tubo abierto: no se le
+        // espera mas de un segundo.
+        long espera = termino ? 5000 : 1000;
         try {
-            salida.join(5000);
-            error.join(5000);
+            salida.join(espera);
+            error.join(espera);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

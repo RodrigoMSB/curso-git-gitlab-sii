@@ -35,19 +35,19 @@ public final class Sincronizadas {
         for (String nombre : VARIABLES) {
             String valor = variables.apply(nombre);
             if (valor == null || valor.isBlank()) continue;
-            String base = Rutas.conBarras(Path.of(valor)).toLowerCase(Locale.ROOT) + "/";
+            String base = Rutas.conBarras(Path.of(valor).toAbsolutePath()).toLowerCase(Locale.ROOT) + "/";
             if (texto.startsWith(base)) return Optional.of("OneDrive");
         }
         String dropbox = variables.apply("DROPBOX_PATH");
         if (dropbox != null && !dropbox.isBlank()
-                && texto.startsWith(Rutas.conBarras(Path.of(dropbox)).toLowerCase(Locale.ROOT) + "/")) {
+                && texto.startsWith(Rutas.conBarras(Path.of(dropbox).toAbsolutePath()).toLowerCase(Locale.ROOT) + "/")) {
             return Optional.of("Dropbox");
         }
         // Google Drive para escritorio monta una unidad con su propia letra, y
         // la ruta ya no dice nada. Su variable si.
         String drive = variables.apply("GoogleDriveFS");
         if (drive != null && !drive.isBlank()
-                && texto.startsWith(Rutas.conBarras(Path.of(drive)).toLowerCase(Locale.ROOT) + "/")) {
+                && texto.startsWith(Rutas.conBarras(Path.of(drive).toAbsolutePath()).toLowerCase(Locale.ROOT) + "/")) {
             return Optional.of("Google Drive");
         }
         for (String[] t : TROZOS) {
