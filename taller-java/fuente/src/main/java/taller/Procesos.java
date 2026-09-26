@@ -39,6 +39,16 @@ public final class Procesos {
      */
     public static Salida correr(List<String> orden, File carpeta, Map<String, String> entorno, long milisegundos)
             throws IOException {
+        return correr(orden, carpeta, entorno, milisegundos, null);
+    }
+
+    /**
+     * Igual, pero con {@code entrada} escrita en la entrada estandar del
+     * proceso, que se cierra enseguida. Sin entrada, la entrada es el
+     * dispositivo nulo.
+     */
+    public static Salida correr(List<String> orden, File carpeta, Map<String, String> entorno, long milisegundos,
+            String entrada) throws IOException {
         ProcessBuilder pb = new ProcessBuilder(orden);
         if (carpeta != null) pb.directory(carpeta);
         if (entorno != null) {
@@ -48,9 +58,16 @@ public final class Procesos {
                 else pb.environment().put(k, v);
             });
         }
-        pb.redirectInput(ProcessBuilder.Redirect.from(nulo()));
+        if (entrada == null) pb.redirectInput(ProcessBuilder.Redirect.from(nulo()));
         LANZADOS.incrementAndGet();
         Process p = pb.start();
+        if (entrada != null) {
+            try (var in = p.getOutputStream()) {
+                in.write(entrada.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } catch (IOException cerrada) {
+                // Bash puede cerrar su entrada antes de leerla entera si termina antes.
+            }
+        }
         Lectura salida = new Lectura(p.getInputStream());
         Lectura error = new Lectura(p.getErrorStream());
         salida.start();

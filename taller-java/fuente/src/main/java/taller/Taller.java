@@ -33,7 +33,8 @@ public final class Taller {
     private volatile long version;
     private volatile String documento = "";
     private volatile long ultimaHuella;
-    private volatile long ultimaLectura;
+    /** Cuando fue la ultima lectura que disparo la huella. Las de una orden no cuentan. */
+    private volatile long ultimaPorHuella;
     private volatile boolean pendiente;
     private volatile String ordenEnCurso;
 
@@ -119,8 +120,6 @@ public final class Taller {
             } catch (IOException e) {
                 Registro.escribir("no se pudo leer el estado, " + e.getMessage());
                 return;
-            } finally {
-                ultimaLectura = System.currentTimeMillis();
             }
             ultimaHuella = huella;
             pendiente = false;
@@ -137,12 +136,19 @@ public final class Taller {
 
     /**
      * Una vuelta del vigilante: calcula la huella y, si cambio, lee el estado,
-     * salvo que la ultima lectura haya sido hace menos de un segundo.
+     * salvo que la ultima lectura por la huella haya sido hace menos de un
+     * segundo (punto 3.7). La lectura que sigue a una orden no cuenta: si
+     * contara, un archivo guardado en el editor justo despues de una orden
+     * tardaria segundo y medio en verse.
      */
     public void vigilar() {
         long huella = Huella.de(carpeta, datos.limite());
         if (huella != ultimaHuella) pendiente = true;
-        if (pendiente && System.currentTimeMillis() - ultimaLectura >= 1000) leer();
+        long ahora = System.currentTimeMillis();
+        if (pendiente && ahora - ultimaPorHuella >= 1000) {
+            ultimaPorHuella = ahora;
+            leer();
+        }
     }
 
     private Map<String, Object> sesion(Path donde) {

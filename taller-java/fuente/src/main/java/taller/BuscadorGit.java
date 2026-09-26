@@ -147,7 +147,7 @@ public final class BuscadorGit {
             if (entorno.esArchivo(c)) return Optional.of(new Instalacion(c, bash, false, c.toString()));
         }
         return enElPath("git")
-                .filter(p -> !p.toString().equals("/usr/bin/git") || entorno.herramientasDeApple())
+                .filter(p -> !p.equals(Path.of("/usr/bin/git")) || entorno.herramientasDeApple())
                 .map(p -> new Instalacion(p, bash, false, "PATH"));
     }
 

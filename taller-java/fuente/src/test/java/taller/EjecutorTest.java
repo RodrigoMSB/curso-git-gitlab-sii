@@ -147,6 +147,20 @@ class EjecutorTest {
     }
 
     @Test
+    void losErroresDeBashNoNombranArchivosDelTaller(@TempDir Path tmp) throws Exception {
+        Path limite = limite(tmp);
+        Ejecutor e = ejecutor(tmp, limite, 20_000);
+        Ejecutor.Resultado r = e.ejecutar("cd no-existe", limite);
+        assertEquals("bash: line 1: cd: no-existe: No such file or directory\n", r.error());
+        Ejecutor.Resultado orden = e.ejecutar("orden-que-no-existe", limite);
+        assertEquals("bash: line 1: orden-que-no-existe: command not found\n", orden.error());
+        assertEquals(127, orden.codigo());
+        // Un error de sintaxis ocurre dentro del eval del envoltorio, y tampoco se nota.
+        Ejecutor.Resultado sintaxis = e.ejecutar("git reset --hard <identificador anterior>", limite);
+        assertTrue(sintaxis.error().startsWith("bash: line 1: syntax error"), sintaxis.error());
+    }
+
+    @Test
     void salidaYErrorPorSeparado(@TempDir Path tmp) throws Exception {
         Path limite = limite(tmp);
         Ejecutor e = ejecutor(tmp, limite, 20_000);

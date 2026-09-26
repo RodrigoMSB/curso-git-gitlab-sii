@@ -16,6 +16,7 @@ import java.util.Map;
  *   <li>{@code GET /api/estado?desde=N}, el ultimo estado leido. Si la version
  *       sigue siendo N responde 204 sin cuerpo y la pagina no redibuja.</li>
  *   <li>{@code POST /api/orden}, ejecuta una orden y responde lo que imprimio.</li>
+ *   <li>{@code GET /api/diagnostico}, cuantos procesos lanzo el programa.</li>
  * </ul>
  */
 final class Paginas {
@@ -40,6 +41,14 @@ final class Paginas {
             String documento = taller.documento();
             String cuerpo = "{\"version\":" + version + (documento.length() > 2 ? "," + documento.substring(1) : "}");
             Servidor.responder(x, 200, "application/json; charset=utf-8", cuerpo.getBytes(StandardCharsets.UTF_8));
+        });
+
+        // Cuantos procesos lanzo el programa desde que arranco. Lo lee la prueba
+        // del reposo (punto 7.5): en un minuto sin nadie escribiendo tiene
+        // que seguir igual.
+        servidor.ruta("/api/diagnostico", false, x -> {
+            if (!metodo(x, "GET")) return;
+            Servidor.json(x, 200, Servidor.mapa("procesos", Procesos.lanzados(), "version", taller.version()));
         });
 
         servidor.ruta("/api/orden", false, x -> {

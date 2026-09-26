@@ -37,7 +37,6 @@ public final class Ejecutor {
     private final Sistema sistema;
     private final BuscadorGit.Instalacion git;
     private final Path limite;
-    private final Path envoltorio;
     private final Path archivoCarpeta;
     private final long tiempoMaximo;
 
@@ -48,9 +47,7 @@ public final class Ejecutor {
         this.limite = limite;
         this.tiempoMaximo = tiempoMaximo;
         Files.createDirectories(carpetaPropia);
-        this.envoltorio = carpetaPropia.resolve("orden.sh");
         this.archivoCarpeta = carpetaPropia.resolve("carpeta-final");
-        Files.writeString(envoltorio, ENVOLTORIO, StandardCharsets.UTF_8);
     }
 
     public long tiempoMaximo() {
@@ -75,7 +72,7 @@ public final class Ejecutor {
         }
         Procesos.Salida s;
         try {
-            s = Procesos.correr(linea(), carpeta.toFile(), entorno(orden, carpeta), tiempoMaximo);
+            s = Procesos.correr(linea(), carpeta.toFile(), entorno(orden, carpeta), tiempoMaximo, ENVOLTORIO);
         } catch (IOException e) {
             avisos.add("No se pudo lanzar bash, " + e.getMessage());
             return new Resultado(-1, "", "", carpeta, false, avisos);
@@ -106,7 +103,7 @@ public final class Ejecutor {
                 || (s.codigo() != 0 && REBASE_INTERACTIVO.matcher(orden).find())) {
             avisos.add("Esta orden pide respuestas por teclado y la consola del taller no se las puede dar. Hazla en Git Bash.");
         }
-        return new Resultado(s.codigo(), s.salida(), s.error(), nueva, s.agotado(), avisos);
+        return new Resultado(s.codigo(), s.salida(), firmaDeBash(s.error()), nueva, s.agotado(), avisos);
     }
 
     static String ayudaEditor(Sistema sistema) {
@@ -142,7 +139,7 @@ public final class Ejecutor {
         List<String> l = new ArrayList<>();
         l.add(git.bash().toString());
         if (git.login()) l.add("--login");
-        l.add(envoltorio.toString());
+        l.add("-s");
         return l;
     }
 
@@ -186,42 +183,36 @@ public final class Ejecutor {
     }
 
     /**
-     * El envoltorio de cada orden.
+     * El envoltorio de cada orden, en una sola linea.
      *
      * Define un {@code cd} que no sale del limite, deja escrita al salir la
-     * carpeta en que quedo bash, y ejecuta la orden tal como se escribio. La
-     * orden viaja en una variable de entorno y no en la linea de comandos, para
-     * no pelear con las comillas de Windows.
+     * carpeta en que quedo bash, cierra la entrada y ejecuta la orden tal como
+     * se escribio. La orden viaja en una variable de entorno y no en la linea
+     * de comandos, para no pelear con las comillas de Windows.
+     *
+     * Bash lo lee de su entrada estandar, y no de un archivo: asi los errores
+     * no nombran un archivo interno del taller sino la linea de la orden, como
+     * con {@code bash -c}. Va en una sola linea porque bash lee la linea entera
+     * antes de ejecutarla, y en ella se cierra la entrada: la orden ya no
+     * encuentra nada que leer, que es lo que se quiere (punto 3.4).
      */
-    static final String ENVOLTORIO = """
-            # Envoltorio de las ordenes del taller. El programa lo reescribe al arrancar.
-            __taller_fin() {
-              __taller_rc=$?
-              if [ "$TALLER_SO" = windows ]; then pwd -W; else pwd -P; fi > "$TALLER_CARPETA_FINAL" 2>/dev/null
-              exit $__taller_rc
-            }
-            trap __taller_fin EXIT
-            __taller_limite=$(builtin cd -- "$TALLER_LIMITE" 2>/dev/null && pwd -P)
-            __taller_dentro() {
-              local __p
-              __p=$(pwd -P)
-              shopt -s nocasematch
-              case "$__p/" in
-                "$__taller_limite"/*) shopt -u nocasematch; return 0 ;;
-              esac
-              shopt -u nocasematch
-              return 1
-            }
-            cd() {
-              local __antes="$PWD"
-              builtin cd "$@" || return
-              if ! __taller_dentro; then
-                builtin cd -- "$__antes"
-                printf '%s\\n' "cd: la consola del taller no sale de $TALLER_LIMITE" >&2
-                return 1
-              fi
-            }
-            builtin cd -- "$TALLER_CARPETA" || exit 97
-            eval "$TALLER_ORDEN"
-            """;
+    static final String ENVOLTORIO = String.join("; ",
+            "__taller_fin() { __taller_rc=$?; if [ \"$TALLER_SO\" = windows ]; then pwd -W; else pwd -P; fi > \"$TALLER_CARPETA_FINAL\" 2>/dev/null; exit $__taller_rc; }",
+            "trap __taller_fin EXIT",
+            "__taller_limite=$(builtin cd -- \"$TALLER_LIMITE\" 2>/dev/null && pwd -P)",
+            "__taller_dentro() { local __p; __p=$(pwd -P); shopt -s nocasematch; case \"$__p/\" in \"$__taller_limite\"/*) shopt -u nocasematch; return 0 ;; esac; shopt -u nocasematch; return 1; }",
+            "cd() { local __antes=\"$PWD\"; builtin cd \"$@\" || return; if ! __taller_dentro; then builtin cd -- \"$__antes\"; printf '%s\\n' \"bash: cd: la consola del taller no sale de $TALLER_LIMITE\" >&2; return 1; fi; }",
+            "builtin cd -- \"$TALLER_CARPETA\" || exit 97",
+            "exec 0</dev/null",
+            "eval \"$TALLER_ORDEN\"") + "\n";
+
+    /**
+     * Bash firma sus errores con el nombre con que se lo lanzo, que aqui es su
+     * ruta completa. En Git Bash firma {@code bash}, y asi se deja.
+     */
+    private static final Pattern FIRMA = Pattern.compile("(?m)^.*?bash(?:\\.exe)?: (?:eval: )?line (\\d+):");
+
+    static String firmaDeBash(String error) {
+        return FIRMA.matcher(error).replaceAll("bash: line $1:");
+    }
 }

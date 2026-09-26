@@ -89,3 +89,88 @@ jobs:
         env:
           VARIANTE: ${{ matrix.variante }}
         run: taller-java/fuente/probar-arranque.sh
+
+  # 4. recorrido: los ocho laboratorios escritos en la consola de la pagina,
+  #    en un navegador de verdad, comparados contra Git (punto 7.2). Playwright
+  #    usa el navegador que ya trae la maquina.
+  recorrido:
+    needs: runtimes
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            navegador: msedge
+            variante: normal
+          - os: windows-latest
+            navegador: chrome
+            variante: normal
+          - os: macos-latest
+            navegador: chrome
+            variante: normal
+          - os: windows-latest
+            navegador: chrome
+            variante: git-fuera-del-path
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: jre
+      - name: Pone el runtime en su lugar
+        run: tar xzf jre.tar.gz -C taller-java
+      - name: Dependencias, sin bajar navegadores
+        working-directory: simulador
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Versiones
+        run: git --version && node --version && bash --version | head -1
+      - name: Los ocho laboratorios en la pagina
+        working-directory: simulador
+        run: npx vitest run --config vitest.taller-java.config.ts
+        env:
+          TALLER_NAVEGADOR: ${{ matrix.navegador }}
+          TALLER_SIN_GIT_EN_PATH: ${{ matrix.variante == 'git-fuera-del-path' && '1' || '0' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recorrido-${{ matrix.os }}-${{ matrix.navegador }}-${{ matrix.variante }}
+          path: simulador/capturas-taller-java
+
+  # 5. Un usuario de Windows de verdad, con espacio y tilde en su carpeta
+  #    personal (punto 7.3). Se crea en la maquina y el recorrido corre como el.
+  usuario-con-tilde:
+    needs: runtimes
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: jre
+      - name: Pone el runtime en su lugar
+        shell: bash
+        run: tar xzf jre.tar.gz -C taller-java
+      - name: Dependencias, sin bajar navegadores
+        shell: bash
+        working-directory: simulador
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: El recorrido como José Pérez
+        shell: pwsh
+        run: taller-java/fuente/como-usuario-con-tilde.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recorrido-usuario-con-tilde
+          path: C:\taller-usuario\salida
