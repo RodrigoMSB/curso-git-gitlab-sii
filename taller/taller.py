@@ -144,15 +144,50 @@ def entorno_base() -> dict:
 REVISAR_EDITOR = 'export GIT_EDITOR="$TALLER_EDITOR"\n'
 
 
-def detener(proceso: subprocess.Popen) -> None:
-    """Detiene la orden y todo lo que haya abierto."""
-    try:
+class Trabajo:
+    """Todo lo que una orden abre, para poder detenerlo junto (3.7).
+
+    En Windows, `taskkill /T` no alcanza a los procesos que abre Git Bash: no
+    quedan en el árbol que ve Windows, y una orden detenida seguía hasta
+    terminar sola. Un objeto de trabajo de Windows sí los contiene, porque los
+    hijos lo heredan. En Mac y Linux basta con el grupo de procesos.
+    """
+
+    def __init__(self, proceso: subprocess.Popen) -> None:
+        self.proceso = proceso
+        self.manija = None
         if WINDOWS:
-            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proceso.pid)], capture_output=True)
-        else:
-            os.killpg(proceso.pid, signal.SIGKILL)
-    except (OSError, ProcessLookupError):
-        pass
+            try:
+                import ctypes
+
+                self.kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+                self.kernel32.CreateJobObjectW.restype = ctypes.c_void_p
+                manija = self.kernel32.CreateJobObjectW(None, None)
+                proceso_manija = ctypes.c_void_p(int(proceso._handle))  # type: ignore[attr-defined]
+                if manija and self.kernel32.AssignProcessToJobObject(ctypes.c_void_p(manija), proceso_manija):
+                    self.manija = manija
+            except (OSError, AttributeError, ValueError):
+                self.manija = None
+
+    def detener(self) -> None:
+        try:
+            if WINDOWS:
+                import ctypes
+
+                if self.manija is not None:
+                    self.kernel32.TerminateJobObject(ctypes.c_void_p(self.manija), 1)
+                subprocess.run(["taskkill", "/T", "/F", "/PID", str(self.proceso.pid)], capture_output=True)
+            else:
+                os.killpg(self.proceso.pid, signal.SIGKILL)
+        except (OSError, ProcessLookupError):
+            pass
+
+    def cerrar(self) -> None:
+        if WINDOWS and self.manija is not None:
+            import ctypes
+
+            self.kernel32.CloseHandle(ctypes.c_void_p(self.manija))
+            self.manija = None
 
 
 class Consola:
@@ -216,21 +251,30 @@ class Consola:
             stderr=subprocess.PIPE,
             **opciones,
         )
+        trabajo = Trabajo(proceso)
         try:
             salida_b, error_b = proceso.communicate(timeout=LIMITE)
         except subprocess.TimeoutExpired:
-            detener(proceso)
-            proceso.communicate()
+            trabajo.detener()
+            try:
+                proceso.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                # Algo quedó con la salida abierta: no se espera más por él.
+                for tubo in (proceso.stdout, proceso.stderr):
+                    if tubo is not None:
+                        tubo.close()
+            trabajo.cerrar()
             minutos = LIMITE // 60
             return {
                 "salida": "",
-                "error": f"La orden no terminó en {minutos} minutos y se detuvo. "
+                "error": f"La orden no terminó en {minutos if minutos else LIMITE} {'minutos' if minutos else 'segundos'} y se detuvo. "
                 "Si abrió un editor, escribe el mensaje, guarda y cierra la pestaña antes de ese plazo.",
                 "codigo": 124,
                 "carpeta": antes,
                 "carpetaAntes": antes,
                 "detenida": True,
             }
+        trabajo.cerrar()
         salida = salida_b.decode("utf-8", errors="replace")
         error = error_b.decode("utf-8", errors="replace")
         if MARCA in salida:
