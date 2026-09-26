@@ -220,10 +220,31 @@ describe('la interfaz de los dos motores', () => {
     motores.push(await arrancar(base, 'python', gitconfig));
   }, 120_000);
 
-  afterAll(() => {
-    for (const a of motores) a.proceso.kill();
-    rmSync(base, { recursive: true, force: true, maxRetries: 5 });
-  });
+  afterAll(async () => {
+    // Se espera a que cada motor salga: en Windows la carpeta de un proceso
+    // vivo no se puede borrar.
+    await Promise.all(
+      motores.map(
+        (a) =>
+          new Promise<void>((listo) => {
+            if (a.proceso.exitCode !== null) return listo();
+            a.proceso.once('exit', () => listo());
+            if (WINDOWS && a.proceso.pid !== undefined) {
+              spawn('taskkill', ['/T', '/F', '/PID', String(a.proceso.pid)], { stdio: 'ignore' });
+            } else {
+              a.proceso.kill();
+            }
+            setTimeout(listo, 10_000);
+          }),
+      ),
+    );
+    try {
+      rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
+    } catch (e) {
+      // Una carpeta temporal que queda no invalida lo que se comparo.
+      console.warn(`no se pudo borrar ${base}: ${String(e)}`);
+    }
+  }, 60_000);
 
   it('la direccion y la clave', () => {
     for (const a of motores) {
