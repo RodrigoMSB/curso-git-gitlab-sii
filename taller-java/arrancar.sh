@@ -46,7 +46,7 @@ case "$(uname -s)" in
   Darwin)
     # uname -m dice x86_64 si la Terminal corre bajo Rosetta en un Mac con
     # chip de Apple; hw.optional.arm64 dice la verdad.
-    if [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ]; then
+    if [ "$(/usr/sbin/sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ]; then
       PROPIO="$AQUI/jre/macos-aarch64/bin/java"
     else
       PROPIO=""
