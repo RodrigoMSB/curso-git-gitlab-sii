@@ -5003,3 +5003,31 @@ supone la terminal parada en el clon.** La consola del taller parte en
 `taller-git-trabajo` (punto 2.4), así que el alumno tiene que escribir antes
 `cd ../curso-git-gitlab-sii`. El recorrido lo hace. El 01 funciona igual
 desde `taller-git-trabajo`: su `cd ..` lleva a la misma carpeta de arriba.
+
+### 71.6 · Resultados
+
+GitHub Actions, ejecución 36218607145
+(https://github.com/RodrigoMSB/curso-git-gitlab-sii/actions/runs/36218607145).
+El taller arrancó con `TALLER.cmd` en Windows y con `taller.command` en Mac,
+con el Python y el Git de cada máquina.
+
+| | Windows + Edge | Windows + Chrome | Mac + Chrome |
+|---|---|---|---|
+| Programa (32) y vista (14) | 46 | 46 | 46 |
+| Órdenes con la página igual a Git, labs 01 a 08 | 513 de 513 | 513 de 513 | 513 de 513 |
+| Pantalla bien en cada orden | sí | sí | sí |
+| Orden escrita hasta la página al día, mediana | 0,8 a 1,0 s | 0,8 a 1,0 s | 0,35 s |
+| Archivo editado por fuera, visto | 670 ms | 414 ms | 502 ms |
+
+Por laboratorio: 01: 68, 02: 53, 03: 67, 04: 86, 05: 56, 06: 52, 07: 76,
+08: 55. Del 07 se saltan dos órdenes de la sección de rescate con marcadores
+que el participante reemplaza a mano.
+
+En Windows cada orden tarda cerca de un segundo: Git Bash arranca como shell
+de inicio de sesión en cada una.
+
+Dos defectos que solo aparecieron en Windows: el navegador de mentira de la
+prueba (un `.cmd`) no se lanzaba, y **una orden detenida por el límite de
+tiempo seguía corriendo** hasta terminar sola, porque `taskkill /T` no alcanza
+a los procesos que abre Git Bash. Ahora cada orden corre dentro de un objeto
+de trabajo de Windows y se termina entera.
