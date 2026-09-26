@@ -10,7 +10,8 @@
 #    curso, INSTALAR y TALLER, con cada paso de la cascada (Java, Python con
 #    el jar saboteado, respaldo con los dos saboteados), y en Windows ademas
 #    con Git fuera del PATH.
-# 4. interfaz: los dos motores responden lo mismo a lo mismo.
+# 4. interfaz: los dos motores responden lo mismo a lo mismo. cierre: en
+#    Windows, al cerrar la ventana o al morir el motor no queda nada vivo.
 # 5. laboratorio 08: los mismos identificadores con autocrlf en true.
 # 6. recorrido: los ocho laboratorios escritos en la consola de la pagina, con
 #    cada motor, en Edge y Chrome sobre Windows y Chrome sobre Mac, y con Git
@@ -115,6 +116,28 @@ jobs:
           MOTOR: ${{ matrix.motor }}
           VARIANTE: ${{ matrix.variante }}
         run: bash taller/probar-instalacion.sh
+
+  # Al cerrar la ventana de TALLER.cmd, o al morir el motor, no queda ningun
+  # proceso vivo, y un segundo arranque puede borrar y recrear lab-01.
+  cierre:
+    needs: runtimes
+    strategy:
+      fail-fast: false
+      matrix:
+        motor: [java, python]
+        cierre: [ventana, motor]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: jre
+      - name: Pone el runtime en su lugar
+        shell: bash
+        run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
+      - name: Cierra y vuelve a arrancar
+        shell: pwsh
+        run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }}
 
   interfaz:
     needs: runtimes
