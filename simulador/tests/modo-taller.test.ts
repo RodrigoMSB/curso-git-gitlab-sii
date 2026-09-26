@@ -168,6 +168,7 @@ describe('la barra', () => {
   it('sin repositorio no dice rama ni cambios', () => {
     const barra = barraDelTaller(documento({ repositorio: false, motivo: 'fuera' }, { relativa: 'taller-git-trabajo' }));
     expect(barra).toEqual({
+      motor: null,
       carpeta: 'José Pérez/taller-git-trabajo',
       repositorio: null,
       rama: null,
@@ -407,5 +408,13 @@ describe('SPEC 027 · las ordenes propias de la consola', () => {
     const texto = r.map((x) => x.texto).join('\n');
     for (const o of ['preparar 02', 'preparar 02 --forzar', 'verificar 02', 'clear']) expect(texto).toContain(o);
     expect(r.slice(1).every((x) => x.color === 'programa')).toBe(true);
+  });
+});
+
+describe('SPEC 028 · la barra dice que motor corre', () => {
+  it('Java o Python, y nada si el motor no lo dice', () => {
+    expect(barraDelTaller(documento(repositorio(), { motor: 'java' })).motor).toBe('motor Java');
+    expect(barraDelTaller(documento({ repositorio: false, motivo: 'fuera' }, { motor: 'python' })).motor).toBe('motor Python');
+    expect(barraDelTaller(documento(repositorio())).motor).toBeNull();
   });
 });

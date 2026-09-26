@@ -18,13 +18,13 @@ La segunda parte tiene un concepto que se escapa siempre. Antes de empezarla vas
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado, en `taller-git-trabajo`. Escribe esto en la consola del taller, desde cualquier carpeta.
+Tu trabajo va en la carpeta del taller, `taller-git`, fuera del clon del curso. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
 preparar 07
 ```
 
-La consola arma el escenario, comprueba que quedó bien y queda parada en `taller-git-trabajo/lab-07/recetario`, que es donde vas a trabajar.
+La consola arma el escenario, comprueba que quedó bien y queda parada en `lab-07/recetario`, dentro de `taller-git`, que es donde vas a trabajar.
 
 Mira el punto de partida.
 
@@ -38,7 +38,7 @@ Estás en una rama de trabajo con cuatro confirmaciones propias, `main` avanzó 
 
 ### El taller ya está abierto
 
-Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER-JAVA.cmd` o con `taller-java.command`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
+Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER.cmd` o con `taller.command`, en la carpeta `taller-git`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
 
 Si trabajas sin el programa del taller, el simulador de escenarios abre este laboratorio con la dirección `SIMULADOR.html?lab=07`, sin Git de verdad.
 

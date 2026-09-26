@@ -14,7 +14,7 @@ Al terminar tendrás cuatro confirmaciones en tu historial y un archivo modifica
 
 ## Antes de empezar
 
-Abre el taller con doble clic en `TALLER-JAVA.cmd`, o en `taller-java.command` si usas Mac, ambos en la carpeta del clon. En la consola de la página, confirma que Git responde.
+Abre el taller con doble clic en `TALLER.cmd`, o en `taller.command` si usas Mac, los dos en la carpeta `taller-git`. En la consola de la página, confirma que Git responde.
 
 ```
 git --version
@@ -24,7 +24,7 @@ Si no responde, avisa antes de seguir. Todo lo que viene depende de eso.
 
 ### El taller ya está abierto
 
-Todo este laboratorio se escribe en la consola del taller. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas. La consola parte en `taller-git-trabajo`, la carpeta hermana del clon donde va todo tu trabajo del taller.
+Todo este laboratorio se escribe en la consola del taller. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas. La consola parte en `taller-git`, la carpeta del taller, donde va todo tu trabajo.
 
 Si trabajas sin el programa del taller, `SIMULADOR.html` abierto con doble clic parte en este laboratorio, en el modo de escenarios y sin Git de verdad.
 
@@ -89,7 +89,7 @@ Eso sirve cuando trabajas con un correo institucional en unos proyectos y uno pe
 
 ### 2.1 Crear la carpeta y el repositorio
 
-Tu recetario no va dentro del clon del curso, va al lado, en `taller-git-trabajo`, que es donde parte la consola del taller. El indicador de la consola lo dice. Desde ahí, crea la carpeta del laboratorio y el repositorio.
+Tu recetario va en `taller-git`, que es donde parte la consola del taller, y no dentro del clon del curso, que es `taller-git/curso`. El indicador de la consola lo dice. Desde ahí, crea la carpeta del laboratorio y el repositorio.
 
 ```
 mkdir -p lab-01/recetario

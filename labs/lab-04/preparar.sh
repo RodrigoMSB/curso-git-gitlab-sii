@@ -15,9 +15,9 @@ set -eu
 
 RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 CLON=$(cd "$RAIZ/../.." && pwd -P)
-TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-04"
+TRABAJO="${TALLER_RAIZ:-$(dirname "$CLON")}/lab-04"
 REPOSITORIO="$TRABAJO/recetario"
-REPOSITORIO_DICHO='taller-git-trabajo/lab-04/recetario'
+REPOSITORIO_DICHO='lab-04/recetario'
 
 FORZAR=no
 for argumento in "$@"; do

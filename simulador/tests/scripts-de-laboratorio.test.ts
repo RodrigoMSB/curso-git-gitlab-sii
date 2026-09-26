@@ -80,7 +80,7 @@ function montar(numero: string): Montado {
   writeFileSync(join(clon, 'README.md'), 'el repositorio del curso\n');
   git('add', '-A');
   git('commit', '-q', '-m', 'el curso');
-  return { raiz, clon, carpeta, recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'), configGlobal };
+  return { raiz, clon, carpeta, recetario: join(raiz, `lab-${numero}`, 'recetario'), configGlobal };
 }
 
 /**
@@ -145,7 +145,7 @@ function bloqueDespuesDe(lineas: readonly string[], desde: number): string {
 }
 
 /**
- * Hace el laboratorio desde taller-git-trabajo, que es donde parte la consola
+ * Hace el laboratorio desde la carpeta del taller, que es donde parte la consola
  * del taller. La carpeta actual se conserva de una orden a la
  * siguiente, como en una terminal.
  */
@@ -157,8 +157,8 @@ function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly
     .findIndex((linea) => /^##\s+Si algo sali/.test(linea));
   const donde = join(lab.raiz, 'carpeta-actual');
   // Desde el SPEC 027 el participante trabaja en la consola del taller, que
-  // parte en taller-git-trabajo y nunca necesita entrar al clon.
-  let actual = join(lab.raiz, 'taller-git-trabajo');
+  // parte en la carpeta del taller y nunca necesita entrar al clon.
+  let actual = lab.raiz;
   mkdirSync(actual, { recursive: true });
   const salidas = new Map<string, string>();
   const problemas: string[] = [];

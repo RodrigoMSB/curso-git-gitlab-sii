@@ -1,23 +1,19 @@
-# Finales de linea y binarios del modo taller (punto 6.4 del SPEC 026).
+# Finales de linea y binarios del taller (SPEC 026, punto 6.4, y SPEC 028).
 #
-# Los arrancadores de Windows van con CRLF, que es lo que cmd espera, y los de
-# bash con LF, que es lo unico que bash acepta: con CRLF, el primer #! ya
-# falla. Se fija aqui para que no dependa del core.autocrlf de cada equipo,
-# que en Windows viene en true.
+# Los arrancadores de Windows van con CRLF, que es lo que cmd espera, y todo lo
+# que corre bash con LF, que es lo unico que bash acepta: con CRLF, el primer
+# #! ya falla. Se fija aqui para que no dependa del core.autocrlf de cada
+# equipo, que en Windows viene en true.
 *.cmd                          text eol=crlf
-taller-java.sh                 text eol=lf
-taller-java.command            text eol=lf
-comprobar-java.sh              text eol=lf
-taller-java/arrancar.sh        text eol=lf
-taller-java/fuente/mvnw        text eol=lf
-taller-java/fuente/*.sh        text eol=lf
+*.sh                           text eol=lf
+*.command                      text eol=lf
+*.py                           text eol=lf
+taller/raiz/preparar           text eol=lf
+taller/raiz/verificar          text eol=lf
+taller/java/fuente/mvnw        text eol=lf
 
-# El runtime de Java y el programa construido viajan tal cual, sin conversion
-# ni diferencias de texto. Sin Git LFS: LFS baja los archivos aparte del clon,
-# y el taller no puede depender de la red mas alla del propio clon.
-taller-java/jre/**             binary
-taller-java/taller.jar         binary
-taller/*.sh text eol=lf
-taller/*.py text eol=lf
-taller.command text eol=lf
-TALLER.cmd text eol=crlf
+# El runtime de Java y el programa construido viajan tal cual. Sin Git LFS: LFS
+# baja los archivos aparte del clon, y el taller no puede depender de la red
+# mas alla del propio clon.
+taller/java/jre/**             binary
+taller/java/taller.jar         binary

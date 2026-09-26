@@ -18,13 +18,13 @@ Siempre vas a escribir la misma orden. Lo que decide qué ocurre es la forma que
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado, en `taller-git-trabajo`. Escribe esto en la consola del taller, desde cualquier carpeta.
+Tu trabajo va en la carpeta del taller, `taller-git`, fuera del clon del curso. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
 preparar 05
 ```
 
-La consola arma el escenario, comprueba que quedó bien y queda parada en `taller-git-trabajo/lab-05/recetario`, que es donde vas a trabajar.
+La consola arma el escenario, comprueba que quedó bien y queda parada en `lab-05/recetario`, dentro de `taller-git`, que es donde vas a trabajar.
 
 Mira con qué te encontraste.
 
@@ -37,7 +37,7 @@ Cuatro ramas de trabajo separadas de `main` en puntos distintos. Estúdialas un 
 
 ### El taller ya está abierto
 
-Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER-JAVA.cmd` o con `taller-java.command`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
+Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER.cmd` o con `taller.command`, en la carpeta `taller-git`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
 
 Si trabajas sin el programa del taller, el simulador de escenarios abre este laboratorio con la dirección `SIMULADOR.html?lab=05`, sin Git de verdad.
 

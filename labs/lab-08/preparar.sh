@@ -34,9 +34,9 @@ set -eu
 
 RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 CLON=$(cd "$RAIZ/../.." && pwd -P)
-TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-08"
+TRABAJO="${TALLER_RAIZ:-$(dirname "$CLON")}/lab-08"
 REPOSITORIO="$TRABAJO/recetario"
-REPOSITORIO_DICHO='taller-git-trabajo/lab-08/recetario'
+REPOSITORIO_DICHO='lab-08/recetario'
 
 FORZAR=no
 for argumento in "$@"; do
@@ -217,7 +217,13 @@ git bundle create -q "$TRABAJO/recetario.bundle" --all HEAD
 # recetario ya tiene, de modo que traerlas sea una fusion de verdad y no la
 # aparicion de archivos nuevos.
 
-git clone -q "$TRABAJO/recetario.bundle" "$TRABAJO/.upstream"
+# El clon lleva core.autocrlf en false desde antes de escribir nada. Fijarlo
+# despues, en configurar, dejaba los archivos del clon con CRLF en Windows:
+# si el git add -A de la confirmacion siguiente caia en otro segundo que el
+# clonado, Git los volvia a leer, confirmaba los CRLF y los identificadores
+# del proyecto original cambiaban de una corrida a otra (SPEC 028, 4.8).
+git -c core.autocrlf=false -c core.eol=lf clone -q --config core.autocrlf=false --config core.eol=lf \
+  "$TRABAJO/recetario.bundle" "$TRABAJO/.upstream"
 cd "$TRABAJO/.upstream"
 configurar
 

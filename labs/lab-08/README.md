@@ -18,13 +18,13 @@ Todo ocurre en tu máquina. Todavía no hay plataforma ni red, eso empieza en la
 
 **Este laboratorio también va entero en la consola del taller.** Es el único que el simulador de escenarios no puede seguir, porque enseña dos remotos y un gancho, y el simulador no modela ninguna de las dos cosas. El taller corre Git de verdad, así que en su grafo vas a ver también las ramas de seguimiento remoto.
 
-Tu trabajo no va dentro del clon del curso, va al lado, en `taller-git-trabajo`. Escribe esto en la consola del taller, desde cualquier carpeta.
+Tu trabajo va en la carpeta del taller, `taller-git`, fuera del clon del curso. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
 preparar 08
 ```
 
-La consola arma el escenario, comprueba que quedó bien y queda parada en `taller-git-trabajo/lab-08/recetario`, que es donde vas a trabajar.
+La consola arma el escenario, comprueba que quedó bien y queda parada en `lab-08/recetario`, dentro de `taller-git`, que es donde vas a trabajar.
 
 La preparación deja el recetario donde vas a trabajar y, al lado, dos paquetes que hacen de repositorios remotos: `recetario.bundle`, que es tu `origin`, y `upstream.bundle`, que es el proyecto original del que salió tu copia y que va un par de confirmaciones por delante.
 

@@ -27,6 +27,12 @@ export function BarraModoTaller({ barra, modoRelator, temaClaro, onModoRelator, 
     >
       <div className="flex min-h-10 min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
         <span className="rotulo rounded-full border border-[var(--borde)] px-3 py-0.5">modo taller</span>
+        {barra?.motor != null && (
+          // Discreto: dice que motor responde, por si el relator lo pregunta (SPEC 028, 3.3).
+          <span className="t-min text-[var(--texto-tenue)]" data-prueba="barra-motor">
+            {barra.motor}
+          </span>
+        )}
         {barra === null ? (
           <p className="t-pequeno text-[var(--texto-apagado)]">conectando con el taller…</p>
         ) : barra.repositorio === null ? (

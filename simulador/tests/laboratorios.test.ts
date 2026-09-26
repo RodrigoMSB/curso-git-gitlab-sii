@@ -22,7 +22,7 @@
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
@@ -102,8 +102,9 @@ function armarLaboratorio(opciones: { conAlias?: boolean; clonDeVerdad?: boolean
     `[user]\n\tname = Participante Taller\n\temail = participante@institucion.cl\n${alias}`,
   );
 
-  // Parte 2 · el repositorio nace, en la carpeta hermana del clon y no dentro.
-  const trabajo = join(raiz, 'taller-git-trabajo', 'lab-01');
+  // Parte 2 · el repositorio nace en la carpeta del taller, al lado del clon y
+  // no dentro (SPEC 028: taller-git/lab-01, con el clon en taller-git/curso).
+  const trabajo = join(raiz, 'lab-01');
   mkdirSync(trabajo, { recursive: true });
   const recetario = join(trabajo, 'recetario');
   mkdirSync(recetario);
@@ -263,7 +264,7 @@ describe('el trabajo del participante vive fuera del clon del curso', () => {
   it('el recetario no queda en ninguna parte dentro del clon', () => {
     const lab = armarLaboratorio();
     expect(lab.recetario.startsWith(`${lab.clon}/`)).toBe(false);
-    expect(lab.recetario).toContain('taller-git-trabajo');
+    expect(lab.recetario).toBe(join(dirname(lab.clon), 'lab-01', 'recetario'));
   });
 
   it('el verificador lo encuentra ahi y aprueba, con el clon siendo un repositorio de verdad', () => {
@@ -552,7 +553,7 @@ describe('CA3 · la preparacion no destruye el trabajo sin avisar', () => {
     const corrida = preparar(esc);
     expect(corrida.salida).toContain('el escenario quedo correcto');
     expect(corrida.salida).toContain('Tu primera orden es');
-    expect(corrida.salida).toContain('taller-git-trabajo/lab-02/recetario');
+    expect(corrida.salida).toContain('cd lab-02/recetario');
   });
 });
 
@@ -682,8 +683,8 @@ describe('CA6 · el enunciado difiere solo en los cambios autorizados', () => {
     expect(enunciado).toContain('```\npreparar 02\n```');
   });
 
-  it('la ruta de trabajo es la carpeta hermana', () => {
-    expect(enunciado).toContain('taller-git-trabajo/lab-02/recetario');
+  it('la ruta de trabajo es la carpeta del taller', () => {
+    expect(enunciado).toContain('`lab-02/recetario`, dentro de `taller-git`');
     expect(enunciado).not.toContain('cd ~/recetario');
   });
 
@@ -843,10 +844,10 @@ describe('la renumeracion quedo consistente', () => {
   it('cada enunciado prepara y trabaja sobre su propia carpeta', () => {
     for (const n of armados.filter((numero) => numero !== '01')) {
       const enunciado = readFileSync(join(LABS, `lab-${n}`, 'README.md'), 'utf8');
-      expect(enunciado, `lab-${n}`).toContain(`taller-git-trabajo/lab-${n}/recetario`);
+      expect(enunciado, `lab-${n}`).toContain(`\`lab-${n}/recetario\``);
       for (const otro of armados.filter((numero) => numero !== n)) {
         expect(enunciado, `lab-${n} nombra la carpeta del ${otro}`).not.toContain(
-          `taller-git-trabajo/lab-${otro}/`,
+          `\`lab-${otro}/recetario\``,
         );
       }
     }

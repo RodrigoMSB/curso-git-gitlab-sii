@@ -22,9 +22,9 @@ set -u
 
 RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 CLON=$(cd "$RAIZ/../.." && pwd -P)
-TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-02"
+TRABAJO="${TALLER_RAIZ:-$(dirname "$CLON")}/lab-02"
 REPOSITORIO="$TRABAJO/recetario"
-REPOSITORIO_DICHO='taller-git-trabajo/lab-02/recetario'
+REPOSITORIO_DICHO='lab-02/recetario'
 
 # El mensaje mal escrito que la preparacion planta y que el participante tiene
 # que corregir. Si sigue en la historia, el laboratorio no esta hecho.

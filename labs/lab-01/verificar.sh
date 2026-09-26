@@ -25,11 +25,11 @@ RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 # Este script vive en <clon>/labs/lab-01, asi que el clon esta dos niveles mas
 # arriba y el trabajo del participante es hermano del clon, no parte de el.
 CLON=$(cd "$RAIZ/../.." && pwd -P)
-TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-01"
+TRABAJO="${TALLER_RAIZ:-$(dirname "$CLON")}/lab-01"
 REPOSITORIO="$TRABAJO/recetario"
 # Como se nombra el repositorio en los mensajes: la ruta larga de la maquina
 # de cada participante no le dice nada a nadie.
-REPOSITORIO_DICHO='taller-git-trabajo/lab-01/recetario'
+REPOSITORIO_DICHO='lab-01/recetario'
 
 APROBADOS=0
 FALLIDOS=0

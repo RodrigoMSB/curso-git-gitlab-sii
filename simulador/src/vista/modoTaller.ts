@@ -87,6 +87,8 @@ export interface SesionGit {
   readonly relativa: string;
   readonly avisos: readonly string[];
   readonly tiempoMaximo: number;
+  /** Que motor responde: el de Java, o el de Python si el de Java no arranco (SPEC 028). */
+  readonly motor?: 'java' | 'python';
 }
 
 export interface DocumentoTaller {
@@ -295,6 +297,8 @@ export function guardadosDelTaller(estado: EstadoGit): readonly EntradaGuardadoV
 // --- La barra y el indicador -------------------------------------------------------
 
 export interface BarraTaller {
+  /** El motor que corre, dicho como se lee en la barra, o null si no lo dijo. */
+  readonly motor: string | null;
   /** La carpeta de la consola, relativa a la carpeta del taller. */
   readonly carpeta: string;
   /** El nombre del repositorio, o `null` si la carpeta no esta dentro de uno. */
@@ -320,14 +324,21 @@ const OPERACIONES: Readonly<Record<string, string>> = {
   revert: 'revert a medias',
 };
 
+function motorDicho(sesion: SesionGit): string | null {
+  if (sesion.motor === 'java') return 'motor Java';
+  if (sesion.motor === 'python') return 'motor Python';
+  return null;
+}
+
 /** Sin repositorio no hay rama ni contador: no hay nada de que hablar (punto 4.5). */
 export function barraDelTaller(documento: DocumentoTaller): BarraTaller {
   const { estado, sesion } = documento;
   if (!estado.repositorio) {
-    return { carpeta: rutaDicha(sesion), repositorio: null, rama: null, desconectado: false, cambios: 0, operacion: null };
+    return { motor: motorDicho(sesion), carpeta: rutaDicha(sesion), repositorio: null, rama: null, desconectado: false, cambios: 0, operacion: null };
   }
   const corto = cortoDe(estado);
   return {
+    motor: motorDicho(sesion),
     carpeta: rutaDicha(sesion),
     repositorio: nombreDe(estado.raiz),
     rama: estado.rama ?? (estado.head === null ? null : corto(estado.head)),

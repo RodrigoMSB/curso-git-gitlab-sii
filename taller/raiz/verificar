@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# verificar 02 comprueba el laboratorio 02.
+# Envoltorio. Lo que hace vive en curso/taller/laboratorio.sh.
+exec bash "$(cd "$(dirname "$0")" && pwd -P)/curso/taller/laboratorio.sh" verificar "$@"
