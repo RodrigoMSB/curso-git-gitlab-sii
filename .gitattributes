@@ -17,3 +17,7 @@ taller-java/fuente/*.sh        text eol=lf
 # y el taller no puede depender de la red mas alla del propio clon.
 taller-java/jre/**             binary
 taller-java/taller.jar         binary
+taller/*.sh text eol=lf
+taller/*.py text eol=lf
+taller.command text eol=lf
+TALLER.cmd text eol=crlf

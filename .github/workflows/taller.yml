@@ -1,0 +1,107 @@
+# SPEC 026 · El taller con Git real dentro de la pagina.
+#
+# Arranca el taller como el alumno (TALLER.cmd en Windows, taller.command en
+# Mac), con el Python y el Git que trae la maquina, y escribe en la consola de
+# la pagina las ordenes de los ocho laboratorios en Edge y Chrome sobre
+# Windows y en Chrome sobre Mac. Deja los resultados en la rama.
+name: taller
+on:
+  push:
+    branches: [taller-python]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probar:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            canal: msedge
+          - os: windows-latest
+            canal: chrome
+          - os: macos-latest
+            canal: chrome
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: simulador
+    steps:
+      # El codigo se baja sin convertir finales de linea, para que la huella de
+      # las fuentes sea la del manifiesto; despues se vuelve a `true`, que es
+      # lo que deja el instalador de Git para Windows.
+      - name: Sin convertir finales de linea al bajar el codigo
+        working-directory: .
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - name: autocrlf como lo deja Git para Windows
+        if: runner.os == 'Windows'
+        working-directory: .
+        run: git config --global core.autocrlf true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Versiones
+        run: |
+          git --version
+          node --version
+          (py -3 --version || python3 --version || python --version) 2>&1 || true
+          which -a python3 python py 2>/dev/null || true
+      - name: SIMULADOR.html es el que corresponde al codigo
+        run: npm run comprobar
+      - name: El programa local (3, 5.4, 5.5)
+        run: mkdir -p ../docs/taller && npx vitest run tests/taller 2>&1 | tee "../docs/taller/programa-${{ runner.os }}-${{ matrix.canal }}.txt"; exit ${PIPESTATUS[0]}
+      - name: La pagina en el navegador (5.1 a 5.3)
+        env:
+          CANAL: ${{ matrix.canal }}
+          CAPTURAS: ${{ github.workspace }}/revision-026/capturas
+        run: npx vitest run -c vitest.navegador.config.ts tests/navegador/taller.navegador.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: taller-${{ matrix.os }}-${{ matrix.canal }}
+          path: |
+            docs/taller/navegador-*.md
+            docs/taller/programa-*.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capturas-${{ matrix.os }}-${{ matrix.canal }}
+          path: revision-026/capturas
+  publicar:
+    needs: probar
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: taller-*
+          path: resultados
+          merge-multiple: true
+      - name: Deja los resultados en la rama
+        run: |
+          mkdir -p docs/taller/actions
+          cp resultados/navegador-*.md resultados/programa-*.txt docs/taller/actions/ 2>/dev/null || true
+          {
+            echo "# Resultados en GitHub Actions"
+            echo
+            echo "Ejecucion: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            echo "Confirmacion probada: ${{ github.sha }}"
+            echo
+            for f in docs/taller/actions/navegador-*.md; do
+              [ -f "$f" ] && echo "- $(basename "$f"): $(tail -1 "$f")"
+            done
+            for f in docs/taller/actions/programa-*.txt; do
+              [ -f "$f" ] && echo "- $(basename "$f"): $(sed 's/\x1b\[[0-9;]*m//g' "$f" | grep -E 'Tests ' | tail -1 | tr -s ' ')"
+            done
+          } > docs/taller/actions.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/taller
+          git commit -m "Resultados de la ejecucion ${{ github.run_id }} [skip ci]" || true
+          git push
