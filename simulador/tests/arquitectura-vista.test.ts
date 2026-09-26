@@ -147,7 +147,9 @@ describe('la ayuda de la consola no es permanente', () => {
   const consola = readFileSync(join(RAIZ, 'ui', 'Consola.tsx'), 'utf8');
 
   it('las dos lineas dependen de que el campo este enfocado y vacio', () => {
-    expect(consola).toContain("const mostrarAyuda = enfocado && entrada === '';");
+    // `ayuda` vale verdadero salvo en el modo taller, que va sin estas lineas (SPEC 026, 4.7).
+    expect(consola).toContain("const mostrarAyuda = ayuda && enfocado && entrada === '';");
+    expect(consola).toContain('ayuda = true,');
     expect(consola).toContain('{mostrarAyuda && (');
     expect(consola).toContain('onFocus={() => setEnfocado(true)}');
     expect(consola).toContain('onBlur={() => setEnfocado(false)}');

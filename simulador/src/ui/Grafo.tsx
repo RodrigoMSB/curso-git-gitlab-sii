@@ -19,6 +19,8 @@ interface Props {
    */
   readonly escenario: string;
   readonly onSeleccionar: (id: string) => void;
+  /** Lo que se dice sin confirmaciones que dibujar; el modo taller tiene otros casos (SPEC 026). */
+  readonly vacio?: string;
 }
 
 /** Tamaño de la letra de identificadores y etiquetas, en unidades del dibujo. */
@@ -59,7 +61,7 @@ function colorDeNodo(nodo: NodoGrafo): string {
 
 function colorDeEtiqueta(etiqueta: EtiquetaGrafo): string {
   if (etiqueta.forma === 'puntero') return 'var(--puntero)';
-  if (etiqueta.forma === 'version') return 'var(--texto-apagado)';
+  if (etiqueta.forma === 'version' || etiqueta.forma === 'remota') return 'var(--texto-apagado)';
   return etiqueta.principal ? 'var(--rama-principal)' : 'var(--rama-derivada)';
 }
 
@@ -84,6 +86,7 @@ export function Grafo({
   animar,
   escenario,
   onSeleccionar,
+  vacio,
 }: Props): React.ReactElement {
   const { nodos, aristas, etiquetas, enlacePuntero, rotuloHuerfanas, origenX, origenY, ancho, alto } =
     disposicion;
@@ -91,9 +94,9 @@ export function Grafo({
 
   if (nodos.length === 0) {
     return (
-      <p className="t-normal p-6 text-[var(--texto-apagado)]">
-        Todavía no hay confirmaciones. La primera aparecerá aquí en cuanto
-        confirmes algo preparado.
+      <p className="t-normal p-6 text-[var(--texto-apagado)]" data-prueba="grafo-vacio">
+        {vacio ??
+          'Todavía no hay confirmaciones. La primera aparecerá aquí en cuanto confirmes algo preparado.'}
       </p>
     );
   }
@@ -327,6 +330,9 @@ export function Grafo({
                     fill={llena ? color : 'var(--fondo-panel)'}
                     stroke={color}
                     strokeWidth={esPuntero ? 2 : 1.5}
+                    // La remota va punteada: es la ultima noticia que se tiene
+                    // del remoto, no una rama sobre la que se trabaje.
+                    strokeDasharray={etiqueta.forma === 'remota' ? '4 3' : undefined}
                   />
                 )}
                 <text

@@ -37,3 +37,23 @@ export type {
   TonoElemento,
 } from './pantalla';
 export { construirPantalla, ESCALA_RELATOR, FILAS_VISIBLES, TEXTO_MINIMO } from './pantalla';
+
+export type {
+  BarraTaller,
+  EstadoTaller,
+  PantallaTaller,
+  ResultadoOrdenTaller,
+  SesionTaller,
+} from './taller';
+export {
+  anotarCierre,
+  anotarEstado,
+  anotarOrden,
+  anotarResultado,
+  claveDelTaller,
+  construirPantallaTaller,
+  indicadorTaller,
+  iniciarSesionTaller,
+  limpiarConsola,
+  seleccionarEnTaller,
+} from './taller';

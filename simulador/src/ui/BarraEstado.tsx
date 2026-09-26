@@ -30,7 +30,7 @@ interface Props {
  * lee sin leer la palabra (SPEC 017, CA5), y `aria-pressed` se lo dice a quien
  * no ve la luz.
  */
-function Interruptor({
+export function Interruptor({
   etiqueta,
   activo,
   onCambiar,
@@ -47,7 +47,7 @@ function Interruptor({
   );
 }
 
-function Luna(): React.ReactElement {
+export function Luna(): React.ReactElement {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
       <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -55,7 +55,7 @@ function Luna(): React.ReactElement {
   );
 }
 
-function Sol(): React.ReactElement {
+export function Sol(): React.ReactElement {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
       <circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none" />

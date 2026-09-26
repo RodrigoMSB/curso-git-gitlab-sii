@@ -1,0 +1,4 @@
+taller/*.sh text eol=lf
+taller/*.py text eol=lf
+taller.command text eol=lf
+TALLER.cmd text eol=crlf

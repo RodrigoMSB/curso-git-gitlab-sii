@@ -6,7 +6,7 @@
  * calcula nada sobre confirmaciones, ramas ni punteros (restriccion R6).
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cambiarEscenario,
   completar,
@@ -27,6 +27,7 @@ import { Consola } from './Consola';
 import { Grafo } from './Grafo';
 import { LineaTiempo } from './LineaTiempo';
 import { Tirador } from './Tirador';
+import { useMedidas } from './useMedidas';
 import { useMovimientoReducido } from './useMovimientoReducido';
 
 export function Aplicacion(): React.ReactElement {
@@ -55,46 +56,7 @@ export function Aplicacion(): React.ReactElement {
   // punto 3.2). Vive aqui y no se toca al cambiar de escenario (punto 3.6).
   const [reparto, setReparto] = useState<number | null>(null);
 
-  // Lo que mide la pantalla y el calculo de posiciones necesita: el hueco del
-  // panel del grafo, descontado su relleno (p-4) y sus bordes, y el reparto
-  // que se ve. El grafo aprieta filas y carriles para caber en ese hueco
-  // (SPEC 016 y 017); antes el panel lo cortaba sin aviso.
-  const cuerpo = useRef<HTMLDivElement>(null);
-  const panelGrafo = useRef<HTMLElement>(null);
-  const consola = useRef<HTMLElement>(null);
-  const [medidas, setMedidas] = useState<{
-    readonly ancho: number;
-    readonly alto: number;
-    readonly reparto: number;
-  } | null>(null);
-  useLayoutEffect(() => {
-    const medir = (): void => {
-      const panel = panelGrafo.current;
-      const contenedor = cuerpo.current;
-      const columna = consola.current;
-      if (panel === null || contenedor === null || columna === null) return;
-      const hueco = 2 * 16 + 2;
-      const siguiente = {
-        ancho: panel.clientWidth - hueco + 2,
-        alto: panel.clientHeight - hueco + 2,
-        reparto: (columna.getBoundingClientRect().width / Math.max(contenedor.clientWidth, 1)) * 100,
-      };
-      setMedidas((anterior) =>
-        anterior !== null &&
-        anterior.ancho === siguiente.ancho &&
-        anterior.alto === siguiente.alto &&
-        Math.abs(anterior.reparto - siguiente.reparto) < 0.1
-          ? anterior
-          : siguiente,
-      );
-    };
-    medir();
-    const observador = new ResizeObserver(medir);
-    for (const elemento of [panelGrafo.current, cuerpo.current, consola.current]) {
-      if (elemento !== null) observador.observe(elemento);
-    }
-    return () => observador.disconnect();
-  }, []);
+  const { cuerpo, panelGrafo, consola, medidas } = useMedidas();
   const altoGrafo = medidas === null ? null : medidas.alto / escala;
   const anchoGrafo = medidas === null ? null : medidas.ancho / escala;
 

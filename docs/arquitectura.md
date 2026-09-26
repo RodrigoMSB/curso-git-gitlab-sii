@@ -4903,3 +4903,103 @@ función que ya usaba `echo`.
 | Cobertura de unidad (líneas, ramas, funciones, sentencias) | 92,22 · 83,55 · 93,90 · 94,92 | 92,11 · 83,30 · 93,81 · 94,83 |
 | Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
 | Artefacto | 335 577 bytes | 336286 bytes |
+
+## 71. El taller con Git real dentro de la página
+
+SPEC 026, en la rama `taller-python`, creada desde `main`. (La sección 70 es
+la del modo conectado, en la rama `poc/repositorio-real`, que se descartó.)
+
+### 71.1 · Cómo se arma
+
+- **`TALLER.cmd` y `taller.command`**, en la raíz del clon, buscan un Python
+  3.9 o superior (`py`, `python`, `python3`) y arrancan `taller/taller.py`.
+  Si no hay, lo dicen y esperan una tecla.
+- **`taller/taller.py`**, un solo archivo, solo biblioteca estándar. Es uno
+  solo para que Python no deje `__pycache__` en el clon. Escucha en
+  `127.0.0.1`, en un puerto que elige el sistema, sirve `SIMULADOR.html` y
+  abre el navegador con `http://127.0.0.1:<puerto>/?clave=<clave>`.
+- **La página decide el modo por su dirección.** Servida por el programa, con
+  clave, es el modo taller; abierta con doble clic, el simulador de siempre.
+  El modo taller reutiliza la consola, el tirador, el grafo, las áreas, los
+  paneles, el modo relator y los temas. No usa el motor ni el lector de
+  `.git`: el estado lo trae el programa preguntándole a Git.
+- **Sin previsualización** en este modo, sin selector de escenario, sin línea
+  de tiempo y sin líneas de ayuda bajo el campo.
+
+### 71.2 · El programa
+
+- **Seguridad.** Clave aleatoria por arranque, comparada en tiempo constante;
+  403 sin ella, con otra, con un `Origin` que no sea el propio, o con un
+  `Host` que no sea `127.0.0.1:<puerto>` (el cambio de nombre de un dominio a
+  127.0.0.1). Ninguna cabecera CORS; la consulta previa recibe 403.
+- **Git Bash de verdad.** En Windows, el `bash.exe` de Git para Windows,
+  buscado desde donde está `git`, nunca el de `System32` (WSL). Se lanza como
+  shell de inicio de sesión con `CHERE_INVOKING=1`, para que no se vaya a la
+  carpeta del usuario. La carpeta se lee al final de cada orden con
+  `pwd -W` y `/c/Users/...` se convierte a `C:/Users/...`.
+- **La consola parte en `taller-git-trabajo`**, hermana del clon, que se crea
+  si no existe. Recuerda la carpeta entre órdenes.
+- **Sin paginador y sin preguntas:** `GIT_PAGER=cat`, `TERM=dumb`,
+  `GIT_TERMINAL_PROMPT=0`, y la entrada estándar vacía.
+- **El editor.** Git recibe siempre `taller/editor.sh`, que en el momento de
+  abrirlo pregunta a Git cuál es el configurado (así ve también un
+  `-c core.editor=...` dentro de la orden). Si es uno de ventana y está
+  instalado, como `code --wait`, lo abre y espera. Si es de terminal (vi,
+  nano...), si no hay ninguno o si no está instalado, termina de inmediato
+  con un mensaje que dice qué configurar.
+- **Órdenes que piden teclado** (`git add -p`, `-i`, `--patch`,
+  `checkout -p`, `clean -i`, vi, nano, less...) no se ejecutan: se dice que
+  se hagan en Git Bash.
+- **Límite de tiempo:** 20 minutos por defecto (`TALLER_LIMITE`, en
+  segundos). Al pasarlo se detiene la orden y todo lo que abrió.
+- **Una orden a la vez:** la segunda recibe 409, y la página no deja escribir
+  mientras corre una.
+- **El estado** se calcula con órdenes de porcelana (`log`, `for-each-ref`,
+  `status --porcelain -z`, `stash list`, `log -g`) con
+  `GIT_OPTIONAL_LOCKS=0`, para no reescribir el índice al mirar. Antes se
+  saca una huella con el tamaño y la fecha de lo que cambia (HEAD, índice,
+  referencias, registro y directorio de trabajo): si no cambió, la página
+  recibe «igual» y Git no se llama. La página pregunta cada medio segundo.
+- **Rastros:** solo `taller-git-trabajo` y `taller-git-trabajo/.taller-sesion.json`,
+  con el puerto y la clave. Un segundo doble clic lo lee, ve que el taller
+  sigue abierto y abre la misma dirección, sin arrancar otro.
+- **Mac:** el `bash` y el `git` de Apple son binarios universales, y en esta
+  máquina a veces arrancaban como x86_64 bajo Rosetta, y el `git` de Apple
+  fallaba («unable to load libxcrun»). El programa los lanza con
+  `/usr/bin/arch -<arquitectura de Python>`. No se encontró la causa.
+
+### 71.3 · La página
+
+- Cada orden queda con el prompt con que se escribió (en Git Bash cambia con
+  `cd`), y el programa guarda las órdenes de la sesión para dibujarlas igual
+  al volver a entrar.
+- La salida de error va en rojo solo si la orden falló; `git status` se pinta
+  como en Git Bash.
+- `clear` limpia la consola en la página.
+- **El prompt tapado.** El contorno del foco del campo se dibuja cuatro
+  píxeles por fuera y pisaba la última línea del prompt, también en el modo
+  de escenarios. La fila del campo lleva ahora aire arriba.
+
+### 71.4 · Pruebas
+
+- `tests/taller/programa.test.ts` (32): arranque como el alumno, seguridad,
+  carpeta, paginador, tildes, una orden a la vez, editor, interactivas,
+  límite de tiempo, huella, segundo doble clic y rastros. Se vieron fallar
+  con el prototipo y, para cada defensa, quitándola del programa.
+- `tests/taller/vista.test.ts` (14): la pantalla desde el estado de Git.
+- `tests/navegador/taller.navegador.ts`: el recorrido de los ocho
+  laboratorios en la consola de la página, comparando después de cada orden
+  grafo (vivas y huérfanas), ramas, remotas, etiquetas, HEAD y áreas contra
+  Git corrido aparte. Además, en cada orden, la pantalla: prompt a la vista y
+  sin tapar (contando el contorno del foco), la carpeta en el prompt y en la
+  barra, letra legible y sin líneas de ayuda. Y 2.7 (archivo editado por
+  fuera), 2.8 (recargar), 4.2 (`clear` e historial) y 2.9 (cerrar el taller).
+  Corre en GitHub Actions (`taller.yml`).
+
+### 71.5 · Lo que el enunciado da por hecho
+
+**Los enunciados del 02 al 08 empiezan con `labs/lab-NN/preparar.sh`, que
+supone la terminal parada en el clon.** La consola del taller parte en
+`taller-git-trabajo` (punto 2.4), así que el alumno tiene que escribir antes
+`cd ../curso-git-gitlab-sii`. El recorrido lo hace. El 01 funciona igual
+desde `taller-git-trabajo`: su `cd ..` lleva a la misma carpeta de arriba.

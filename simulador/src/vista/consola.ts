@@ -22,6 +22,12 @@ export interface Renglon {
   readonly clave: string;
   readonly texto: string;
   readonly color: ColorConsola;
+  /**
+   * El indicador con que se escribio la orden, si cambia de una orden a otra.
+   * En el modo taller `cd` mueve la carpeta, y cada orden queda con la suya,
+   * como en Git Bash (SPEC 026).
+   */
+  readonly indicador?: Indicador;
 }
 
 export interface Indicador {

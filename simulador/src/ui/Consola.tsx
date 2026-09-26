@@ -37,6 +37,13 @@ interface Props {
   readonly onCompletar: (texto: string) => void;
   readonly onHistorial: (direccion: 'anterior' | 'siguiente') => void;
   readonly onDescartar: () => void;
+  /**
+   * Las dos lineas de ayuda bajo el campo. El modo taller va sin ellas: la
+   * consola es la de Git Bash y no se explica a si misma (SPEC 026, 4.7).
+   */
+  readonly ayuda?: boolean;
+  /** Una orden corriendo en el modo taller: el campo no acepta otra (SPEC 026, 3.9). */
+  readonly ocupada?: boolean;
 }
 
 const CLASE_POR_COLOR: Readonly<Record<ColorConsola, string>> = {
@@ -63,6 +70,8 @@ export function Consola({
   onCompletar,
   onHistorial,
   onDescartar,
+  ayuda = true,
+  ocupada = false,
 }: Props): React.ReactElement {
   const campo = useRef<HTMLInputElement>(null);
   const desplazable = useRef<HTMLDivElement>(null);
@@ -72,7 +81,7 @@ export function Consola({
   // Las dos lineas de ayuda solo tienen sentido en el momento en que sirven:
   // con el cursor puesto y todavia sin escribir nada. Permanentes se vuelven
   // ruido, sobre todo en proyeccion.
-  const mostrarAyuda = enfocado && entrada === '';
+  const mostrarAyuda = ayuda && enfocado && entrada === '';
 
   // El cursor recibe el foco al cargar la pagina (punto 4.3).
   useEffect(() => {
@@ -106,6 +115,7 @@ export function Consola({
 
     if (evento.key === 'Enter') {
       evento.preventDefault();
+      if (ocupada) return;
       pegadoAlFinal.current = true;
       onEjecutar(valor);
       return;
@@ -170,7 +180,7 @@ export function Consola({
         {renglones.map((renglon) =>
           renglon.color === 'orden' ? (
             <div key={renglon.clave} className="mt-4 first:mt-0" data-color="orden">
-              <LineaIndicador indicador={indicador} />
+              <LineaIndicador indicador={renglon.indicador ?? indicador} />
               <div className="text-[var(--texto)]">
                 <span className="text-[var(--consola-verde)]">$ </span>
                 {renglon.texto}
@@ -212,7 +222,12 @@ export function Consola({
 
       <div className="shrink-0 border-t border-[var(--borde-suave)] px-5 py-4">
         <LineaIndicador indicador={indicador} />
-        <div className="t-normal flex items-baseline gap-2 font-mono">
+        {/*
+          Aire entre el prompt y el campo: el contorno del foco se dibuja
+          cuatro pixeles por fuera del campo y tapaba la ultima linea del
+          prompt (SPEC 026, 4.7).
+        */}
+        <div className="t-normal mt-1.5 flex items-baseline gap-2 font-mono">
           <span className="text-[var(--consola-verde)]">$</span>
           <input
             ref={campo}
@@ -224,6 +239,8 @@ export function Consola({
             className="t-normal min-w-0 flex-1 bg-transparent font-mono text-[var(--texto)] outline-none"
             aria-label="Orden de Git"
             data-prueba="entrada-consola"
+            data-ocupada={ocupada ? 'si' : 'no'}
+            readOnly={ocupada}
             aria-describedby={
               mostrarAyuda && previsualizacionActiva ? 'aviso-previsualizacion' : undefined
             }
