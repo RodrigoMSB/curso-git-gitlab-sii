@@ -4903,3 +4903,117 @@ función que ya usaba `echo`.
 | Cobertura de unidad (líneas, ramas, funciones, sentencias) | 92,22 · 83,55 · 93,90 · 94,92 | 92,11 · 83,30 · 93,81 · 94,83 |
 | Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
 | Artefacto | 335 577 bytes | 336286 bytes |
+
+---
+
+# SPEC 026 · El taller con Git real dentro de la página
+
+## 71. El modo taller
+
+SPEC 026, en la rama `taller-java`. La numeración salta la 70, que en la rama
+`poc/repositorio-real` es la del modo conectado.
+
+`SIMULADOR.html` tiene un tercer modo. Servida por un programa local, con su
+clave en la dirección, la consola de la página ejecuta cada orden con Git de
+verdad en la carpeta del participante, y el grafo y las tres áreas se dibujan
+con lo que Git dice. Abierta con doble clic sigue en el modo de escenarios, sin
+un cambio.
+
+### 71.1 · Lo que se decidió
+
+- **Una rama que convive con otra.** Otra persona trabaja en paralelo en
+  `taller-python`. Todo lo de este spec lleva nombres propios, `taller-java/`,
+  `TALLER-JAVA.cmd`, `taller-java.command`, `taller-java.sh`,
+  `comprobar-java.cmd` y `comprobar-java.sh`, y se trabajó en un worktree
+  aparte para no tocar la copia de trabajo de la otra rama.
+- **Java 21 puro.** El servidor HTTP es el de `jdk.httpserver`, el JSON es una
+  clase de doscientas líneas y no hay ninguna dependencia en tiempo de
+  ejecución. JUnit solo en las pruebas.
+- **El runtime viaja en el clon.** `taller-java/jre/windows-x64` y
+  `taller-java/jre/macos-aarch64`, recortados con jlink desde Eclipse Temurin
+  21.0.12.1+1 a `java.base` y `jdk.httpserver`, que es lo que `jdeps` dice que
+  el programa usa. 31 MB cada uno en disco, unos 17 MB comprimidos. Los genera
+  `taller-java/fuente/generar-runtimes.sh`, con las versiones y las sumas
+  SHA-256 fijas, los dos desde una sola máquina.
+- **La orden viaja en una variable de entorno, y el envoltorio por la entrada
+  de bash.** En una sola línea, porque bash lee la línea entera antes de
+  ejecutarla, y en ella se cierra la entrada antes de la orden. Así no hay
+  comillas que pelear con Windows, y los errores dicen `bash: line 1:` como
+  con `bash -c`, en vez de nombrar un archivo interno del taller.
+- **El límite de la carpeta es un `cd` que no sale.** El envoltorio define una
+  función `cd` que rechaza salir de la carpeta que contiene al clon, antes de
+  que corra lo que sigue en la misma línea: `cd ../.. && rm ...` se detiene en
+  el `cd`. Después de cada orden se revisa además la carpeta en que quedó bash,
+  para el `builtin cd` y los `pushd`.
+- **Leer no escribe.** La lectura pasa `--no-optional-locks`: si reescribiera
+  el índice, la huella cambiaría con cada lectura y se leería de nuevo sin que
+  nadie tocara nada.
+- **Las huérfanas las decide la página, como siempre.** El programa manda las
+  confirmaciones alcanzables desde las referencias y las del registro de HEAD,
+  y la página las pinta con el mismo cálculo de posiciones del modo de
+  escenarios, que atenúa lo que ninguna referencia alcanza.
+- **La consola usa el git de la Terminal del participante.** El programa
+  encuentra Git en el orden del punto 3.3 para leer el estado, pero no
+  antepone su carpeta al PATH de la consola si el PATH ya tiene un `git`. En un
+  Mac con Homebrew, anteponer `/usr/bin` dejaba en la consola un git distinto
+  del de la Terminal, y cambiaba además qué otras herramientas encontraba.
+- **Una lectura por segundo, por la huella.** El límite del punto 3.7 se aplica
+  a las lecturas que dispara la huella. La que sigue a una orden no cuenta: si
+  contara, un archivo guardado justo después de una orden tardaba segundo y
+  medio en verse.
+- **Cada orden guarda su indicador.** En el modo de escenarios la consola
+  dibuja todas las órdenes anteriores con el indicador de ahora. En el modo
+  taller un `cd` cambia la carpeta de verdad, y las órdenes viejas habrían
+  aparecido escritas en la carpeta nueva.
+- **El foco del campo no pisa el indicador.** El anillo de foco global sale
+  dos píxeles hacia arriba y tapaba la línea del indicador. En el modo taller
+  el foco es un borde a la izquierda del bloque de entrada. El modo de
+  escenarios tiene el mismo roce y no se tocó.
+
+### 71.2 · Lo que el recorrido encontró
+
+El recorrido de punta a punta compara, después de cada orden, lo que la página
+pinta con lo que Git dice preguntado aparte, y lo que la consola mostró con lo
+que imprimió un gemelo que corre la misma orden con bash directo. Encontró
+cinco defectos que ninguna prueba de unidad había visto.
+
+1. Un `cd` fallido mostraba `…/taller-git-trabajo/.taller/orden.sh: line 21:`.
+2. Un error de sintaxis salía firmado `bash: eval: line 1:`.
+3. En un Mac con Homebrew la consola usaba otro git que la Terminal.
+4. Un archivo guardado justo después de una orden tardaba 1,5 s en verse.
+5. En Windows, la lectura del estado lanzaba once procesos de Git y tardaba
+   cerca de un segundo. Ahora lanza entre cuatro y seis: la rama y HEAD salen
+   de `git status --branch`, y el registro y el guardado solo se consultan si
+   sus archivos existen.
+
+Y en el programa, antes del recorrido, las pruebas de unidad y las primeras
+corridas en Windows encontraron que la comprobación del primer día cortaba su
+propia respuesta al navegador, que el arrancador de Mac no encontraba
+`sysctl` con un PATH mínimo y tomaba un M1 por un Intel, y que `lineas()`
+recortaba los tabuladores finales y perdía todas las ramas.
+
+### 71.3 · Por qué el prototipo en Python no arrancó en Mac
+
+`HTTPServer.server_bind` llama a `socket.getfqdn()`, que resuelve el nombre de
+`127.0.0.1` al revés. En el ejecutor `macos-latest` de GitHub eso tardó 35,1
+segundos, medido en la integración continua, y la prueba del prototipo
+esperaba veinte. El programa Java no resuelve ningún nombre, y los arrancadores
+tampoco.
+
+### 71.4 · Lo que no se pudo probar
+
+El antivirus corporativo, la lista de programas permitidos, el proxy y la
+política de ejecución de los equipos del SII. La comprobación del primer día
+los cubre en sus filas 5 y 6, con qué hacer si fallan.
+
+### 71.5 · Pendiente
+
+- `git push` y `git pull` contra un servidor con clave van en Git Bash.
+- Las órdenes que piden teclado, como `git add -p`, van en Git Bash. La
+  consola lo dice.
+- Los enunciados piden pararse en la raíz del clon, y la consola parte en
+  `taller-git-trabajo` (punto 2.4). El participante escribe primero
+  `cd ../curso-git-gitlab-sii`, y al empezar cada laboratorio vuelve con otro
+  `cd`. El recorrido escribe esos `cd` como pasos del arnés.
+- El doble clic en `taller-java.command` desde Finder no se probó en la
+  integración continua, que no tiene Finder.

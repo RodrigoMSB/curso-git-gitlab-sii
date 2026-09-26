@@ -26,8 +26,14 @@ MUTACIONES = [
      "se escucha en todas las interfaces"),
     ("Procesos.java", 'p.toHandle().descendants().forEach(ProcessHandle::destroyForcibly);', '', "EjecutorTest",
      "el limite de tiempo mata solo a bash y no a sus hijos"),
-    ("Ejecutor.java", '"exec 0</dev/null",', '', "EjecutorTest",
-     "la entrada de la orden queda abierta"),
+    # Sacar el exec 0</dev/null del envoltorio no deja la entrada abierta:
+    # Java cierra el tubo apenas escribe el envoltorio, y la orden igual
+    # encuentra el fin. El defecto de verdad es que Java no lo cierre.
+    ("Procesos.java",
+     'try (var in = p.getOutputStream()) {\n                in.write(entrada.getBytes(java.nio.charset.StandardCharsets.UTF_8));',
+     'try { var in = p.getOutputStream();\n                in.write(entrada.getBytes(java.nio.charset.StandardCharsets.UTF_8)); in.flush();',
+     "EjecutorTest", "la entrada de la orden queda abierta",
+     [("Ejecutor.java", '"exec 0</dev/null",', '')]),
     ("Procesos.java", 'return bytes.toString(StandardCharsets.UTF_8);', 'return bytes.toString(StandardCharsets.ISO_8859_1);',
      "EjecutorTest", "la salida no se lee en UTF-8"),
     ("Ejecutor.java", 'if ! __taller_dentro; then', 'if false; then', "EjecutorTest",
@@ -47,7 +53,8 @@ MUTACIONES = [
     ("LectorEstado.java", 'String id = anotada ? pelado : objeto;', 'String id = objeto;', "LectorEstadoTest",
      "la etiqueta anotada apunta al objeto etiqueta"),
     ("LectorEstado.java", 'g() { "$TALLER_GIT" --no-optional-locks', 'g() { "$TALLER_GIT"', "LectorEstadoTest",
-     "leer reescribe el indice (1 de 2)"),
+     "leer reescribe el indice",
+     [("LectorEstado.java", 'entorno.put("GIT_OPTIONAL_LOCKS", "0");', '')]),
     ("Porcelana.java", 'if (x != \'.\') preparado.add', 'if (y != \'.\') preparado.add', "PorcelanaTest",
      "las columnas X e Y se confunden"),
     ("Taller.java", 'if (huella != ultimaHuella) pendiente = true;', 'pendiente = true;', "TallerTest",
@@ -64,10 +71,6 @@ MUTACIONES = [
      "una carpeta hermana con el mismo prefijo cuenta como dentro"),
 ]
 
-# La segunda mitad de la mutacion del indice: las dos defensas juntas.
-SEGUNDA = ("LectorEstado.java", 'entorno.put("GIT_OPTIONAL_LOCKS", "0");', '')
-
-
 def mvn(prueba: str) -> bool:
     r = subprocess.run(["./mvnw", "-q", "-B", "test", f"-Dtest={prueba}", "-Dsurefire.failIfNoSpecifiedTests=false"],
                        cwd=RAIZ, capture_output=True, text=True)
@@ -77,23 +80,30 @@ def mvn(prueba: str) -> bool:
 def main() -> int:
     atrapadas = 0
     escapadas = []
-    for archivo, original, mutado, prueba, que in MUTACIONES:
-        ruta = FUENTE / archivo
-        texto = ruta.read_text(encoding="utf-8")
-        if original not in texto:
-            print(f"  ?  {que}: el texto a mutar ya no esta en {archivo}")
+    for mutacion in MUTACIONES:
+        archivo, original, mutado, prueba, que = mutacion[:5]
+        # Algunas mutaciones tocan mas de un lugar: dos defensas que se cubren
+        # una a la otra solo se ven fallar si caen las dos.
+        cambios = [(archivo, original, mutado), *(mutacion[5] if len(mutacion) > 5 else [])]
+        originales = {}
+        faltante = None
+        for nombre, antes, _ in cambios:
+            ruta = FUENTE / nombre
+            originales.setdefault(ruta, ruta.read_text(encoding="utf-8"))
+            if antes not in originales[ruta]:
+                faltante = nombre
+        if faltante is not None:
+            print(f"  ?  {que}: el texto a mutar ya no esta en {faltante}")
             escapadas.append(que)
             continue
-        extra = None
         try:
-            ruta.write_text(texto.replace(original, mutado, 1), encoding="utf-8")
-            if "indice (1 de 2)" in que:
-                extra = FUENTE / SEGUNDA[0]
-                t2 = extra.read_text(encoding="utf-8")
-                extra.write_text(t2.replace(SEGUNDA[1], SEGUNDA[2], 1), encoding="utf-8")
+            for nombre, antes, despues in cambios:
+                ruta = FUENTE / nombre
+                ruta.write_text(ruta.read_text(encoding="utf-8").replace(antes, despues, 1), encoding="utf-8")
             paso = mvn(prueba)
         finally:
-            ruta.write_text(texto, encoding="utf-8")
+            for ruta, texto in originales.items():
+                ruta.write_text(texto, encoding="utf-8")
         if paso:
             print(f"  ✗  {prueba} no atrapo: {que}")
             escapadas.append(que)

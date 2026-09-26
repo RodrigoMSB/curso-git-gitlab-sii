@@ -78,9 +78,19 @@ public final class LectorEstado {
         estado.put("gitdir", raiz.length > 1 ? raiz[1].trim() : "");
         estado.put("dentroDeGit", s.containsKey("dentro-de-git"));
 
-        String rama = s.getOrDefault("rama", "").trim();
-        estado.put("rama", rama.startsWith("refs/heads/") ? rama.substring("refs/heads/".length()) : null);
-        String head = s.getOrDefault("head", "").trim();
+        // La rama y la confirmacion actual vienen en los encabezados de git status --branch.
+        String rama = null;
+        String head = "";
+        for (String parte : s.getOrDefault("estado", "").split("\0")) {
+            if (parte.startsWith("# branch.head ")) {
+                String nombre = parte.substring("# branch.head ".length()).trim();
+                rama = nombre.equals("(detached)") ? null : nombre;
+            } else if (parte.startsWith("# branch.oid ")) {
+                String oid = parte.substring("# branch.oid ".length()).trim();
+                head = oid.equals("(initial)") ? "" : oid;
+            }
+        }
+        estado.put("rama", rama);
         estado.put("head", head.isEmpty() ? null : head);
 
         List<Map<String, Object>> ramas = new ArrayList<>();
@@ -250,37 +260,42 @@ public final class LectorEstado {
             m() { printf '\\001%s\\001' "$1"; }
             g() { "$TALLER_GIT" --no-optional-locks -c core.quotepath=false "$@"; }
             builtin cd -- "$TALLER_CARPETA" 2>/dev/null || { m sin-carpeta; exit 0; }
-            gitdir=$(g rev-parse --absolute-git-dir 2>/dev/null) || { m fuera; exit 0; }
-            top=$(g rev-parse --show-toplevel 2>/dev/null)
+            { IFS= read -r gitdir; IFS= read -r top; } <<EOF
+            $(g rev-parse --absolute-git-dir --show-toplevel 2>/dev/null)
+            EOF
+            [ -n "$gitdir" ] || { m fuera; exit 0; }
             if [ -z "$top" ]; then
-              if [ "$(g rev-parse --is-bare-repository 2>/dev/null)" = true ]; then m desnudo; exit 0; fi
+              # Sin arbol de trabajo: parado dentro de .git, o un repositorio desnudo.
+              [ "${gitdir##*/}" = .git ] || { m desnudo; exit 0; }
               m dentro-de-git
-              top=$(dirname -- "$gitdir")
+              top=${gitdir%/.git}
             fi
             m raiz; printf '%s\\n%s\\n' "$top" "$gitdir"
             builtin cd -- "$top" || exit 0
-            m rama; g symbolic-ref -q HEAD
-            head=$(g rev-parse -q --verify HEAD 2>/dev/null)
-            m head; printf '%s\\n' "$head"
             m refs; g for-each-ref --format='%(refname)%09%(objectname)%09%(objecttype)%09%(*objectname)%09%(*objecttype)' refs/heads refs/remotes refs/tags
-            m guardados; g stash list --format='%H%x09%P%x09%gs' 2>/dev/null
             puntas=()
-            [ -n "$head" ] && puntas+=("$head")
-            while read -r id tipo; do
-              [ "$tipo" = commit ] && puntas+=("$id")
-            done <<EOF
-            $(g reflog show --format=%H HEAD -- 2>/dev/null | g cat-file --batch-check='%(objectname) %(objecttype)' 2>/dev/null)
-            EOF
-            while read -r stash padres; do
+            guardados=
+            if [ -e "$gitdir/refs/stash" ] || [ -e "$gitdir/logs/refs/stash" ]; then
+              guardados=$(g stash list --format='%H%x09%P%x09%gs' 2>/dev/null)
+            fi
+            m guardados; printf '%s\\n' "$guardados"
+            while IFS=$'\\t' read -r stash padres resto; do
               [ -n "$padres" ] && puntas+=("${padres%% *}")
             done <<EOF
-            $(g stash list --format='%H %P' 2>/dev/null)
+            $guardados
             EOF
-            m log; g log --topo-order --abbrev=7 --format='%H%x1f%h%x1f%P%x1f%an%x1f%ae%x1f%ct%x1f%s%x1e' --branches --remotes --tags "${puntas[@]}" -- 2>/dev/null
+            if [ -s "$gitdir/logs/HEAD" ]; then
+              while read -r id tipo; do
+                [ "$tipo" = commit ] && puntas+=("$id")
+              done <<EOF
+            $(g reflog show --format=%H HEAD -- 2>/dev/null | g cat-file --batch-check='%(objectname) %(objecttype)' 2>/dev/null)
+            EOF
+            fi
+            m log; g log --ignore-missing --topo-order --abbrev=7 --format='%H%x1f%h%x1f%P%x1f%an%x1f%ae%x1f%ct%x1f%s%x1e' --branches --remotes --tags HEAD "${puntas[@]}" -- 2>/dev/null
             m operacion
             for f in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do [ -e "$gitdir/$f" ] && echo "$f"; done
             { [ -d "$gitdir/rebase-merge" ] || [ -d "$gitdir/rebase-apply" ]; } && echo REBASE
-            m estado; g status --porcelain=v2 -z --untracked-files=all 2>/dev/null
+            m estado; g status --porcelain=v2 -z --branch --untracked-files=all 2>/dev/null
             m fin
             """;
 }

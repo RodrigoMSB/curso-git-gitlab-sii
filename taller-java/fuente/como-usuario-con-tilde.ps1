@@ -21,6 +21,18 @@ icacls $base /grant "${nombre}:(OI)(CI)F" /T /Q | Out-Null
 
 $guion = @"
 `$ErrorActionPreference = 'Continue'
+# Start-Process -Credential hereda el entorno del proceso que lo lanza. Las
+# carpetas del usuario se rehacen desde su perfil verdadero.
+`$perfil = [Environment]::GetFolderPath('UserProfile')
+`$env:USERPROFILE = `$perfil
+`$env:HOME = `$perfil
+`$env:USERNAME = '$nombre'
+`$env:APPDATA = Join-Path `$perfil 'AppData\Roaming'
+`$env:LOCALAPPDATA = Join-Path `$perfil 'AppData\Local'
+`$env:TEMP = Join-Path `$perfil 'AppData\Local\Temp'
+`$env:TMP = `$env:TEMP
+New-Item -ItemType Directory -Force `$env:TEMP | Out-Null
+Remove-Item Env:GITHUB_ACTIONS, Env:GITHUB_STEP_SUMMARY, Env:GITHUB_OUTPUT, Env:GITHUB_ENV -ErrorAction SilentlyContinue
 `$env:TALLER_CAPTURAS = '$base\salida'
 `$env:TALLER_NAVEGADOR = 'msedge'
 Set-Location '$base\repo\simulador'

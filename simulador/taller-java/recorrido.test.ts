@@ -28,7 +28,6 @@
 
 import { type ChildProcess, spawn } from 'node:child_process';
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -36,6 +35,7 @@ import {
   realpathSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
   chmodSync,
 } from 'node:fs';
@@ -208,15 +208,35 @@ function prepararLado(raiz: string, nombre: string, bin: string): Lado {
   return { limite, casa, plan, entorno, carpeta: 'taller-git-trabajo', salidas: new Map() };
 }
 
+/**
+ * Copia un archivo o una carpeta entera, conservando los permisos.
+ *
+ * No usa `cpSync`: en Windows, con una tilde en la ruta de destino, fallaba
+ * con «The operation completed successfully».
+ */
+function copiar(origen: string, destino: string): void {
+  if (statSync(origen).isDirectory()) {
+    mkdirSync(destino, { recursive: true });
+    for (const nombre of readdirSync(origen)) copiar(join(origen, nombre), join(destino, nombre));
+    return;
+  }
+  mkdirSync(dirname(destino), { recursive: true });
+  writeFileSync(destino, readFileSync(origen));
+  chmodSync(destino, statSync(origen).mode);
+}
+
 function clonar(destino: string): void {
   execFileSync(herramientas().git, ['clone', '-q', REPO, destino], { stdio: 'ignore' });
   // Lo que todavia no esta confirmado en la rama viaja igual: el recorrido
-  // prueba el arbol de trabajo, no el ultimo commit.
-  for (const ruta of ['SIMULADOR.html', 'taller-java/taller.jar', 'taller-java/arrancar.sh', 'taller-java.sh', 'labs']) {
-    cpSync(join(REPO, ruta), join(destino, ruta), { recursive: true });
+  // prueba el arbol de trabajo, no el ultimo commit. En la integracion
+  // continua el arbol es el commit y no hace falta.
+  if (process.env.CI !== 'true') {
+    for (const ruta of ['SIMULADOR.html', 'taller-java/taller.jar', 'taller-java/arrancar.sh', 'taller-java.sh', 'labs']) {
+      copiar(join(REPO, ruta), join(destino, ruta));
+    }
   }
   if (!existsSync(join(destino, 'taller-java', 'jre')) && existsSync(join(REPO, 'taller-java', 'jre'))) {
-    cpSync(join(REPO, 'taller-java', 'jre'), join(destino, 'taller-java', 'jre'), { recursive: true });
+    copiar(join(REPO, 'taller-java', 'jre'), join(destino, 'taller-java', 'jre'));
   }
 }
 
@@ -405,6 +425,7 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
+  mkdirSync(SALIDA, { recursive: true });
   const lineas = ['# Recorrido del modo taller', '', `Navegador ${CANAL}, ${process.platform}.`, ''];
   for (const n of NUMEROS) {
     const del = resultados.filter((r) => r.lab === n && r.tipo === 'orden');

@@ -169,13 +169,26 @@ public final class Ejecutor {
             if (sinLocale()) e.put("LANG", "C.UTF-8");
         } else {
             if (sinLocale()) e.put("LC_CTYPE", "UTF-8");
-            // El git que se encontro va primero, para que la orden escrita use
-            // el mismo que el programa usa para leer el estado.
-            Path carpetaGit = git.git().getParent();
+            // La consola usa el git de la Terminal del participante, el primero
+            // de su PATH. Solo si el PATH no tiene ninguno se agrega la carpeta
+            // del que se encontro: anteponerla siempre cambiaba tambien que otras
+            // herramientas encuentra la consola, y en un Mac con Homebrew dejaba
+            // un git distinto del que el participante usa en su Terminal.
             String path = System.getenv("PATH");
-            e.put("PATH", carpetaGit + (path == null || path.isEmpty() ? "" : ":" + path));
+            if (!hayGitEn(path)) {
+                Path carpetaGit = git.git().getParent();
+                e.put("PATH", carpetaGit + (path == null || path.isEmpty() ? "" : ":" + path));
+            }
         }
         return e;
+    }
+
+    static boolean hayGitEn(String path) {
+        if (path == null) return false;
+        for (String carpeta : path.split(":")) {
+            if (!carpeta.isEmpty() && Files.isExecutable(Path.of(carpeta, "git"))) return true;
+        }
+        return false;
     }
 
     private static boolean sinLocale() {

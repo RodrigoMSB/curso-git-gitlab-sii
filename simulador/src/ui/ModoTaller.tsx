@@ -72,7 +72,9 @@ export function ModoTaller({ clave }: { readonly clave: string }): React.ReactEl
   const preguntar = useCallback(async (): Promise<Conexion> => {
     try {
       const nuevo = await pedirEstado(clave, version.current);
-      if (nuevo !== null) {
+      // Una pregunta que salio antes de terminar una orden puede volver
+      // despues de la que siguio a la orden: solo se acepta lo mas nuevo.
+      if (nuevo !== null && nuevo.version > version.current) {
         version.current = nuevo.version;
         setDocumento(nuevo);
       }
