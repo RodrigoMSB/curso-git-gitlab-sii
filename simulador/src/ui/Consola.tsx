@@ -105,6 +105,16 @@ export function Consola({
   const campo = useRef<HTMLInputElement>(null);
   const desplazable = useRef<HTMLDivElement>(null);
   const pegadoAlFinal = useRef(true);
+  // Donde la dejo la propia consola la ultima vez que la movio. El evento de
+  // desplazamiento de ese movimiento llega un cuadro despues, y si entretanto
+  // la consola se achico (aparece el repositorio y la barra crece), medir la
+  // distancia al final la daba por subida a mano y la despegaba. Un evento
+  // que la encuentra donde la dejo la consola no es del participante.
+  const puesta = useRef<number | null>(null);
+  const mover = (caja: HTMLDivElement, arriba: number): void => {
+    caja.scrollTop = arriba;
+    puesta.current = caja.scrollTop;
+  };
   const [enfocado, setEnfocado] = useState(true);
   const [hayMasAbajo, setHayMasAbajo] = useState(false);
 
@@ -133,7 +143,7 @@ export function Consola({
   useLayoutEffect(() => {
     const caja = desplazable.current;
     if (caja === null || !pegadoAlFinal.current) return;
-    caja.scrollTop = caja.scrollHeight;
+    mover(caja, caja.scrollHeight);
     if (!salidasDesdeElPrincipio) return;
     setHayMasAbajo(false);
     // Si lo que imprimio la ultima orden, con su eco, no cabe, se muestra
@@ -144,7 +154,7 @@ export function Consola({
     const desdeElEco =
       eco.getBoundingClientRect().top - caja.getBoundingClientRect().top + caja.scrollTop;
     if (caja.scrollHeight - desdeElEco > caja.clientHeight) {
-      caja.scrollTop = Math.max(0, desdeElEco - 8);
+      mover(caja, Math.max(0, desdeElEco - 8));
       pegadoAlFinal.current = false;
       setHayMasAbajo(true);
     }
@@ -158,7 +168,7 @@ export function Consola({
     const caja = desplazable.current;
     if (caja === null || typeof ResizeObserver === 'undefined') return;
     const observador = new ResizeObserver(() => {
-      if (pegadoAlFinal.current) caja.scrollTop = caja.scrollHeight;
+      if (pegadoAlFinal.current) mover(caja, caja.scrollHeight);
     });
     observador.observe(caja);
     return () => observador.disconnect();
@@ -167,6 +177,8 @@ export function Consola({
   const alDesplazar = (): void => {
     const caja = desplazable.current;
     if (caja === null) return;
+    if (puesta.current !== null && Math.abs(caja.scrollTop - puesta.current) < 1) return;
+    puesta.current = null;
     const distancia = caja.scrollHeight - caja.scrollTop - caja.clientHeight;
     pegadoAlFinal.current = distancia < 24;
     if (pegadoAlFinal.current) setHayMasAbajo(false);
@@ -175,7 +187,7 @@ export function Consola({
   const irAlFinal = (): void => {
     const caja = desplazable.current;
     if (caja === null) return;
-    caja.scrollTop = caja.scrollHeight;
+    mover(caja, caja.scrollHeight);
     pegadoAlFinal.current = true;
     setHayMasAbajo(false);
   };

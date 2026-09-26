@@ -450,22 +450,27 @@ export function opcionesNoReconocidas(
  * falso y le enseña al participante que la orden no existe.
  *
  * Sale de `git --list-cmds=main,nohelpers` de Git 2.54, mas la ayuda de
- * credenciales de Windows. Una prueba la compara con el Git de la maquina.
+ * credenciales de Windows, mas lo que agregan Git 2.55 en Linux (format-rev,
+ * url-parse, instaweb) y el Git de Homebrew con sus ordenes de contrib
+ * (archimport, cvs*, credential-netrc, jump), que la prueba encontro en la
+ * integracion continua del SPEC 028. Una prueba la compara con el Git de la
+ * maquina.
  */
 export const ORDENES_DE_GIT: ReadonlySet<string> = new Set([
-  'add', 'am', 'annotate', 'apply', 'archive', 'backfill', 'bisect', 'blame', 'branch',
-  'bugreport', 'bundle', 'cat-file', 'check-attr', 'check-ignore', 'check-mailmap',
+  'add', 'am', 'annotate', 'apply', 'archimport', 'archive', 'backfill', 'bisect', 'blame',
+  'branch', 'bugreport', 'bundle', 'cat-file', 'check-attr', 'check-ignore', 'check-mailmap',
   'check-ref-format', 'checkout', 'checkout-index', 'cherry', 'cherry-pick', 'clean', 'clone',
   'column', 'commit', 'commit-graph', 'commit-tree', 'config', 'count-objects', 'credential',
-  'credential-cache', 'credential-osxkeychain', 'credential-store', 'credential-wincred', 'daemon',
-  'describe', 'diagnose', 'diff', 'diff-files', 'diff-index', 'diff-pairs', 'diff-tree',
-  'difftool', 'fast-export', 'fast-import', 'fetch', 'fetch-pack', 'filter-branch',
-  'fmt-merge-msg', 'for-each-ref', 'for-each-repo', 'format-patch', 'fsck', 'fsck-objects', 'gc',
+  'credential-cache', 'credential-netrc', 'credential-osxkeychain', 'credential-store',
+  'credential-wincred', 'cvsexportcommit', 'cvsimport', 'cvsserver', 'daemon', 'describe',
+  'diagnose', 'diff', 'diff-files', 'diff-index', 'diff-pairs', 'diff-tree', 'difftool',
+  'fast-export', 'fast-import', 'fetch', 'fetch-pack', 'filter-branch', 'fmt-merge-msg',
+  'for-each-ref', 'for-each-repo', 'format-patch', 'format-rev', 'fsck', 'fsck-objects', 'gc',
   'get-tar-commit-id', 'grep', 'hash-object', 'help', 'history', 'hook', 'http-backend',
-  'http-fetch', 'http-push', 'imap-send', 'index-pack', 'init', 'init-db', 'interpret-trailers',
-  'last-modified', 'log', 'ls-files', 'ls-remote', 'ls-tree', 'mailinfo', 'mailsplit',
-  'maintenance', 'merge', 'merge-base', 'merge-file', 'merge-index', 'merge-octopus',
-  'merge-one-file', 'merge-ours', 'merge-recursive', 'merge-recursive-ours',
+  'http-fetch', 'http-push', 'imap-send', 'index-pack', 'init', 'init-db', 'instaweb',
+  'interpret-trailers', 'jump', 'last-modified', 'log', 'ls-files', 'ls-remote', 'ls-tree',
+  'mailinfo', 'mailsplit', 'maintenance', 'merge', 'merge-base', 'merge-file', 'merge-index',
+  'merge-octopus', 'merge-one-file', 'merge-ours', 'merge-recursive', 'merge-recursive-ours',
   'merge-recursive-theirs', 'merge-resolve', 'merge-subtree', 'merge-tree', 'mergetool', 'mktag',
   'mktree', 'multi-pack-index', 'mv', 'name-rev', 'notes', 'p4', 'pack-objects', 'pack-redundant',
   'pack-refs', 'patch-id', 'pickaxe', 'prune', 'prune-packed', 'pull', 'push', 'quiltimport',
@@ -475,6 +480,7 @@ export const ORDENES_DE_GIT: ReadonlySet<string> = new Set([
   'revert', 'rm', 'send-email', 'send-pack', 'shell', 'shortlog', 'show', 'show-branch',
   'show-index', 'show-ref', 'sparse-checkout', 'stage', 'stash', 'status', 'stripspace',
   'submodule', 'subtree', 'switch', 'symbolic-ref', 'tag', 'unpack-file', 'unpack-objects',
-  'update-index', 'update-ref', 'update-server-info', 'upload-archive', 'upload-pack', 'var',
-  'verify-commit', 'verify-pack', 'verify-tag', 'version', 'whatchanged', 'worktree', 'write-tree',
+  'update-index', 'update-ref', 'update-server-info', 'upload-archive', 'upload-pack', 'url-parse',
+  'var', 'verify-commit', 'verify-pack', 'verify-tag', 'version', 'whatchanged', 'worktree',
+  'write-tree',
 ]);

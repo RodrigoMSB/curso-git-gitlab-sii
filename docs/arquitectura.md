@@ -5432,7 +5432,36 @@ Diferencias que encontró y se arreglaron:
 | `modo-taller.test.ts` | el modelo de la página, con la barra del motor | `mutaciones-modelo.py`: 20 de 20 |
 | pruebas de Java | incluida la nueva de `PATH` y `TALLER_CD_DESPUES` | `mutaciones.py` |
 
-### 74.7 · Resultados, en este Mac con Chrome
+### 74.7 · Lo que encontró GitHub Actions
+
+La facturación volvió el mismo día y el flujo corrió. La primera ejecución
+(36276663855) pasó los ocho recorridos, las siete instalaciones, la interfaz
+y el laboratorio 08 en Windows y en Mac, y destapó cinco cosas:
+
+- **La consola se despegaba del final**, una vez, con `git init` en el
+  laboratorio 01 con Python en Mac. La consola baja sola y el evento de ese
+  desplazamiento llega un cuadro después; si entretanto la barra crece y la
+  consola se achica, la distancia al final pasa de 24 píxeles y se tomaba
+  como que el participante subió. Ahora la consola recuerda dónde se dejó y no
+  toma su propio movimiento por uno ajeno. Una prueba nueva del recorrido lo
+  provoca a propósito, con dos achiques seguidos, y sin el arreglo falla.
+- **El usuario con tilde**, dos veces en el arnés: Git Bash monta la carpeta
+  temporal del usuario en `/tmp`, y la ruta que deja `preparar` y la que
+  imprimen los scripts venían como `/tmp/...`. El arnés las traduce con
+  `cygpath`.
+- **La rama inicial en la prueba del laboratorio 01.** En el Mac del
+  desarrollo la pone en main el gitconfig de las herramientas de Apple; en
+  el de GitHub nacía master. La prueba fija `init.defaultBranch`, como el
+  enunciado.
+- **Órdenes de Git que el simulador no conocía:** `format-rev` y `url-parse`
+  de Git 2.55, e `instaweb`, `archimport`, `cvsimport`, `cvsexportcommit`,
+  `cvsserver`, `credential-netrc` y `jump` del Git de Homebrew. Respondía
+  que no son órdenes de Git.
+- **La suite del simulador** no se había corrido nunca en Windows. Allí
+  fallan pruebas que dependen de permisos de ejecución y de finales de línea;
+  en la integración continua corre en Linux.
+
+### 74.8 · Resultados, en este Mac con Chrome
 
 | | motor Java | motor Python |
 |---|---|---|
@@ -5456,14 +5485,10 @@ motor, fuera del repositorio.
 El clon pesa unos 33 MB de descarga y 101 MB en disco, de los que 62 MB son
 los dos runtimes de Java.
 
-### 74.8 · Lo que falta
+### 74.9 · Lo que falta
 
-- **GitHub Actions no corre.** Desde el 2026-09-26 cada ejecución de la cuenta
-  termina en seis segundos con «recent account payments have failed or your
-  spending limit needs to be increased». El flujo `.github/workflows/taller.yml`
-  está escrito para Windows con Edge y Chrome, Mac con Chrome, Git solo para
-  Git Bash y el usuario con tilde, con los dos motores, pero nada de eso se
-  vio en esta rama: lo de Windows solo se probó en `taller-java` y
-  `taller-python` por separado, antes de la fusión.
+- **La suite del simulador en Windows y en Mac.** Corre en Linux. Que pase en
+  Windows pide revisar las pruebas que miran permisos de ejecución y
+  finales de línea, que se escribieron para el Mac del desarrollo.
 - **Mac con Intel** no tiene runtime de Java en el clon: usa un Java 21 del
   sistema si hay, y si no, Python.

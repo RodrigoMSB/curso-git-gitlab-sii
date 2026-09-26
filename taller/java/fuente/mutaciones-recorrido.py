@@ -46,6 +46,9 @@ MUTACIONES = [
      "...arbolVisible(estado.arbol ?? []),", "...arbolVisible([]),", "el area del repositorio sin archivos"),
     ("pagina", SIM / "src/vista/contar.ts",
      "n === 1 ? singular : plural", "n === -1 ? singular : plural", "un contador en plural con uno"),
+    ("pagina", SIM / "src/ui/Consola.tsx",
+     "    if (puesta.current !== null && Math.abs(caja.scrollTop - puesta.current) < 1) return;\n", "",
+     "la consola toma su propio desplazamiento por uno del participante", "01,02,03"),
     # SPEC 028: el motor de Python, la barra que lo nombra y preparar desde la consola.
     ("python", PYTHON,
      'conf["huerfana"] = conf["id"] not in vivas', 'conf["huerfana"] = False',

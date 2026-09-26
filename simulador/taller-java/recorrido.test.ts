@@ -273,10 +273,20 @@ function editorFalso(bin: string): void {
 // --- Comparar ----------------------------------------------------------------------
 
 /** Las formas en que una ruta aparece escrita: nativa, con barras, como la escribe Git Bash, y resuelta. */
+const deGitBash = new Map<string, string>();
+
 function formas(ruta: string): string[] {
   const conBarras = ruta.replaceAll('\\', '/');
   const msys = conBarras.replace(/^([A-Za-z]):/, (_, u: string) => `/${u.toLowerCase()}`);
   const todas = [ruta, conBarras, msys, conBarras.replace(/^\/private/, '')];
+  if (WINDOWS) {
+    // Como la escribe Git Bash, que monta la temporal del usuario en /tmp: con
+    // el usuario con tilde la carpeta del taller sale como /tmp/... .
+    if (!deGitBash.has(ruta)) {
+      deGitBash.set(ruta, execFileSync(herramientas().bash, ['-c', 'cygpath -u "$1"', '_', ruta], { encoding: 'utf8' }).trim());
+    }
+    todas.push(deGitBash.get(ruta) ?? msys);
+  }
   return [...new Set(todas)].sort((a, b) => b.length - a.length);
 }
 
@@ -810,6 +820,44 @@ describe('el modo taller, laboratorio por laboratorio', () => {
     expect(ayuda.programa.join('\n')).toContain('preparar 02 --forzar');
     expect(await pagina.locator('[data-propia="si"]').count()).toBeGreaterThan(0);
   }, 120_000);
+
+  it('la consola sigue pegada al final si se achica justo despues de bajar sola', async () => {
+    // Lo que paso en la integracion continua con git init: la consola baja
+    // sola, y antes de que llegue el evento de ese desplazamiento la barra
+    // crece y la consola se achica. Aqui se provoca a proposito: un primer
+    // achique, la consola vuelve a bajar, y un segundo achique antes del
+    // cuadro siguiente.
+    await escribir(pagina, 'echo pegada al final');
+    const eco = await pagina.evaluate(async () => {
+      const ecos = [...document.querySelectorAll<HTMLElement>('section[aria-label="Consola"] [data-color="orden"]')];
+      let caja = ecos.at(-1)?.parentElement ?? null;
+      while (caja !== null && !['auto', 'scroll'].includes(getComputedStyle(caja).overflowY)) caja = caja.parentElement;
+      if (caja === null) return 'sin caja';
+      if (caja.scrollHeight <= caja.clientHeight + 200) return 'la consola no desborda';
+      const alto = caja.clientHeight;
+      const cuadro = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => r()));
+      // El observador de la pagina se creo antes, asi que corre antes que
+      // este: cuando este corre, la consola ya volvio a bajar sola.
+      await new Promise<void>((listo) => {
+        const observador = new ResizeObserver(() => {
+          observador.disconnect();
+          setTimeout(() => {
+            caja.style.maxHeight = `${alto - 160}px`;
+            listo();
+          }, 0);
+        });
+        caja.style.maxHeight = `${alto - 80}px`;
+        observador.observe(caja);
+      });
+      for (let i = 0; i < 4; i++) await cuadro();
+      const ultimo = ecos.at(-1)?.getBoundingClientRect();
+      const visible = caja.getBoundingClientRect();
+      const dentro = ultimo !== undefined && ultimo.top >= visible.top - 1 && ultimo.bottom <= visible.bottom + 1;
+      caja.style.maxHeight = '';
+      return dentro ? 'visible' : `fuera: eco ${ultimo?.top}-${ultimo?.bottom}, consola ${visible.top}-${visible.bottom}`;
+    });
+    expect(eco).toBe('visible');
+  }, 60_000);
 
   it('sin repositorio la barra no dice rama, y si el programa se cierra lo dice una franja', async () => {
     await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', '.') || '.'}`);
