@@ -1,70 +1,66 @@
 
 [1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90mD:/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador[39m
 
- [31m❯[39m tests/taller/programa.test.ts [2m([22m[2m32 tests[22m[2m | [22m[33m32 skipped[39m[2m)[22m[33m 120334[2mms[22m[39m
-   [2m[90m↓[39m[22m el arranque, como lo hace el alumno (2.2 a 2.4) [2m(3)[22m
-     [2m[90m↓[39m[22m la ventana dice en dos lineas que el taller esta listo y que no se cierre, y abre el navegador
-     [2m[90m↓[39m[22m la consola parte en taller-git-trabajo, hermana del clon, que el programa creo
-     [2m[90m↓[39m[22m la pagina que sirve es SIMULADOR.html
-   [2m[90m↓[39m[22m solo la pagina propia puede mandar ordenes (3.1, 3.2 y 5.4) [2m(10)[22m
-     [2m[90m↓[39m[22m una orden sin clave recibe 403 y no se ejecuta
-     [2m[90m↓[39m[22m una orden con clave equivocada recibe 403 y no se ejecuta
-     [2m[90m↓[39m[22m una orden con otro Origin recibe 403 y no se ejecuta
-     [2m[90m↓[39m[22m una orden con Origin null recibe 403 y no se ejecuta
-     [2m[90m↓[39m[22m una orden con otro Host, como un dominio que se hace pasar por 127.0.0.1 recibe 403 y no se ejecuta
-     [2m[90m↓[39m[22m el estado tampoco se entrega sin clave
-     [2m[90m↓[39m[22m la pagina no se entrega sin la clave en la direccion
-     [2m[90m↓[39m[22m la consulta previa de CORS recibe 403 y ninguna cabecera CORS
-     [2m[90m↓[39m[22m con la clave y el origen propios, la orden si se ejecuta
-     [2m[90m↓[39m[22m escucha solo en 127.0.0.1
-   [2m[90m↓[39m[22m la consola es una terminal (3.4, 3.5, 3.9, 3.10) [2m(4)[22m
-     [2m[90m↓[39m[22m cd cambia la carpeta y se recuerda en la orden siguiente
-     [2m[90m↓[39m[22m git log largo no espera la tecla q
-     [2m[90m↓[39m[22m tildes y eñes en nombres de archivo y en mensajes
-     [2m[90m↓[39m[22m una orden a la vez: la segunda, mientras corre la primera, recibe 409
-   [2m[90m↓[39m[22m el editor (3.6 y 5.5) [2m(4)[22m
-     [2m[90m↓[39m[22m sin editor configurado, git commit termina de inmediato con un mensaje en español
-     [2m[90m↓[39m[22m con vi configurado, que necesita teclado, tambien termina de inmediato
-     [2m[90m↓[39m[22m con un editor que no esta instalado, igual
-     [2m[90m↓[39m[22m con un editor que espera, como code --wait, la orden espera a que se cierre y usa el mensaje
-   [2m[90m↓[39m[22m ordenes interactivas y limite de tiempo (3.7 y 3.8) [2m(8)[22m
-     [2m[90m↓[39m[22m «git add -p» termina de inmediato y sugiere Git Bash
-     [2m[90m↓[39m[22m «git add -i» termina de inmediato y sugiere Git Bash
-     [2m[90m↓[39m[22m «git add --patch editor.txt» termina de inmediato y sugiere Git Bash
-     [2m[90m↓[39m[22m «git checkout -p» termina de inmediato y sugiere Git Bash
-     [2m[90m↓[39m[22m «git clean -i» termina de inmediato y sugiere Git Bash
-     [2m[90m↓[39m[22m «vi README.md» termina de inmediato y sugiere Git Bash
-     [2m[90m↓[39m[22m una orden que pasa el limite se detiene, lo explica, y la consola sigue sirviendo
-     [2m[90m↓[39m[22m Git no pide usuario ni clave
-   [2m[90m↓[39m[22m el estado y la vuelta a la pagina (2.7, 2.8, 4.3) [2m(3)[22m
-     [2m[90m↓[39m[22m la huella no cambia si no se hizo nada, y cambia con un archivo editado por fuera
-     [2m[90m↓[39m[22m otro doble clic no abre un segundo taller: vuelve al mismo, en la misma carpeta
-     [2m[90m↓[39m[22m no escribio nada dentro del clon ni en la configuracion global de Git (3.11)
- [32m✓[39m tests/taller/vista.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [31m❯[39m tests/taller/programa.test.ts [2m([22m[2m32 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 45402[2mms[22m[39m
+   [32m✓[39m el arranque, como lo hace el alumno (2.2 a 2.4) [2m(3)[22m
+     [32m✓[39m la ventana dice en dos lineas que el taller esta listo y que no se cierre, y abre el navegador[32m 2[2mms[22m[39m
+     [33m[2m✓[22m[39m la consola parte en taller-git-trabajo, hermana del clon, que el programa creo[33m 337[2mms[22m[39m
+     [32m✓[39m la pagina que sirve es SIMULADOR.html[32m 5[2mms[22m[39m
+   [32m✓[39m solo la pagina propia puede mandar ordenes (3.1, 3.2 y 5.4) [2m(10)[22m
+     [33m[2m✓[22m[39m una orden sin clave recibe 403 y no se ejecuta[33m 312[2mms[22m[39m
+     [33m[2m✓[22m[39m una orden con clave equivocada recibe 403 y no se ejecuta[33m 314[2mms[22m[39m
+     [33m[2m✓[22m[39m una orden con otro Origin recibe 403 y no se ejecuta[33m 314[2mms[22m[39m
+     [33m[2m✓[22m[39m una orden con Origin null recibe 403 y no se ejecuta[33m 314[2mms[22m[39m
+     [33m[2m✓[22m[39m una orden con otro Host, como un dominio que se hace pasar por 127.0.0.1 recibe 403 y no se ejecuta[33m 314[2mms[22m[39m
+     [32m✓[39m el estado tampoco se entrega sin clave[32m 4[2mms[22m[39m
+     [32m✓[39m la pagina no se entrega sin la clave en la direccion[32m 2[2mms[22m[39m
+     [32m✓[39m la consulta previa de CORS recibe 403 y ninguna cabecera CORS[32m 1[2mms[22m[39m
+     [32m✓[39m con la clave y el origen propios, la orden si se ejecuta[32m 174[2mms[22m[39m
+     [32m✓[39m escucha solo en 127.0.0.1[32m 25[2mms[22m[39m
+   [32m✓[39m la consola es una terminal (3.4, 3.5, 3.9, 3.10) [2m(4)[22m
+     [33m[2m✓[22m[39m cd cambia la carpeta y se recuerda en la orden siguiente[33m 588[2mms[22m[39m
+     [33m[2m✓[22m[39m git log largo no espera la tecla q[33m 1120[2mms[22m[39m
+     [33m[2m✓[22m[39m tildes y eñes en nombres de archivo y en mensajes[33m 1535[2mms[22m[39m
+     [33m[2m✓[22m[39m una orden a la vez: la segunda, mientras corre la primera, recibe 409[33m 2215[2mms[22m[39m
+   [32m✓[39m el editor (3.6 y 5.5) [2m(4)[22m
+     [33m[2m✓[22m[39m sin editor configurado, git commit termina de inmediato con un mensaje en español[33m 521[2mms[22m[39m
+     [32m✓[39m con vi configurado, que necesita teclado, tambien termina de inmediato[32m 259[2mms[22m[39m
+     [32m✓[39m con un editor que no esta instalado, igual[32m 261[2mms[22m[39m
+     [33m[2m✓[22m[39m con un editor que espera, como code --wait, la orden espera a que se cierre y usa el mensaje[33m 3567[2mms[22m[39m
+   [31m❯[39m ordenes interactivas y limite de tiempo (3.7 y 3.8) [2m(8)[22m
+     [32m✓[39m «git add -p» termina de inmediato y sugiere Git Bash[32m 2[2mms[22m[39m
+     [32m✓[39m «git add -i» termina de inmediato y sugiere Git Bash[32m 1[2mms[22m[39m
+     [32m✓[39m «git add --patch editor.txt» termina de inmediato y sugiere Git Bash[32m 1[2mms[22m[39m
+     [32m✓[39m «git checkout -p» termina de inmediato y sugiere Git Bash[32m 1[2mms[22m[39m
+     [32m✓[39m «git clean -i» termina de inmediato y sugiere Git Bash[32m 1[2mms[22m[39m
+     [32m✓[39m «vi README.md» termina de inmediato y sugiere Git Bash[32m 1[2mms[22m[39m
+[31m     [31m×[31m una orden que pasa el limite se detiene, lo explica, y la consola sigue sirviendo[39m[33m 30190[2mms[22m[39m
+     [32m✓[39m Git no pide usuario ni clave[32m 277[2mms[22m[39m
+   [32m✓[39m el estado y la vuelta a la pagina (2.7, 2.8, 4.3) [2m(3)[22m
+     [33m[2m✓[22m[39m la huella no cambia si no se hizo nada, y cambia con un archivo editado por fuera[33m 311[2mms[22m[39m
+     [33m[2m✓[22m[39m otro doble clic no abre un segundo taller: vuelve al mismo, en la misma carpeta[33m 431[2mms[22m[39m
+     [32m✓[39m no escribio nada dentro del clon ni en la configuracion global de Git (3.11)[32m 5[2mms[22m[39m
+ [32m✓[39m tests/taller/vista.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 6[2mms[22m[39m
 
-[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
 
-[41m[1m FAIL [22m[49m tests/taller/programa.test.ts[2m [ tests/taller/programa.test.ts ][22m
-[31m[1mError[22m: el taller no abrio el navegador en 120222 ms. Ventana:
-El taller de Git está listo. No cierres esta ventana mientras trabajas.
-Si cierras la pestaña, vuelve a entrar en http://127.0.0.1:50092/?clave=-0jZ6ItEygFcaT6ti7-wck0ODTco-Hcn
-[39m
-[36m [2m❯[22m abrirTaller tests/taller/instalacion.ts:[2m132:11[22m[39m
-    [90m130|[39m   if (!abrio) {
-    [90m131|[39m     detener(proceso);
-    [90m132|[39m     throw new Error(`el taller no abrio el navegador en ${Date.now() -…
-    [90m   |[39m           [31m^[39m
-    [90m133|[39m   }
-    [90m134|[39m   const direccion = readFileSync(navegador.anotada, 'utf8').trim().spl…
-[90m [2m❯[22m tests/taller/programa.test.ts:[2m34:12[22m[39m
+[41m[1m FAIL [22m[49m tests/taller/programa.test.ts[2m > [22mordenes interactivas y limite de tiempo (3.7 y 3.8)[2m > [22muna orden que pasa el limite se detiene, lo explica, y la consola sigue sirviendo
+[31m[1mAssertionError[22m: expected 30186 to be less than 20000[39m
+[36m [2m❯[22m tests/taller/programa.test.ts:[2m221:33[22m[39m
+    [90m219|[39m     const inicio = Date.now();
+    [90m220|[39m     const r = await orden(taller, 'sleep 30');
+    [90m221|[39m     expect(Date.now() - inicio).toBeLessThan(20_000);
+    [90m   |[39m                                 [31m^[39m
+    [90m222|[39m     expect(r.detenida).toBe(true);
+    [90m223|[39m     expect(r.error).toMatch(/no terminó en .* y se detuvo/);
 
 [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
 
 
 [2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (2)[39m
-[2m      Tests [22m [1m[32m14 passed[39m[22m[2m | [22m[33m32 skipped[39m[90m (46)[39m
-[2m   Start at [22m 04:29:24
-[2m   Duration [22m 121.82s[2m (tests 99%, transform 1%)[22m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m45 passed[39m[22m[90m (46)[39m
+[2m   Start at [22m 04:36:29
+[2m   Duration [22m 46.09s[2m (tests 99%, transform 1%)[22m
 
 
-::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/taller/instalacion.ts,title=tests/taller/programa.test.ts,line=132,column=11::Error: el taller no abrio el navegador en 120222 ms. Ventana:%0AEl taller de Git está listo. No cierres esta ventana mientras trabajas.%0D%0ASi cierras la pestaña, vuelve a entrar en http://127.0.0.1:50092/?clave=-0jZ6ItEygFcaT6ti7-wck0ODTco-Hcn%0D%0A%0A ❯ abrirTaller tests/taller/instalacion.ts:132:11%0A ❯ tests/taller/programa.test.ts:34:12%0A%0A
+::error file=D%3A/a/curso-git-gitlab-sii/curso-git-gitlab-sii/simulador/tests/taller/programa.test.ts,title=tests/taller/programa.test.ts > ordenes interactivas y limite de tiempo (3.7 y 3.8) > una orden que pasa el limite se detiene%2C lo explica%2C y la consola sigue sirviendo,line=221,column=33::AssertionError: expected 30186 to be less than 20000%0A ❯ tests/taller/programa.test.ts:221:33%0A%0A
