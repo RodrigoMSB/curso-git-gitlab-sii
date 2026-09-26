@@ -41,7 +41,11 @@ export interface EstadoEnPantalla {
 }
 
 export function leerPantalla(pagina: Page): Promise<EstadoEnPantalla> {
-  return pagina.evaluate(() => {
+  return pagina.evaluate(async () => {
+    // Dos cuadros antes de mirar: cuando la barra crece, la consola vuelve a
+    // bajar en el cuadro siguiente, y leer entre medio veia el eco fuera de
+    // la vista aunque la pagina quedara bien (la captura lo mostraba dentro).
+    await new Promise<void>((listo) => requestAnimationFrame(() => requestAnimationFrame(() => listo())));
     const visible = (el: Element | null): boolean => {
       if (el === null) return false;
       const caja = el.getBoundingClientRect();

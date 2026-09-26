@@ -45,7 +45,9 @@ Remove-Item -Recurse -Force (Join-Path $raiz 'curso\taller\java\fuente\target') 
 cmd /c "cd /d `"$raiz\curso`" && INSTALAR.cmd < nul" | Out-Null
 if (-not (Test-Path (Join-Path $raiz 'TALLER.cmd'))) { throw 'INSTALAR.cmd no dejo TALLER.cmd' }
 if ($Motor -eq 'python') {
-  Set-Content -NoNewline (Join-Path $raiz 'curso\taller\java\taller.jar') 'no es un jar'
+  # Sin el jar, el arrancador salta directo al motor de Python.
+  Remove-Item -Force (Join-Path $raiz 'curso\taller\java\taller.jar')
+  if (Test-Path (Join-Path $raiz 'curso\taller\java\taller.jar')) { throw 'no se pudo sacar el jar' }
 }
 $env:TALLER_SIN_NAVEGADOR = '1'
 $env:GIT_CONFIG_GLOBAL = Join-Path $base 'gitconfig'
@@ -96,7 +98,8 @@ function Arrancar {
     if ($ventana.HasExited) { throw "TALLER.cmd termino antes de arrancar el motor de $esperado" }
     Start-Sleep -Milliseconds 300
   }
-  if (-not (Test-Path (Join-Path $raiz '.taller\motor'))) { throw "el motor de $esperado no arranco en 90 s" }
+  $quedo = if (Test-Path (Join-Path $raiz '.taller\motor')) { (Get-Content (Join-Path $raiz '.taller\motor') -Raw).Trim() } else { 'nada' }
+  if ($quedo -ne $esperado) { throw "se esperaba el motor de $esperado y el arrancador dejo: $quedo" }
   $direccion = (Get-Content (Join-Path $raiz '.taller\direccion') -TotalCount 1).Trim()
   $cliente = [System.Net.Http.HttpClient]::new()
   $cliente.Timeout = [TimeSpan]::FromMinutes(15)
@@ -110,8 +113,13 @@ function Orden($taller, [string] $texto) {
 }
 
 function CerrarVentana([int] $cmdPid) {
-  # WM_CLOSE a la ventana de consola de TALLER.cmd, como la X. Se hace desde
-  # otro proceso para no soltar la consola de esta prueba.
+  # Primero como la X: WM_SYSCOMMAND con SC_CLOSE y WM_CLOSE a la ventana de
+  # la consola de TALLER.cmd. En un equipo sin escritorio, como el de la
+  # integracion continua, la ventana no atiende mensajes: entonces se hace lo
+  # que hace Windows al cerrarla, terminar cada proceso unido a esa consola,
+  # que son los que recibirian CTRL_CLOSE_EVENT. La lista la da Windows,
+  # GetConsoleProcessList, no esta prueba. Se hace desde otro proceso para no
+  # soltar la consola de esta prueba.
   $guion = @"
 Add-Type @'
 using System; using System.Runtime.InteropServices;
@@ -119,24 +127,40 @@ public static class V {
   [DllImport("kernel32.dll")] public static extern bool FreeConsole();
   [DllImport("kernel32.dll")] public static extern bool AttachConsole(uint p);
   [DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
+  [DllImport("kernel32.dll")] public static extern uint GetConsoleProcessList(uint[] l, uint n);
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
 }
 '@
 [V]::FreeConsole() | Out-Null
 if (-not [V]::AttachConsole($cmdPid)) { exit 2 }
 `$h = [V]::GetConsoleWindow()
+`$lista = New-Object 'uint32[]' 64
+`$n = [V]::GetConsoleProcessList(`$lista, 64)
 [V]::FreeConsole() | Out-Null
-if (`$h -eq [IntPtr]::Zero) { exit 3 }
-if (-not [V]::PostMessage(`$h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)) { exit 4 }
+`$lista[0..([int]`$n - 1)] | Where-Object { `$_ -ne `$PID } | Set-Content '$base\unidos.txt'
+if (`$h -ne [IntPtr]::Zero) {
+  [V]::PostMessage(`$h, 0x0112, [IntPtr]0xF060, [IntPtr]::Zero) | Out-Null
+  [V]::PostMessage(`$h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+}
 exit 0
 "@
   $archivo = Join-Path $base 'cerrar.ps1'
   Set-Content -Encoding utf8 $archivo $guion
   $p = Start-Process pwsh -ArgumentList '-NoProfile', '-File', $archivo -PassThru -Wait -WindowStyle Hidden
-  if ($p.ExitCode -ne 0) { throw "no se pudo cerrar la ventana de TALLER.cmd (codigo $($p.ExitCode))" }
+  if ($p.ExitCode -ne 0) { throw "no se pudo llegar a la consola de TALLER.cmd (codigo $($p.ExitCode))" }
+  $unidos = @(Get-Content (Join-Path $base 'unidos.txt') | ForEach-Object { [int]$_ })
+  Write-Host "procesos unidos a la consola de TALLER.cmd: $($unidos -join ', ')"
+  $ventana = Get-Process -Id $cmdPid -ErrorAction SilentlyContinue
+  if ($null -ne $ventana -and -not $ventana.WaitForExit(5000)) {
+    Write-Host 'la ventana no atiende mensajes en este equipo: se terminan los procesos unidos a su consola, como hace Windows al cerrarla'
+    foreach ($u in $unidos) { Stop-Process -Id $u -Force -ErrorAction SilentlyContinue }
+  } else {
+    Write-Host 'la ventana se cerro con el mensaje'
+  }
 }
 
-function EsperarQueMueran($procesos, [string] $cuando) {
+function EsperarQueMueran($procesos, [string] $cuando, [int[]] $salvo = @()) {
+  $procesos = @($procesos | Where-Object { $_.ProcessId -notin $salvo })
   $limite = (Get-Date).AddSeconds(20)
   do {
     $vivos = Vivos $procesos
@@ -178,9 +202,12 @@ if ($Cierre -eq 'ventana') {
   $motorProceso = $arbol | Where-Object { $_.Name -in 'java.exe', 'python.exe', 'py.exe' } | Select-Object -Last 1
   Write-Host "se termina de golpe el motor, $($motorProceso.Name) $($motorProceso.ProcessId)"
   Stop-Process -Id $motorProceso.ProcessId -Force
-  EsperarQueMueran $arbol 'al terminar el motor'
+  # La ventana queda, a proposito: arrancar.cmd hace pause para que se lea el
+  # mensaje. Ella y su conhost no cuentan; todo lo demas tiene que terminar.
+  $laVentana = @($primero.Ventana.Id) + @($arbol | Where-Object { $_.Name -eq 'conhost.exe' -and $_.ParentProcessId -eq $primero.Ventana.Id } | ForEach-Object { [int]$_.ProcessId })
+  EsperarQueMueran $arbol 'al terminar el motor' $laVentana
+  CerrarVentana $primero.Ventana.Id
 }
-$null = $tarea.ContinueWith({ param($t) $t.Exception }, [System.Threading.Tasks.TaskContinuationOptions]::OnlyOnFaulted)
 
 # --- 2. Un segundo arranque, enseguida --------------------------------------
 
