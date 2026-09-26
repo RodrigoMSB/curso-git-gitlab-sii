@@ -1,8 +1,9 @@
 # El recorrido del modo taller corrido por un usuario de Windows de verdad,
-# con espacio y tilde en su carpeta personal (punto 7.3 del SPEC 026).
+# con espacio y tilde en su carpeta personal (punto 7.3 del SPEC 026), con el
+# motor que diga TALLER_MOTOR (SPEC 028).
 #
 # Solo para la integracion continua: crea un usuario local en la maquina.
-# Todo lo que el recorrido arma, el clon, taller-git-trabajo y la casa, queda
+# Todo lo que el recorrido arma, taller-git con el clon adentro y la casa, queda
 # bajo C:\Users\José Pérez, porque sale de la carpeta temporal de ese usuario.
 
 $ErrorActionPreference = 'Stop'
@@ -35,9 +36,10 @@ New-Item -ItemType Directory -Force `$env:TEMP | Out-Null
 Remove-Item Env:GITHUB_ACTIONS, Env:GITHUB_STEP_SUMMARY, Env:GITHUB_OUTPUT, Env:GITHUB_ENV -ErrorAction SilentlyContinue
 `$env:TALLER_CAPTURAS = '$base\salida\recorrido'
 `$env:TALLER_NAVEGADOR = 'msedge'
+`$env:TALLER_MOTOR = '$($env:TALLER_MOTOR)'
 Set-Location '$base\repo\simulador'
 "usuario `$env:USERNAME, carpeta personal `$env:USERPROFILE, temporal `$env:TEMP" | Out-File -Encoding utf8 '$base\salida\quien.txt'
-npx vitest run --config vitest.taller-java.config.ts *>&1 | Out-File -Encoding utf8 '$base\salida\registro.txt'
+npx vitest run --config vitest.taller-java.config.ts taller-java/recorrido.test.ts *>&1 | Out-File -Encoding utf8 '$base\salida\registro.txt'
 exit `$LASTEXITCODE
 "@
 Set-Content -Encoding utf8 "$base\correr.ps1" $guion

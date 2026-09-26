@@ -23,7 +23,8 @@
  *
  *   TALLER_NAVEGADOR   chrome o msedge (por omision chrome)
  *   TALLER_LABS        01,02,... (por omision los ocho)
- *   TALLER_CAPTURAS    carpeta de salida (por omision simulador/capturas-taller-java)
+ *   TALLER_MOTOR       java o python. Con python el jar se sabotea y la cascada llega a Python.
+ *   TALLER_CAPTURAS    carpeta de salida (por omision simulador/capturas-taller-java/<motor>)
  */
 
 import { type ChildProcess, spawn } from 'node:child_process';
@@ -40,7 +41,7 @@ import {
   chmodSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, posix, resolve } from 'node:path';
+import { dirname, join, posix, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { chromium, type Browser, type Page } from 'playwright';
@@ -59,9 +60,11 @@ const AQUI = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(AQUI, '..', '..');
 const CANAL = process.env.TALLER_NAVEGADOR ?? 'chrome';
 const NUMEROS = (process.env.TALLER_LABS ?? '01,02,03,04,05,06,07,08').split(',');
-const SALIDA = process.env.TALLER_CAPTURAS ?? join(REPO, 'simulador', 'capturas-taller-java');
+/** El motor que se prueba. Con python, el jar del motor de Java se sabotea y la cascada tiene que llegar al de Python. */
+const MOTOR = process.env.TALLER_MOTOR === 'python' ? 'python' : 'java';
+const SALIDA = process.env.TALLER_CAPTURAS ?? join(REPO, 'simulador', 'capturas-taller-java', MOTOR);
 const CON_CAPTURAS = new Set(['01', '02']);
-const CLON = 'curso-git-gitlab-sii';
+const CLON = 'curso';
 
 // --- Los pasos del guion ------------------------------------------------------
 
@@ -186,7 +189,8 @@ interface Lado {
 const FECHA = '@1772370000 -0300';
 
 function prepararLado(raiz: string, nombre: string, bin: string): Lado {
-  const limite = join(raiz, 'Ana Núñez', nombre);
+  // La carpeta unica del SPEC 028: taller-git, con el clon adentro en curso/.
+  const limite = join(raiz, 'Ana Núñez', nombre, 'taller-git');
   const casa = join(raiz, `José Pérez ${nombre}`);
   mkdirSync(limite, { recursive: true });
   mkdirSync(casa, { recursive: true });
@@ -216,7 +220,7 @@ function prepararLado(raiz: string, nombre: string, bin: string): Lado {
       .filter((c) => !/\\Git\\(cmd|bin|mingw64|usr)/i.test(c))
       .join(';');
   }
-  return { limite, casa, plan, entorno, carpeta: 'taller-git-trabajo', salidas: new Map() };
+  return { limite, casa, plan, entorno, carpeta: '', salidas: new Map() };
 }
 
 /**
@@ -236,19 +240,25 @@ function copiar(origen: string, destino: string): void {
   chmodSync(destino, statSync(origen).mode);
 }
 
-function clonar(destino: string): void {
+/** Instala el taller como el participante: clona en taller-git/curso y corre instalar.command. */
+function instalar(limite: string): void {
+  const destino = join(limite, CLON);
   execFileSync(herramientas().git, ['clone', '-q', REPO, destino], { stdio: 'ignore' });
   // Lo que todavia no esta confirmado en la rama viaja igual: el recorrido
   // prueba el arbol de trabajo, no el ultimo commit. En la integracion
   // continua el arbol es el commit y no hace falta.
   if (process.env.CI !== 'true') {
-    for (const ruta of ['SIMULADOR.html', 'taller-java/taller.jar', 'taller-java/arrancar.sh', 'taller-java.sh', 'labs']) {
+    for (const ruta of ['SIMULADOR.html', 'taller', 'labs', 'INSTALAR.cmd', 'instalar.command']) {
       copiar(join(REPO, ruta), join(destino, ruta));
     }
   }
-  if (!existsSync(join(destino, 'taller-java', 'jre')) && existsSync(join(REPO, 'taller-java', 'jre'))) {
-    copiar(join(REPO, 'taller-java', 'jre'), join(destino, 'taller-java', 'jre'));
+  if (!existsSync(join(destino, 'taller', 'java', 'jre')) && existsSync(join(REPO, 'taller', 'java', 'jre'))) {
+    copiar(join(REPO, 'taller', 'java', 'jre'), join(destino, 'taller', 'java', 'jre'));
   }
+  const instalado = execFileSync(herramientas().bash, [join(destino, 'instalar.command').replaceAll('\\', '/')], {
+    encoding: 'utf8',
+  });
+  if (!existsSync(join(limite, 'taller.sh'))) throw new Error(`instalar.command no dejo los envoltorios:\n${instalado}`);
 }
 
 /** El `code` falso que el laboratorio 01 deja como editor. */
@@ -371,14 +381,14 @@ function cerrarPrograma(): void {
     // bash de Git para Windows no reemplaza su proceso al hacer exec de un
     // programa de Windows, y java puede quedar fuera del arbol. Se cierra el
     // java que corre el taller.jar de este clon, y ningun otro.
-    const jar = join(A.limite, CLON, 'taller-java', 'taller.jar').replaceAll("'", "''");
+    const clon = join(A.limite, CLON).replaceAll("'", "''");
     try {
       execFileSync(
         'powershell',
         [
           '-NoProfile',
           '-Command',
-          `Get-CimInstance Win32_Process -Filter "Name='java.exe'" | Where-Object { $_.CommandLine -like '*${jar}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`,
+          `Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(java|python|py)' -and $_.CommandLine -like '*${clon}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`,
         ],
         { stdio: 'ignore' },
       );
@@ -403,12 +413,24 @@ async function diagnostico(): Promise<{ procesos: number; version: number }> {
  * desde la raiz de su clon.
  */
 function gemeloDe(texto: string): ReturnType<typeof correrEnBash> {
-  const propia = texto.match(/^(preparar|verificar)\s+0?(\d+)(\s+--forzar)?$/);
-  if (propia !== null) {
-    const nn = (propia[2] ?? '').padStart(2, '0');
-    return correrEnBash(`labs/lab-${nn}/${propia[1]}.sh${propia[3] ?? ''}`, join(B.limite, CLON), B.entorno);
+  // Como la consola: la raiz del taller en el PATH, para preparar y verificar,
+  // y un archivo donde preparar deja la carpeta a la que hay que ir.
+  const cd = join(B.casa, 'cd-despues');
+  rmSync(cd, { force: true });
+  const r = correrEnBash(texto, absoluta(B), {
+    ...B.entorno,
+    PATH: `${B.limite}${WINDOWS ? ';' : ':'}${B.entorno.PATH ?? ''}`,
+    TALLER_CD_DESPUES: cd,
+  });
+  if (existsSync(cd)) {
+    const destino = readFileSync(cd, 'utf8').trim().replace(/^\/([a-zA-Z])\//, (_, u: string) => `${u.toUpperCase()}:/`);
+    const relativa = posix.normalize(
+      relative(realpathSync.native(B.limite), realpathSync.native(destino)).replaceAll('\\', '/'),
+    );
+    B.carpeta = relativa === '.' ? '' : relativa;
+    A.carpeta = B.carpeta;
   }
-  return correrEnBash(texto, absoluta(B), B.entorno);
+  return r;
 }
 
 /**
@@ -432,12 +454,6 @@ async function esperarAlDibujo(carpeta: string): Promise<{ ms: number; dif: stri
 const absoluta = (lado: Lado): string => join(lado.limite, ...lado.carpeta.split('/'));
 
 function moverse(lado: Lado, texto: string): void {
-  // preparar deja la consola en el recetario del laboratorio.
-  const preparado = texto.match(/^preparar\s+0?(\d+)/)?.[1];
-  if (preparado !== undefined) {
-    lado.carpeta = `taller-git-trabajo/lab-${preparado.padStart(2, '0')}/recetario`;
-    return;
-  }
   const m = texto.match(/^cd\s+(\S+)$/);
   if (m?.[1] === undefined) return;
   lado.carpeta = posix.normalize(posix.join(lado.carpeta, m[1])).replace(/^\.$/, '');
@@ -450,15 +466,21 @@ beforeAll(async () => {
   editorFalso(bin);
   A = prepararLado(raiz, 'SII', bin);
   B = prepararLado(raiz, 'SII gemelo', bin);
-  clonar(join(A.limite, CLON));
-  clonar(join(B.limite, CLON));
-  mkdirSync(join(B.limite, 'taller-git-trabajo'), { recursive: true });
+  instalar(A.limite);
+  instalar(B.limite);
+  if (MOTOR === 'python') {
+    // Java saboteado: la cascada del arrancador tiene que llegar a Python.
+    writeFileSync(join(A.limite, CLON, 'taller', 'java', 'taller.jar'), 'no es un jar');
+  }
   rmSync(SALIDA, { recursive: true, force: true });
   mkdirSync(SALIDA, { recursive: true });
 
-  programa = spawn(herramientas().bash, [join(A.limite, CLON, 'taller-java.sh').replaceAll('\\', '/')], {
-    cwd: join(A.limite, CLON),
-    env: A.entorno,
+  // En Windows, como TALLER.cmd: bash --login, que arma su propio PATH aunque
+  // el del sistema no tenga Git, y se queda en la carpeta de la que parte.
+  const taller = join(A.limite, 'taller.sh').replaceAll('\\', '/');
+  programa = spawn(herramientas().bash, WINDOWS ? ['--login', taller] : [taller], {
+    cwd: A.limite,
+    env: WINDOWS ? { ...A.entorno, CHERE_INVOKING: '1' } : A.entorno,
   });
   programa.stdout?.on('data', (d) => (registroPrograma += d));
   programa.stderr?.on('data', (d) => (registroPrograma += d));
@@ -474,6 +496,11 @@ beforeAll(async () => {
   compositor = await navegador.newPage({ viewport: { width: 1920, height: 850 } });
   await pagina.goto(direccion);
   await pagina.locator('[data-prueba="entrada-consola"]').waitFor({ state: 'visible' });
+  // La barra dice el motor que quedo corriendo (SPEC 028, 3.3).
+  const motor = await pagina.locator('[data-prueba="barra-motor"]').textContent();
+  if (motor !== `motor ${MOTOR === 'java' ? 'Java' : 'Python'}`) {
+    throw new Error(`la barra dice «${motor}» y se esperaba el motor ${MOTOR}:\n${registroPrograma}`);
+  }
 }, 180_000);
 
 afterAll(async () => {
@@ -491,17 +518,17 @@ afterAll(async () => {
     }
     lineas.push('');
   }
-  writeFileSync(join(SALIDA, `resultado-${process.platform}-${CANAL}.md`), lineas.join('\n'));
+  writeFileSync(join(SALIDA, `resultado-${process.platform}-${CANAL}-${MOTOR}.md`), lineas.join('\n'));
 
   // El indice de las capturas y un zip con todas, para revisarlas una por una.
   const indice = ['# Capturas del modo taller', '', 'A la izquierda la pagina, a la derecha lo que Git imprimio corrido aparte.', ''];
   for (const r of resultados.filter((x) => CON_CAPTURAS.has(x.lab) && x.tipo === 'orden' && !x.texto.startsWith('(editor)'))) {
-    const nombre = `lab-${r.lab}-${String(r.paso).padStart(3, '0')}.jpg`;
+    const nombre = `lab-${r.lab}-${String(r.paso).padStart(3, '0')}-${MOTOR}.jpg`;
     if (existsSync(join(SALIDA, nombre))) indice.push(`- [${nombre}](${nombre}) ${r.igual ? 'igual' : 'DISTINTA'} \`${r.texto}\``);
   }
   writeFileSync(join(SALIDA, 'indice.md'), indice.join('\n'));
   try {
-    const zip = join(SALIDA, `capturas-${process.platform}-${CANAL}.zip`);
+    const zip = join(SALIDA, `capturas-${process.platform}-${CANAL}-${MOTOR}.zip`);
     if (WINDOWS) execFileSync('tar.exe', ['-a', '-c', '-f', zip, '-C', SALIDA, 'indice.md', ...readdirSync(SALIDA).filter((f) => f.endsWith('.jpg'))]);
     else execFileSync('zip', ['-q', '-j', zip, join(SALIDA, 'indice.md'), ...readdirSync(SALIDA).filter((f) => f.endsWith('.jpg')).map((f) => join(SALIDA, f))]);
   } catch (error) {
@@ -519,7 +546,7 @@ describe('el modo taller, laboratorio por laboratorio', () => {
       // En Windows el clon llega con CRLF, por el core.autocrlf de Git para Windows.
       const enunciado = readFileSync(join(REPO, 'labs', `lab-${numero}`, 'README.md'), 'utf8').replaceAll('\r\n', '\n');
       // Desde el SPEC 027 el enunciado no pide ir al clon: preparar deja la
-      // consola en el laboratorio, y el 01 empieza en taller-git-trabajo.
+      // consola en el laboratorio, y el 01 empieza en la raiz, taller-git.
       const pasos: Paso[] = pasosDe(numero, enunciado, alias);
       let paso = 0;
       for (const p of pasos) {
@@ -576,11 +603,11 @@ describe('el modo taller, laboratorio por laboratorio', () => {
         // las dos preparaciones no coinciden se anota, y el gemelo sigue desde
         // una copia exacta de la del participante: lo que se compara despues
         // es el programa, no el script.
-        const preparado = gemelo.codigo === 0 ? textoA.match(/^preparar\s+(\d+)/)?.[1] : undefined;
+        const preparado = gemelo.codigo === 0 ? textoA.match(/^preparar\s+0?(\d+)/)?.[1]?.padStart(2, '0') : undefined;
         let avisoPreparacion: string | null = null;
         if (preparado !== undefined) {
-          const carpetaA = join(A.limite, 'taller-git-trabajo', `lab-${preparado}`);
-          const carpetaB = join(B.limite, 'taller-git-trabajo', `lab-${preparado}`);
+          const carpetaA = join(A.limite, `lab-${preparado}`);
+          const carpetaB = join(B.limite, `lab-${preparado}`);
           const huella = (carpeta: string): string =>
             readdirSync(carpeta)
               .filter((n) => existsSync(join(carpeta, n, '.git')))
@@ -664,7 +691,7 @@ describe('el modo taller, laboratorio por laboratorio', () => {
             `Laboratorio ${numero} · paso ${paso} · ${textoA}`,
             derecha,
             dif.length === 0,
-            join(SALIDA, `lab-${numero}-${String(paso).padStart(3, '0')}.jpg`),
+            join(SALIDA, `lab-${numero}-${String(paso).padStart(3, '0')}-${MOTOR}.jpg`),
           );
         }
       }
@@ -700,7 +727,7 @@ describe('el modo taller, laboratorio por laboratorio', () => {
       diferencias: [],
     });
     writeFileSync(
-      join(SALIDA, `reposo-${process.platform}-${CANAL}.txt`),
+      join(SALIDA, `reposo-${process.platform}-${CANAL}-${MOTOR}.txt`),
       `procesos en 60 s de reposo ${despues.procesos - antes.procesos}\ncambio de afuera visible en ${demoras.join(', ')} ms, mediana ${mediana} ms\n`,
     );
     expect(despues.procesos - antes.procesos).toBe(0);
@@ -751,13 +778,13 @@ describe('el modo taller, laboratorio por laboratorio', () => {
   }, 60_000);
 
   it('la consola avisa dos ordenes pegadas, y muestra una salida larga desde su principio', async () => {
-    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', 'taller-git-trabajo') || '.'}`);
-    A.carpeta = 'taller-git-trabajo';
+    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', '.') || '.'}`);
+    A.carpeta = '';
     await escribir(pagina, 'mkdir -p prueba-dos cd prueba-dos');
     const pegadas = await salidaDeLaUltimaOrden(pagina);
     expect(pegadas.programa.join(' ')).toContain('¿Eran dos órdenes?');
     // La orden corrio igual: bash creo las tres carpetas.
-    expect(existsSync(join(A.limite, 'taller-git-trabajo', 'cd'))).toBe(true);
+    expect(existsSync(join(A.limite, 'cd'))).toBe(true);
     await pagina.screenshot({ path: join(SALIDA, 'dos-ordenes.jpg'), type: 'jpeg', quality: 80 });
     await escribir(pagina, 'rm -rf prueba-dos ./cd');
 
@@ -770,7 +797,7 @@ describe('el modo taller, laboratorio por laboratorio', () => {
     await pagina.locator('[data-prueba="mas-abajo"]').click();
     await pagina.waitForTimeout(200);
     expect((await leerPantalla(pagina)).masAbajo).toBe(false);
-    A.carpeta = 'taller-git-trabajo/lab-03/recetario';
+    A.carpeta = 'lab-03/recetario';
 
     // ayuda, y el eco de las ordenes propias en otro color.
     await escribir(pagina, 'ayuda');
@@ -780,8 +807,8 @@ describe('el modo taller, laboratorio por laboratorio', () => {
   }, 120_000);
 
   it('sin repositorio la barra no dice rama, y si el programa se cierra lo dice una franja', async () => {
-    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', 'taller-git-trabajo') || '.'}`);
-    A.carpeta = 'taller-git-trabajo';
+    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', '.') || '.'}`);
+    A.carpeta = '';
     const pantalla = await leerPantalla(pagina);
     expect(pantalla.barraSinRepositorio).toBe(true);
     expect(pantalla.barraConRama).toBe(false);

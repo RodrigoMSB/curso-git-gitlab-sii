@@ -6,7 +6,7 @@ Cada mutacion mete a proposito un defecto en el codigo, corre la prueba que
 deberia atraparlo y deja el codigo como estaba. Una mutacion que la prueba no
 atrapa es una prueba que no comprueba lo que dice.
 
-Uso, desde taller-java/fuente:  python3 mutaciones.py
+Uso, desde taller/java/fuente:  python3 mutaciones.py
 """
 import pathlib
 import subprocess

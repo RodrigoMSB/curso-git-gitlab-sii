@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Genera los dos runtimes de Java que viajan en el clon (punto 6.2 del SPEC 026).
 #
-#     taller-java/fuente/generar-runtimes.sh
+#     taller/java/fuente/generar-runtimes.sh
 #
-# Deja taller-java/jre/windows-x64 y taller-java/jre/macos-aarch64, recortados
+# Deja taller/java/jre/windows-x64 y taller/java/jre/macos-aarch64, recortados
 # con jlink a partir de los jmods de Eclipse Temurin 21. jlink arma un runtime
 # para otra plataforma si recibe los jmods de esa plataforma, asi que los dos
 # salen de una sola maquina: el jlink es el del JDK de esta maquina, de la
@@ -29,7 +29,7 @@ LINUX_ARCHIVO='OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz'
 LINUX_SUMA='ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94'
 
 # Los modulos que el programa usa de verdad. Salen de
-#     jdeps --print-module-deps --ignore-missing-deps taller-java/taller.jar
+#     jdeps --print-module-deps --ignore-missing-deps taller/java/taller.jar
 # y el script lo vuelve a comprobar antes de recortar.
 MODULOS='java.base,jdk.httpserver'
 

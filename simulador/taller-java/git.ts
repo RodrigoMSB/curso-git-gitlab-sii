@@ -85,7 +85,11 @@ export function estadoSegunGit(carpeta: string, entorno: NodeJS.ProcessEnv): Est
     if (!dentro) return { repositorio: false, ...vacio };
     return { repositorio: true, ...vacio };
   }
-  const e = (...a: string[]): string | null => git(raiz, entorno, ...a);
+  // Sin el candado opcional: un git status comun refresca .git/index, el
+  // motor ve el cambio y hace una lectura que no pidio nadie de la pagina.
+  // Lo destapo la prueba del reposo (SPEC 028).
+  const sinCandado = { ...entorno, GIT_OPTIONAL_LOCKS: '0' };
+  const e = (...a: string[]): string | null => git(raiz, sinCandado, ...a);
   const rama = e('symbolic-ref', '-q', '--short', 'HEAD')?.trim() || null;
   const head = e('rev-parse', '-q', '--verify', '--short=7', 'HEAD')?.trim() || null;
 
