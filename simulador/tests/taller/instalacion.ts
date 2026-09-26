@@ -72,15 +72,13 @@ export function entornoDe(casa: string, extra: NodeJS.ProcessEnv = {}): NodeJS.P
 
 function navegadorDeMentira(raiz: string): { comando: string; anotada: string } {
   const anotada = join(raiz, 'navegador-abrio.txt');
-  if (WINDOWS) {
-    const script = join(raiz, 'navegador.cmd');
-    writeFileSync(script, `@echo off\r\necho %~1>>"${anotada}"\r\n`);
-    return { comando: script.replace(/\\/g, '/'), anotada };
-  }
-  const script = join(raiz, 'navegador.sh');
-  writeFileSync(script, `#!/bin/sh\necho "$1" >> '${anotada}'\n`);
-  chmodSync(script, 0o755);
-  return { comando: script, anotada };
+  // Un script de Node, el mismo en los dos sistemas. Python parte `BROWSER`
+  // como una linea de shell: las rutas van entre comillas y con barras
+  // normales, que Windows tambien acepta.
+  const script = join(raiz, 'navegador.cjs');
+  writeFileSync(script, `require('fs').appendFileSync(${JSON.stringify(anotada)}, process.argv[2] + '\\n');\n`);
+  const barras = (ruta: string): string => ruta.replace(/\\/g, '/');
+  return { comando: `"${barras(process.execPath)}" "${barras(script)}" %s`, anotada };
 }
 
 /** Arranca el lanzador del clon, como el doble clic. */
