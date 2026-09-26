@@ -95,7 +95,7 @@ public final class Principal {
             System.out.println("  ATENCIÓN. " + aviso);
             System.out.println();
         }
-        Registro.escribir("Git en " + git.git() + ", bash en " + git.bash());
+        Registro.escribir("Git en " + git.git() + ", bash en " + git.bash() + ", encontrado por " + git.origen());
         System.out.flush();
 
         if (!sinNavegador) Navegador.abrir(sistema, servidor.direccion());

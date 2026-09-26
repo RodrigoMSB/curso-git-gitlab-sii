@@ -72,8 +72,10 @@ final class Comprobacion {
 
         CountDownLatch llego = new CountDownLatch(1);
         servidor.ruta("/llego", true, x -> {
-            llego.countDown();
+            // Primero la respuesta y despues el aviso: el servidor se detiene
+            // apenas llega el aviso, y detenido antes cortaba la respuesta.
             Servidor.responder(x, 200, "text/html; charset=utf-8", PAGINA.getBytes(StandardCharsets.UTF_8));
+            llego.countDown();
         });
         servidor.iniciar();
         String direccion = "http://127.0.0.1:" + servidor.puerto() + "/llego?clave=" + servidor.clave();
