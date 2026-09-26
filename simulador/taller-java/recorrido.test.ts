@@ -531,6 +531,26 @@ describe('el modo taller, laboratorio por laboratorio', () => {
           moverse(B, textoB);
         }
         const salidaB = [gemelo.salida, gemelo.error].filter((t) => t !== '').join('');
+        // preparar.sh tiene que dar la misma historia en cualquier maquina. Si
+        // las dos preparaciones no coinciden se anota, y el gemelo sigue desde
+        // una copia exacta de la del participante: lo que se compara despues
+        // es el programa, no el script.
+        const preparado = textoA.match(/^labs\/lab-(\d+)\/preparar\.sh$/)?.[1];
+        let avisoPreparacion: string | null = null;
+        if (preparado !== undefined) {
+          const carpetaA = join(A.limite, 'taller-git-trabajo', `lab-${preparado}`);
+          const carpetaB = join(B.limite, 'taller-git-trabajo', `lab-${preparado}`);
+          const huella = (carpeta: string): string =>
+            readdirSync(carpeta)
+              .filter((n) => existsSync(join(carpeta, n, '.git')))
+              .map((n) => `${n} ${estadoSegunGit(join(carpeta, n), A.entorno).confirmaciones.join(',')}`)
+              .join('\n');
+          if (huella(carpetaA) !== huella(carpetaB)) {
+            avisoPreparacion = `preparar.sh dio historias distintas en la copia y en el gemelo:\n${huella(carpetaA)}\n---\n${huella(carpetaB)}`;
+          }
+          rmSync(carpetaB, { recursive: true, force: true });
+          copiar(carpetaA, carpetaB);
+        }
         A.salidas.set(p.orden.texto, consola.git);
         B.salidas.set(p.orden.texto, salidaB);
 
@@ -541,7 +561,16 @@ describe('el modo taller, laboratorio por laboratorio', () => {
         const enGit = normalizar(salidaB, B);
         if (enConsola !== enGit) dif.push(`consola:\n--- pagina\n${enConsola}\n--- Git\n${enGit}`);
         const texto = p.arnes === undefined ? textoA : `${textoA}   (arnés: ${p.arnes})`;
-        resultados.push({ lab: numero, paso, texto, tipo: 'orden', igual: dif.length === 0, diferencias: dif, ms, programa: consola.programa });
+        resultados.push({
+          lab: numero,
+          paso,
+          texto,
+          tipo: 'orden',
+          igual: dif.length === 0,
+          diferencias: avisoPreparacion === null ? dif : [...dif, `(aviso, no cuenta como diferencia) ${avisoPreparacion}`],
+          ms,
+          programa: consola.programa,
+        });
 
         if (CON_CAPTURAS.has(numero)) {
           const captura = await pagina.screenshot({ type: 'jpeg', quality: 85 });
