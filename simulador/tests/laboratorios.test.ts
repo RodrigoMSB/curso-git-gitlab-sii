@@ -93,13 +93,15 @@ function armarLaboratorio(opciones: { conAlias?: boolean; clonDeVerdad?: boolean
   const { raiz, clon, configGlobal } = montarClon(clonDeVerdad);
   const carpeta = join(clon, 'labs', 'lab-01');
 
-  // Parte 1 · la configuracion, que el enunciado pide global.
+  // Parte 1 · la configuracion, que el enunciado pide global, con la rama
+  // inicial main como en el punto 1.1: sin ella la rama depende del Git de la
+  // maquina, y en el Mac de la integracion continua es master.
   const alias = conAlias
     ? '[alias]\n\ts = status -s\n\tlg = log --oneline --graph --all --decorate\n'
     : '';
   writeFileSync(
     configGlobal,
-    `[user]\n\tname = Participante Taller\n\temail = participante@institucion.cl\n${alias}`,
+    `[user]\n\tname = Participante Taller\n\temail = participante@institucion.cl\n[init]\n\tdefaultBranch = main\n${alias}`,
   );
 
   // Parte 2 · el repositorio nace en la carpeta del taller, al lado del clon y

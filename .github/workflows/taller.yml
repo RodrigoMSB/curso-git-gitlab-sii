@@ -3,8 +3,9 @@
 # 1. runtimes: los dos runtimes de Java, generados con el script del
 #    repositorio desde los jmods de Temurin con sus sumas fijas, como
 #    artefacto para los demas trabajos.
-# 2. unidad: las pruebas de Java, el jar confirmado contra el codigo, la suite
-#    del simulador y SIMULADOR.html contra su manifiesto.
+# 2. unidad: las pruebas de Java y el jar confirmado contra el codigo, en
+#    Windows y en Mac; simulador: la suite y SIMULADOR.html contra su
+#    manifiesto, en Linux.
 # 3. instalacion: de cero, como el participante: taller-git, el clon como
 #    curso, INSTALAR y TALLER, con cada paso de la cascada (Java, Python con
 #    el jar saboteado, respaldo con los dos saboteados), y en Windows ademas
@@ -66,9 +67,23 @@ jobs:
           (cd "$RUNNER_TEMP/a" && unzip -q -o "$GITHUB_WORKSPACE/taller/java/taller.jar")
           (cd "$RUNNER_TEMP/b" && unzip -q -o "$GITHUB_WORKSPACE/taller/java/fuente/target/taller.jar")
           diff -r "$RUNNER_TEMP/a" "$RUNNER_TEMP/b" && echo "el jar confirmado es el del codigo"
+
+  # La suite del simulador se escribio para correr en el Mac del desarrollo:
+  # varias pruebas dependen del Git de la maquina (la lista de ordenes, la rama
+  # inicial) y de permisos de ejecucion que Windows no tiene. Aqui corre en
+  # Linux, con el Git del sistema.
+  simulador:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sin convertir finales de linea al bajar el codigo
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Suite del simulador
         working-directory: simulador
-        run: npm ci && npm run comprobar && npx vitest run
+        run: git --version && npm ci && npm run comprobar && npx vitest run
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 

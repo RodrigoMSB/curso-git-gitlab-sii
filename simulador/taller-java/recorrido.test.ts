@@ -423,7 +423,12 @@ function gemeloDe(texto: string): ReturnType<typeof correrEnBash> {
     TALLER_CD_DESPUES: cd,
   });
   if (existsSync(cd)) {
-    const destino = readFileSync(cd, 'utf8').trim().replace(/^\/([a-zA-Z])\//, (_, u: string) => `${u.toUpperCase()}:/`);
+    // En Windows la ruta es de Git Bash, y puede ser /c/... o /tmp/..., que
+    // Git Bash monta en la carpeta temporal del usuario: la traduce cygpath.
+    const escrita = readFileSync(cd, 'utf8').trim();
+    const destino = WINDOWS
+      ? execFileSync(herramientas().bash, ['-c', 'cygpath -m "$1"', '_', escrita], { encoding: 'utf8' }).trim()
+      : escrita;
     const relativa = posix.normalize(
       relative(realpathSync.native(B.limite), realpathSync.native(destino)).replaceAll('\\', '/'),
     );
