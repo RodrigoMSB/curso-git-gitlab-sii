@@ -212,4 +212,4 @@ if ($fallas.Count -gt 0) {
   Write-Host "`n$($fallas.Count) falla(s), motor $Motor, cierre $Cierre"
   exit 1
 }
-Write-Host "`nBIEN   motor $Motor, cierre $Cierre: nada vivo, y el segundo arranque trabaja en lab-01"
+Write-Host "`nBIEN   motor $Motor, cierre ${Cierre}: nada vivo, y el segundo arranque trabaja en lab-01"
