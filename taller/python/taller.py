@@ -163,6 +163,11 @@ class Trabajo:
     ordenes. Sin esto un bash, un git o un sleep a medio correr quedaban
     vivos, parados en la carpeta del laboratorio, y el siguiente arranque no
     la podia borrar.
+
+    El motor mismo entra en ese trabajo al arrancar, y asi todo lo que lanza
+    nace dentro. Sumar cada proceso despues de lanzarlo deja una carrera: el
+    bash.exe de Git para Windows es un lanzador que abre enseguida el bash de
+    verdad, que puede nacer fuera.
     """
 
     _del_motor: Optional[int] = None
@@ -201,6 +206,10 @@ class Trabajo:
             # JobObjectExtendedLimitInformation
             if not kernel32.SetInformationJobObject(ctypes.c_void_p(manija), 9, ctypes.byref(info),
                                                     ctypes.sizeof(info)):
+                kernel32.CloseHandle(ctypes.c_void_p(manija))
+                return None
+            kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+            if not kernel32.AssignProcessToJobObject(ctypes.c_void_p(manija), ctypes.c_void_p(kernel32.GetCurrentProcess())):
                 kernel32.CloseHandle(ctypes.c_void_p(manija))
                 return None
             cls._del_motor = manija
@@ -1260,6 +1269,14 @@ def abrir_navegador(direccion: str) -> None:
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
+    if WINDOWS:
+        # Antes de lanzar nada: desde aqui todo nace dentro del trabajo del motor.
+        import ctypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateJobObjectW.restype = ctypes.c_void_p
+        if Trabajo.del_motor(kernel32) is None:
+            print("  Aviso: no se pudo crear el trabajo de Windows que cierra las ordenes junto con el taller.")
     clon = ubicar_clon()
     limite = clon.parent
     propia = limite / ".taller"

@@ -59,11 +59,11 @@ public final class Procesos {
             });
         }
         if (entrada == null) pb.redirectInput(ProcessBuilder.Redirect.from(nulo()));
+        // Una orden no se lanza hasta que el motor este dentro de su trabajo,
+        // para que todo lo que abra nazca dentro (ver Custodio).
+        if (entrada != null) Custodio.esperar();
         LANZADOS.incrementAndGet();
         Process p = pb.start();
-        // Una orden entra al trabajo del motor antes de recibir lo que tiene
-        // que hacer: bash no lanza nada hasta leerlo.
-        if (entrada != null) Custodio.sumar(p);
         if (entrada != null) {
             try (var in = p.getOutputStream()) {
                 in.write(entrada.getBytes(java.nio.charset.StandardCharsets.UTF_8));

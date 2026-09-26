@@ -24,13 +24,16 @@ import java.util.concurrent.TimeUnit;
  * Windows tiene para eso los objetos de trabajo marcados con
  * KILL_ON_JOB_CLOSE: al cerrarse su ultima manija, terminan todos sus
  * procesos. Java 21 no los alcanza sin codigo nativo, asi que el motor lanza al
- * arrancar un ayudante de PowerShell que crea el trabajo y le va sumando cada
- * orden. El ayudante lee numeros de proceso por su entrada y sale cuando esa
- * entrada se cierra, que es cuando el motor termina, de cualquier forma: con
- * el ayudante se cierra la manija y Windows termina el trabajo entero.
+ * arrancar un ayudante de PowerShell que crea el trabajo y mete en el al motor
+ * mismo. Desde ahi todo lo que el motor lance nace dentro del trabajo. El
+ * ayudante, lanzado antes, queda fuera: lee su entrada hasta que se cierra,
+ * que es cuando el motor termina, de cualquier forma, y al salir se cierra la
+ * manija y Windows termina el trabajo entero.
  *
- * El numero se manda antes de escribirle la orden a bash, y bash no hace nada
- * hasta leerla, asi que nada de lo que la orden lanza queda fuera.
+ * Sumar cada orden despues de lanzarla no alcanzaba: el bash.exe de Git para
+ * Windows es un lanzador que abre enseguida el bash de verdad, y ese nacia
+ * fuera del trabajo antes de que llegara el numero. Lo vio la prueba del
+ * cierre en la integracion continua.
  */
 final class Custodio {
 
@@ -78,6 +81,7 @@ final class Custodio {
     private static Writer escritor;
     private static BufferedReader lector;
     private static volatile boolean activo;
+    private static volatile boolean pedido;
 
     private Custodio() {}
 
@@ -87,6 +91,7 @@ final class Custodio {
             LISTO.countDown();
             return;
         }
+        pedido = true;
         String raiz = System.getenv().getOrDefault("SystemRoot", "C:\\Windows");
         Path powershell = Path.of(raiz, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
         String codificado = Base64.getEncoder().encodeToString(GUION.getBytes(StandardCharsets.UTF_16LE));
@@ -102,8 +107,12 @@ final class Custodio {
         }
         Thread espera = new Thread(() -> {
             try {
-                activo = "listo".equals(lector.readLine());
-                if (!activo) Registro.escribir("el custodio de procesos no pudo crear su trabajo");
+                if ("listo".equals(lector.readLine())) {
+                    escritor.write(ProcessHandle.current().pid() + "\n");
+                    escritor.flush();
+                    activo = "True".equals(lector.readLine());
+                }
+                if (!activo) Registro.escribir("el custodio de procesos no pudo meter al motor en su trabajo");
             } catch (IOException e) {
                 Registro.escribir("el custodio de procesos no respondio: " + e);
             } finally {
@@ -115,22 +124,15 @@ final class Custodio {
     }
 
     /**
-     * Suma un proceso al trabajo del motor y espera la respuesta. Sin
-     * custodio, porque no es Windows o porque no arranco, no hace nada.
+     * Espera a que el motor este dentro del trabajo, hasta veinte segundos.
+     * Las ordenes pasan por aqui antes de lanzarse. Sin custodio, porque no
+     * es Windows o porque nadie lo arranco, como en la comprobacion del primer
+     * dia, no espera.
      */
-    static synchronized boolean sumar(Process p) {
-        if (Sistema.actual() != Sistema.WINDOWS) return false;
+    static boolean esperar() {
+        if (Sistema.actual() != Sistema.WINDOWS || !pedido) return false;
         try {
-            if (!LISTO.await(20, TimeUnit.SECONDS) || !activo) return false;
-            escritor.write(p.pid() + "\n");
-            escritor.flush();
-            boolean ok = "True".equals(lector.readLine());
-            if (!ok) Registro.escribir("el custodio no pudo sumar el proceso " + p.pid());
-            return ok;
-        } catch (IOException e) {
-            activo = false;
-            Registro.escribir("el custodio de procesos dejo de responder: " + e);
-            return false;
+            return LISTO.await(20, TimeUnit.SECONDS) && activo;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
