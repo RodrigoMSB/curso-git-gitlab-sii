@@ -61,6 +61,8 @@ MUTACIONES = [
      "en reposo se le pregunta a Git igual"),
     ("Taller.java", 'if (pendiente && ahora - ultimaPorHuella >= 1000) {', 'if (false) {',
      "TallerTest", "un cambio de afuera no se ve"),
+    ("Taller.java", 'while (version == desde && (leyendo || pendiente)) {', 'while (version == desde && false) {', "TallerTest",
+     "la pagina no espera la lectura en curso"),
     ("BuscadorGit.java", 'String instalacion = entorno.registro(rama);', 'String instalacion = null;', "BuscadorGitTest",
      "no se mira el registro"),
     ("BuscadorGit.java", 'if (entorno.herramientasDeApple()) candidatas.add', 'candidatas.add', "BuscadorGitTest",
@@ -71,9 +73,16 @@ MUTACIONES = [
      "una carpeta hermana con el mismo prefijo cuenta como dentro"),
 ]
 
+class NoCompila(Exception):
+    pass
+
+
 def mvn(prueba: str) -> bool:
     r = subprocess.run(["./mvnw", "-q", "-B", "test", f"-Dtest={prueba}", "-Dsurefire.failIfNoSpecifiedTests=false"],
                        cwd=RAIZ, capture_output=True, text=True)
+    # Una mutacion que no compila no prueba nada: la prueba ni siquiera corrio.
+    if "COMPILATION ERROR" in r.stdout + r.stderr:
+        raise NoCompila()
     return r.returncode == 0
 
 
@@ -100,7 +109,12 @@ def main() -> int:
             for nombre, antes, despues in cambios:
                 ruta = FUENTE / nombre
                 ruta.write_text(ruta.read_text(encoding="utf-8").replace(antes, despues, 1), encoding="utf-8")
-            paso = mvn(prueba)
+            try:
+                paso = mvn(prueba)
+            except NoCompila:
+                print(f"  ?  {que}: la mutacion no compila, no prueba nada")
+                escapadas.append(que)
+                continue
         finally:
             for ruta, texto in originales.items():
                 ruta.write_text(texto, encoding="utf-8")

@@ -37,6 +37,9 @@ public final class Taller {
     private volatile long ultimaPorHuella;
     private volatile boolean pendiente;
     private volatile String ordenEnCurso;
+    private volatile boolean leyendo;
+    /** Se avisa cada vez que termina una lectura, cambie o no la version. */
+    private final Object terminoLectura = new Object();
 
     public Taller(Datos datos, Ejecutor ejecutor, LectorEstado lector) {
         this.datos = datos;
@@ -105,6 +108,10 @@ public final class Taller {
         }
     }
 
+    boolean leyendo() {
+        return leyendo;
+    }
+
     public boolean ocupado() {
         return ocupado.get();
     }
@@ -112,25 +119,56 @@ public final class Taller {
     /** Le pregunta a Git y sube la version si algo de lo que se dibuja cambio. */
     public void leer() {
         synchronized (lectura) {
-            Path donde = carpeta;
-            long huella = Huella.de(donde, datos.limite());
-            Map<String, Object> estado;
+            leyendo = true;
             try {
-                estado = lector.leer(donde);
-            } catch (IOException e) {
-                Registro.escribir("no se pudo leer el estado, " + e.getMessage());
-                return;
+                leerSinAvisar();
+            } finally {
+                leyendo = false;
+                synchronized (terminoLectura) {
+                    terminoLectura.notifyAll();
+                }
             }
-            ultimaHuella = huella;
-            pendiente = false;
-            Map<String, Object> todo = new LinkedHashMap<>();
-            todo.put("sesion", sesion(donde));
-            todo.put("estado", estado);
-            String nuevo = Json.escribir(todo);
-            if (!nuevo.equals(documento)) {
-                documento = nuevo;
-                version++;
+        }
+    }
+
+    /**
+     * Si la pagina pregunta mientras se esta leyendo, o mientras la huella ya
+     * cambio y la lectura esta por empezar, espera a que termine en vez de
+     * responder que nada cambio. Asi un archivo guardado en el editor aparece
+     * en cuanto Git termina de leerlo, y no medio segundo despues, en la
+     * pregunta siguiente. Nunca lanza nada: solo espera a la lectura que ya
+     * iba a ocurrir.
+     */
+    public void esperarLectura(long desde, long milisegundos) throws InterruptedException {
+        long fin = System.currentTimeMillis() + milisegundos;
+        synchronized (terminoLectura) {
+            while (version == desde && (leyendo || pendiente)) {
+                long resta = fin - System.currentTimeMillis();
+                if (resta <= 0) return;
+                terminoLectura.wait(resta);
             }
+        }
+    }
+
+    private void leerSinAvisar() {
+        Path donde = carpeta;
+        long huella = Huella.de(donde, datos.limite());
+        Map<String, Object> estado;
+        try {
+            estado = lector.leer(donde);
+        } catch (IOException e) {
+            Registro.escribir("no se pudo leer el estado, " + e.getMessage());
+            return;
+        }
+        ultimaHuella = huella;
+        pendiente = false;
+        Map<String, Object> todo = new LinkedHashMap<>();
+        todo.put("sesion", sesion(donde));
+        todo.put("estado", estado);
+        String nuevo = Json.escribir(todo);
+        if (!nuevo.equals(documento)) {
+            documento = nuevo;
+            version++;
         }
     }
 

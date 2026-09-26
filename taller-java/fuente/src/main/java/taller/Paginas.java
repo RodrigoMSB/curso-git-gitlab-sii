@@ -33,6 +33,13 @@ final class Paginas {
         servidor.ruta("/api/estado", false, x -> {
             if (!metodo(x, "GET")) return;
             String desde = Servidor.parametro(x.getRequestURI(), "desde");
+            if (desde != null && desde.equals(Long.toString(taller.version()))) {
+                try {
+                    taller.esperarLectura(taller.version(), 1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             long version = taller.version();
             if (desde != null && desde.equals(Long.toString(version))) {
                 Servidor.responder(x, 204, "application/json; charset=utf-8", new byte[0]);

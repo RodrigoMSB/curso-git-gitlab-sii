@@ -262,6 +262,23 @@ describe('la consola', () => {
     expect(r.filter((x) => x.texto === '')).toHaveLength(1);
   });
 
+  it('la salida de lo que no es git va sin colores de Git', () => {
+    const r = renglonesDeOrden(
+      'ls -l .git/hooks/commit-msg',
+      { codigo: 0, salida: '-rwxr-xr-x 1 ana staff 185 .git/hooks/commit-msg\n', error: '', agotado: false, avisos: [] },
+      'o4',
+      donde,
+    );
+    expect(r[1]?.color).toBe('normal');
+    const diff = renglonesDeOrden(
+      'git diff',
+      { codigo: 0, salida: '-aji de color\n+albahaca\n', error: '', agotado: false, avisos: [] },
+      'o5',
+      donde,
+    );
+    expect(diff.slice(1).map((x) => x.color)).toEqual(['error', 'exito']);
+  });
+
   it('la presentacion dice donde corre', () => {
     expect(presentacion(documento({ repositorio: false, motivo: 'fuera' }, { relativa: 'taller-git-trabajo' }))).toContain(
       'José Pérez/taller-git-trabajo',

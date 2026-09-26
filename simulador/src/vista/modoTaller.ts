@@ -363,6 +363,9 @@ export function renglonesDeOrden(
 ): readonly Renglon[] {
   const fallo = respuesta.codigo !== 0;
   const salida: LineaSalida[] = lineasDe(respuesta.salida).map((texto) => ({ tipo: 'salida', texto }));
+  // Los colores son los de Git: una linea que empieza con guion es una linea
+  // quitada en un diff. En la salida de ls -l es un permiso, y va sin color.
+  const deGit = /^\s*git\s/.test(orden);
   const error: Renglon[] = lineasDe(respuesta.error).map((texto, i) => ({
     clave: `${prefijo}:e${i}`,
     texto,
@@ -375,7 +378,9 @@ export function renglonesDeOrden(
   }));
   return [
     { clave: `${prefijo}:orden`, texto: orden, color: 'orden', indicador },
-    ...colorearSalida(salida, `${prefijo}:s`),
+    ...(deGit
+      ? colorearSalida(salida, `${prefijo}:s`)
+      : salida.map((linea, i): Renglon => ({ clave: `${prefijo}:s:${i}`, texto: linea.texto, color: 'normal' }))),
     ...error,
     ...avisos,
   ];

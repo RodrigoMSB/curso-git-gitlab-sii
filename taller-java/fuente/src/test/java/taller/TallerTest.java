@@ -54,6 +54,21 @@ class TallerTest {
     }
 
     @Test
+    void siLaPaginaPreguntaMientrasSeLee_esperaElEstadoNuevo(@TempDir Path tmp) throws Exception {
+        Path limite = Files.createDirectories(tmp.resolve("limite"));
+        Taller t = taller(limite);
+        t.ejecutar("mkdir r && cd r && git init -q && echo a > a.md && git add a.md && git commit -qm a");
+        long version = t.version();
+        Files.writeString(t.carpeta().resolve("b.md"), "nuevo\n");
+        Thread vigilante = Thread.ofVirtual().start(t::vigilar);
+        long inicio = System.currentTimeMillis();
+        while (!t.leyendo() && vigilante.isAlive() && System.currentTimeMillis() - inicio < 5000) Thread.onSpinWait();
+        t.esperarLectura(version, 5000);
+        assertNotEquals(version, t.version(), "respondio antes de que terminara la lectura");
+        vigilante.join();
+    }
+
+    @Test
     void laCarpetaSeRecuerdaEntreArranques(@TempDir Path tmp) throws Exception {
         Path limite = Files.createDirectories(tmp.resolve("José Pérez"));
         Taller t = taller(limite);

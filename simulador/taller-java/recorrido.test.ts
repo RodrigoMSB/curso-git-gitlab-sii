@@ -354,6 +354,23 @@ function cerrarPrograma(): void {
     } catch {
       // Ya estaba cerrado.
     }
+    // bash de Git para Windows no reemplaza su proceso al hacer exec de un
+    // programa de Windows, y java puede quedar fuera del arbol. Se cierra el
+    // java que corre el taller.jar de este clon, y ningun otro.
+    const jar = join(A.limite, CLON, 'taller-java', 'taller.jar').replaceAll("'", "''");
+    try {
+      execFileSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-Command',
+          `Get-CimInstance Win32_Process -Filter "Name='java.exe'" | Where-Object { $_.CommandLine -like '*${jar}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`,
+        ],
+        { stdio: 'ignore' },
+      );
+    } catch {
+      // Nada que cerrar.
+    }
   } else {
     programa.kill();
   }
@@ -621,7 +638,8 @@ describe('el modo taller, laboratorio por laboratorio', () => {
     expect(pantalla.barraConRama).toBe(false);
     expect(pantalla.barraConCambios).toBe(false);
     cerrarPrograma();
-    await pagina.locator('[data-prueba="franja-caida"]').waitFor({ state: 'visible', timeout: 5000 });
+    // En Windows una conexion rechazada en 127.0.0.1 tarda unos dos segundos en fallar.
+    await pagina.locator('[data-prueba="franja-caida"]').waitFor({ state: 'visible', timeout: 10_000 });
     await pagina.screenshot({ path: join(SALIDA, 'franja.jpg'), type: 'jpeg', quality: 80 });
     expect(await pagina.locator('[data-prueba="entrada-consola"]').isVisible()).toBe(false);
   }, 60_000);
