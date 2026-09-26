@@ -1,0 +1,165 @@
+package taller;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * La sesion de la consola: en que carpeta esta, que orden corre y que dice Git.
+ *
+ * Guarda el ultimo estado leido con un numero de version. La pagina pregunta
+ * cada medio segundo y se le responde de memoria; a Git solo se le pregunta
+ * despues de una orden o cuando la huella cambia, y nunca mas de una vez por
+ * segundo por la huella (punto 3.7).
+ */
+public final class Taller {
+
+    /** Lo que la pagina necesita saber de la sesion, fijo desde el arranque. */
+    public record Datos(
+            Sistema sistema, Path limite, Path trabajo, Path propia, String usuario, String equipo, List<String> avisos) {}
+
+    private final Datos datos;
+    private final Ejecutor ejecutor;
+    private final LectorEstado lector;
+    private final AtomicBoolean ocupado = new AtomicBoolean();
+    private final Object lectura = new Object();
+
+    private volatile Path carpeta;
+    private volatile long version;
+    private volatile String documento = "";
+    private volatile long ultimaHuella;
+    private volatile long ultimaLectura;
+    private volatile boolean pendiente;
+    private volatile String ordenEnCurso;
+
+    public Taller(Datos datos, Ejecutor ejecutor, LectorEstado lector) {
+        this.datos = datos;
+        this.ejecutor = ejecutor;
+        this.lector = lector;
+        this.carpeta = carpetaGuardada();
+    }
+
+    public Datos datos() {
+        return datos;
+    }
+
+    public Path carpeta() {
+        return carpeta;
+    }
+
+    public long version() {
+        return version;
+    }
+
+    public String documento() {
+        return documento;
+    }
+
+    /** La carpeta en que quedo la consola la vez anterior, si sigue existiendo y esta dentro del limite. */
+    private Path carpetaGuardada() {
+        Path archivo = datos.propia().resolve("carpeta");
+        try {
+            if (Files.isRegularFile(archivo)) {
+                Path p = Path.of(Files.readString(archivo, StandardCharsets.UTF_8).trim());
+                if (Files.isDirectory(p) && Rutas.dentroDe(datos.limite(), p, datos.sistema())) return Rutas.real(p);
+            }
+        } catch (IOException | RuntimeException e) {
+            // Sin carpeta guardada se parte en taller-git-trabajo.
+        }
+        return Rutas.real(datos.trabajo());
+    }
+
+    private void guardarCarpeta() {
+        try {
+            Files.writeString(datos.propia().resolve("carpeta"), carpeta.toString(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            Registro.escribir("no se pudo guardar la carpeta de la consola, " + e.getMessage());
+        }
+    }
+
+    /** Resultado de pedir una orden. {@code null} en {@code resultado} significa que otra estaba corriendo. */
+    public record Respuesta(Ejecutor.Resultado resultado, String enCurso) {}
+
+    public Respuesta ejecutar(String orden) {
+        if (!ocupado.compareAndSet(false, true)) return new Respuesta(null, ordenEnCurso);
+        ordenEnCurso = orden;
+        try {
+            Registro.escribir("orden en " + Rutas.relativa(datos.limite(), carpeta) + " · " + orden);
+            Ejecutor.Resultado r = ejecutor.ejecutar(orden, carpeta);
+            if (!r.carpeta().equals(carpeta)) {
+                carpeta = r.carpeta();
+                guardarCarpeta();
+            }
+            if (r.agotado()) Registro.escribir("la orden se detuvo por tiempo");
+            leer();
+            return new Respuesta(r, null);
+        } finally {
+            ordenEnCurso = null;
+            ocupado.set(false);
+        }
+    }
+
+    public boolean ocupado() {
+        return ocupado.get();
+    }
+
+    /** Le pregunta a Git y sube la version si algo de lo que se dibuja cambio. */
+    public void leer() {
+        synchronized (lectura) {
+            Path donde = carpeta;
+            long huella = Huella.de(donde, datos.limite());
+            Map<String, Object> estado;
+            try {
+                estado = lector.leer(donde);
+            } catch (IOException e) {
+                Registro.escribir("no se pudo leer el estado, " + e.getMessage());
+                return;
+            } finally {
+                ultimaLectura = System.currentTimeMillis();
+            }
+            ultimaHuella = huella;
+            pendiente = false;
+            Map<String, Object> todo = new LinkedHashMap<>();
+            todo.put("sesion", sesion(donde));
+            todo.put("estado", estado);
+            String nuevo = Json.escribir(todo);
+            if (!nuevo.equals(documento)) {
+                documento = nuevo;
+                version++;
+            }
+        }
+    }
+
+    /**
+     * Una vuelta del vigilante: calcula la huella y, si cambio, lee el estado,
+     * salvo que la ultima lectura haya sido hace menos de un segundo.
+     */
+    public void vigilar() {
+        long huella = Huella.de(carpeta, datos.limite());
+        if (huella != ultimaHuella) pendiente = true;
+        if (pendiente && System.currentTimeMillis() - ultimaLectura >= 1000) leer();
+    }
+
+    private Map<String, Object> sesion(Path donde) {
+        Map<String, Object> s = new LinkedHashMap<>();
+        s.put("sistema", switch (datos.sistema()) {
+            case WINDOWS -> "windows";
+            case MAC -> "mac";
+            case OTRO -> "otro";
+        });
+        s.put("usuario", datos.usuario());
+        s.put("equipo", datos.equipo());
+        s.put("limite", datos.limite().getFileName() == null ? Rutas.conBarras(datos.limite())
+                : datos.limite().getFileName().toString());
+        s.put("carpeta", Rutas.conBarras(donde));
+        s.put("relativa", Rutas.relativa(datos.limite(), donde));
+        s.put("avisos", datos.avisos());
+        s.put("tiempoMaximo", ejecutor.tiempoMaximo());
+        return s;
+    }
+}
