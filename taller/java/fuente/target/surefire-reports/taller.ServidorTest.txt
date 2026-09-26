@@ -1,4 +1,11 @@
 -------------------------------------------------------------------------------
 Test set: taller.ServidorTest
 -------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.590 s -- in taller.ServidorTest
+Tests run: 8, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 3.167 s <<< FAILURE! -- in taller.ServidorTest
+taller.ServidorTest.soloEscuchaEn127001 -- Time elapsed: 3.027 s <<< FAILURE!
+java.lang.AssertionError: el servidor acepto una conexion en /fe80:0:0:0:1035:d8ff:fee7:971f%llw0
+	at taller.ServidorTest.soloEscuchaEn127001(ServidorTest.java:120)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
