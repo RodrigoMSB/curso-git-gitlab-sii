@@ -20,7 +20,7 @@ class TallerTest {
         var git = Ayuda.git();
         Ejecutor e = new Ejecutor(Ayuda.SISTEMA, git, limite, propia, 60_000).conEntornoExtra(Ayuda.aislado(limite));
         LectorEstado l = new LectorEstado(Ayuda.SISTEMA, git, propia);
-        return new Taller(new Taller.Datos(Ayuda.SISTEMA, limite, trabajo, propia, "ana", "equipo", List.of()), e, l);
+        return new Taller(new Taller.Datos(Ayuda.SISTEMA, limite, limite.resolve("curso"), trabajo, propia, "ana", "equipo", List.of()), e, l);
     }
 
     @Test

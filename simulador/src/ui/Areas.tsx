@@ -19,6 +19,7 @@ const COLOR_POR_TONO: Readonly<Record<TonoElemento, string>> = {
   preparado: 'var(--consola-verde)',
   conflicto: 'var(--consola-amarillo)',
   neutro: 'var(--texto-apagado)',
+  repositorio: 'var(--texto)',
   'borrado-preparado': 'var(--consola-verde)',
   'borrado-pendiente': 'var(--consola-rojo)',
 };

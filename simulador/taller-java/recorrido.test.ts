@@ -47,7 +47,6 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   aliasDelTaller,
-  bloquesDe,
   ordenesDe,
   ordenPara,
   resolverMarcadores,
@@ -70,6 +69,7 @@ type Paso =
   | { readonly tipo: 'orden'; readonly orden: OrdenDelEnunciado; readonly arnes?: string; readonly plan?: readonly string[] }
   | { readonly tipo: 'archivo'; readonly ruta: string; readonly contenido: string; readonly linea: number }
   | { readonly tipo: 'resolver'; readonly ruta: string; readonly linea: number }
+  | { readonly tipo: 'anexar'; readonly lineas: Readonly<Record<string, string>>; readonly linea: number }
   | { readonly tipo: 'omitida'; readonly texto: string; readonly motivo: string };
 
 /**
@@ -84,10 +84,24 @@ const PLANES: Readonly<Record<string, readonly (readonly string[])[]>> = {
   ],
 };
 
+/** Las ediciones en prosa, con la frase del enunciado que las pide. Son las mismas del arnes en disco. */
+const ANEXOS: Readonly<Record<string, readonly { readonly ancla: string; readonly lineas: Readonly<Record<string, string>> }[]>> = {
+  '01': [
+    {
+      ancla: 'Y agrega una línea al final de `cocineros.md`',
+      lineas: { 'platos.md': '- sopaipillas', 'ingredientes.md': '- zapallo', 'cocineros.md': '- Pedro' },
+    },
+  ],
+};
+
 const orden = (texto: string, linea = 0): OrdenDelEnunciado => ({ texto, clase: 'comparada', motivo: '', linea, terminal: false });
 
 function pasosDe(numero: string, enunciado: string, alias: Readonly<Record<string, string>>): Paso[] {
   const lineas = enunciado.split('\n');
+  // Ediciones que el enunciado pide en prosa, sin bloque de codigo: se hacen
+  // por fuera, como en el editor, antes de la primera orden que sigue.
+  const anexos = [...(ANEXOS[numero] ?? [])].map((a) => ({ ...a, linea: lineas.findIndex((l) => l.includes(a.ancla)) + 1 }));
+  for (const a of anexos) if (a.linea === 0) throw new Error(`el enunciado ${numero} ya no dice «${a.ancla}»`);
   const creaciones = new Set<number>();
   const resoluciones = new Map<number, string>();
   lineas.forEach((l, i) => {
@@ -96,22 +110,17 @@ function pasosDe(numero: string, enunciado: string, alias: Readonly<Record<strin
     if (abre?.[1] !== undefined) resoluciones.set(i + 1, abre[1]);
   });
 
-  // `preparar.sh` no entra por el extractor, que lo deja al arnes de Cypress.
-  // Aqui el participante lo escribe en la consola, asi que es una orden mas.
-  const preparaciones: OrdenDelEnunciado[] = [];
-  for (const bloque of bloquesDe(enunciado)) {
-    bloque.contenido.split('\n').forEach((cruda, i) => {
-      if (/^labs\/lab-\d+\/preparar\.sh$/.test(cruda.trim())) preparaciones.push(orden(cruda.trim(), bloque.linea + i));
-    });
-  }
-
   const pasos: Paso[] = [];
   const archivos = new Map<string, { ruta: string; filas: string[]; linea: number }>();
   const vistas = new Map<string, number>();
   const pendientes = [...resoluciones.entries()].sort((a, b) => a[0] - b[0]);
 
-  const guion = [...resolverMarcadores(ordenesDe(enunciado, alias), numero, alias), ...preparaciones].sort((a, b) => a.linea - b.linea);
+  const guion = resolverMarcadores(ordenesDe(enunciado, alias), numero, alias);
   for (const o of guion) {
+    while (anexos.length > 0 && (anexos[0]?.linea ?? 0) < o.linea) {
+      const a = anexos.shift();
+      if (a !== undefined) pasos.push({ tipo: 'anexar', lineas: a.lineas, linea: a.linea });
+    }
     while (pendientes.length > 0 && (pendientes[0]?.[0] ?? 0) < o.linea) {
       const [linea, ruta] = pendientes.shift() ?? [0, ''];
       pasos.push({ tipo: 'resolver', ruta, linea });
@@ -130,7 +139,9 @@ function pasosDe(numero: string, enunciado: string, alias: Readonly<Record<strin
       archivo.filas.push(m[1] ?? '');
       continue;
     }
-    if (/^labs\/lab-\d+\/preparar\.sh$/.test(o.texto)) {
+    // Las ordenes propias de la consola del taller y code son del guion: el
+    // participante las escribe en la consola como cualquier otra.
+    if (/^(preparar|verificar|code)(\s|$)/.test(o.texto)) {
       pasos.push({ tipo: 'orden', orden: { ...o, clase: 'comparada' } });
       continue;
     }
@@ -272,6 +283,7 @@ function normalizar(texto: string, lado: Lado): string {
 
 function diferencias(pantalla: EstadoEnPantalla, git: EstadoSegunGit, carpeta: string): string[] {
   const d: string[] = [];
+  if (pantalla.plurales.length > 0) d.push(`contadores mal escritos: ${pantalla.plurales.join(' · ')}`);
   const mismo = (nombre: string, a: unknown, b: unknown): void => {
     if (JSON.stringify(a) !== JSON.stringify(b)) d.push(`${nombre}: pagina ${JSON.stringify(a)}, Git ${JSON.stringify(b)}`);
   };
@@ -290,6 +302,8 @@ function diferencias(pantalla: EstadoEnPantalla, git: EstadoSegunGit, carpeta: s
   }
   const vivas = git.confirmaciones.length - git.huerfanas.length;
   mismo('confirmaciones en el repositorio local', pantalla.confirmacionesEnArea, vivas === 0 ? null : vivas);
+  mismo('archivos del repositorio', pantalla.arbol, git.arbol.slice(0, 30));
+  mismo('archivos del repositorio que no se listan', pantalla.arbolResto, Math.max(0, git.arbol.length - 30));
   mismo('ramas', pantalla.ramas, git.ramas);
   mismo('etiquetas', pantalla.etiquetas, git.etiquetas);
   mismo('directorio de trabajo', pantalla.trabajo, git.trabajo);
@@ -384,6 +398,20 @@ async function diagnostico(): Promise<{ procesos: number; version: number }> {
 }
 
 /**
+ * La misma orden, en el gemelo. Las ordenes propias de la consola no existen en
+ * bash: el gemelo hace lo que hace la consola, correr el script del laboratorio
+ * desde la raiz de su clon.
+ */
+function gemeloDe(texto: string): ReturnType<typeof correrEnBash> {
+  const propia = texto.match(/^(preparar|verificar)\s+0?(\d+)(\s+--forzar)?$/);
+  if (propia !== null) {
+    const nn = (propia[2] ?? '').padStart(2, '0');
+    return correrEnBash(`labs/lab-${nn}/${propia[1]}.sh${propia[3] ?? ''}`, join(B.limite, CLON), B.entorno);
+  }
+  return correrEnBash(texto, absoluta(B), B.entorno);
+}
+
+/**
  * Espera a que la pagina muestre lo que Git dice, para los cambios hechos por
  * fuera. A Git se le pregunta una vez; despues solo se mira la pagina, para
  * que la medida sea la demora de la pagina y no la del arnes.
@@ -404,6 +432,12 @@ async function esperarAlDibujo(carpeta: string): Promise<{ ms: number; dif: stri
 const absoluta = (lado: Lado): string => join(lado.limite, ...lado.carpeta.split('/'));
 
 function moverse(lado: Lado, texto: string): void {
+  // preparar deja la consola en el recetario del laboratorio.
+  const preparado = texto.match(/^preparar\s+0?(\d+)/)?.[1];
+  if (preparado !== undefined) {
+    lado.carpeta = `taller-git-trabajo/lab-${preparado.padStart(2, '0')}/recetario`;
+    return;
+  }
   const m = texto.match(/^cd\s+(\S+)$/);
   if (m?.[1] === undefined) return;
   lado.carpeta = posix.normalize(posix.join(lado.carpeta, m[1])).replace(/^\.$/, '');
@@ -484,18 +518,25 @@ describe('el modo taller, laboratorio por laboratorio', () => {
     it(`laboratorio ${numero}`, async () => {
       // En Windows el clon llega con CRLF, por el core.autocrlf de Git para Windows.
       const enunciado = readFileSync(join(REPO, 'labs', `lab-${numero}`, 'README.md'), 'utf8').replaceAll('\r\n', '\n');
-      // El enunciado empieza en la raiz del clon. Desde donde haya quedado la
-      // consola, el participante vuelve con un cd: el arnes escribe el mismo.
-      const hastaElClon = posix.relative(A.carpeta || '.', CLON) || '.';
-      const pasos: Paso[] = [
-        { tipo: 'orden', orden: orden(`cd ${hastaElClon}`), arnes: 'volver a la raiz del clon' },
-        ...pasosDe(numero, enunciado, alias),
-      ];
+      // Desde el SPEC 027 el enunciado no pide ir al clon: preparar deja la
+      // consola en el laboratorio, y el 01 empieza en taller-git-trabajo.
+      const pasos: Paso[] = pasosDe(numero, enunciado, alias);
       let paso = 0;
       for (const p of pasos) {
         paso++;
         if (p.tipo === 'omitida') {
           resultados.push({ lab: numero, paso, texto: p.texto, tipo: 'omitida', igual: false, diferencias: [p.motivo] });
+          continue;
+        }
+        if (p.tipo === 'anexar') {
+          for (const lado of [A, B]) {
+            for (const [archivo, linea] of Object.entries(p.lineas)) {
+              const ruta = join(absoluta(lado), archivo);
+              writeFileSync(ruta, `${readFileSync(ruta, 'utf8')}${linea}\n`);
+            }
+          }
+          const { ms, dif } = await esperarAlDibujo(absoluta(A));
+          resultados.push({ lab: numero, paso, texto: `(editor) agrega una línea a ${Object.keys(p.lineas).join(', ')}`, tipo: 'orden', igual: dif.length === 0, diferencias: dif, ms });
           continue;
         }
         if (p.tipo === 'archivo' || p.tipo === 'resolver') {
@@ -524,7 +565,7 @@ describe('el modo taller, laboratorio por laboratorio', () => {
 
         const ms = await escribir(pagina, textoA);
         const consola = await salidaDeLaUltimaOrden(pagina);
-        const gemelo = correrEnBash(textoB, absoluta(B), B.entorno);
+        const gemelo = gemeloDe(textoB);
         // La consola sigue al cd solo si funciono: lo dice el gemelo.
         if (gemelo.codigo === 0) {
           moverse(A, textoA);
@@ -535,7 +576,7 @@ describe('el modo taller, laboratorio por laboratorio', () => {
         // las dos preparaciones no coinciden se anota, y el gemelo sigue desde
         // una copia exacta de la del participante: lo que se compara despues
         // es el programa, no el script.
-        const preparado = textoA.match(/^labs\/lab-(\d+)\/preparar\.sh$/)?.[1];
+        const preparado = gemelo.codigo === 0 ? textoA.match(/^preparar\s+(\d+)/)?.[1] : undefined;
         let avisoPreparacion: string | null = null;
         if (preparado !== undefined) {
           const carpetaA = join(A.limite, 'taller-git-trabajo', `lab-${preparado}`);
@@ -580,10 +621,18 @@ describe('el modo taller, laboratorio por laboratorio', () => {
         const pantalla = await leerPantalla(pagina);
         const git = estadoSegunGit(absoluta(A), A.entorno);
         const dif = diferencias(pantalla, git, A.carpeta);
+        // La consola deja ver el eco de la orden, cabiendo o no la salida
+        // (puntos 3.2 y 3.3 del SPEC 027).
+        if (!pantalla.ecoVisible) dif.push('el eco de la orden quedó fuera de la vista de la consola');
+        if (consola.programa.some((p) => p.includes('¿Eran'))) dif.push('la consola avisó dos órdenes en una orden del guion');
         const enConsola = normalizar(consola.git, A);
         const enGit = normalizar(salidaB, B);
         if (enConsola !== enGit) dif.push(`consola:\n--- pagina\n${enConsola}\n--- Git\n${enGit}`);
-        const texto = p.arnes === undefined ? textoA : `${textoA}   (arnés: ${p.arnes})`;
+        // El resultado de cada verificador queda en el informe.
+        const criterios = consola.git.match(/(\d+) de (\d+) criterios aprobados/);
+        const texto =
+          (p.arnes === undefined ? textoA : `${textoA}   (arnés: ${p.arnes})`) +
+          (criterios === null ? '' : `   → verificador ${criterios[1]} de ${criterios[2]}`);
         resultados.push({
           lab: numero,
           paso,
@@ -662,12 +711,12 @@ describe('el modo taller, laboratorio por laboratorio', () => {
   it('la pantalla: el indicador se ve entero y sin tapar en cualquier ancho, despues de cien ordenes', async () => {
     const total = resultados.filter((r) => r.tipo === 'orden').length;
     expect(total).toBeGreaterThan(100);
-    for (const ancho of [1024, 1280, 1440, 1920]) {
+    for (const ancho of [900, 1024, 1280, 1440]) {
       await pagina.setViewportSize({ width: ancho, height: 900 });
       await pagina.waitForTimeout(300);
       const medida = await pagina.evaluate(() => {
         const bloque = document.querySelector('[aria-busy]');
-        const indicador = bloque?.querySelector('.t-min')?.getBoundingClientRect();
+        const indicador = bloque?.querySelector('[data-prueba="indicador"]')?.getBoundingClientRect();
         const campo = document.querySelector('[data-prueba="entrada-consola"]')?.getBoundingClientRect();
         const ultima = [...document.querySelectorAll('section[aria-label="Consola"] pre')].at(-1)?.getBoundingClientRect();
         const letra = parseFloat(getComputedStyle(document.querySelector('section[aria-label="Consola"] pre') ?? document.body).fontSize);
@@ -677,10 +726,58 @@ describe('el modo taller, laboratorio por laboratorio', () => {
       // El campo empieza debajo del indicador: no lo pisa.
       expect(medida.campo?.top ?? 0).toBeGreaterThanOrEqual((medida.indicador?.bottom ?? 0) - 0.5);
       expect(medida.letra).toBeGreaterThanOrEqual(11);
+      // Desde novecientos pixeles, la consola y el grafo lado a lado (SPEC 027, 1.2).
+      const lado = await pagina.evaluate(() => {
+        const c = document.querySelector('section[aria-label="Consola"]')?.getBoundingClientRect();
+        const g = document.querySelector('section[aria-label="Grafo de confirmaciones"]')?.getBoundingClientRect();
+        return { consolaDerecha: c?.right ?? 0, grafoIzquierda: g?.left ?? 0, grafoAncho: g?.width ?? 0, arriba: Math.abs((c?.top ?? 0) - (g?.top ?? 1)) };
+      });
+      expect(lado.consolaDerecha, `a ${ancho} px`).toBeLessThanOrEqual(lado.grafoIzquierda);
+      expect(lado.arriba, `a ${ancho} px`).toBeLessThan(2);
+      expect(lado.grafoAncho, `a ${ancho} px el grafo quedo muy angosto`).toBeGreaterThan(ancho * 0.3);
       await pagina.screenshot({ path: join(SALIDA, `ancho-${ancho}.jpg`), type: 'jpeg', quality: 80 });
     }
+    // Bajo novecientos se apilan, la consola arriba.
+    await pagina.setViewportSize({ width: 880, height: 900 });
+    await pagina.waitForTimeout(300);
+    const apilado = await pagina.evaluate(() => {
+      const c = document.querySelector('section[aria-label="Consola"]')?.getBoundingClientRect();
+      const g = document.querySelector('section[aria-label="Grafo de confirmaciones"]')?.getBoundingClientRect();
+      return (g?.top ?? 0) >= (c?.bottom ?? 1);
+    });
+    expect(apilado).toBe(true);
+    await pagina.screenshot({ path: join(SALIDA, 'ancho-880.jpg'), type: 'jpeg', quality: 80 });
     await pagina.setViewportSize({ width: 1440, height: 900 });
   }, 60_000);
+
+  it('la consola avisa dos ordenes pegadas, y muestra una salida larga desde su principio', async () => {
+    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', 'taller-git-trabajo') || '.'}`);
+    A.carpeta = 'taller-git-trabajo';
+    await escribir(pagina, 'mkdir -p prueba-dos cd prueba-dos');
+    const pegadas = await salidaDeLaUltimaOrden(pagina);
+    expect(pegadas.programa.join(' ')).toContain('¿Eran dos órdenes?');
+    // La orden corrio igual: bash creo las tres carpetas.
+    expect(existsSync(join(A.limite, 'taller-git-trabajo', 'cd'))).toBe(true);
+    await pagina.screenshot({ path: join(SALIDA, 'dos-ordenes.jpg'), type: 'jpeg', quality: 80 });
+    await escribir(pagina, 'rm -rf prueba-dos ./cd');
+
+    // preparar imprime mas de una pantalla: se ve su principio y la marca.
+    await escribir(pagina, 'preparar 03 --forzar');
+    const larga = await leerPantalla(pagina);
+    expect(larga.ecoVisible).toBe(true);
+    expect(larga.masAbajo).toBe(true);
+    await pagina.screenshot({ path: join(SALIDA, 'salida-larga.jpg'), type: 'jpeg', quality: 80 });
+    await pagina.locator('[data-prueba="mas-abajo"]').click();
+    await pagina.waitForTimeout(200);
+    expect((await leerPantalla(pagina)).masAbajo).toBe(false);
+    A.carpeta = 'taller-git-trabajo/lab-03/recetario';
+
+    // ayuda, y el eco de las ordenes propias en otro color.
+    await escribir(pagina, 'ayuda');
+    const ayuda = await salidaDeLaUltimaOrden(pagina);
+    expect(ayuda.programa.join('\n')).toContain('preparar 02 --forzar');
+    expect(await pagina.locator('[data-propia="si"]').count()).toBeGreaterThan(0);
+  }, 120_000);
 
   it('sin repositorio la barra no dice rama, y si el programa se cierra lo dice una franja', async () => {
     await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', 'taller-git-trabajo') || '.'}`);

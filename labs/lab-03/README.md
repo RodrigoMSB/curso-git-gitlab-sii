@@ -16,12 +16,13 @@ El punto central es el último y es más sutil de lo que parece. Ignorar un arch
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+Tu trabajo no va dentro del clon del curso, va al lado, en `taller-git-trabajo`. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
-labs/lab-03/preparar.sh
-cd ../taller-git-trabajo/lab-03/recetario
+preparar 03
 ```
+
+La consola arma el escenario, comprueba que quedó bien y queda parada en `taller-git-trabajo/lab-03/recetario`, que es donde vas a trabajar.
 
 Mira con qué te encontraste.
 
@@ -34,16 +35,11 @@ git status
 
 Toma nota de los tres archivos que sobran. Están confirmados en la historia, no son basura suelta en tu directorio.
 
-### Abre el simulador en el escenario de este laboratorio
+### El taller ya está abierto
 
-El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER-JAVA.cmd` o con `taller-java.command`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
 
-Llévalo al escenario de este laboratorio, que es **Lab 03 · Ordenar el recetario**, de cualquiera de estas dos formas.
-
-- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 03`.
-- O abre el archivo con la dirección `SIMULADOR.html?lab=03`, pegándola en la barra de direcciones del navegador.
-
-Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 03`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+Si trabajas sin el programa del taller, el simulador de escenarios abre este laboratorio con la dirección `SIMULADOR.html?lab=03`, sin Git de verdad.
 
 ---
 
@@ -316,7 +312,7 @@ rm importante.tmp
 
 Si tienes exclusiones que son solo tuyas, van en `.git/info/exclude`, que es local y no se comparte.
 
-**Esta orden hazla en tu terminal.** Mira dentro de la carpeta `.git`, y esa el simulador no la modela a propósito: es la misma razón por la que el laboratorio 02 abre la caja en la consola de verdad.
+Esta orden mira dentro de la carpeta `.git`, donde viven las exclusiones que son solo tuyas.
 
 ```
 cat .git/info/exclude
@@ -349,6 +345,14 @@ git status
 ```
 
 Directorio limpio.
+
+Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
+
+```
+verificar 03
+```
+
+Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
 
 ---
 

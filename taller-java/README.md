@@ -38,17 +38,29 @@ Si cierras la pestaña del navegador, vuelve con la dirección que muestra la ve
 
 ## Trabajar
 
-La consola parte en `taller-git-trabajo`, la carpeta hermana del clon. Los enunciados te piden pararte en la raíz del clon, así que tu primera orden es esta.
+La consola parte en `taller-git-trabajo`, la carpeta hermana del clon donde va todo tu trabajo. No necesitas entrar al clon para nada.
+
+Cada enunciado empieza con una orden propia de la consola, que arma el laboratorio y deja la consola parada en su carpeta.
 
 ```
-cd ../curso-git-gitlab-sii
+preparar 02
 ```
 
-Desde ahí sigues el enunciado tal cual, escribiendo todo en la consola de la página. Las órdenes de Git, `cd`, `ls`, `cat`, `echo`, `mkdir`, las redirecciones y los `preparar.sh` de cada laboratorio corren igual que en Git Bash.
+Y termina con otra, que comprueba si quedó hecho.
+
+```
+verificar 02
+```
+
+Aceptan `2` y `02`. Sin número usan el laboratorio donde está la consola. Si el laboratorio ya estaba preparado, `preparar` avisa que prepararlo de nuevo borra tu trabajo, y solo lo hace si escribes `preparar 02 --forzar`. `ayuda` las lista, junto con `clear`.
+
+Desde ahí sigues el enunciado tal cual, escribiendo todo en la consola de la página. Las órdenes de Git, `cd`, `ls`, `cat`, `echo`, `mkdir` y las redirecciones corren igual que en Git Bash.
+
+Si escribes dos órdenes en una misma línea sin separarlas, como `mkdir recetas cd recetas`, bash las toma como una sola orden con argumentos raros. La consola la corre igual, pero te pregunta si eran dos.
 
 La consola no sale de la carpeta que contiene al clon y a `taller-git-trabajo`. Un `cd` más arriba se rechaza y lo dice.
 
-Los archivos los editas en Visual Studio Code, como siempre. Al guardar, el dibujo se actualiza solo en menos de un segundo.
+Los archivos los editas en Visual Studio Code. Escribe `code .` en la consola, parado en `recetario`, y se abre una ventana aparte solo con tu carpeta de trabajo. Al guardar, el dibujo se actualiza solo en menos de un segundo.
 
 Cuando Git necesita un editor, en `git commit` sin `-m`, en una fusión o en un rebase interactivo, se abre Visual Studio Code si lo configuraste en el laboratorio 01. La consola espera hasta que cierres la pestaña. Si Visual Studio Code no se abre, la consola dice cómo dejarlo disponible, y mientras tanto `git commit -m "mensaje"` no necesita editor.
 

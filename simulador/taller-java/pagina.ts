@@ -26,6 +26,16 @@ export interface EstadoEnPantalla {
   readonly barraConCambios: boolean;
   /** Lo que dice el area del repositorio local: «N confirmaciones», o null si esta vacia. */
   readonly confirmacionesEnArea: number | null;
+  /** Los archivos del area del repositorio, el arbol de HEAD como lo pinta la pagina. */
+  readonly arbol: readonly string[];
+  /** Si dice «y N archivos más» al final de la lista. */
+  readonly arbolResto: number;
+  /** Contadores mal escritos: «(s)», «(es)» o un uno en plural. */
+  readonly plurales: readonly string[];
+  /** Si se ve el eco de la ultima orden en la consola. */
+  readonly ecoVisible: boolean;
+  /** Si se ve la marca de que la salida sigue mas abajo. */
+  readonly masAbajo: boolean;
   /** Las confirmaciones que el grafo dejo fuera por espacio. */
   readonly ocultas: number;
 }
@@ -49,7 +59,7 @@ export function leerPantalla(pagina: Page): Promise<EstadoEnPantalla> {
         .map((li) => li.getAttribute('data-archivo') ?? '');
     const barraRama = document.querySelector('[data-prueba="barra-rama"]');
     const ramaTexto = barraRama?.textContent ?? null;
-    const indicador = document.querySelector('[aria-busy] .t-min');
+    const indicador = document.querySelector('[aria-busy] [data-prueba="indicador"]');
     const aviso = [...document.querySelectorAll('p')].find((p) => /Se dibujan las \d+ confirmaciones/.test(p.textContent ?? ''));
     const sinRepositorio = visible(document.querySelector('[data-prueba="barra-sin-repositorio"]'));
     const desconectada = ramaTexto?.startsWith('posición desconectada · ') ?? false;
@@ -70,10 +80,30 @@ export function leerPantalla(pagina: Page): Promise<EstadoEnPantalla> {
       confirmacionesEnArea: (() => {
         const texto = [...document.querySelectorAll('section[data-columna="local"] li[data-archivo]')]
           .map((li) => li.getAttribute('data-archivo') ?? '')
-          .find((t) => /^\d+ confirmaciones$/.test(t));
+          .find((t) => /^\d+ confirmaci(ón|ones)$/.test(t));
         return texto === undefined ? null : Number(texto.split(' ')[0]);
       })(),
-      ocultas: Number(aviso?.textContent?.match(/(\d+) quedaron fuera/)?.[1] ?? 0),
+      arbol: [...document.querySelectorAll('section[data-columna="local"] li[data-tono="repositorio"]')]
+        .filter(visible)
+        .map((li) => li.getAttribute('data-archivo') ?? ''),
+      arbolResto: Number(
+        [...document.querySelectorAll('section[data-columna="local"] li[data-archivo]')]
+          .map((li) => li.getAttribute('data-archivo') ?? '')
+          .find((t) => /^y \d+ archivos? más$/.test(t))
+          ?.match(/\d+/)?.[0] ?? 0,
+      ),
+      plurales: (document.body.innerText.match(/[^\n]*(\(s\)|\(es\)|\b1 (confirmaciones|cambios|archivos)\b)[^\n]*/g) ?? []).map(String),
+      ecoVisible: (() => {
+        const caja = document.querySelector('section[aria-label="Consola"] [data-color="orden"]')?.parentElement;
+        const ecos = [...document.querySelectorAll('section[aria-label="Consola"] [data-color="orden"]')];
+        const eco = ecos.at(-1);
+        if (caja === undefined || caja === null || eco === undefined) return true;
+        const a = caja.getBoundingClientRect();
+        const b = eco.getBoundingClientRect();
+        return b.top >= a.top - 1 && b.bottom <= a.bottom + 1;
+      })(),
+      masAbajo: visible(document.querySelector('[data-prueba="mas-abajo"]')),
+      ocultas: Number(aviso?.textContent?.match(/(\d+) (?:quedaron|quedó) fuera/)?.[1] ?? 0),
     };
   });
 }

@@ -14,7 +14,7 @@ Al terminar tendrás cuatro confirmaciones en tu historial y un archivo modifica
 
 ## Antes de empezar
 
-Abre Git Bash y confirma que Git responde.
+Abre el taller con doble clic en `TALLER-JAVA.cmd`, o en `taller-java.command` si usas Mac, ambos en la carpeta del clon. En la consola de la página, confirma que Git responde.
 
 ```
 git --version
@@ -22,13 +22,11 @@ git --version
 
 Si no responde, avisa antes de seguir. Todo lo que viene depende de eso.
 
-### Abre el simulador en el escenario de este laboratorio
+### El taller ya está abierto
 
-En la carpeta que clonaste hay un archivo llamado `SIMULADOR.html`. Haz doble clic sobre él: se abre en el navegador y funciona sin conexión.
+Todo este laboratorio se escribe en la consola del taller. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas. La consola parte en `taller-git-trabajo`, la carpeta hermana del clon donde va todo tu trabajo del taller.
 
-Abierto así parte en **Lab 01 · El recetario nace**, que es justo el escenario de este laboratorio. Compruébalo en la barra de arriba.
-
-**El simulador no adivina en qué laboratorio estás.** En los laboratorios que vienen después vas a tener que llevarlo al escenario que corresponda, con el selector que dice **escenario** en esa misma barra, o abriéndolo con una dirección como `SIMULADOR.html?lab=02`. Cada enunciado te lo recuerda.
+Si trabajas sin el programa del taller, `SIMULADOR.html` abierto con doble clic parte en este laboratorio, en el modo de escenarios y sin Git de verdad.
 
 ---
 
@@ -43,7 +41,10 @@ Cada confirmación queda firmada con un nombre y un correo. Configura los tuyos,
 ```
 git config --global user.name "Tu Nombre"
 git config --global user.email "tu.correo@institucion.cl"
+git config --global init.defaultBranch main
 ```
+
+La tercera línea hace que la rama principal de cada repositorio nuevo se llame `main`. Así se llama igual en todos los equipos, y es el nombre que usan los laboratorios que vienen.
 
 Revisa cómo quedó.
 
@@ -88,18 +89,23 @@ Eso sirve cuando trabajas con un correo institucional en unos proyectos y uno pe
 
 ### 2.1 Crear la carpeta y el repositorio
 
-Tu recetario no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+Tu recetario no va dentro del clon del curso, va al lado, en `taller-git-trabajo`, que es donde parte la consola del taller. El indicador de la consola lo dice. Desde ahí, crea la carpeta del laboratorio y el repositorio.
 
 ```
-cd ..
-mkdir -p taller-git-trabajo/lab-01
-cd taller-git-trabajo/lab-01
-mkdir recetario
-cd recetario
+mkdir -p lab-01/recetario
+cd lab-01/recetario
 git init
 ```
 
 Fíjate en lo que respondió Git. Te dice que creó un repositorio vacío y en qué rama estás parado.
+
+Ahora abre esta carpeta en Visual Studio Code, con esta orden escrita desde `recetario`.
+
+```
+code .
+```
+
+El punto quiere decir esta carpeta. Se abre una ventana de Visual Studio Code aparte, solo con tu recetario, y ahí vas a crear y editar los archivos del laboratorio. No los abras desde la ventana del curso, si la tienes abierta, porque ahí se mezclan con los del clon.
 
 ### 2.2 Mira lo que apareció
 
@@ -319,6 +325,14 @@ git config --global --get alias.lg
 Debe devolver tu alias.
 
 Si las tres cosas están, terminaste.
+
+Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
+
+```
+verificar 01
+```
+
+Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
 
 ---
 

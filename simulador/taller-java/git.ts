@@ -70,12 +70,14 @@ export interface EstadoSegunGit {
   readonly etiquetas: readonly string[];
   readonly trabajo: readonly string[];
   readonly preparacion: readonly string[];
+  /** Los archivos de HEAD, como los lista `git ls-tree`. */
+  readonly arbol: readonly string[];
 }
 
 const lineas = (texto: string | null): string[] => (texto ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
 
 export function estadoSegunGit(carpeta: string, entorno: NodeJS.ProcessEnv): EstadoSegunGit {
-  const vacio = { rama: null, head: null, confirmaciones: [], huerfanas: [], ramas: [], etiquetas: [], trabajo: [], preparacion: [] };
+  const vacio = { rama: null, head: null, confirmaciones: [], huerfanas: [], ramas: [], etiquetas: [], trabajo: [], preparacion: [], arbol: [] };
   const raiz = git(carpeta, entorno, 'rev-parse', '--show-toplevel')?.trim();
   if (raiz === undefined || raiz === '') {
     // Dentro de .git no hay arbol de trabajo, pero si repositorio.
@@ -128,8 +130,10 @@ export function estadoSegunGit(carpeta: string, entorno: NodeJS.ProcessEnv): Est
     if (y !== ' ') trabajo.push(ruta);
   }
 
+  const arbol = head === null ? [] : (e('ls-tree', '-r', '--name-only', '-z', 'HEAD') ?? '').split('\0').filter(Boolean);
   return {
     repositorio: true,
+    arbol,
     rama,
     head,
     confirmaciones: todas.sort(),

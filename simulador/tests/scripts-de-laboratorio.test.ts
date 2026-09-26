@@ -145,8 +145,8 @@ function bloqueDespuesDe(lineas: readonly string[], desde: number): string {
 }
 
 /**
- * Hace el laboratorio desde la raiz del clon, que es donde el enunciado deja
- * parado al participante. La carpeta actual se conserva de una orden a la
+ * Hace el laboratorio desde taller-git-trabajo, que es donde parte la consola
+ * del taller. La carpeta actual se conserva de una orden a la
  * siguiente, como en una terminal.
  */
 function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly string[]; registro: string } {
@@ -156,7 +156,10 @@ function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly
     .split('\n')
     .findIndex((linea) => /^##\s+Si algo sali/.test(linea));
   const donde = join(lab.raiz, 'carpeta-actual');
-  let actual = lab.clon;
+  // Desde el SPEC 027 el participante trabaja en la consola del taller, que
+  // parte en taller-git-trabajo y nunca necesita entrar al clon.
+  let actual = join(lab.raiz, 'taller-git-trabajo');
+  mkdirSync(actual, { recursive: true });
   const salidas = new Map<string, string>();
   const problemas: string[] = [];
   const registro: string[] = [];
@@ -201,6 +204,14 @@ function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly
         extra = { GIT_SEQUENCE_EDITOR: `bash "${barras(lista)}"`, GIT_EDITOR: `bash "${barras(mensaje)}"` };
       }
     }
+    // Las ordenes propias de la consola del taller. preparar ya se corrio al
+    // montar el laboratorio, y la consola queda en su recetario; verificar se
+    // corre al final, y code solo abre el editor.
+    if (/^preparar(\s|$)/.test(orden.texto)) {
+      actual = lab.recetario;
+      continue;
+    }
+    if (/^(verificar|code)(\s|$)/.test(orden.texto)) continue;
     if (orden.clase === 'omitida') {
       problemas.push(`linea ${orden.linea} «${orden.texto}» se saltaria: ${orden.motivo}`);
       continue;

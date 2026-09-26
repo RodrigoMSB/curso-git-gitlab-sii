@@ -35,6 +35,14 @@ MUTACIONES = [
      'conf.put("huerfana", !vivas.contains((String) conf.get("id")));',
      'conf.put("huerfana", false);',
      "el programa no marca huerfanas, y el contador de confirmaciones las suma"),
+    ("pagina", SIM / "src/ui/Consola.tsx",
+     "      if (pegadoAlFinal.current) caja.scrollTop = caja.scrollHeight;\n    });",
+     "    });",
+     "la consola no vuelve a bajar cuando se achica", "01"),
+    ("pagina", SIM / "src/vista/modoTaller.ts",
+     "...arbolVisible(estado.arbol ?? []),", "...arbolVisible([]),", "el area del repositorio sin archivos"),
+    ("pagina", SIM / "src/vista/contar.ts",
+     "n === 1 ? singular : plural", "n === -1 ? singular : plural", "un contador en plural con uno"),
 ]
 
 
@@ -49,13 +57,21 @@ def construir(lado: str) -> None:
 def main() -> int:
     escapadas = 0
     entorno = {**os.environ, "TALLER_LABS": "02", "TALLER_CAPTURAS": str(SIM / "capturas-mutacion")}
-    for lado, ruta, original, mutado, que in MUTACIONES:
+    for mutacion in MUTACIONES:
+        lado, ruta, original, mutado, que = mutacion[:5]
+        lab = mutacion[5] if len(mutacion) > 5 else "02"
+        entorno = {**entorno, "TALLER_LABS": lab}
         texto = ruta.read_text(encoding="utf-8")
         assert original in texto, que
         try:
             ruta.write_text(texto.replace(original, mutado, 1), encoding="utf-8")
-            construir(lado)
-            r = subprocess.run(["npx", "vitest", "run", "--config", "vitest.taller-java.config.ts", "-t", "laboratorio 02"],
+            try:
+                construir(lado)
+            except subprocess.CalledProcessError:
+                print(f"  ?  {que}: la mutacion no compila, no prueba nada")
+                escapadas += 1
+                continue
+            r = subprocess.run(["npx", "vitest", "run", "--config", "vitest.taller-java.config.ts", "-t", f"laboratorio {lab}"],
                                cwd=SIM, env=entorno, capture_output=True, text=True)
         finally:
             ruta.write_text(texto, encoding="utf-8")

@@ -5,6 +5,11 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  contar,
+  esOrdenPropia,
+  ORDENES_CONOCIDAS,
+  ordenesPegadas,
+  renglonesDeAyuda,
   barraDelTaller,
   claveDelTaller,
   columnasDelTaller,
@@ -292,5 +297,115 @@ describe('la consola', () => {
     expect(completarEnTaller('git switch pru', estado).texto).toBe('git switch prueba');
     expect(completarEnTaller('git add pla', estado).texto).toBe('git add platos.md');
     expect(completarEnTaller('git swi', { repositorio: false, motivo: 'fuera' }).texto).toBe('git switch');
+  });
+});
+
+describe('SPEC 027 · el area del repositorio lista la ultima confirmacion', () => {
+  it('los archivos de HEAD primero, y debajo las confirmaciones y las ramas', () => {
+    const local = columnasDelTaller(repositorio({ arbol: ['README.md', 'recetas/pastel.md'] }))[2];
+    expect(local?.elementos).toEqual([
+      { texto: 'README.md', tono: 'repositorio' },
+      { texto: 'recetas/pastel.md', tono: 'repositorio' },
+      { texto: '3 confirmaciones', tono: 'neutro' },
+      { texto: 'main (actual)', tono: 'neutro' },
+      { texto: 'prueba', tono: 'neutro' },
+    ]);
+  });
+
+  it('sobre treinta archivos, los primeros y cuantos mas hay', () => {
+    const arbol = Array.from({ length: 33 }, (_, i) => `archivo-${String(i).padStart(2, '0')}.md`);
+    const textos = columnasDelTaller(repositorio({ arbol }))[2]?.elementos.map((e) => e.texto) ?? [];
+    expect(textos.filter((t) => t.startsWith('archivo-'))).toHaveLength(30);
+    expect(textos).toContain('y 3 archivos más');
+    const uno = columnasDelTaller(repositorio({ arbol: arbol.slice(0, 31) }))[2]?.elementos.map((e) => e.texto) ?? [];
+    expect(uno).toContain('y 1 archivo más');
+  });
+
+  it('una sola confirmacion va en singular', () => {
+    const una = repositorio({
+      confirmaciones: [{ id: id('a'), corto: 'aaaaaaa', padres: [], autor: 'A', correo: 'a', epoca: 0, asunto: 'uno', huerfana: false }],
+      ramas: [{ nombre: 'main', id: id('a') }],
+      remotas: [],
+      etiquetas: [],
+      head: id('a'),
+    });
+    expect(columnasDelTaller(una)[2]?.elementos.map((e) => e.texto)).toContain('1 confirmación');
+  });
+});
+
+describe('SPEC 027 · los contadores en singular', () => {
+  it('contar dice uno en singular y lo demas en plural', () => {
+    expect(contar(0, 'cambio sin confirmar', 'cambios sin confirmar')).toBe('0 cambios sin confirmar');
+    expect(contar(1, 'cambio sin confirmar', 'cambios sin confirmar')).toBe('1 cambio sin confirmar');
+    expect(contar(2, 'confirmación', 'confirmaciones')).toBe('2 confirmaciones');
+  });
+});
+
+describe('SPEC 027 · dos ordenes en una linea', () => {
+  it('avisa cuando despues de una orden aparece otra suelta', () => {
+    expect(ordenesPegadas('mkdir -p lab-01/recetario cd lab-01/recetario')).toEqual(['mkdir', 'cd']);
+    expect(ordenesPegadas('cd recetario git status')).toEqual(['cd', 'git']);
+  });
+
+  it('no avisa con ordenes bien separadas, entre comillas, ni con subordenes de git', () => {
+    for (const linea of [
+      'mkdir -p lab-01/recetario && cd lab-01/recetario',
+      'cd recetario; git status',
+      'git log --format="%h" trabajo | sort',
+      'git config --global core.editor "code --wait"',
+      'git commit -m "cd"',
+      "echo 'ls'",
+      'git diff',
+      'git mv platos.md cat.md',
+      'git stash clear',
+      'git stash list',
+      'git rm --cached credenciales.txt',
+      'echo "cd no es una orden aqui" > nota.md',
+      'mensaje=$(cat .git/COMMIT_EDITMSG)',
+      'comm -12 <(git log --format="%h" trabajo | sort) <(cut -d" " -f1 ~/antes-del-rebase.txt | sort)',
+      'labs/lab-02/preparar.sh',
+      'preparar 02',
+      'code .',
+      'ls',
+    ]) {
+      expect(ordenesPegadas(linea), linea).toBeNull();
+    }
+  });
+
+  it('la consola lo dice con la voz del programa, despues del eco, y la orden igual corre', () => {
+    const r = renglonesDeOrden(
+      'mkdir -p lab-01/recetario cd lab-01/recetario',
+      { codigo: 0, salida: '', error: '', agotado: false, avisos: [] },
+      'o9',
+      { usuario: 'ana', ruta: 'x', rama: null },
+    );
+    expect(r.map((x) => x.color)).toEqual(['orden', 'programa']);
+    expect(r[1]?.texto).toContain('¿Eran dos órdenes?');
+    expect(r[1]?.texto).toContain('mkdir y cd');
+  });
+
+  it('la lista de ordenes conocidas vive en un solo lugar y tiene las de los enunciados', () => {
+    for (const o of ['git', 'cd', 'ls', 'cat', 'echo', 'mkdir', 'rm', 'mv', 'grep', 'wc', 'diff', 'comm', 'cut', 'chmod', 'code', 'preparar', 'verificar']) {
+      expect(ORDENES_CONOCIDAS).toContain(o);
+    }
+  });
+});
+
+describe('SPEC 027 · las ordenes propias de la consola', () => {
+  it('preparar y verificar llevan la marca de ordenes propias, y las de bash no', () => {
+    const vacia = { codigo: 0, salida: '', error: '', agotado: false, avisos: [] };
+    const donde = { usuario: 'ana', ruta: 'x', rama: null };
+    expect(renglonesDeOrden('preparar 02', vacia, 'p', donde)[0]?.propia).toBe(true);
+    expect(renglonesDeOrden('verificar', vacia, 'v', donde)[0]?.propia).toBe(true);
+    expect(renglonesDeOrden('labs/lab-02/preparar.sh', vacia, 'l', donde)[0]?.propia).toBe(false);
+    expect(esOrdenPropia('clear')).toBe(true);
+  });
+
+  it('ayuda lista preparar, verificar y clear, con su marca', () => {
+    const r = renglonesDeAyuda('a', { usuario: 'ana', ruta: 'x', rama: null });
+    expect(r[0]).toMatchObject({ texto: 'ayuda', color: 'orden', propia: true });
+    const texto = r.map((x) => x.texto).join('\n');
+    for (const o of ['preparar 02', 'preparar 02 --forzar', 'verificar 02', 'clear']) expect(texto).toContain(o);
+    expect(r.slice(1).every((x) => x.color === 'programa')).toBe(true);
   });
 });

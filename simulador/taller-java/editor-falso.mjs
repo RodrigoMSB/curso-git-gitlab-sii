@@ -19,7 +19,7 @@
  *   squash-del-medio         en la lista del rebase, las del medio pasan a squash
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 
 const archivo = process.argv.filter((a) => !a.startsWith('--')).at(-1);
 const plan = process.env.TALLER_EDITOR_PLAN;
@@ -32,6 +32,8 @@ function siguienteAccion() {
   return lineas[0];
 }
 
+// `code .` abre una carpeta, no un archivo: no hay nada que escribir.
+if (archivo === undefined || !existsSync(archivo) || statSync(archivo).isDirectory()) process.exit(0);
 const texto = readFileSync(archivo, 'utf8');
 const lineas = texto.split('\n');
 const util = (l) => l.trim() !== '' && !l.startsWith('#');

@@ -7,7 +7,7 @@
  * selector de escenario ni previsualizacion: en este modo no aplican.
  */
 
-import type { BarraTaller } from '../vista';
+import { contar, type BarraTaller } from '../vista';
 import { Interruptor, Luna, Sol } from './BarraEstado';
 
 interface Props {
@@ -60,7 +60,7 @@ export function BarraModoTaller({ barra, modoRelator, temaClaro, onModoRelator, 
               <span className="t-pequeno font-semibold text-[var(--consola-amarillo)]">{barra.operacion}</span>
             )}
             <p className="t-pequeno text-[var(--texto-apagado)]" data-prueba="barra-cambios">
-              {barra.cambios === 0 ? 'sin cambios pendientes' : `${barra.cambios} cambio(s) sin confirmar`}
+              {barra.cambios === 0 ? 'sin cambios pendientes' : contar(barra.cambios, 'cambio sin confirmar', 'cambios sin confirmar')}
             </p>
             <p className="t-min w-full truncate font-mono text-[var(--texto-tenue)]" data-prueba="barra-carpeta">
               {barra.carpeta}

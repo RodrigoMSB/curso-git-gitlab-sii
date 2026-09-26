@@ -6,6 +6,7 @@
  * (restriccion R6 y criterio CA7 del SPEC 002).
  */
 
+export { contar } from './contar';
 export type { ColorConsola, Completado, Indicador, Renglon } from './consola';
 export { completar, navegarHistorial } from './consola';
 
@@ -55,5 +56,7 @@ export {
   indicadorDelTaller,
   presentacion,
   renglonDelPrograma,
+  renglonesDeAyuda,
   renglonesDeOrden,
 } from './modoTaller';
+export { AYUDA, ORDENES_CONOCIDAS, esOrdenPropia, ordenesPegadas } from './ordenesConocidas';

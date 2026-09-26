@@ -16,14 +16,13 @@ El repositorio con el que vas a trabajar no es el tuyo. Tiene cinco confirmacion
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+Tu trabajo no va dentro del clon del curso, va al lado, en `taller-git-trabajo`. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
-labs/lab-02/preparar.sh
-cd ../taller-git-trabajo/lab-02/recetario
+preparar 02
 ```
 
-El script arma el escenario y verifica que quedó bien antes de devolverte el control.
+La consola arma el escenario, comprueba que quedó bien y queda parada en `taller-git-trabajo/lab-02/recetario`, que es donde vas a trabajar.
 
 Confirma dónde estás parado.
 
@@ -34,16 +33,11 @@ git status
 
 Cinco confirmaciones. Un archivo modificado sin preparar y otro preparado. Toma nota de cuáles son, los vas a necesitar en la parte 3.
 
-### Abre el simulador en el escenario de este laboratorio
+### El taller ya está abierto
 
-El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER-JAVA.cmd` o con `taller-java.command`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
 
-Llévalo al escenario de este laboratorio, que es **Lab 02 · Leer la historia y abrir la caja**, de cualquiera de estas dos formas.
-
-- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 02`.
-- O abre el archivo con la dirección `SIMULADOR.html?lab=02`, pegándola en la barra de direcciones del navegador.
-
-Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 02`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+Si trabajas sin el programa del taller, el simulador de escenarios abre este laboratorio con la dirección `SIMULADOR.html?lab=02`, sin Git de verdad.
 
 ---
 
@@ -353,17 +347,25 @@ cat .git/HEAD
 
 Debe apuntar a `main`.
 
+Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
+
+```
+verificar 02
+```
+
+Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
+
 ---
 
 ## Si algo salió mal
 
-**Borraste algo con `git restore` que sí necesitabas.** No hay rescate. Ese contenido nunca estuvo en una confirmación. Vuelve a ejecutar `preparar.sh` y repite desde la parte 3.
+**Borraste algo con `git restore` que sí necesitabas.** No hay rescate. Ese contenido nunca estuvo en una confirmación. Escribe `preparar 02 --forzar` en la consola, que borra todo tu trabajo en este laboratorio, sin vuelta atrás, y repite desde la parte 3.
 
 **Hiciste `reset` de más y perdiste confirmaciones.** Sí hay rescate y se ve completo en el laboratorio 06. Por ahora prepara el escenario de nuevo.
 
 **Editaste un archivo dentro de `.git` a mano.** Prepara el escenario otra vez. Editar ahí a mano es la única forma real de dañar un repositorio.
 
-**El historial te quedó irreconocible.** Vuelve a ejecutar `preparar.sh`. El escenario siempre entrega el mismo estado inicial.
+**El historial te quedó irreconocible.** Escribe `preparar 02 --forzar` en la consola. Borra todo tu trabajo en este laboratorio, sin vuelta atrás, y deja el escenario como al principio. El escenario siempre entrega el mismo estado inicial.
 
 ---
 

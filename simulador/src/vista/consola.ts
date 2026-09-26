@@ -30,6 +30,8 @@ export interface Renglon {
    * cada orden tiene que seguir mostrando donde se escribio (SPEC 026).
    */
   readonly indicador?: Indicador;
+  /** El eco de una orden propia de la consola del taller, que no es de bash (SPEC 027). */
+  readonly propia?: boolean;
 }
 
 export interface Indicador {

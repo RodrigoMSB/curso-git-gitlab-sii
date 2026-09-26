@@ -342,7 +342,10 @@ describe('lo que queda declarado, y por que', () => {
     for (const numero of ['01', '02', '03', '04', '05', '06']) {
       const ordenes = resolverMarcadores(ordenesDe(enunciado(numero), ALIAS), numero, ALIAS);
       ordenes.forEach((orden, indice) => {
-        if (orden.clase === 'omitida') omitidas.push(`${numero}: ${orden.texto}`);
+        // Las ordenes propias de la consola del taller (SPEC 027) no son del
+        // simulador: en el, el escenario ya viene preparado.
+        const delTaller = /^(preparar|verificar|code)(\s|$)/.test(orden.texto);
+        if (orden.clase === 'omitida' && !delTaller) omitidas.push(`${numero}: ${orden.texto}`);
         if (orden.eleccion === undefined) return;
         usadas.add(`${numero} ${orden.texto}`);
         // La orden de la que se copia tiene que haber corrido antes en el

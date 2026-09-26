@@ -23,6 +23,7 @@ import {
   navegarHistorial,
   presentacion,
   renglonDelPrograma,
+  renglonesDeAyuda,
   renglonesDeOrden,
   ESCALA_RELATOR,
   type DocumentoTaller,
@@ -174,6 +175,10 @@ export function ModoTaller({ clave }: { readonly clave: string }): React.ReactEl
         return;
       }
       const n = ++contador.current;
+      if (orden === 'ayuda') {
+        setRenglones((anterior) => [...anterior, ...renglonesDeAyuda(`o${n}`, indicador)]);
+        return;
+      }
       const donde = indicador;
       setOcupado(orden);
       try {
@@ -230,7 +235,7 @@ export function ModoTaller({ clave }: { readonly clave: string }): React.ReactEl
       data-relator={modoRelator}
       data-modo="taller"
       style={{ '--escala': escala } as React.CSSProperties}
-      className="flex min-h-[100dvh] flex-col min-[1280px]:h-[100dvh]"
+      className="flex min-h-[100dvh] flex-col min-[900px]:h-[100dvh]"
     >
       <BarraModoTaller
         barra={documento === null ? null : barraDelTaller(documento)}
@@ -256,7 +261,7 @@ export function ModoTaller({ clave }: { readonly clave: string }): React.ReactEl
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
         <div
           ref={cuerpo}
-          className="flex min-h-[26rem] flex-1 flex-col gap-4 min-[1280px]:flex-row min-[1280px]:gap-0"
+          className="flex min-h-[26rem] flex-1 flex-col gap-4 min-[900px]:flex-row min-[900px]:gap-0"
         >
           <Consola
             ref={consola}
@@ -277,6 +282,8 @@ export function ModoTaller({ clave }: { readonly clave: string }): React.ReactEl
                     : null
             }
             ayuda={false}
+            corte={900}
+            salidasDesdeElPrincipio
             onEntrada={(texto) => {
               setEntrada(texto);
               setSugerencias([]);
@@ -290,11 +297,17 @@ export function ModoTaller({ clave }: { readonly clave: string }): React.ReactEl
             }}
           />
 
-          <Tirador actual={medidas?.reparto ?? 50} pedido={reparto} contenedor={cuerpo} onCambiar={setReparto} />
+          <Tirador
+            actual={medidas?.reparto ?? 50}
+            pedido={reparto}
+            contenedor={cuerpo}
+            onCambiar={setReparto}
+            corte={900}
+          />
 
           <section
             ref={panelGrafo}
-            className="panel flex min-h-[26rem] min-w-0 flex-1 flex-col overflow-hidden min-[1280px]:min-h-0"
+            className="panel flex min-h-[26rem] min-w-0 flex-1 flex-col overflow-hidden min-[900px]:min-h-0"
             aria-label="Grafo de confirmaciones"
           >
             {sinRepositorio ? (

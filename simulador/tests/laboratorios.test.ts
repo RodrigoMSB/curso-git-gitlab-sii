@@ -165,7 +165,8 @@ describe('CA2 · el enunciado lleva el cambio de ruta autorizado y solo ese', ()
 
   it('el repositorio se crea en la carpeta hermana del clon', () => {
     expect(enunciado).toContain(
-      'cd ..\nmkdir -p taller-git-trabajo/lab-01\ncd taller-git-trabajo/lab-01\nmkdir recetario\ncd recetario\ngit init',
+      // Desde el SPEC 027 la consola del taller parte en taller-git-trabajo.
+      'mkdir -p lab-01/recetario\ncd lab-01/recetario\ngit init',
     );
   });
 
@@ -190,7 +191,7 @@ describe('CA3 · el verificador aprueba el laboratorio bien hecho', () => {
   it('los cinco criterios pasan y el codigo de salida es cero', () => {
     const lab = armarLaboratorio();
     const corrida = verificar(lab.carpeta, lab.configGlobal);
-    expect(corrida.salida).toContain('5 de 5 criterios aprobados');
+    expect(corrida.salida).toContain('6 de 6 criterios aprobados');
     expect(corrida.salida).not.toContain('✗');
     expect(corrida.codigo).toBe(0);
   });
@@ -270,7 +271,7 @@ describe('el trabajo del participante vive fuera del clon del curso', () => {
     const lab = armarLaboratorio({ clonDeVerdad: true });
     expect(git(lab.clon, lab.configGlobal, 'rev-parse', '--is-inside-work-tree')).toBe('true');
     const corrida = verificar(lab.carpeta, lab.configGlobal);
-    expect(corrida.salida).toContain('5 de 5 criterios aprobados');
+    expect(corrida.salida).toContain('6 de 6 criterios aprobados');
     expect(corrida.codigo).toBe(0);
   });
 
@@ -677,7 +678,8 @@ describe('CA6 · el enunciado difiere solo en los cambios autorizados', () => {
     // se invoca el script por su ruta y se sale a la carpeta hermana. Un nivel
     // de `..`, porque se sale del clon y no de la carpeta del laboratorio. Es
     // la carpeta de trabajo fuera del clon que la seccion 17 exige.
-    expect(enunciado).toContain('labs/lab-02/preparar.sh\ncd ../taller-git-trabajo/lab-02/recetario');
+    // Desde el SPEC 027 se prepara con la orden propia de la consola del taller.
+    expect(enunciado).toContain('```\npreparar 02\n```');
   });
 
   it('la ruta de trabajo es la carpeta hermana', () => {
@@ -698,7 +700,7 @@ describe('CA6 · el enunciado difiere solo en los cambios autorizados', () => {
   it('el enunciado describe lo que el script hace de verdad', () => {
     // Cuarto cambio autorizado, que heredan los enunciados del 02 al 13: ya no
     // se clona ninguna semilla, se arma el escenario.
-    expect(enunciado).toContain('El script arma el escenario');
+    expect(enunciado).toContain('La consola arma el escenario');
     expect(enunciado).not.toContain('clona la semilla');
   });
 
@@ -741,7 +743,7 @@ describe('CA1 · el laboratorio 03 esta armado', () => {
   it('el enunciado lleva su numero nuevo, no el antiguo', () => {
     const enunciado = readFileSync(join(LAB03, 'README.md'), 'utf8');
     expect(enunciado.startsWith('# Laboratorio 03 · Ordenar el recetario')).toBe(true);
-    expect(enunciado).toContain('labs/lab-03/preparar.sh');
+    expect(enunciado).toContain('preparar 03');
     expect(enunciado).not.toContain('lab-04');
   });
 });
@@ -857,7 +859,7 @@ describe('la renumeracion quedo consistente', () => {
     for (const n of armados.filter((numero) => numero !== '01')) {
       const enunciado = readFileSync(join(LABS, `lab-${n}`, 'README.md'), 'utf8');
       expect(enunciado, `lab-${n}`).toContain(
-        `labs/lab-${n}/preparar.sh\ncd ../taller-git-trabajo/lab-${n}/recetario`,
+        `\`\`\`\npreparar ${n}\n\`\`\``,
       );
       expect(enunciado, `lab-${n} conserva la forma vieja`).not.toContain('./preparar.sh\ncd');
     }

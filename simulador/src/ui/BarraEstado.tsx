@@ -10,7 +10,7 @@
  * extremo derecho, que es donde la gente lo busca.
  */
 
-import type { ResumenBarra } from '../vista';
+import { contar, type ResumenBarra } from '../vista';
 
 interface Props {
   readonly barra: ResumenBarra;
@@ -97,7 +97,7 @@ export function BarraEstado({
         <p className="t-pequeno text-[var(--texto-apagado)]">
           {barra.cambiosSinConfirmar === 0
             ? 'sin cambios pendientes'
-            : `${barra.cambiosSinConfirmar} cambio(s) sin confirmar`}
+            : contar(barra.cambiosSinConfirmar, 'cambio sin confirmar', 'cambios sin confirmar')}
         </p>
       </div>
 

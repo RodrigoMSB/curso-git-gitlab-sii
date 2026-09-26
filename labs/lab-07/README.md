@@ -18,12 +18,13 @@ La segunda parte tiene un concepto que se escapa siempre. Antes de empezarla vas
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+Tu trabajo no va dentro del clon del curso, va al lado, en `taller-git-trabajo`. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
-labs/lab-07/preparar.sh
-cd ../taller-git-trabajo/lab-07/recetario
+preparar 07
 ```
+
+La consola arma el escenario, comprueba que quedó bien y queda parada en `taller-git-trabajo/lab-07/recetario`, que es donde vas a trabajar.
 
 Mira el punto de partida.
 
@@ -35,16 +36,11 @@ git status
 
 Estás en una rama de trabajo con cuatro confirmaciones propias, `main` avanzó por su cuenta, y tienes una receta a medio escribir en el directorio.
 
-### Abre el simulador en el escenario de este laboratorio
+### El taller ya está abierto
 
-El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER-JAVA.cmd` o con `taller-java.command`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
 
-Llévalo al escenario de este laboratorio, que es **Lab 07 · Interrumpir y limpiar la historia**, de cualquiera de estas dos formas.
-
-- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 07`.
-- O abre el archivo con la dirección `SIMULADOR.html?lab=07`, pegándola en la barra de direcciones del navegador.
-
-Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 07`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+Si trabajas sin el programa del taller, el simulador de escenarios abre este laboratorio con la dirección `SIMULADOR.html?lab=07`, sin Git de verdad.
 
 ---
 
@@ -348,7 +344,7 @@ Mientras el trabajo sea solo tuyo, el rebase es limpio y conveniente. Cuando ya 
 
 **Tiempo sugerido, 25 minutos.**
 
-**Esta parte entera va en tu terminal.** El rebase interactivo abre un editor con la lista de confirmaciones y se eligen las acciones línea por línea. No es una orden que al simulador le falte: es un modo de trabajo que esa pantalla no tiene, y por eso la declara en vez de fingirlo.
+El rebase interactivo abre Visual Studio Code con la lista de confirmaciones, y ahí se eligen las acciones línea por línea. La consola del taller espera mientras la pestaña está abierta, y sigue cuando la cierras.
 
 Tus cuatro confirmaciones tienen mensajes que no sirven. Vas a arreglar eso.
 
@@ -464,6 +460,14 @@ git status
 
 Directorio limpio.
 
+Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
+
+```
+verificar 07
+```
+
+Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
+
 ---
 
 ## Si algo salió mal
@@ -500,7 +504,7 @@ git stash apply <identificador>
 
 Si no lo tienes, se puede buscar entre los objetos sueltos, pero es una operación de rescate que se sale del taller. Consulta.
 
-**Perdiste el rumbo del todo.** Vuelve a ejecutar `preparar.sh`.
+**Perdiste el rumbo del todo.** Escribe `preparar 07 --forzar` en la consola. Borra todo tu trabajo en este laboratorio, sin vuelta atrás, y deja el escenario como al principio.
 
 ---
 

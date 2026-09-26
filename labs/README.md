@@ -63,6 +63,11 @@ Preparacion y no lleva escenario.
 
 ## Correr el verificador
 
+En la consola del modo taller no hace falta ir a ninguna carpeta. `preparar 02`
+corre el `preparar.sh` del laboratorio 02 y deja la consola en su recetario, y
+`verificar 02` corre su verificador. Lo que sigue es lo que esas dos órdenes
+hacen por debajo, y sirve para correr los scripts desde Git Bash.
+
 Se corre sin argumentos desde la carpeta del laboratorio y no recibe la ruta de
 nada, la deduce de su propia ubicacion.
 

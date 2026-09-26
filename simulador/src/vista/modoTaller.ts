@@ -15,8 +15,10 @@
 import type { EstadoRepositorio, LineaSalida } from '../core/tipos';
 import { disponer } from '../grafico/disposicion';
 import type { Disposicion } from '../grafico/tipos';
+import { contar } from './contar';
+import { AYUDA, esOrdenPropia, ordenesPegadas } from './ordenesConocidas';
 import { colorearSalida, completar, type Completado, type Indicador, type Renglon } from './consola';
-import type { ColumnaArea, EntradaGuardadoVista } from './pantalla';
+import type { ColumnaArea, ElementoArea, EntradaGuardadoVista } from './pantalla';
 
 // --- Lo que entrega el programa local --------------------------------------
 
@@ -72,6 +74,8 @@ export type EstadoGit =
         readonly conflicto: readonly string[];
       };
       readonly cambios: number;
+      /** Los archivos de la ultima confirmacion, el arbol de HEAD. */
+      readonly arbol?: readonly string[];
     };
 
 export interface SesionGit {
@@ -252,7 +256,11 @@ export function columnasDelTaller(estado: EstadoGit): readonly ColumnaArea[] {
         vivas === 0
           ? []
           : [
-              { texto: `${vivas} confirmaciones`, tono: 'neutro' as const },
+              // Los archivos de la ultima confirmacion, como las otras dos areas
+              // listan los suyos: asi se ve un archivo pasar de un area a la
+              // siguiente (SPEC 027, punto 2.2).
+              ...arbolVisible(estado.arbol ?? []),
+              { texto: contar(vivas, 'confirmación', 'confirmaciones'), tono: 'neutro' as const },
               ...ramasOrdenadas(estado)
                 .filter((r) => !estado.remotas.includes(r))
                 .map((r) => ({
@@ -263,6 +271,16 @@ export function columnasDelTaller(estado: EstadoGit): readonly ColumnaArea[] {
       vacio: 'sin confirmaciones',
     },
   ];
+}
+
+/** Cuantos archivos del arbol se listan antes de resumir el resto. */
+export const ARCHIVOS_DEL_ARBOL = 30;
+
+function arbolVisible(arbol: readonly string[]): readonly ElementoArea[] {
+  const visibles = arbol.slice(0, ARCHIVOS_DEL_ARBOL).map((ruta) => ({ texto: ruta, tono: 'repositorio' as const }));
+  const resto = arbol.length - visibles.length;
+  if (resto <= 0) return visibles;
+  return [...visibles, { texto: `y ${contar(resto, 'archivo más', 'archivos más')}`, tono: 'neutro' as const }];
 }
 
 export function guardadosDelTaller(estado: EstadoGit): readonly EntradaGuardadoVista[] | null {
@@ -376,13 +394,33 @@ export function renglonesDeOrden(
     texto,
     color: 'programa',
   }));
+  const pegadas = ordenesPegadas(orden);
+  const aviso: Renglon[] =
+    pegadas === null
+      ? []
+      : [
+          {
+            clave: `${prefijo}:pegadas`,
+            texto: `¿Eran ${pegadas.length === 2 ? 'dos órdenes' : `${pegadas.length} órdenes`}? En la línea aparecen ${pegadas.join(' y ')}, y bash la toma como una sola. Si eran varias, escríbelas de a una.`,
+            color: 'programa',
+          },
+        ];
   return [
-    { clave: `${prefijo}:orden`, texto: orden, color: 'orden', indicador },
+    { clave: `${prefijo}:orden`, texto: orden, color: 'orden', indicador, propia: esOrdenPropia(orden) },
+    ...aviso,
     ...(deGit
       ? colorearSalida(salida, `${prefijo}:s`)
       : salida.map((linea, i): Renglon => ({ clave: `${prefijo}:s:${i}`, texto: linea.texto, color: 'normal' }))),
     ...error,
     ...avisos,
+  ];
+}
+
+/** Lo que la consola muestra al escribir `ayuda`, que no se manda al programa. */
+export function renglonesDeAyuda(prefijo: string, indicador: Indicador): readonly Renglon[] {
+  return [
+    { clave: `${prefijo}:orden`, texto: 'ayuda', color: 'orden', indicador, propia: true },
+    ...AYUDA.map((texto, i) => ({ clave: `${prefijo}:a${i}`, texto, color: 'programa' as const })),
   ];
 }
 

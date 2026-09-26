@@ -247,6 +247,16 @@ const NO_EJECUTABLES: readonly { readonly patron: RegExp; readonly motivo: strin
     patron: /^(labs\/lab-\d+\/preparar\.sh|\.\/preparar\.sh|\.\/verificar\.sh)/,
     motivo: 'la preparacion la corre el arnes antes de empezar',
   },
+  {
+    // Las ordenes propias de la consola del modo taller (SPEC 027). En el
+    // simulador de escenarios el escenario ya viene preparado.
+    patron: /^(preparar|verificar)(\s|$)/,
+    motivo: 'orden de la consola del taller: en el simulador el escenario ya viene preparado',
+  },
+  {
+    patron: /^code(\s|$)/,
+    motivo: 'abre Visual Studio Code, no toca el repositorio',
+  },
 ];
 
 /** Bloques que no son ordenes, sino contenido de archivos que el enunciado muestra. */
@@ -254,7 +264,7 @@ function pareceOrden(linea: string): boolean {
   const primera = linea.split(/\s+/)[0] ?? '';
   // El verbo tiene que ser la palabra entera: el enunciado del laboratorio 03
   // habla de un archivo llamado `gitignore`, que no es una orden.
-  return /^(git|ls|cat|pwd|echo|cd|mkdir|wc|diff|rm|mv|grep|labs)$/.test(primera) ||
+  return /^(git|ls|cat|pwd|echo|cd|mkdir|wc|diff|rm|mv|grep|labs|preparar|verificar|code|chmod)$/.test(primera) ||
     primera.startsWith('./');
 }
 

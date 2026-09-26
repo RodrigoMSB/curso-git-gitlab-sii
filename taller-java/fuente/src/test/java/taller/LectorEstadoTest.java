@@ -54,6 +54,7 @@ class LectorEstadoTest {
         assertEquals("main", e.get("rama"));
         assertNull(e.get("head"));
         assertTrue(lista(e, "confirmaciones").isEmpty());
+        assertEquals(List.of(), e.get("arbol"));
         assertEquals(List.of("platos.md"), areas(e).get("sinSeguimiento"));
     }
 
@@ -137,6 +138,8 @@ class LectorEstadoTest {
         Ayuda.escribir(repo.resolve("recetas/ñoquis.md"), "ñoquis\n");
 
         Map<String, Object> e = leer(tmp, repo);
+        // El arbol de HEAD no sabe del renombrado todavia: es la ultima confirmacion.
+        assertEquals(List.of("canción.md", "platos.md"), e.get("arbol"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> preparado = (List<Map<String, Object>>) areas(e).get("preparado");
         assertEquals("canción nueva.md", preparado.get(0).get("ruta"));

@@ -112,7 +112,7 @@ export function Grafo({
       {disposicion.ocultas > 0 && (
         <p className="t-min mb-2 text-[var(--texto-apagado)]">
           Se dibujan las {nodos.length} confirmaciones más recientes.{' '}
-          {disposicion.ocultas} quedaron fuera.
+          {disposicion.ocultas === 1 ? '1 quedó fuera.' : `${disposicion.ocultas} quedaron fuera.`}
         </p>
       )}
       <svg

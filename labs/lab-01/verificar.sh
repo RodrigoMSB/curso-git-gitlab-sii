@@ -83,7 +83,7 @@ fi
 
 # Los tres criterios que siguen leen el repositorio. Sin el no se pueden
 # evaluar, pero igual se imprime una linea por cada uno: el participante tiene
-# que ver los cinco criterios y no una lista que se corta a la primera falla.
+# que ver los seis criterios y no una lista que se corta a la primera falla.
 sin_repositorio() {
   fallido "$1" "$2" 'no se pudo comprobar, no hay repositorio'
 }
@@ -176,6 +176,22 @@ else
   fallido 'los alias s y lg' \
     'alias.s y alias.lg configurados' \
     "falta configurar: $FALTANTES"
+fi
+
+# --- Criterio 6 · la rama se llama main ------------------------------------
+
+# El enunciado configura init.defaultBranch en main (SPEC 027, punto 5.4): asi
+# la rama principal se llama igual en todos los equipos, y los laboratorios
+# que vienen la nombran asi.
+if [ "$HAY_REPOSITORIO" = no ]; then
+  sin_repositorio 'la rama se llama main' 'main'
+else
+  RAMA=$(git -C "$REPOSITORIO" symbolic-ref --short -q HEAD 2>/dev/null) || RAMA=''
+  if [ "$RAMA" = main ]; then
+    aprobado 'la rama se llama main'
+  else
+    fallido 'la rama se llama main' 'main' "${RAMA:-una posicion desconectada}"
+  fi
 fi
 
 # --- Resumen ---------------------------------------------------------------

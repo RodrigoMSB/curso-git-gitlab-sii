@@ -84,6 +84,14 @@ public final class LectorEstado {
                 "--format=%(refname)%09%(objectname)%09%(objecttype)%09%(*objectname)%09%(*objecttype)",
                 "refs/heads", "refs/remotes", "refs/tags").salida());
 
+        // Los archivos de la ultima confirmacion, para el area del repositorio
+        // (punto 2.2 del SPEC 027). Sin ninguna referencia todavia no hay
+        // confirmacion, y no se pregunta.
+        boolean hayConfirmaciones = !s.get("refs").isBlank() || Files.isRegularFile(dirGit.resolve("logs/HEAD"));
+        s.put("arbol", hayConfirmaciones
+                ? git(raiz, entorno, null, "ls-tree", "-r", "--name-only", "-z", "HEAD").salida()
+                : "");
+
         List<String> puntas = new ArrayList<>();
         String guardados = "";
         if (Files.exists(dirGit.resolve("refs/stash")) || Files.exists(dirGit.resolve("logs/refs/stash"))) {
@@ -288,6 +296,11 @@ public final class LectorEstado {
         estado.put("guardados", guardados);
         estado.put("operacion", operacion);
         estado.put("areas", a);
+        List<String> arbol = new ArrayList<>();
+        for (String ruta : s.getOrDefault("arbol", "").split("\0")) {
+            if (!ruta.isEmpty()) arbol.add(ruta);
+        }
+        estado.put("arbol", arbol);
         estado.put("cambios", areas.cambios());
         return estado;
     }

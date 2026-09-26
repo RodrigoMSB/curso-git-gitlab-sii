@@ -5065,3 +5065,106 @@ colgada y se canceló.
 | Mutaciones del recorrido de punta a punta | 4 de 4 atrapadas |
 | `taller-java/taller.jar` | 77 552 bytes |
 | Runtimes | 31 MB cada uno en disco, 17,4 y 18,7 MB comprimidos |
+
+---
+
+# SPEC 027 · Ajustes del modo taller después de la prueba en vivo
+
+## 72. Lo que se ajustó
+
+SPEC 027, en la rama `taller-java`.
+
+### 72.1 · La disposición
+
+En el modo taller la consola y el grafo van lado a lado desde 900 píxeles, y no
+desde 1280. La consola y el tirador recibieron una opción de corte, y el modo de
+escenarios conserva el suyo. El ancho de partida de la consola quedó con tope
+en 60 %: con el tope de 72 del modo de escenarios, a 900 píxeles el grafo se
+quedaba con un cuarto de la pantalla.
+
+### 72.2 · El área del repositorio
+
+Lista los archivos de HEAD, que el programa lee con `git ls-tree` en la misma
+lectura del estado, y debajo las confirmaciones y las ramas. Sobre treinta
+archivos, los primeros y una línea con cuántos más. Todos los contadores de la
+página pasan por una sola función, `contar`, que dice «1 confirmación» y
+«1 cambio sin confirmar». Se corrigieron también los del modo de escenarios.
+
+### 72.3 · La consola
+
+- **Dos órdenes en una línea.** La lista de órdenes conocidas vive en
+  `simulador/src/vista/ordenesConocidas.ts`. Si una línea empieza con una de
+  ellas y más adelante aparece otra suelta, fuera de comillas y sin `;`, `&&`,
+  `||` ni `|` entre medio, la consola lo pregunta con la voz del programa y la
+  orden corre igual. La segunda palabra de `git` no cuenta, porque `git diff` es
+  una sola orden, y en `git stash`, `git remote` y las demás que llevan una
+  suborden propia tampoco la tercera.
+- **La salida larga.** Si la salida de una orden no cabe, la consola queda
+  mostrando su principio, con el eco arriba, y una marca que dice que sigue más
+  abajo. Un clic en la marca baja hasta el final.
+- **La primera orden.** La causa de que la salida de `git init` quedara fuera de
+  la vista era otra. Al aparecer el repositorio, la barra de arriba gana una
+  línea con la carpeta, la consola se achica, y lo que estaba pegado al final
+  quedaba debajo. La consola ahora vuelve a bajar cuando cambia de alto. El
+  recorrido lo encontró en el paso 11 del laboratorio 01, al comprobar después
+  de cada orden que su eco se vea.
+
+### 72.4 · `preparar` y `verificar`
+
+Órdenes propias de la consola, que atiende el programa. Corren
+`labs/lab-NN/preparar.sh` y `labs/lab-NN/verificar.sh` desde la raíz del clon.
+`preparar` deja la consola en `taller-git-trabajo/lab-NN/recetario` si el script
+termina bien. Aceptan `2` y `02`, y sin número usan el laboratorio donde está la
+consola. Sobre un laboratorio ya preparado, `preparar` no corre nada, avisa que
+se borra el trabajo sin vuelta atrás y pide `preparar NN --forzar`. El programa
+nunca pasa `--forzar` por su cuenta. Su eco va en el color del programa, y
+`ayuda` las lista junto con `clear`. Los scripts no se tocaron.
+
+### 72.5 · Los enunciados
+
+Los ocho cambiaron en su preparación, en su sección del simulador y en su
+comprobación. El 01 cambió además en «Antes de empezar», en la parte 1 y en la
+parte 2; el 02, 06 y 07 en «Si algo salió mal»; el 03 y el 07 en el pasaje que
+mandaba a la terminal; el 08 en el suyo. Cada sección «Abre el simulador» pasó
+a ser «El taller ya está abierto», y conserva una frase con la dirección del
+simulador de escenarios, que sigue siendo el respaldo sin el programa y que el
+arnés de Cypress necesita para saber qué escenario abrir.
+
+El extractor del guion reconoce `preparar`, `verificar` y `code`. Para el
+simulador de escenarios quedan omitidas, porque allí el escenario ya viene
+preparado, y el recorrido del modo taller las ejecuta en la consola.
+
+**Una contradicción del spec.** El punto 4.6 dice que los scripts no se tocan y
+el 5.4 pide que el verificador del 01 compruebe que la rama se llame `main`.
+Se agregó ese criterio al verificador del 01, el sexto, y ningún otro script
+cambió.
+
+### 72.6 · Lo que el recorrido encontró además
+
+- **El extractor nunca sacó `chmod`.** En el laboratorio 08 el gancho quedaba
+  sin permiso de ejecución en la copia y en el gemelo por igual, y la
+  comparación decía «igual» mientras `verificar 08` daba 4 de 5. El recorrido
+  ahora anota el resultado de cada verificador.
+- **El recorrido no hacía el paso a mano del laboratorio 01**, agregar una línea
+  a tres archivos, que el arnés en disco sí hacía. Ahora lo hace por fuera, como
+  el editor, y `verificar 01` da 6 de 6.
+- **`git stash clear` se avisaba como dos órdenes**, porque `clear` también es
+  orden de la consola.
+
+### 72.7 · Las cifras
+
+En el Mac del product owner, con Chrome.
+
+| Laboratorio | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 |
+|---|---|---|---|---|---|---|---|---|
+| Iguales a Git | 44/44 | 53/53 | 65/65 | 71/71 | 57/57 | 52/52 | 75/75 | 46/46 |
+| Verificador | 6/6 | 7/7 | 7/7 | 5/5 | 5/5 | 7/7 | 8/8 | 5/5 |
+
+| | |
+|---|---|
+| Procesos en 60 s de reposo | 0 |
+| Cambio de afuera visible, mediana | 518 ms |
+| Pruebas de Java | 68, y 31 mutaciones atrapadas |
+| Pruebas del modelo del modo taller | 28, y 17 mutaciones atrapadas |
+| Suite del simulador | 982 |
+| Mutaciones del recorrido | 7 de 7 atrapadas |

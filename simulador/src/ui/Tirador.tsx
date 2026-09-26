@@ -32,9 +32,11 @@ interface Props {
   /** El contenedor de la consola, el tirador y el grafo: contra su ancho se mide. */
   readonly contenedor: React.RefObject<HTMLElement | null>;
   readonly onCambiar: (porcentaje: number) => void;
+  /** Desde que ancho se muestra: el mismo corte de la consola. */
+  readonly corte?: 1280 | 900;
 }
 
-export function Tirador({ actual, pedido, contenedor, onCambiar }: Props): React.ReactElement {
+export function Tirador({ actual, pedido, contenedor, onCambiar, corte = 1280 }: Props): React.ReactElement {
   const [arrastrando, setArrastrando] = useState(false);
   // El arrastre se sigue en una referencia y no en el estado: el primer
   // movimiento puede llegar antes de que React redibuje, y con el estado
@@ -61,7 +63,7 @@ export function Tirador({ actual, pedido, contenedor, onCambiar }: Props): React
       tabIndex={0}
       title="Arrastra para repartir el espacio"
       data-arrastrando={arrastrando ? 'si' : 'no'}
-      className="tirador hidden min-[1280px]:grid"
+      className={corte === 900 ? 'tirador hidden min-[900px]:grid' : 'tirador hidden min-[1280px]:grid'}
       onPointerDown={(evento) => {
         evento.preventDefault();
         identificador.current = evento.pointerId;

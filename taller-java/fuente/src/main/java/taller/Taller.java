@@ -21,7 +21,8 @@ public final class Taller {
 
     /** Lo que la pagina necesita saber de la sesion, fijo desde el arranque. */
     public record Datos(
-            Sistema sistema, Path limite, Path trabajo, Path propia, String usuario, String equipo, List<String> avisos) {}
+            Sistema sistema, Path limite, Path clon, Path trabajo, Path propia, String usuario, String equipo,
+            List<String> avisos) {}
 
     private final Datos datos;
     private final Ejecutor ejecutor;
@@ -94,6 +95,8 @@ public final class Taller {
         ordenEnCurso = orden;
         try {
             Registro.escribir("orden en " + Rutas.relativa(datos.limite(), carpeta) + " · " + orden);
+            var propia = OrdenesPropias.planDe(orden, carpeta, datos.clon(), datos.trabajo());
+            if (propia.isPresent()) return new Respuesta(ejecutarPropia(propia.get()), null);
             Ejecutor.Resultado r = ejecutor.ejecutar(orden, carpeta);
             if (!r.carpeta().equals(carpeta)) {
                 carpeta = r.carpeta();
@@ -110,6 +113,27 @@ public final class Taller {
 
     boolean leyendo() {
         return leyendo;
+    }
+
+    /**
+     * Corre el script de una orden propia desde la raiz del clon. La consola no
+     * queda en el clon: vuelve a donde estaba, o, si preparar termino bien, pasa
+     * a la carpeta del laboratorio.
+     */
+    private Ejecutor.Resultado ejecutarPropia(OrdenesPropias.Plan plan) {
+        if (plan.script() == null) {
+            return new Ejecutor.Resultado(1, "", "", carpeta, false, plan.avisos());
+        }
+        Ejecutor.Resultado r = ejecutor.ejecutar(plan.script(), plan.carpeta());
+        List<String> avisos = new java.util.ArrayList<>(plan.avisos());
+        avisos.addAll(r.avisos());
+        if (r.codigo() == 0 && plan.destino() != null && Files.isDirectory(plan.destino())) {
+            carpeta = Rutas.real(plan.destino());
+            guardarCarpeta();
+            avisos.add("La consola quedó en " + Rutas.relativa(datos.limite(), carpeta) + ".");
+        }
+        leer();
+        return new Ejecutor.Resultado(r.codigo(), r.salida(), r.error(), carpeta, r.agotado(), avisos);
     }
 
     public boolean ocupado() {

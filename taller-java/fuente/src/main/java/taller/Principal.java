@@ -64,7 +64,7 @@ public final class Principal {
         Ejecutor ejecutor = new Ejecutor(sistema, git, limite, propia, tiempo);
         LectorEstado lector = new LectorEstado(sistema, git, propia);
         Taller taller = new Taller(
-                new Taller.Datos(sistema, limite, trabajo, propia, usuario(), equipo(sistema), List.copyOf(avisos)),
+                new Taller.Datos(sistema, limite, clon, trabajo, propia, usuario(), equipo(sistema), List.copyOf(avisos)),
                 ejecutor, lector);
         taller.leer();
 

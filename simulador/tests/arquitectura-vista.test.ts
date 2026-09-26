@@ -230,7 +230,7 @@ describe('SPEC 017 · la barra, las areas y la tipografia', () => {
 const TEXTOS_ACENTUADOS: Readonly<Record<string, readonly string[]>> = {
   'Consola.tsx': [
     'Previsualización:',
-    'confirmación(es) en trazo discontinuo',
+    "contar(aviso.confirmacionesNuevas, 'confirmación', 'confirmaciones')} en trazo discontinuo",
     ', el puntero se moverá',
     'Tabulación completa la orden. Con el campo vacío, tabulación sale de la consola.',
     'Previsualización activa: lo que la orden haría',

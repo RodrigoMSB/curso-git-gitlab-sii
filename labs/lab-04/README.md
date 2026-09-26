@@ -14,12 +14,13 @@ Antes de mirar el resultado vas a dibujar en un papel cómo crees que quedó el 
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+Tu trabajo no va dentro del clon del curso, va al lado, en `taller-git-trabajo`. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
-labs/lab-04/preparar.sh
-cd ../taller-git-trabajo/lab-04/recetario
+preparar 04
 ```
+
+La consola arma el escenario, comprueba que quedó bien y queda parada en `taller-git-trabajo/lab-04/recetario`, que es donde vas a trabajar.
 
 Mira el punto de partida.
 
@@ -31,16 +32,11 @@ git branch
 
 Seis confirmaciones en una sola línea recta y una sola rama. De aquí en adelante deja de ser recta.
 
-### Abre el simulador en el escenario de este laboratorio
+### El taller ya está abierto
 
-El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER-JAVA.cmd` o con `taller-java.command`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
 
-Llévalo al escenario de este laboratorio, que es **Lab 04 · Tres cocinas en paralelo**, de cualquiera de estas dos formas.
-
-- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 04`.
-- O abre el archivo con la dirección `SIMULADOR.html?lab=04`, pegándola en la barra de direcciones del navegador.
-
-Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 04`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+Si trabajas sin el programa del taller, el simulador de escenarios abre este laboratorio con la dirección `SIMULADOR.html?lab=04`, sin Git de verdad.
 
 ---
 
@@ -380,6 +376,14 @@ git status
 ```
 
 Directorio limpio.
+
+Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
+
+```
+verificar 04
+```
+
+Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
 
 ---
 
