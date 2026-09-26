@@ -42,7 +42,7 @@ final class Paginas {
             }
             long version = taller.version();
             if (desde != null && desde.equals(Long.toString(version))) {
-                Servidor.responder(x, 204, "application/json; charset=utf-8", new byte[0]);
+                Servidor.responder(x, 204, null, new byte[0]);
                 return;
             }
             String documento = taller.documento();

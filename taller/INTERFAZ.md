@@ -96,7 +96,7 @@ Fuera de un repositorio, `<estado>` es `{"repositorio": false, "motivo": "fuera"
 
 ### `POST /api/orden`
 
-Cuerpo `{"orden": "git status"}`, en UTF-8, de hasta 64 KB.
+Cuerpo `{"orden": "git status"}`, en UTF-8, de hasta 64 KB. Llega con `Content-Length`, como lo manda el navegador, o por partes (`Transfer-Encoding: chunked`); los dos motores leen las dos formas. Más de 64 KB es 400, como una orden que falta.
 
 - Sin orden, o con una orden vacía, 400 con `{"error": "falta la orden"}`.
 - Si otra orden está corriendo, 409 con `{"ocupado": true, "enCurso": "<la otra orden>", "avisos": ["Todavía corre la orden anterior. Espera a que termine."]}`.

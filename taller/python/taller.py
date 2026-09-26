@@ -1130,10 +1130,7 @@ class Manejador(BaseHTTPRequestHandler):
     def _orden(self) -> None:
         taller = self.server.taller
         try:
-            largo = int(self.headers.get("Content-Length", "0"))
-            if largo > 64 * 1024:
-                raise ValueError("cuerpo demasiado grande")
-            leido = json.loads(self.rfile.read(largo).decode("utf-8") or "null")
+            leido = json.loads(self._cuerpo(64 * 1024).decode("utf-8") or "null")
             orden = leido.get("orden") if isinstance(leido, dict) and isinstance(leido.get("orden"), str) else None
         except (ValueError, UnicodeDecodeError):
             orden = None
@@ -1147,6 +1144,25 @@ class Manejador(BaseHTTPRequestHandler):
             return
         self._json(200, {"codigo": r.codigo, "salida": r.salida, "error": r.error, "agotado": r.agotado,
                          "avisos": r.avisos, "version": taller.version})
+
+    def _cuerpo(self, maximo: int) -> bytes:
+        """El cuerpo, con Content-Length o por partes, como lo lee el motor de Java."""
+        if "chunked" in self.headers.get("Transfer-Encoding", "").lower():
+            partes = b""
+            while True:
+                tamano = int(self.rfile.readline().split(b";")[0].strip() or b"0", 16)
+                if tamano == 0:
+                    while self.rfile.readline().strip():
+                        pass
+                    return partes
+                partes += self.rfile.read(tamano)
+                self.rfile.readline()
+                if len(partes) > maximo:
+                    raise ValueError("cuerpo demasiado grande")
+        largo = int(self.headers.get("Content-Length", "0"))
+        if largo > maximo:
+            raise ValueError("cuerpo demasiado grande")
+        return self.rfile.read(largo)
 
     def do_GET(self) -> None:  # noqa: N802
         self._atender("GET")

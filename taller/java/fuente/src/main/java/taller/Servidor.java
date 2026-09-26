@@ -91,6 +91,8 @@ public final class Servidor {
     private HttpHandler guardia(String camino, boolean claveEnDireccion, Manejador manejador) {
         return intercambio -> {
             try (intercambio) {
+                // Toda respuesta los lleva, tambien el 403 y el 405 sin cuerpo.
+                seguridad(intercambio);
                 if (!permitida(intercambio, camino, claveEnDireccion)) {
                     intercambio.sendResponseHeaders(403, -1);
                     return;
@@ -146,12 +148,17 @@ public final class Servidor {
         }
     }
 
-    public static void responder(HttpExchange x, int codigo, String tipo, byte[] cuerpo) throws IOException {
+    static void seguridad(HttpExchange x) {
         var h = x.getResponseHeaders();
-        h.set("Content-Type", tipo);
         h.set("Cache-Control", "no-store");
         h.set("X-Content-Type-Options", "nosniff");
         h.set("Referrer-Policy", "no-referrer");
+    }
+
+    /** {@code tipo} null no manda Content-Type, para las respuestas sin cuerpo. */
+    public static void responder(HttpExchange x, int codigo, String tipo, byte[] cuerpo) throws IOException {
+        if (tipo != null) x.getResponseHeaders().set("Content-Type", tipo);
+        seguridad(x);
         if (cuerpo.length == 0) {
             x.sendResponseHeaders(codigo, -1);
             return;
