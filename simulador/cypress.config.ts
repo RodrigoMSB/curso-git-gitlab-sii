@@ -78,7 +78,7 @@ function prepararLaboratorio(numero: string): Laboratorio {
   const raiz = mkdtempSync(join(tmpdir(), 'punta-a-punta-'));
   montados.push(raiz);
 
-  const clon = join(raiz, 'curso-git-gitlab-sii');
+  const clon = join(raiz, 'curso');
   const carpeta = join(clon, 'labs', `lab-${numero}`);
   mkdirSync(carpeta, { recursive: true });
   for (const archivo of ['preparar.sh', 'verificar.sh']) {
@@ -98,7 +98,7 @@ function prepararLaboratorio(numero: string): Laboratorio {
 
   return {
     raiz,
-    recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'),
+    recetario: join(raiz, `lab-${numero}`, 'recetario'),
     configGlobal,
   };
 }

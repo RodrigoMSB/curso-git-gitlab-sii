@@ -5,5 +5,5 @@
 #
 #     cd simulador && npm run build
 #
-fuentes    1c788df8a427d92b231dbef97e28bf9c10375491
-artefacto  ea2bfd81f44e53de935ec3895a74a1ee2c24c43f
+fuentes    c173a12647f109d6897c6d36a5c809066287d171
+artefacto  5c47a69e6ebcd5b1cddc173a08a4ec0ab66052d7

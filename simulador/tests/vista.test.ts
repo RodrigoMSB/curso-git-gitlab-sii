@@ -39,7 +39,7 @@ describe('consola', () => {
     const indicador = indicadorDe(repoConRamas());
     expect(indicador.usuario).toContain('MINGW64');
     // La ruta que el participante ve en su terminal, no solo la ultima carpeta.
-    expect(indicador.ruta).toBe('~/taller-git-trabajo/lab-05/recetario');
+    expect(indicador.ruta).toBe('~/taller-git/lab-05/recetario');
     expect(indicador.rama).toBe('main');
   });
 

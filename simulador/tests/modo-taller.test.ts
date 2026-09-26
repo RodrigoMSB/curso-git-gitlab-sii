@@ -32,8 +32,8 @@ const SESION: SesionGit = {
   usuario: 'ana',
   equipo: 'SII-123',
   limite: 'José Pérez',
-  carpeta: 'C:/Users/José Pérez/taller-git-trabajo/lab-02/recetario',
-  relativa: 'taller-git-trabajo/lab-02/recetario',
+  carpeta: 'C:/Users/José Pérez/taller-git/lab-02/recetario',
+  relativa: 'taller-git/lab-02/recetario',
   avisos: [],
   tiempoMaximo: 600000,
 };
@@ -44,8 +44,8 @@ const id = (letra: string): string => letra.repeat(40);
 function repositorio(cambios: Partial<Extract<EstadoGit, { repositorio: true }>> = {}): EstadoGit {
   return {
     repositorio: true,
-    raiz: 'C:/Users/José Pérez/taller-git-trabajo/lab-02/recetario',
-    gitdir: 'C:/Users/José Pérez/taller-git-trabajo/lab-02/recetario/.git',
+    raiz: 'C:/Users/José Pérez/taller-git/lab-02/recetario',
+    gitdir: 'C:/Users/José Pérez/taller-git/lab-02/recetario/.git',
     dentroDeGit: false,
     rama: 'main',
     head: id('c'),
@@ -166,10 +166,10 @@ describe('las tres areas', () => {
 
 describe('la barra', () => {
   it('sin repositorio no dice rama ni cambios', () => {
-    const barra = barraDelTaller(documento({ repositorio: false, motivo: 'fuera' }, { relativa: 'taller-git-trabajo' }));
+    const barra = barraDelTaller(documento({ repositorio: false, motivo: 'fuera' }, { relativa: 'taller-git' }));
     expect(barra).toEqual({
       motor: null,
-      carpeta: 'José Pérez/taller-git-trabajo',
+      carpeta: 'José Pérez/taller-git',
       repositorio: null,
       rama: null,
       desconectado: false,
@@ -198,7 +198,7 @@ describe('el indicador, como el de Git Bash', () => {
   it('usuario, equipo y MINGW64 en Windows, y la rama entre parentesis', () => {
     expect(indicadorDelTaller(documento(repositorio()))).toEqual({
       usuario: 'ana@SII-123 MINGW64',
-      ruta: 'José Pérez/taller-git-trabajo/lab-02/recetario',
+      ruta: 'José Pérez/taller-git/lab-02/recetario',
       rama: 'main',
     });
     expect(indicadorDelTaller(documento(repositorio(), { sistema: 'mac' })).usuario).toBe('ana@SII-123');
@@ -217,7 +217,7 @@ describe('el indicador, como el de Git Bash', () => {
 });
 
 describe('la consola', () => {
-  const donde = { usuario: 'ana@SII-123 MINGW64', ruta: 'José Pérez/taller-git-trabajo', rama: null };
+  const donde = { usuario: 'ana@SII-123 MINGW64', ruta: 'José Pérez/taller-git', rama: null };
 
   it('el error de una orden que funciono no va en rojo', () => {
     const r = renglonesDeOrden(
@@ -286,8 +286,8 @@ describe('la consola', () => {
   });
 
   it('la presentacion dice donde corre', () => {
-    expect(presentacion(documento({ repositorio: false, motivo: 'fuera' }, { relativa: 'taller-git-trabajo' }))).toContain(
-      'José Pérez/taller-git-trabajo',
+    expect(presentacion(documento({ repositorio: false, motivo: 'fuera' }, { relativa: 'taller-git' }))).toContain(
+      'José Pérez/taller-git',
     );
   });
 

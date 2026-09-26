@@ -166,7 +166,7 @@ describe('CA2 · el enunciado lleva el cambio de ruta autorizado y solo ese', ()
 
   it('el repositorio se crea en la carpeta hermana del clon', () => {
     expect(enunciado).toContain(
-      // Desde el SPEC 027 la consola del taller parte en taller-git-trabajo.
+      // Desde el SPEC 028 la consola del taller parte en taller-git.
       'mkdir -p lab-01/recetario\ncd lab-01/recetario\ngit init',
     );
   });

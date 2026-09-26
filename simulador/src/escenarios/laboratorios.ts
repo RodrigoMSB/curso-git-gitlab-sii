@@ -19,7 +19,7 @@ import type { ArchivoDeclarado, EscenarioDeclarado } from './tipos';
 
 /** Donde vive el repositorio del participante, que es una carpeta por laboratorio. */
 const directorioDe = (laboratorio: number): string =>
-  `/taller-git-trabajo/lab-${String(laboratorio).padStart(2, '0')}/recetario`;
+  `/taller-git/lab-${String(laboratorio).padStart(2, '0')}/recetario`;
 
 /** Instante de 2024 en la zona de Chile continental, en segundos desde la epoca. */
 const cuando = (mes: number, dia: number, hora: number, minuto: number): number =>

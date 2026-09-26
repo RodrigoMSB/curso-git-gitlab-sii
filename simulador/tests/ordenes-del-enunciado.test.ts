@@ -438,3 +438,12 @@ describe('la configuracion del taller sale del enunciado del laboratorio 01', ()
     }
   });
 });
+
+describe('SPEC 028 · las carpetas del taller no se crean en el simulador de respaldo', () => {
+  it('mkdir de lab-NN o de taller-git dice que no, y una carpeta del recetario si se crea', async () => {
+    const { formaSinSoporte } = await import('../src/core/contrato');
+    expect(formaSinSoporte('mkdir -p lab-01/recetario')).toBeDefined();
+    expect(formaSinSoporte('mkdir -p taller-git/lab-01')).toBeDefined();
+    expect(formaSinSoporte('mkdir -p recetas/postres')).toBeUndefined();
+  });
+});

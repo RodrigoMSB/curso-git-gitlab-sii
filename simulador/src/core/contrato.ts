@@ -91,7 +91,7 @@ export const SIN_SOPORTE: readonly FormaSinSoporte[] = [
   },
   {
     // Crear carpetas dentro del repositorio si se puede; fuera de el, no.
-    patron: /^mkdir\b.*\s(\.\.|~|\/|taller-git-trabajo)/,
+    patron: /^mkdir\b.*\s(\.\.|~|\/|taller-git\b|lab-\d)/,
     motivo:
       'crear carpetas fuera del repositorio. El simulador solo modela el recetario en el que estas parado',
   },

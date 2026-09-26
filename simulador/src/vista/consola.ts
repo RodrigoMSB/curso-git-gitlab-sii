@@ -46,7 +46,7 @@ export interface Indicador {
  */
 export function indicadorDe(estado: EstadoRepositorio): Indicador {
   // La ruta completa del laboratorio y no solo la ultima carpeta: en el disco
-  // el participante esta parado en taller-git-trabajo/lab-NN/recetario, y el
+  // el participante esta parado en taller-git/lab-NN/recetario, y el
   // indicador tiene que decir lo mismo que su terminal (SPEC 007).
   const ruta = estado.directorio.replace(/^\/+/, '');
   return {
