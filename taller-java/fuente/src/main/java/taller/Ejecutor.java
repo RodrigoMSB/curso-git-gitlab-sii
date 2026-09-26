@@ -166,7 +166,9 @@ public final class Ejecutor {
         e.put("GIT_TERMINAL_PROMPT", "0");
         if (sistema == Sistema.WINDOWS) {
             e.put("CHERE_INVOKING", "1");
-            if (sinLocale()) e.put("LANG", "C.UTF-8");
+            // El idioma lo pone el inicio de sesion de Git Bash, desde el de
+            // Windows, y con el el orden de ls. Fijar LANG aqui ordenaba
+            // distinto de la ventana de Git Bash del participante.
         } else {
             if (sinLocale()) e.put("LC_CTYPE", "UTF-8");
             // La consola usa el git de la Terminal del participante, el primero

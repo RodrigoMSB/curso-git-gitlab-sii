@@ -33,7 +33,7 @@ $guion = @"
 `$env:TMP = `$env:TEMP
 New-Item -ItemType Directory -Force `$env:TEMP | Out-Null
 Remove-Item Env:GITHUB_ACTIONS, Env:GITHUB_STEP_SUMMARY, Env:GITHUB_OUTPUT, Env:GITHUB_ENV -ErrorAction SilentlyContinue
-`$env:TALLER_CAPTURAS = '$base\salida'
+`$env:TALLER_CAPTURAS = '$base\salida\recorrido'
 `$env:TALLER_NAVEGADOR = 'msedge'
 Set-Location '$base\repo\simulador'
 "usuario `$env:USERNAME, carpeta personal `$env:USERPROFILE, temporal `$env:TEMP" | Out-File -Encoding utf8 '$base\salida\quien.txt'

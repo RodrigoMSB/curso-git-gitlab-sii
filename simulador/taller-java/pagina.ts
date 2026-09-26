@@ -92,6 +92,18 @@ export function salidaDeLaUltimaOrden(pagina: Page): Promise<{ readonly git: str
   });
 }
 
+/**
+ * Espera a que terminen las animaciones. Una confirmacion nueva entra
+ * creciendo desde cero, y mientras crece no mide nada: leerla en ese momento
+ * es leer una pantalla a medio dibujar.
+ */
+export async function quieta(pagina: Page): Promise<void> {
+  await pagina.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), undefined, {
+    timeout: 5000,
+    polling: 30,
+  });
+}
+
 /** Escribe una orden en la consola y espera a que la entrada vuelva a estar disponible. */
 export async function escribir(pagina: Page, orden: string, espera = 15 * 60_000): Promise<number> {
   const entrada = pagina.locator('[data-prueba="entrada-consola"]');
@@ -109,5 +121,7 @@ export async function escribir(pagina: Page, orden: string, espera = 15 * 60_000
     undefined,
     { timeout: espera, polling: 50 },
   );
-  return Date.now() - inicio;
+  const ms = Date.now() - inicio;
+  await quieta(pagina);
+  return ms;
 }

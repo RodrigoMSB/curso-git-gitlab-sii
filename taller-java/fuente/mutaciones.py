@@ -52,7 +52,7 @@ MUTACIONES = [
      "LectorEstadoTest", "nunca hay huerfanas"),
     ("LectorEstado.java", 'String id = anotada ? pelado : objeto;', 'String id = objeto;', "LectorEstadoTest",
      "la etiqueta anotada apunta al objeto etiqueta"),
-    ("LectorEstado.java", 'g() { "$TALLER_GIT" --no-optional-locks', 'g() { "$TALLER_GIT"', "LectorEstadoTest",
+    ("LectorEstado.java", 'orden.add("--no-optional-locks");', '', "LectorEstadoTest",
      "leer reescribe el indice",
      [("LectorEstado.java", 'entorno.put("GIT_OPTIONAL_LOCKS", "0");', '')]),
     ("Porcelana.java", 'if (x != \'.\') preparado.add', 'if (y != \'.\') preparado.add', "PorcelanaTest",

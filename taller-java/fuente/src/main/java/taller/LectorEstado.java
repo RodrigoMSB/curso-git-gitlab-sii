@@ -18,11 +18,9 @@ import java.util.Set;
  * Le pregunta a Git como esta el repositorio de la carpeta de la consola
  * (punto 3.6).
  *
- * Todas las lecturas van en un solo bash, separadas por un marcador, para que
- * cada lectura lance un bash y no uno por pregunta. Se pasa
- * {@code --no-optional-locks} para que leer no reescriba el indice: si lo
- * reescribiera, la huella cambiaria con cada lectura y se leeria de nuevo sin
- * que nadie hubiera tocado nada.
+ * Se pasa {@code --no-optional-locks} para que leer no reescriba el indice: si
+ * lo reescribiera, la huella cambiaria con cada lectura y se leeria de nuevo
+ * sin que nadie hubiera tocado nada.
  */
 public final class LectorEstado {
 
@@ -30,27 +28,123 @@ public final class LectorEstado {
 
     private final BuscadorGit.Instalacion git;
     private final Sistema sistema;
-    private final Path guion;
 
     public LectorEstado(Sistema sistema, BuscadorGit.Instalacion git, Path carpetaPropia) throws IOException {
         this.sistema = sistema;
         this.git = git;
         Files.createDirectories(carpetaPropia);
-        this.guion = carpetaPropia.resolve("estado.sh");
-        Files.writeString(guion, GUION, StandardCharsets.UTF_8);
     }
 
     /** Lee el estado de la carpeta. Devuelve un mapa listo para JSON. */
     public Map<String, Object> leer(Path carpeta) throws IOException {
+        return interpretar(secciones(carpeta));
+    }
+
+    /**
+     * Le hace a Git las preguntas, una orden por pregunta, y junta las
+     * respuestas por nombre.
+     *
+     * Se lanzan directo y no dentro de un bash. En Windows cada proceso cuesta,
+     * y un bash con sus sustituciones de ordenes lanzaba mas procesos que las
+     * preguntas mismas: bash, un fork por cada {@code $(...)} y un tubo. Asi
+     * son entre cuatro y seis procesos de Git, y ninguno mas. El registro y el
+     * guardado temporal solo se preguntan si sus archivos existen.
+     */
+    Map<String, String> secciones(Path carpeta) throws IOException {
+        Map<String, String> s = new LinkedHashMap<>();
+        if (!Files.isDirectory(carpeta)) {
+            s.put("sin-carpeta", "");
+            return s;
+        }
         Map<String, String> entorno = new HashMap<>(Ejecutor.entornoComun(sistema, git));
-        entorno.put("TALLER_GIT", Rutas.conBarras(git.git()));
-        entorno.put("TALLER_CARPETA", Rutas.conBarras(carpeta));
         entorno.put("GIT_OPTIONAL_LOCKS", "0");
-        // Sin --login: aqui no hace falta el PATH de Git Bash, porque git se
-        // llama por su ruta, y el inicio de sesion cuesta un cuarto de segundo.
-        Procesos.Salida s = Procesos.correr(
-                List.of(git.bash().toString(), guion.toString()), carpeta.toFile(), entorno, 60_000);
-        return interpretar(s.salida());
+
+        Procesos.Salida rp = git(carpeta, entorno, null, "rev-parse", "--absolute-git-dir", "--show-toplevel");
+        String[] lineas = rp.salida().split("\\R");
+        String gitdir = lineas.length > 0 ? lineas[0].trim() : "";
+        String top = lineas.length > 1 ? lineas[1].trim() : "";
+        if (gitdir.isEmpty()) {
+            s.put("fuera", "");
+            return s;
+        }
+        if (top.isEmpty()) {
+            // Sin arbol de trabajo: parado dentro de .git, o un repositorio desnudo.
+            if (!gitdir.endsWith("/.git")) {
+                s.put("desnudo", "");
+                return s;
+            }
+            s.put("dentro-de-git", "");
+            top = gitdir.substring(0, gitdir.length() - "/.git".length());
+        }
+        s.put("raiz", top + "\n" + gitdir + "\n");
+        Path raiz = Path.of(top);
+        Path dirGit = Path.of(gitdir);
+
+        s.put("refs", git(raiz, entorno, null, "for-each-ref",
+                "--format=%(refname)%09%(objectname)%09%(objecttype)%09%(*objectname)%09%(*objecttype)",
+                "refs/heads", "refs/remotes", "refs/tags").salida());
+
+        List<String> puntas = new ArrayList<>();
+        String guardados = "";
+        if (Files.exists(dirGit.resolve("refs/stash")) || Files.exists(dirGit.resolve("logs/refs/stash"))) {
+            guardados = git(raiz, entorno, null, "stash", "list", "--format=%H%x09%P%x09%gs").salida();
+            for (String linea : lineas(guardados)) {
+                String[] c = linea.split("\t", -1);
+                if (c.length > 1 && !c[1].isBlank()) puntas.add(c[1].trim().split(" ")[0]);
+            }
+        }
+        s.put("guardados", guardados);
+
+        List<String> registro = new ArrayList<>();
+        if (Files.isRegularFile(dirGit.resolve("logs/HEAD")) && Files.size(dirGit.resolve("logs/HEAD")) > 0) {
+            for (String id : lineas(git(raiz, entorno, null, "reflog", "show", "--format=%H", "HEAD", "--").salida())) {
+                registro.add(id.trim());
+            }
+        }
+
+        List<String> log = new ArrayList<>(List.of("log", "--ignore-missing", "--topo-order", "--abbrev=7",
+                "--format=%H%x1f%h%x1f%P%x1f%an%x1f%ae%x1f%ct%x1f%s%x1e", "--branches", "--remotes", "--tags", "HEAD"));
+        log.addAll(puntas);
+        List<String> conRegistro = new ArrayList<>(log);
+        conRegistro.addAll(new java.util.LinkedHashSet<>(registro));
+        conRegistro.add("--");
+        Procesos.Salida l = git(raiz, entorno, null, conRegistro.toArray(String[]::new));
+        if (l.codigo() != 0 && !registro.isEmpty()) {
+            // Un registro viejo puede nombrar objetos que ya no existen, y git
+            // log falla entero por uno solo. Solo entonces se filtran.
+            String consulta = String.join("\n", registro) + "\n";
+            Procesos.Salida tipos = git(raiz, entorno, consulta, "cat-file", "--batch-check=%(objectname) %(objecttype)");
+            List<String> filtrado = new ArrayList<>(log);
+            for (String linea : lineas(tipos.salida())) {
+                String[] c = linea.trim().split(" ");
+                if (c.length == 2 && c[1].equals("commit")) filtrado.add(c[0]);
+            }
+            filtrado.add("--");
+            l = git(raiz, entorno, null, filtrado.toArray(String[]::new));
+        }
+        s.put("log", l.salida());
+
+        StringBuilder operacion = new StringBuilder();
+        for (String f : List.of("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD")) {
+            if (Files.exists(dirGit.resolve(f))) operacion.append(f).append('\n');
+        }
+        if (Files.isDirectory(dirGit.resolve("rebase-merge")) || Files.isDirectory(dirGit.resolve("rebase-apply"))) {
+            operacion.append("REBASE\n");
+        }
+        s.put("operacion", operacion.toString());
+        s.put("estado", git(raiz, entorno, null, "status", "--porcelain=v2", "-z", "--branch", "--untracked-files=all").salida());
+        return s;
+    }
+
+    private Procesos.Salida git(Path carpeta, Map<String, String> entorno, String entrada, String... argumentos)
+            throws IOException {
+        List<String> orden = new ArrayList<>();
+        orden.add(git.git().toString());
+        orden.add("--no-optional-locks");
+        orden.add("-c");
+        orden.add("core.quotepath=false");
+        orden.addAll(List.of(argumentos));
+        return Procesos.correr(orden, carpeta.toFile(), entorno, 60_000, entrada);
     }
 
     /** Las secciones de la salida del guion, por nombre. */
@@ -65,7 +159,10 @@ public final class LectorEstado {
     }
 
     static Map<String, Object> interpretar(String salida) {
-        Map<String, String> s = secciones(salida);
+        return interpretar(secciones(salida));
+    }
+
+    static Map<String, Object> interpretar(Map<String, String> s) {
         Map<String, Object> estado = new LinkedHashMap<>();
         if (!s.containsKey("raiz")) {
             estado.put("repositorio", false);
@@ -245,57 +342,4 @@ public final class LectorEstado {
             return 0;
         }
     }
-
-    /**
-     * El guion de lectura. Cada seccion empieza con un marcador y su nombre.
-     *
-     * Las huerfanas salen del registro de HEAD: las confirmaciones que alguna
-     * vez fueron HEAD entran al {@code git log} como puntas, junto con las
-     * ramas, las remotas y las etiquetas. Antes se filtran con
-     * {@code cat-file}, porque un registro viejo puede nombrar objetos que ya
-     * no existen y {@code git log} fallaria entero por uno solo.
-     */
-    static final String GUION = """
-            # Lectura del estado del taller. El programa lo reescribe al arrancar.
-            m() { printf '\\001%s\\001' "$1"; }
-            g() { "$TALLER_GIT" --no-optional-locks -c core.quotepath=false "$@"; }
-            builtin cd -- "$TALLER_CARPETA" 2>/dev/null || { m sin-carpeta; exit 0; }
-            { IFS= read -r gitdir; IFS= read -r top; } <<EOF
-            $(g rev-parse --absolute-git-dir --show-toplevel 2>/dev/null)
-            EOF
-            [ -n "$gitdir" ] || { m fuera; exit 0; }
-            if [ -z "$top" ]; then
-              # Sin arbol de trabajo: parado dentro de .git, o un repositorio desnudo.
-              [ "${gitdir##*/}" = .git ] || { m desnudo; exit 0; }
-              m dentro-de-git
-              top=${gitdir%/.git}
-            fi
-            m raiz; printf '%s\\n%s\\n' "$top" "$gitdir"
-            builtin cd -- "$top" || exit 0
-            m refs; g for-each-ref --format='%(refname)%09%(objectname)%09%(objecttype)%09%(*objectname)%09%(*objecttype)' refs/heads refs/remotes refs/tags
-            puntas=()
-            guardados=
-            if [ -e "$gitdir/refs/stash" ] || [ -e "$gitdir/logs/refs/stash" ]; then
-              guardados=$(g stash list --format='%H%x09%P%x09%gs' 2>/dev/null)
-            fi
-            m guardados; printf '%s\\n' "$guardados"
-            while IFS=$'\\t' read -r stash padres resto; do
-              [ -n "$padres" ] && puntas+=("${padres%% *}")
-            done <<EOF
-            $guardados
-            EOF
-            if [ -s "$gitdir/logs/HEAD" ]; then
-              while read -r id tipo; do
-                [ "$tipo" = commit ] && puntas+=("$id")
-              done <<EOF
-            $(g reflog show --format=%H HEAD -- 2>/dev/null | g cat-file --batch-check='%(objectname) %(objecttype)' 2>/dev/null)
-            EOF
-            fi
-            m log; g log --ignore-missing --topo-order --abbrev=7 --format='%H%x1f%h%x1f%P%x1f%an%x1f%ae%x1f%ct%x1f%s%x1e' --branches --remotes --tags HEAD "${puntas[@]}" -- 2>/dev/null
-            m operacion
-            for f in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do [ -e "$gitdir/$f" ] && echo "$f"; done
-            { [ -d "$gitdir/rebase-merge" ] || [ -d "$gitdir/rebase-apply" ]; } && echo REBASE
-            m estado; g status --porcelain=v2 -z --branch --untracked-files=all 2>/dev/null
-            m fin
-            """;
 }

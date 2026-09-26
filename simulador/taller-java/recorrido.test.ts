@@ -393,7 +393,8 @@ function moverse(lado: Lado, texto: string): void {
 }
 
 beforeAll(async () => {
-  const raiz = realpathSync(mkdtempSync(join(tmpdir(), 'recorrido-')));
+  // native: en Windows resuelve tambien los nombres cortos, RUNNER~1.
+  const raiz = realpathSync.native(mkdtempSync(join(tmpdir(), 'recorrido-')));
   const bin = join(raiz, 'bin');
   editorFalso(bin);
   A = prepararLado(raiz, 'SII', bin);
@@ -460,11 +461,12 @@ afterAll(async () => {
 }, 60_000);
 
 describe('el modo taller, laboratorio por laboratorio', () => {
-  const alias = aliasDelTaller(readFileSync(join(REPO, 'labs', 'lab-01', 'README.md'), 'utf8'));
+  const alias = aliasDelTaller(readFileSync(join(REPO, 'labs', 'lab-01', 'README.md'), 'utf8').replaceAll('\r\n', '\n'));
 
   for (const numero of NUMEROS) {
     it(`laboratorio ${numero}`, async () => {
-      const enunciado = readFileSync(join(REPO, 'labs', `lab-${numero}`, 'README.md'), 'utf8');
+      // En Windows el clon llega con CRLF, por el core.autocrlf de Git para Windows.
+      const enunciado = readFileSync(join(REPO, 'labs', `lab-${numero}`, 'README.md'), 'utf8').replaceAll('\r\n', '\n');
       // El enunciado empieza en la raiz del clon. Desde donde haya quedado la
       // consola, el participante vuelve con un cd: el arnes escribe el mismo.
       const hastaElClon = posix.relative(A.carpeta || '.', CLON) || '.';

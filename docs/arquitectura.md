@@ -4948,6 +4948,17 @@ un cambio.
 - **Leer no escribe.** La lectura pasa `--no-optional-locks`: si reescribiera
   el índice, la huella cambiaría con cada lectura y se leería de nuevo sin que
   nadie tocara nada.
+- **La lectura lanza Git directo, no un bash.** El punto 3.6 pedía todas las
+  lecturas en un solo bash, para lanzar menos procesos. En Windows resultó al
+  revés: bash, un fork emulado por cada `$(...)` y un tubo sumaban más procesos
+  que las preguntas mismas, y la lectura tardaba cerca de un segundo. Ahora son
+  entre cuatro y seis procesos de Git y ninguno más: la rama y HEAD salen de
+  `git status --branch`, y el registro y el guardado temporal solo se
+  preguntan si sus archivos existen. Se cumple la intención del punto y no su
+  letra.
+- **El idioma lo pone Git Bash.** El programa fijaba `LANG=C.UTF-8` en Windows,
+  y con eso `ls` ordenaba las mayúsculas primero, distinto de la ventana de Git
+  Bash, que toma el idioma de Windows.
 - **Las huérfanas las decide la página, como siempre.** El programa manda las
   confirmaciones alcanzables desde las referencias y las del registro de HEAD,
   y la página las pinta con el mismo cálculo de posiciones del modo de
@@ -4975,16 +4986,18 @@ un cambio.
 El recorrido de punta a punta compara, después de cada orden, lo que la página
 pinta con lo que Git dice preguntado aparte, y lo que la consola mostró con lo
 que imprimió un gemelo que corre la misma orden con bash directo. Encontró
-cinco defectos que ninguna prueba de unidad había visto.
+siete defectos que ninguna prueba de unidad había visto.
 
 1. Un `cd` fallido mostraba `…/taller-git-trabajo/.taller/orden.sh: line 21:`.
 2. Un error de sintaxis salía firmado `bash: eval: line 1:`.
 3. En un Mac con Homebrew la consola usaba otro git que la Terminal.
 4. Un archivo guardado justo después de una orden tardaba 1,5 s en verse.
-5. En Windows, la lectura del estado lanzaba once procesos de Git y tardaba
-   cerca de un segundo. Ahora lanza entre cuatro y seis: la rama y HEAD salen
-   de `git status --branch`, y el registro y el guardado solo se consultan si
-   sus archivos existen.
+5. En Windows, la lectura del estado lanzaba once procesos de Git dentro de un
+   bash y tardaba cerca de un segundo.
+6. En Windows, `ls` ordenaba distinto de Git Bash, por el `LANG` fijado.
+7. Una pregunta por el estado que salió antes de terminar una orden podía
+   volver después y pisar el estado nuevo con el viejo durante medio segundo.
+   La página ahora solo acepta una versión más nueva que la que tiene.
 
 Y en el programa, antes del recorrido, las pruebas de unidad y las primeras
 corridas en Windows encontraron que la comprobación del primer día cortaba su
