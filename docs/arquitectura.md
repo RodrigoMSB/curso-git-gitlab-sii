@@ -5169,12 +5169,17 @@ En el Mac del product owner, con Chrome.
 | Suite del simulador | 982 |
 | Mutaciones del recorrido | 7 de 7 atrapadas |
 
-## 71. El taller con Git real dentro de la página
+## 73. El taller con Git real dentro de la página
 
 SPEC 026, en la rama `taller-python`, creada desde `main`. (La sección 70 es
 la del modo conectado, en la rama `poc/repositorio-real`, que se descartó.)
 
-### 71.1 · Cómo se arma
+Se numeró 71 en esa rama, a la par con la 71 de `taller-java`, y pasó a 73 al
+juntar las dos ramas en `taller` (sección 74). Describe el taller de Python
+antes de la fusión: su página, `AplicacionTaller`, salió, y su programa se
+rehízo para hablar la interfaz de la página de Java.
+
+### 73.1 · Cómo se arma
 
 - **`TALLER.cmd` y `taller.command`**, en la raíz del clon, buscan un Python
   3.9 o superior (`py`, `python`, `python3`) y arrancan `taller/taller.py`.
@@ -5191,7 +5196,7 @@ la del modo conectado, en la rama `poc/repositorio-real`, que se descartó.)
 - **Sin previsualización** en este modo, sin selector de escenario, sin línea
   de tiempo y sin líneas de ayuda bajo el campo.
 
-### 71.2 · El programa
+### 73.2 · El programa
 
 - **Seguridad.** Clave aleatoria por arranque, comparada en tiempo constante;
   403 sin ella, con otra, con un `Origin` que no sea el propio, o con un
@@ -5233,7 +5238,7 @@ la del modo conectado, en la rama `poc/repositorio-real`, que se descartó.)
   fallaba («unable to load libxcrun»). El programa los lanza con
   `/usr/bin/arch -<arquitectura de Python>`. No se encontró la causa.
 
-### 71.3 · La página
+### 73.3 · La página
 
 - Cada orden queda con el prompt con que se escribió (en Git Bash cambia con
   `cd`), y el programa guarda las órdenes de la sesión para dibujarlas igual
@@ -5245,7 +5250,7 @@ la del modo conectado, en la rama `poc/repositorio-real`, que se descartó.)
   píxeles por fuera y pisaba la última línea del prompt, también en el modo
   de escenarios. La fila del campo lleva ahora aire arriba.
 
-### 71.4 · Pruebas
+### 73.4 · Pruebas
 
 - `tests/taller/programa.test.ts` (32): arranque como el alumno, seguridad,
   carpeta, paginador, tildes, una orden a la vez, editor, interactivas,
@@ -5261,7 +5266,7 @@ la del modo conectado, en la rama `poc/repositorio-real`, que se descartó.)
   fuera), 2.8 (recargar), 4.2 (`clear` e historial) y 2.9 (cerrar el taller).
   Corre en GitHub Actions (`taller.yml`).
 
-### 71.5 · Lo que el enunciado da por hecho
+### 73.5 · Lo que el enunciado da por hecho
 
 **Los enunciados del 02 al 08 empiezan con `labs/lab-NN/preparar.sh`, que
 supone la terminal parada en el clon.** La consola del taller parte en
@@ -5269,7 +5274,7 @@ supone la terminal parada en el clon.** La consola del taller parte en
 `cd ../curso-git-gitlab-sii`. El recorrido lo hace. El 01 funciona igual
 desde `taller-git-trabajo`: su `cd ..` lleva a la misma carpeta de arriba.
 
-### 71.6 · Resultados
+### 73.6 · Resultados
 
 GitHub Actions, ejecución 36218607145
 (https://github.com/RodrigoMSB/curso-git-gitlab-sii/actions/runs/36218607145).
@@ -5296,3 +5301,169 @@ prueba (un `.cmd`) no se lanzaba, y **una orden detenida por el límite de
 tiempo seguía corriendo** hasta terminar sola, porque `taskkill /T` no alcanza
 a los procesos que abre Git Bash. Ahora cada orden corre dentro de un objeto
 de trabajo de Windows y se termina entera.
+
+## 74. Un solo taller, con dos motores
+
+SPEC 028, en la rama `taller`, creada desde `main` y con `taller-java` y
+`taller-python` fusionadas. Las cuatro ramas de antes (`main`,
+`poc/repositorio-real`, `taller-java`, `taller-python`) no se tocaron.
+
+### 74.1 · La fusión
+
+Doce archivos en conflicto: `.gitattributes`, `SIMULADOR.html`,
+`docs/arquitectura.md`, `simulador/dist/index.html`,
+`simulador/dist/manifiesto.txt`, `simulador/package.json`,
+`simulador/package-lock.json`, `src/main.tsx`, `src/ui/Consola.tsx`,
+`src/vista/consola.ts`, `src/vista/index.ts` y
+`tests/arquitectura-vista.test.ts`. En todo lo de la página manda
+`taller-java`, también en lo que Git mezcló sin conflicto; la página de
+`taller-python` (`AplicacionTaller`, su barra, sus medidas y sus pruebas) sale
+en un commit aparte. `docs/arquitectura.md` conserva las dos secciones 71: la
+de Python pasó a 73. `.gitattributes` se reescribió para la estructura nueva.
+
+### 74.2 · La estructura
+
+```
+taller-git/
+  TALLER.cmd  taller.command  taller.sh     arrancan el taller
+  comprobar.cmd  comprobar.sh                 la comprobacion del primer dia
+  preparar  verificar                         scripts de bash, sin logica
+  .taller/                                    lo que guarda el motor
+  lab-01/recetario ... lab-08/recetario       el trabajo del participante
+  curso/                                      el clon
+    INSTALAR.cmd  instalar.command
+    taller/
+      INTERFAZ.md  arrancar.sh  arrancar.cmd  laboratorio.sh  comprobar.sh
+      probar-instalacion.sh  probar-lab-08.sh  mutaciones-instalacion.py
+      raiz/            los siete envoltorios que copia INSTALAR
+      java/            taller.jar, jre/ y fuente/
+      python/          taller.py
+```
+
+- **Los envoltorios de la raíz son una línea** que llama a lo que vive en el
+  clon, así que `git pull` los actualiza sin reinstalar. INSTALAR solo copia
+  y se niega si la carpeta no es `taller-git/curso`.
+- **`preparar` y `verificar` son scripts de bash**, no órdenes de la consola.
+  La consola pone la raíz del taller en el `PATH`, y así se llaman igual en la
+  consola y en Git Bash. Corren el script del laboratorio con `TALLER_RAIZ`
+  apuntando a `taller-git`. Los scripts de los laboratorios solo cambiaron la
+  carpeta de trabajo: `${TALLER_RAIZ:-$(dirname "$CLON")}/lab-NN`.
+- **Cómo `preparar` mueve la consola.** Un script no puede cambiar la carpeta
+  de quien lo llama. El envoltorio de la consola exporta `TALLER_CD_DESPUES`,
+  un archivo; `laboratorio.sh` escribe ahí la carpeta del laboratorio y el
+  envoltorio va a ella al salir, con el mismo `cd` que no sale del taller. En
+  Git Bash la variable no existe y `preparar` dice a qué carpeta ir.
+- **Sin `--forzar` y sin terminal**, preparar un laboratorio ya preparado no
+  pregunta: avisa y pide `preparar NN --forzar`.
+
+### 74.3 · La cascada
+
+`arrancar.sh` (y `arrancar.cmd`, que solo busca el bash de Git para Windows y
+lo llama con `--login`) prueba en orden:
+
+1. El motor de Java, con el runtime del clon, o un Java 21 del sistema.
+2. Si en cinco segundos no responde a `/api/diagnostico` con su clave, lo
+   cierra con todo lo que abrió y prueba el de Python, con un Python 3.9 o
+   superior del equipo (`py -3`, `python3`, `python`).
+3. Si tampoco, abre `SIMULADOR.html` en el modo de escenarios, con un aviso
+   que empieza con ATENCIÓN y pide avisar al relator, y sale con 3.
+
+El motor escribe su dirección en `taller-git/.taller/direccion`, el
+arrancador anota el motor que quedó en `.taller/motor` y abre el navegador él.
+La barra de la página dice «motor Java» o «motor Python».
+
+### 74.4 · La interfaz
+
+`taller/INTERFAZ.md` es el contrato. El motor de Python se rehízo para
+hablarla: el mismo envoltorio de bash, línea por línea; las mismas lecturas
+de Git; la misma huella sin procesos; la misma guardia. La prueba
+`simulador/taller-java/interfaz.test.ts` arranca los dos con la misma
+identidad y las mismas fechas de Git, les manda 87 peticiones (la guardia, los
+errores de la API, el 409, y órdenes que pasan por fusión con conflicto,
+rebase a medias, guardados, etiquetas, huérfanas, posición desconectada, un
+repositorio desnudo, los cuatro avisos, el límite de tiempo y `preparar`) y
+compara las respuestas paso a paso.
+
+Diferencias que encontró y se arreglaron:
+
+- **Python no leía cuerpos por partes** (`Transfer-Encoding: chunked`) y
+  respondía «falta la orden». El navegador manda `Content-Length` y no se
+  notaba; ahora los lee como Java.
+- **Java no ponía** `Cache-Control`, `X-Content-Type-Options` ni
+  `Referrer-Policy` **en el 403 y el 405**, que INTERFAZ.md pide en toda
+  respuesta. Ahora los pone la guardia antes que nada.
+- **Java mandaba `Content-Type` en el 204**, sin cuerpo. Ya no.
+
+### 74.5 · Lo que se arregló de paso
+
+- **El laboratorio 08 con `core.autocrlf` en true.** El proyecto original se
+  clonaba del paquete con la configuración global; `configurar` fijaba
+  `autocrlf` en false después, con los archivos ya escritos con CRLF. En Mac
+  el identificador quedaba siempre distinto del de un equipo con false, y en
+  Windows cambiaba de una preparación a otra según el segundo del reloj. El
+  clon lleva ahora `-c core.autocrlf=false --config core.autocrlf=false`.
+  `taller/probar-lab-08.sh` prepara una vez con false y cinco con true y
+  compara las referencias de los tres lugares.
+- **`taller/java/fuente/target/` entró al repositorio** en el commit de la
+  estructura, porque la regla que lo ignoraba no existía (en `taller-java`
+  nunca se había agregado por casualidad). Salió, y quedó la regla.
+- **La prueba del reposo dependía de la hora.** El arnés compara la página
+  con Git corriendo `git status` en la carpeta del participante, y ese
+  `git status` refrescaba `.git/index`. El motor veía el cambio, con razón, y
+  hacía una lectura: seis procesos que caían o no dentro del minuto de reposo.
+  Corriendo solo los laboratorios 01 a 03 cayeron adentro. El arnés lee ahora
+  con `GIT_OPTIONAL_LOCKS=0`, como los motores.
+- **El simulador de respaldo** decía `/taller-git-trabajo/lab-NN/recetario`
+  en su indicador. Ahora dice `/taller-git/lab-NN/recetario`, como los
+  enunciados, y `mkdir -p lab-01/recetario` recibe la explicación de que el
+  simulador no crea carpetas fuera del recetario.
+- **Las capturas del recorrido** se ignoraban solo en la copia local. Ahora
+  `.gitignore` lo dice, y cada motor deja las suyas en
+  `simulador/capturas-taller-java/<motor>/`, con su zip.
+
+### 74.6 · Pruebas, y cómo se vio fallar cada una
+
+| Prueba | Qué hace | Cómo se vio fallar |
+|---|---|---|
+| `recorrido.test.ts`, `TALLER_MOTOR=java` y `python` | los ocho laboratorios en la página, contra Git y contra un gemelo en bash; `preparar NN` y `verificar NN` escritos en la consola | `mutaciones-recorrido.py`: 12 de 12, entre ellas el motor de Python sin la raíz en el `PATH`, la barra que dice Java con Python, `preparar` que no mueve la consola y la cascada que no llega a Python |
+| `interfaz.test.ts` | los dos motores, 87 pasos | las tres diferencias reales de 74.4, y `mutaciones-interfaz.py`: 6 de 6 |
+| `probar-instalacion.sh`, `MOTOR=java`, `python`, `respaldo` | de cero: taller-git, el clon como curso, INSTALAR, TALLER, el lab 01, `preparar 02`, la comprobación | `mutaciones-instalacion.py`: 7 de 7 |
+| `probar-lab-08.sh` | seis preparaciones del 08 | con el arreglo quitado, en Mac: `2818cdd` contra `e0bc1cf` |
+| `modo-taller.test.ts` | el modelo de la página, con la barra del motor | `mutaciones-modelo.py`: 20 de 20 |
+| pruebas de Java | incluida la nueva de `PATH` y `TALLER_CD_DESPUES` | `mutaciones.py` |
+
+### 74.7 · Resultados, en este Mac con Chrome
+
+| | motor Java | motor Python |
+|---|---|---|
+| 01 | 44 de 44 | 44 de 44 |
+| 02 | 53 de 53 | 53 de 53 |
+| 03 | 65 de 65 | 65 de 65 |
+| 04 | 71 de 71 | 71 de 71 |
+| 05 | 57 de 57 | 57 de 57 |
+| 06 | 52 de 52 | 52 de 52 |
+| 07 | 75 de 75 | 75 de 75 |
+| 08 | 46 de 46 | 46 de 46 |
+| procesos en un minuto de reposo | 0 | 0 |
+| archivo editado por fuera, visto (mediana) | 517 ms | 671 ms |
+| interfaz, pasos iguales | 87 de 87 | 87 de 87 |
+
+Órdenes con la página igual a Git, con `preparar` y `verificar` escritos en
+la consola. Las capturas de los laboratorios 01 y 02 y de las pruebas de
+pantalla quedan en `simulador/capturas-taller-java/<motor>/`, con un zip por
+motor, fuera del repositorio.
+
+El clon pesa unos 33 MB de descarga y 101 MB en disco, de los que 62 MB son
+los dos runtimes de Java.
+
+### 74.8 · Lo que falta
+
+- **GitHub Actions no corre.** Desde el 2026-09-26 cada ejecución de la cuenta
+  termina en seis segundos con «recent account payments have failed or your
+  spending limit needs to be increased». El flujo `.github/workflows/taller.yml`
+  está escrito para Windows con Edge y Chrome, Mac con Chrome, Git solo para
+  Git Bash y el usuario con tilde, con los dos motores, pero nada de eso se
+  vio en esta rama: lo de Windows solo se probó en `taller-java` y
+  `taller-python` por separado, antes de la fusión.
+- **Mac con Intel** no tiene runtime de Java en el clon: usa un Java 21 del
+  sistema si hay, y si no, Python.
