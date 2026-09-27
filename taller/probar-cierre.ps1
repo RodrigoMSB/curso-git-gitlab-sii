@@ -207,7 +207,9 @@ function Arrancar([string] $nombre) {
 function Pantalla($taller) {
   # Lo que mostro la consola, sin las secuencias de control de la terminal.
   if (-not (Test-Path $taller.Salida)) { return '' }
-  $texto = [IO.File]::ReadAllText($taller.Salida)
+  # El lanzador la sigue escribiendo: se abre compartida.
+  $flujo = [IO.FileStream]::new($taller.Salida, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+  try { $texto = [IO.StreamReader]::new($flujo, [Text.Encoding]::UTF8).ReadToEnd() } finally { $flujo.Dispose() }
   return ($texto -replace "`e\[[0-9;?]*[A-Za-z]", '' -replace "`e\][^`a]*`a", '')
 }
 
