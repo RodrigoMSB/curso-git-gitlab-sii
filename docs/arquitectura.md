@@ -5633,3 +5633,112 @@ los dos runtimes de Java.
   finales de línea, que se escribieron para el Mac del desarrollo.
 - **Mac con Intel** no tiene runtime de Java en el clon: usa un Java 21 del
   sistema si hay, y si no, Python.
+
+## 75. El grafo y los detalles de la prueba en Windows
+
+SPEC 029, en la rama `taller`. Sale de la prueba del product owner en una
+máquina virtual Windows de Netec, con Git 2.55 y Edge.
+
+### 75.1 · El grafo
+
+- **El mensaje de cada confirmación** va en su fila, como `git log
+  --oneline`. Empieza en una columna común a la derecha de todos los
+  carriles, o después de las etiquetas de esa fila si llegan más lejos; como
+  cada fila tiene una sola confirmación, las líneas de los otros carriles
+  nunca lo cruzan. Los mensajes se ponen después de hacer caber el dibujo:
+  usan el ancho que sobra y no aprietan carriles ni identificadores (el ancho
+  sin ellos queda en `anchoSinMensajes`, que es lo que miran las pruebas del
+  SPEC 017). Si no cabe, se corta con puntos suspensivos, sin bajar de 24
+  caracteres ni pasar de 72, y el completo va en un `<title>`, que el
+  navegador muestra al pasar el puntero. El rótulo de las huérfanas va
+  después de sus mensajes. Letra monoespaciada, para que el corte calculado
+  sea el dibujado.
+- **Desplazamiento.** El panel se desplaza a lo alto y a lo ancho. El tope de
+  confirmaciones dibujadas pasa de 40 a 400: con desplazamiento ya no hace
+  falta cortar, y queda solo como seguridad. Al cambiar el repositorio (otra
+  confirmación en HEAD, otra cantidad, otro escenario), si HEAD quedó fuera de
+  lo visible el panel se desplaza hasta él, y solo el panel, no la página.
+- **Tamaño.** Tres botones en la esquina del panel (achicar, volver al normal,
+  que muestra el porcentaje, y agrandar) y Ctrl con la rueda sobre el panel,
+  con un escuchador no pasivo que impide que el navegador agrande la página.
+  Es la escala del SVG entero, así que puntos, etiquetas y mensajes cambian
+  juntos; el cálculo de posiciones sigue haciendo caber el dibujo como si el
+  tamaño fuera el normal. Diez pasos, de 50 % a 200 %. Se recuerda en el
+  almacenamiento del navegador; si no está o falla, parte en el normal
+  (`vista/zoomGrafo.ts`).
+- Todo vale en el modo taller y en el de escenarios: está en `Grafo.tsx`.
+
+### 75.2 · La pila de guardado
+
+Se ve siempre, en los dos modos y también fuera de un repositorio, y vacía
+dice «vacía». En el modo relator sigue sin mostrarse, como los otros paneles
+secundarios: es una decisión anterior, de proyección, que no se tocó.
+
+### 75.3 · Textos
+
+- `preparar NN` desde la consola del taller ya no imprime las líneas que
+  mandan a elegir el escenario del simulador y a abrir
+  `SIMULADOR.html?lab=NN` (laboratorios 02 a 07). Se sabe por
+  `TALLER_CD_DESPUES`, que solo exporta la consola del taller: `TALLER_RAIZ`
+  no sirve, porque el envoltorio `preparar` de Git Bash también la pone.
+  Desde Git Bash sale como siempre.
+- `INSTALAR.cmd` y `arrancar.cmd` hablan en español y con tildes, leídos en
+  UTF-8 después de `chcp 65001`. En vez de `pause`, que en un Windows en
+  inglés dice «Press any key to continue», escriben «Presiona una tecla para
+  cerrar esta ventana.» y esperan con `pause >nul`.
+- Textos del motor con tildes. La línea con la ruta de Git y la clave del
+  registro de Windows donde se encontró va a `taller-git/.taller/registro.txt`
+  y no a la ventana: es la primera excepción a la regla de la sección 3.8 del
+  SPEC 026, de no escribir registros en archivos.
+- La franja de una pestaña cuyo taller se cerró ya no dice que reintenta cada
+  cinco segundos: un taller que vuelve a abrirse trae otro puerto y otra
+  clave, y esa pestaña no se reconecta. Dice que se cierre y se siga en la
+  pestaña nueva. Por detrás sigue intentando, por si el motor solo tardó.
+
+### 75.4 · El aviso de dos órdenes
+
+El product owner escribió `git stash pop sleep 60` y Git respondió «Too many
+revisions specified». El aviso del SPEC 027, punto 3.1, **no salió**: `sleep`
+no estaba entre las órdenes conocidas, así que la línea no tenía dos. Se
+agregó `sleep`, y solo esa: sumar otras, como `find`, haría saltar el aviso con
+`git grep find`.
+
+### 75.5 · preparar y verificar dentro del laboratorio
+
+En Windows, `preparar 02 --forzar` escrito con la consola parada en
+`lab-02/recetario` borraba el `.git` y fallaba con `rm: cannot remove
+'.../lab-02/recetario': Device or resource busy`. En Windows nadie puede
+borrar una carpeta que otro proceso tiene como directorio actual, y el bash
+de la orden, el de `laboratorio.sh` y el del script la tenían.
+
+- Los dos motores corren una orden que es solo `preparar` o `verificar`, con
+  sus argumentos, con el directorio actual en la raíz del clon (SPEC 027,
+  4.2), y le pasan la carpeta de la consola en `TALLER_CARPETA_CONSOLA`. Al
+  terminar la consola vuelve a donde estaba, salvo que `preparar` la mande a
+  su laboratorio. Una línea con algo más, como `cd .. && preparar 02`, corre
+  donde está la consola. El envoltorio es el mismo, y la interfaz no cambia.
+- `laboratorio.sh` deduce el laboratorio de `TALLER_CARPETA_CONSOLA`, o de la
+  carpeta actual en Git Bash, y corre el script parado en el clon.
+- Cada `preparar.sh` de los laboratorios 02 a 08 hace `cd` al clon antes de
+  borrar, por si se corre desde Git Bash parado adentro, y
+  `semillas/preparar.sh` sale de la carpeta antes de rehacerla. Los otros
+  scripts que borran carpetas no estaban parados en ellas: la temporal de
+  `lab-05/verificar.sh` y el `.upstream` del 08, que ya hacía `cd` antes.
+- La prueba de instalación lo hace en Windows con los dos motores: con la
+  consola dentro de `lab-02/recetario`, `preparar 02 --forzar` tiene que
+  rehacerlo y `verificar`, sin número, deducir el laboratorio. Se vio fallar
+  con «Device or resource busy» en los dos motores antes del arreglo.
+
+### 75.6 · Pruebas, y cómo se vio fallar cada una
+
+| Punto | Prueba | Cómo se vio fallar |
+|---|---|---|
+| 1.1 a 1.4, 2.1 | cinco pruebas de pantalla en el recorrido, con capturas | las cinco, con la página anterior |
+| 1.1, 1.2 | `disposicion.test.ts` | el tope de 40 y los campos nuevos |
+| 1.3 | `zoom-grafo.test.ts` | sin el `try` del almacenamiento |
+| 2.1 | `vista.test.ts`, `modo-taller.test.ts` | esperaban `null` con la pila vacía |
+| 3.1 | `scripts-de-laboratorio.test.ts`, laboratorios 02 a 07 | los seis, sin el cambio |
+| 3.2 | `probar-instalacion.sh` en Windows | «los demas» y «Press any key» |
+| 4.1 | `modo-taller.test.ts` | `null` en vez de `['git', 'sleep']` |
+| 75.5 | `probar-instalacion.sh` en Windows, `EjecutorTest` | «Device or resource busy» con los dos motores; la de Java, sin la detección |
+| franja | el recorrido | la página anterior decía «cinco segundos» |

@@ -25,8 +25,9 @@ class RastroTest {
     void loQueQuedoDeLaVezAnteriorSeCierraAlArrancar(@TempDir Path propia) throws Exception {
         assertEquals(0, Rastro.limpiar(propia));
         Process orden = largo();
+        Thread mirada = null;
         try {
-            Rastro.seguir(orden);
+            mirada = Rastro.seguir(orden);
             String anotado = Files.readString(propia.resolve("procesos"), StandardCharsets.UTF_8);
             assertTrue(anotado.contains(orden.pid() + " "), anotado);
 
@@ -36,6 +37,9 @@ class RastroTest {
             assertEquals("", Files.readString(propia.resolve("procesos"), StandardCharsets.UTF_8).trim());
         } finally {
             orden.destroyForcibly();
+            // El hilo escribe el archivo una vez mas al ver terminar la orden: si
+            // lo hace mientras JUnit borra la carpeta, en Windows el borrado falla.
+            if (mirada != null) mirada.join(10_000);
         }
     }
 

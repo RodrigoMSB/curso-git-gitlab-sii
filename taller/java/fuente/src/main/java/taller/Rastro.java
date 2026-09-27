@@ -76,10 +76,11 @@ final class Rastro {
 
     /**
      * Anota una orden recien lanzada y, mientras corre, a sus descendientes.
-     * Al terminar deja en el archivo solo lo que siga vivo.
+     * Al terminar deja en el archivo solo lo que siga vivo. Devuelve el hilo
+     * que mira, para que las pruebas lo esperen antes de borrar su carpeta.
      */
-    static void seguir(Process orden) {
-        if (archivo == null) return;
+    static Thread seguir(Process orden) {
+        if (archivo == null) return null;
         anotar(List.of(orden.toHandle()));
         Thread mirada = new Thread(() -> {
             try {
@@ -94,6 +95,7 @@ final class Rastro {
         }, "rastro");
         mirada.setDaemon(true);
         mirada.start();
+        return mirada;
     }
 
     private static String inicio(ProcessHandle p) {
