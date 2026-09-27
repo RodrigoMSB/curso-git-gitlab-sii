@@ -156,9 +156,17 @@ jobs:
         motor: [java, python]
         cierre: [ventana, motor]
         custodio: [apagado, encendido]
+        directo: [no]
         exclude:
           - motor: python
             custodio: encendido
+        include:
+          # Diagnostico: java -jar solo en la consola, sin TALLER.cmd ni
+          # arrancar.sh, para ver si el gancho corre con CTRL_CLOSE_EVENT.
+          - motor: java
+            cierre: ventana
+            custodio: apagado
+            directo: si
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -170,7 +178,7 @@ jobs:
         run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
       - name: Cierra y vuelve a arrancar
         shell: pwsh
-        run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }} -Custodio:$${{ matrix.custodio == 'encendido' }}
+        run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }} -Custodio:$${{ matrix.custodio == 'encendido' }} -Directo:$${{ matrix.directo == 'si' }}
 
   interfaz:
     needs: runtimes

@@ -63,7 +63,7 @@ MUTACIONES = [
      'printf \'%s\' "$REPOSITORIO" > "$TALLER_CD_DESPUES"', 'true',
      "preparar no deja la consola en el laboratorio", "02", "java"),
     ("script", RAIZ / "taller" / "arrancar.sh",
-     'intentar Python $PYTHON', 'false $PYTHON',
+     'intentar Python "$ESPERA" $PYTHON', 'false "$ESPERA" $PYTHON',
      "la cascada no llega al motor de Python", "02", "python"),
 ]
 

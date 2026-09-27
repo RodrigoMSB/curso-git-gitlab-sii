@@ -4,12 +4,15 @@
 # Lo llaman taller.sh y taller.command, en la raiz de taller-git, y en Windows
 # arrancar.cmd, con el bash de Git para Windows. El participante no elige
 # nada. Primero el motor de Java, con el runtime que viene en el clon. Si en
-# cinco segundos no responde en su puerto, se cierra y se prueba el de Python,
+# treinta segundos no responde en su puerto, se cierra y se prueba el de Python,
 # con el Python del equipo si es 3.9 o superior. Si tampoco, se abre
 # SIMULADOR.html en el modo de escenarios, y se dice que es el respaldo.
 #
-# TALLER_ESPERA cambia los cinco segundos. TALLER_SIN_NAVEGADOR=1 no abre el
-# navegador, para las pruebas.
+# Treinta segundos para Java porque en un equipo corporativo el antivirus revisa
+# el runtime la primera vez que arranca; si responde antes, se sigue en ese
+# momento. TALLER_ESPERA_JAVA cambia los treinta segundos y TALLER_ESPERA los
+# cinco del motor de Python. TALLER_SIN_NAVEGADOR=1 no abre el navegador, para
+# las pruebas.
 #
 # Escrito para Bash 3.2, el de macOS.
 
@@ -22,6 +25,7 @@ PROPIA="$RAIZ/.taller"
 mkdir -p "$PROPIA"
 DIRECCION="$PROPIA/direccion"
 ESPERA=${TALLER_ESPERA:-5}
+ESPERA_JAVA=${TALLER_ESPERA_JAVA:-30}
 ABRIR=yes
 [ "${TALLER_SIN_NAVEGADOR:-}" = 1 ] && ABRIR=no
 
@@ -45,7 +49,7 @@ abrir() {
 # El motor escribe su direccion en $DIRECCION cuando esta escuchando. Se da por
 # arrancado si ademas responde a la clave en su puerto.
 responde() {
-  local pid=$1 intentos=$((ESPERA * 5)) direccion base clave
+  local pid=$1 intentos=$(($2 * 5)) direccion base clave
   while [ "$intentos" -gt 0 ]; do
     kill -0 "$pid" 2>/dev/null || return 1
     if [ -s "$DIRECCION" ]; then
@@ -135,12 +139,12 @@ python_del_equipo() {
 }
 
 intentar() {
-  local nombre=$1
-  shift
+  local nombre=$1 segundos=$2
+  shift 2
   rm -f "$DIRECCION"
   TALLER_SIN_NAVEGADOR=1 TALLER_ARCHIVO_DIRECCION="$DIRECCION" "$@" &
   PID=$!
-  if responde "$PID"; then
+  if responde "$PID" "$segundos"; then
     MOTOR=$nombre
     return 0
   fi
@@ -173,7 +177,8 @@ PID=''
 if [ ! -f "$AQUI/java/taller.jar" ]; then
   decir "Falta el motor de Java en el clon. Se prueba el de Python."
 elif JAVA=$(java_del_taller); then
-  intentar Java "$JAVA" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
+  decir "El taller está arrancando. La primera vez puede tardar hasta medio minuto."
+  intentar Java "$ESPERA_JAVA" "$JAVA" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
     -XX:-UsePerfData -Xshare:auto -jar "$AQUI/java/taller.jar" "$@" ||
     decir "El motor de Java no arrancó. Se prueba el de Python."
 else
@@ -185,7 +190,7 @@ if [ -z "$MOTOR" ]; then
     decir "Falta el motor de Python en el clon."
   elif PYTHON=$(python_del_equipo); then
     # shellcheck disable=SC2086
-    intentar Python $PYTHON "$AQUI/python/taller.py" "$@" ||
+    intentar Python "$ESPERA" $PYTHON "$AQUI/python/taller.py" "$@" ||
       decir "El motor de Python tampoco arrancó."
   else
     decir "No hay un Python 3.9 o superior con que arrancar el motor de Python."

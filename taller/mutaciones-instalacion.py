@@ -21,9 +21,9 @@ LABORATORIO = RAIZ / "taller" / "laboratorio.sh"
 MUTACIONES = [
     (INSTALAR, "comprobar.sh preparar verificar; do", "comprobar.sh preparar; do",
      "la instalacion no copia verificar", "java"),
-    (ARRANCAR, 'intentar Java "$JAVA"', 'false "$JAVA"',
+    (ARRANCAR, 'intentar Java "$ESPERA_JAVA" "$JAVA"', 'false "$ESPERA_JAVA" "$JAVA"',
      "el arrancador no prueba Java", "java"),
-    (ARRANCAR, "intentar Python $PYTHON", "false $PYTHON",
+    (ARRANCAR, 'intentar Python "$ESPERA" $PYTHON', 'false "$ESPERA" $PYTHON',
      "la cascada no llega a Python", "python"),
     (ARRANCAR, "  exit 3\nfi", "  exit 0\nfi",
      "el respaldo sale como si el taller hubiera arrancado", "respaldo"),

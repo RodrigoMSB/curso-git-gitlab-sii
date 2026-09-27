@@ -36,6 +36,8 @@ interface Arrancado {
   puerto: number;
   clave: string;
   registro: string;
+  /** Lo que tardo en dejar su direccion, en milisegundos. */
+  arranque: number;
 }
 
 interface Respuesta {
@@ -79,6 +81,7 @@ async function arrancar(base: string, motor: Motor, gitconfig: string): Promise<
   // Lo que traiga la maquina de quien corre la prueba no llega a Git.
   const heredado = { ...process.env };
   for (const v of ['GIT_EDITOR', 'GIT_ASKPASS', 'EDITOR', 'VISUAL', 'GIT_DIR', 'GIT_WORK_TREE', 'SSH_ASKPASS']) delete heredado[v];
+  const desde = Date.now();
   const proceso = spawn(programa, argumentos, {
     cwd: raiz,
     env: {
@@ -97,11 +100,15 @@ async function arrancar(base: string, motor: Motor, gitconfig: string): Promise<
   proceso.stdout?.on('data', (d) => (registro += String(d)));
   proceso.stderr?.on('data', (d) => (registro += String(d)));
   for (let i = 0; i < 300 && !existsSync(direccion); i++) await new Promise((r) => setTimeout(r, 100));
-  if (!existsSync(direccion)) throw new Error(`el motor de ${motor} no dejo su direccion:\n${registro}`);
+  // Si no llega, beforeAll falla y vitest da las tres pruebas por saltadas:
+  // el mensaje dice cuanto se espero, para distinguirlo de otra causa.
+  if (!existsSync(direccion)) {
+    throw new Error(`el motor de ${motor} no dejo su direccion en ${Date.now() - desde} ms:\n${registro}`);
+  }
   const url = readFileSync(direccion, 'utf8').trim();
   const m = url.match(/^http:\/\/127\.0\.0\.1:(\d+)\/\?clave=([0-9a-f]+)$/);
   if (m === null) throw new Error(`direccion rara: ${url}`);
-  return { motor, raiz, proceso, puerto: Number(m[1]), clave: m[2] ?? '', registro };
+  return { motor, raiz, proceso, puerto: Number(m[1]), clave: m[2] ?? '', registro, arranque: Date.now() - desde };
 }
 
 function pedir(
@@ -248,6 +255,7 @@ describe('la interfaz de los dos motores', () => {
 
   it('la direccion y la clave', () => {
     for (const a of motores) {
+      console.log(`motor ${a.motor}: direccion en ${a.arranque} ms`);
       expect(a.clave, a.motor).toMatch(/^[0-9a-f]{32}$/);
       expect(a.registro, a.motor).toContain(`Dirección: http://127.0.0.1:${a.puerto}/?clave=${a.clave}`);
     }

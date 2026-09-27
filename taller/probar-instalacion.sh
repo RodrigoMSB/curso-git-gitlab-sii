@@ -143,17 +143,43 @@ fi
 export TALLER_SIN_NAVEGADOR=1
 export GIT_CONFIG_GLOBAL="$BASE/gitconfig"
 printf '[user]\n\tname = Ana Núñez\n\temail = ana@sii.cl\n' > "$GIT_CONFIG_GLOBAL"
-if [ "$WINDOWS" = 1 ]; then
-  if [ "$VARIANTE" = git-fuera-del-path ]; then
-    # Solo lo que Windows trae: ni Git\cmd, ni mingw64, ni usr/bin.
-    (cd "$RAIZ" && env PATH="/c/Windows/system32:/c/Windows" /c/Windows/system32/cmd.exe //c TALLER.cmd) > "$LOG" 2>&1 &
+
+ahora_ms() {
+  local t
+  t=$(date +%s%3N 2>/dev/null)
+  case $t in
+    *[!0-9]*|'') python3 -c 'import time; print(int(time.time() * 1000))' ;;
+    *) echo "$t" ;;
+  esac
+}
+
+lanzar() {
+  if [ "$WINDOWS" = 1 ]; then
+    if [ "$VARIANTE" = git-fuera-del-path ]; then
+      # Solo lo que Windows trae: ni Git\cmd, ni mingw64, ni usr/bin.
+      (cd "$RAIZ" && env PATH="/c/Windows/system32:/c/Windows" /c/Windows/system32/cmd.exe //c TALLER.cmd) > "$1" 2>&1 &
+    else
+      (cd "$RAIZ" && cmd //c TALLER.cmd) > "$1" 2>&1 &
+    fi
   else
-    (cd "$RAIZ" && cmd //c TALLER.cmd) > "$LOG" 2>&1 &
+    (cd "$RAIZ" && bash ./taller.command) > "$1" 2>&1 &
   fi
-else
-  (cd "$RAIZ" && bash ./taller.command) > "$LOG" 2>&1 &
-fi
-PID=$!
+  PID=$!
+}
+
+# Cuanto tarda en quedar listo, desde el doble clic hasta "Motor del taller".
+esperar_motor() {
+  local desde=$1 registro=$2
+  for _ in $(seq 1 240); do
+    grep -q 'Motor del taller' "$registro" 2>/dev/null && break
+    kill -0 "$PID" 2>/dev/null || break
+    sleep 0.25
+  done
+  echo $(( $(ahora_ms) - desde ))
+}
+
+INICIO=$(ahora_ms)
+lanzar "$LOG"
 
 if [ "$ESPERADO" = respaldo ]; then
   codigo=0
@@ -168,11 +194,7 @@ if [ "$ESPERADO" = respaldo ]; then
   exit 0
 fi
 
-for _ in $(seq 1 120); do
-  grep -q 'Motor del taller' "$LOG" 2>/dev/null && break
-  kill -0 "$PID" 2>/dev/null || break
-  sleep 0.5
-done
+EN_FRIO=$(esperar_motor "$INICIO" "$LOG")
 cat "$LOG"
 grep -q "Motor del taller: $ESPERADO." "$LOG" || falla "el arrancador no quedo con el motor de $ESPERADO"
 [ "$(cat "$RAIZ/.taller/motor")" = "$ESPERADO" ] || falla ".taller/motor no dice $ESPERADO"
@@ -242,6 +264,26 @@ if [ "$VARIANTE" = git-fuera-del-path ]; then
   grep 'encontrado por PATH' "$LOG" && falla "encontro Git por el PATH, que no deberia tener Git"
 fi
 cerrar
+
+# 4b. Un segundo arranque, ya sin frio: el primero es el que paga que el
+# antivirus revise el runtime recien llegado.
+if [ "$MOTOR" = java ]; then
+  grep -q 'El taller está arrancando. La primera vez puede tardar' "$LOG" ||
+    falla "mientras espera a Java, la ventana no dijo que el taller esta arrancando"
+fi
+LOG_NORMAL="$BASE/arrancador-2.log"
+INICIO=$(ahora_ms)
+lanzar "$LOG_NORMAL"
+NORMAL=$(esperar_motor "$INICIO" "$LOG_NORMAL")
+grep -q "Motor del taller: $ESPERADO." "$LOG_NORMAL" || { cat "$LOG_NORMAL"; falla "el segundo arranque no quedo con el motor de $ESPERADO"; }
+cerrar
+ANTIVIRUS=''
+if [ "$WINDOWS" = 1 ]; then
+  ANTIVIRUS=$(pwsh -NoProfile -Command '$e = Get-MpComputerStatus -ErrorAction SilentlyContinue; if ($e) { "Defender en tiempo real: $($e.RealTimeProtectionEnabled)" } else { "Defender: sin datos" }' 2>/dev/null | tr -d '\r')
+fi
+MEDIDA="motor $ESPERADO, $(uname -s): primer arranque $(awk "BEGIN {printf \"%.1f\", $EN_FRIO / 1000}") s, arranque normal $(awk "BEGIN {printf \"%.1f\", $NORMAL / 1000}") s. $ANTIVIRUS"
+echo "MEDIDA  $MEDIDA"
+[ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "- $MEDIDA" >> "$GITHUB_STEP_SUMMARY"
 
 # 5. La comprobacion del primer dia, desde la raiz, con la visita del navegador
 # hecha a mano. La hace el motor de Java, asi que solo con MOTOR=java.

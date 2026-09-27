@@ -26,11 +26,16 @@
 # de Java sin custodio y -Cierre motor, pueden quedar procesos: el gancho no
 # corre si el motor muere de golpe. Ese caso se informa y no falla.
 #
-#     pwsh taller/probar-cierre.ps1 -Motor java -Cierre ventana [-Custodio]
+# Con -Directo, solo para Java, la pseudoconsola lanza java -jar sin
+# TALLER.cmd ni arrancar.sh: el unico que recibe CTRL_CLOSE_EVENT es la
+# maquina virtual de Java, y se ve si su gancho de cierre corre sin nadie mas.
+#
+#     pwsh taller/probar-cierre.ps1 -Motor java -Cierre ventana [-Custodio] [-Directo]
 param(
   [ValidateSet('java', 'python')] [string] $Motor = 'java',
   [ValidateSet('ventana', 'motor')] [string] $Cierre = 'ventana',
-  [switch] $Custodio
+  [switch] $Custodio,
+  [switch] $Directo
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'probar-cierre.ps1 es solo para Windows' }
@@ -44,6 +49,7 @@ $fallas = [System.Collections.Generic.List[string]]::new()
 $informe = [ordered]@{}
 $puedenQuedar = $Motor -eq 'java' -and -not $Custodio -and $Cierre -eq 'motor'
 $custodioDicho = if ($Motor -ne 'java') { '-' } elseif ($Custodio) { 'encendido' } else { 'apagado' }
+if ($Directo) { $custodioDicho += ', java directo' }
 
 function Falla([string] $texto) {
   Write-Host "FALLA  $texto"
@@ -110,7 +116,7 @@ function Vivos($procesos) {
 # archivo de senal.
 $lanzador = Join-Path $base 'lanzador.ps1'
 Set-Content -Encoding utf8 $lanzador @'
-param([string] $Carpeta, [string] $Salida, [string] $Senal, [string] $Numero)
+param([string] $Carpeta, [string] $Salida, [string] $Senal, [string] $Numero, [string] $Linea)
 Add-Type -TypeDefinition @"
 using System; using System.IO; using System.Text; using System.Threading;
 using System.Runtime.InteropServices; using Microsoft.Win32.SafeHandles;
@@ -160,7 +166,7 @@ public static class Pty {
   }
 }
 "@
-$cmd = [Pty]::Lanzar('cmd.exe /c TALLER.cmd', $Carpeta, $Salida)
+$cmd = [Pty]::Lanzar([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Linea)), $Carpeta, $Salida)
 Set-Content $Numero $cmd
 while (-not (Test-Path $Senal)) { Start-Sleep -Milliseconds 200 }
 [Pty]::Cerrar(30000) | Out-Null
@@ -174,7 +180,15 @@ function Arrancar([string] $nombre) {
   $numero = Join-Path $base "$nombre.cmd.txt"
   # Start-Process junta los argumentos con espacios sin comillas: la carpeta
   # del taller tiene un espacio ('Ana Núñez'), asi que van entre comillas.
-  $argumentos = "-NoProfile -File `"$lanzador`" -Carpeta `"$raiz`" -Salida `"$salida`" -Senal `"$senal`" -Numero `"$numero`""
+  $linea = 'cmd.exe /c TALLER.cmd'
+  if ($Directo) {
+    $java = Join-Path $raiz 'curso\taller\java\jre\windows-x64\bin\java.exe'
+    $linea = "`"$java`" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -jar `"$(Join-Path $raiz 'curso\taller\java\taller.jar')`""
+    $env:TALLER_ARCHIVO_DIRECCION = Join-Path $raiz '.taller\direccion'
+    New-Item -ItemType Directory -Force (Join-Path $raiz '.taller') | Out-Null
+  }
+  $linea64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($linea))
+  $argumentos = "-NoProfile -File `"$lanzador`" -Carpeta `"$raiz`" -Salida `"$salida`" -Senal `"$senal`" -Numero `"$numero`" -Linea $linea64"
   $lanzado = Start-Process pwsh -PassThru -WindowStyle Hidden -ArgumentList $argumentos
   $limite = (Get-Date).AddSeconds(30)
   while (-not (Test-Path $numero) -and (Get-Date) -lt $limite) { Start-Sleep -Milliseconds 200 }
@@ -185,6 +199,7 @@ function Arrancar([string] $nombre) {
   while ((Get-Date) -lt $limite) {
     $archivo = Join-Path $raiz '.taller\motor'
     if ((Test-Path $archivo) -and ((Get-Content $archivo -Raw).Trim() -eq $esperado)) { break }
+    if ($Directo -and (Test-Path (Join-Path $raiz '.taller\direccion'))) { Set-Content $archivo 'Java'; break }
     if ($null -eq (Get-Process -Id $cmdPid -ErrorAction SilentlyContinue)) { throw "TALLER.cmd termino antes de arrancar el motor de $esperado" }
     Start-Sleep -Milliseconds 300
   }
