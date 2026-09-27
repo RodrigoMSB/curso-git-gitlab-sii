@@ -6,7 +6,10 @@ rem bash de Git para Windows y le pasa el trabajo a arrancar.sh o a
 rem comprobar.sh, que son los mismos de Mac y de Git Bash. Sin Git para Windows
 rem no hay motor que arrancar: se abre el simulador de respaldo.
 rem
-rem Solo caracteres ASCII: chcp 65001 hace que cmd relea el resto en UTF-8.
+rem Los comentarios van sin tildes. Los textos que ve el participante van en
+rem espanol con tildes: chcp 65001 va antes que cualquiera de ellos. En vez de
+rem pause, que en un Windows en ingles dice "Press any key to continue", se
+rem escribe el aviso y se espera en silencio (SPEC 029, 3.2).
 setlocal EnableExtensions
 chcp 65001 >nul
 set "AQUI=%~dp0"
@@ -25,16 +28,21 @@ if not defined BASH goto sin_git
 set "CHERE_INVOKING=1"
 "%BASH%" --login "%AQUI%%QUE%.sh"
 set "ESTADO=%ERRORLEVEL%"
-if not "%ESTADO%"=="0" pause
+if not "%ESTADO%"=="0" (
+  echo.
+  echo   Presiona una tecla para cerrar esta ventana.
+  pause >nul
+)
 exit /b %ESTADO%
 
 :sin_git
 echo.
-echo   No se encontro Git para Windows, y sin el no hay taller.
-echo   Instalalo desde https://git-scm.com/download/win y vuelve a abrir el taller.
+echo   No se encontró Git para Windows, y sin él no hay taller.
+echo   Instálalo desde https://git-scm.com/download/win y vuelve a abrir el taller.
 echo.
-echo   ATENCION. Mientras tanto se abre el simulador de respaldo, sin Git de verdad.
+echo   ATENCIÓN. Mientras tanto se abre el simulador de respaldo, sin Git de verdad.
 echo.
 start "" "%AQUI%..\SIMULADOR.html"
-pause
+echo   Presiona una tecla para cerrar esta ventana.
+pause >nul
 exit /b 3
