@@ -30,6 +30,11 @@ import java.util.concurrent.TimeUnit;
  * que es cuando el motor termina, de cualquier forma, y al salir se cierra la
  * manija y Windows termina el trabajo entero.
  *
+ * El trabajo no permite salir de el (sin BREAKAWAY_OK): Git Bash lanza los
+ * programas de Windows, git.exe entre ellos, pidiendo salir, y con permiso
+ * salian y sobrevivian. La consecuencia es que un Visual Studio Code abierto
+ * con code desde la consola del taller se cierra con el taller.
+ *
  * Sumar cada orden despues de lanzarla no alcanzaba: el bash.exe de Git para
  * Windows es un lanzador que abre enseguida el bash de verdad, y ese nacia
  * fuera del trabajo antes de que llegara el numero. Lo vio la prueba del
@@ -55,7 +60,7 @@ final class Custodio {
                 trabajo = CreateJobObjectW(IntPtr.Zero, IntPtr.Zero);
                 if (trabajo == IntPtr.Zero) return false;
                 var i = new Extendida();
-                i.B.Limites = 0x2000 | 0x800;
+                i.B.Limites = 0x2000;
                 return SetInformationJobObject(trabajo, 9, ref i, Marshal.SizeOf(typeof(Extendida)));
               }
               public static bool Sumar(int pid) {

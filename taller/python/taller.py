@@ -200,9 +200,10 @@ class Trabajo:
             if not manija:
                 return None
             info = Extendida()
-            # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, y BREAKAWAY_OK para lo que
-            # pida salir, como un editor que se abre y sigue solo.
-            info.basica.limites = 0x2000 | 0x800
+            # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, sin BREAKAWAY_OK: Git Bash
+            # lanza los programas de Windows, git.exe entre ellos, pidiendo
+            # salir del trabajo, y con permiso salian y sobrevivian.
+            info.basica.limites = 0x2000
             # JobObjectExtendedLimitInformation
             if not kernel32.SetInformationJobObject(ctypes.c_void_p(manija), 9, ctypes.byref(info),
                                                     ctypes.sizeof(info)):
