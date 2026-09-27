@@ -16,12 +16,21 @@
 # sin Git, como en un equipo donde Git para Windows se instalo para usarse solo
 # desde Git Bash.
 #
+# SIN_POWERSHELL, solo en Windows y con MOTOR=java, deja powershell.exe fuera
+# de alcance para el custodio del motor de Java: bloqueado (sin permiso de
+# ejecucion), no-existe (renombrado) o lento (se lanza y no responde). El
+# taller tiene que arrancar igual, decir en la ventana que al cerrar pueden
+# quedar procesos, y atender las ordenes sin esperar al custodio en cada una.
+# Toca el sistema: solo en la integracion continua.
+#
 # Desde la raiz del clon:  MOTOR=python bash taller/probar-instalacion.sh
 set -eu
 
 CLON=$(cd "$(dirname "$0")/.." && pwd -P)
 MOTOR=${MOTOR:-java}
 VARIANTE=${VARIANTE:-normal}
+SIN_POWERSHELL=${SIN_POWERSHELL:-}
+AVISO_CUSTODIO='Al cerrar esta ventana pueden quedar procesos abiertos.'
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) WINDOWS=1 ;;
   *) WINDOWS=0 ;;
@@ -43,7 +52,16 @@ cerrar() {
   wait "$PID" 2>/dev/null || true
   PID=''
 }
-trap 'cerrar; rm -rf "$BASE"' EXIT
+devolver_powershell() {
+  [ -n "$SIN_POWERSHELL" ] || return 0
+  pwsh -NoProfile -Command '
+    $ps = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\powershell.exe" -Recurse -ErrorAction SilentlyContinue
+    if (Test-Path "$ps.fuera") { Rename-Item "$ps.fuera" "powershell.exe" }
+    if (Test-Path $ps) { icacls $ps /remove:d "$env:USERNAME" | Out-Null }
+  ' || true
+}
+trap 'cerrar; devolver_powershell; rm -rf "$BASE"' EXIT
 falla() {
   echo "FALLA  $*"
   echo "--- lo que dijo el arrancador"
@@ -85,6 +103,40 @@ case $MOTOR in
     ;;
   *) echo "MOTOR es java, python o respaldo" >&2; exit 2 ;;
 esac
+
+# 3b. PowerShell fuera de alcance, si se pidio.
+if [ -n "$SIN_POWERSHELL" ]; then
+  [ "$WINDOWS" = 1 ] && [ "$MOTOR" = java ] || { echo "SIN_POWERSHELL es solo para Windows con MOTOR=java" >&2; exit 2; }
+  [ "${CI:-}" = true ] || { echo "SIN_POWERSHELL toca el sistema: solo en la integracion continua" >&2; exit 2; }
+  pwsh -NoProfile -Command '
+    $ErrorActionPreference = "Stop"
+    $ps = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    switch ($env:SIN_POWERSHELL) {
+      "bloqueado" {
+        takeown /f $ps | Out-Null
+        icacls $ps /grant "$($env:USERNAME):F" | Out-Null
+        icacls $ps /deny "$($env:USERNAME):(RX)" | Out-Null
+      }
+      "no-existe" {
+        takeown /f $ps | Out-Null
+        icacls $ps /grant "$($env:USERNAME):F" | Out-Null
+        Rename-Item $ps "powershell.exe.fuera"
+      }
+      "lento" {
+        $clave = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\powershell.exe"
+        New-Item -Path $clave -Force | Out-Null
+        Set-ItemProperty -Path $clave -Name Debugger -Value "C:\Windows\System32\cmd.exe /c ping -n 90 127.0.0.1 >nul & rem"
+      }
+      default { throw "SIN_POWERSHELL es bloqueado, no-existe o lento" }
+    }
+  '
+  # Que de verdad no responda.
+  if timeout 15 "$SYSTEMROOT/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -Command 'Write-Output si' 2>/dev/null | grep -q si; then
+    echo "FALLA  powershell.exe sigue respondiendo; la prueba no probaria nada"
+    exit 1
+  fi
+  echo "BIEN   powershell.exe fuera de alcance: $SIN_POWERSHELL"
+fi
 
 # 4. El arranque, con doble clic en la raiz de taller-git. La configuracion
 # global de Git es una de prueba, para no tocar la del equipo.
@@ -161,12 +213,29 @@ grep -q '"asunto": *"señal ñ"' "$BASE/estado.json" || falla "el estado no trae
 echo "BIEN   el laboratorio 01 empieza en taller-git/lab-01/recetario"
 
 # preparar desde la consola, sin cd antes: la deja en el laboratorio.
+inicio=$(date +%s)
 orden 'preparar 02'
+demora=$(( $(date +%s) - inicio ))
 grep -q '"codigo": *0' "$BASE/respuesta.json" || falla "preparar 02 fallo"
 estado
 grep -q '"relativa": *"lab-02/recetario"' "$BASE/estado.json" || falla "preparar 02 no dejo la consola en lab-02/recetario"
 [ -d "$RAIZ/lab-02/recetario/.git" ] || falla "preparar 02 no dejo el repositorio en taller-git/lab-02/recetario"
-echo "BIEN   preparar 02 deja la consola en lab-02/recetario"
+echo "BIEN   preparar 02 deja la consola en lab-02/recetario, en $demora s"
+
+# El custodio del motor de Java, en Windows.
+if [ "$WINDOWS" = 1 ] && [ "$MOTOR" = java ]; then
+  if [ -n "$SIN_POWERSHELL" ]; then
+    for _ in $(seq 1 60); do
+      grep -q "$AVISO_CUSTODIO" "$LOG" && break
+      sleep 0.5
+    done
+    grep -q "$AVISO_CUSTODIO" "$LOG" || falla "sin PowerShell la ventana no dijo que al cerrar pueden quedar procesos"
+    [ "$demora" -lt 10 ] || falla "sin PowerShell preparar 02 tardo $demora s: las ordenes esperan al custodio"
+    echo "BIEN   sin PowerShell ($SIN_POWERSHELL) el taller arranca, avisa en la ventana y atiende las ordenes"
+  else
+    grep -q "$AVISO_CUSTODIO" "$LOG" && falla "con PowerShell la ventana dijo que el cierre ordenado no esta"
+  fi
+fi
 
 grep 'encontrado por' "$LOG" || true
 if [ "$VARIANTE" = git-fuera-del-path ]; then

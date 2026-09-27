@@ -100,6 +100,19 @@ jobs:
           - os: windows-latest
             motor: java
             variante: git-fuera-del-path
+          # El motor de Java con PowerShell fuera de alcance para su custodio.
+          - os: windows-latest
+            motor: java
+            variante: normal
+            sin_powershell: bloqueado
+          - os: windows-latest
+            motor: java
+            variante: normal
+            sin_powershell: no-existe
+          - os: windows-latest
+            motor: java
+            variante: normal
+            sin_powershell: lento
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -115,6 +128,7 @@ jobs:
         env:
           MOTOR: ${{ matrix.motor }}
           VARIANTE: ${{ matrix.variante }}
+          SIN_POWERSHELL: ${{ matrix.sin_powershell }}
         run: bash taller/probar-instalacion.sh
 
   # Al cerrar la ventana de TALLER.cmd, o al morir el motor, no queda ningun
