@@ -285,8 +285,9 @@ function arbolVisible(arbol: readonly string[]): readonly ElementoArea[] {
   return [...visibles, { texto: `y ${contar(resto, 'archivo más', 'archivos más')}`, tono: 'neutro' as const }];
 }
 
-export function guardadosDelTaller(estado: EstadoGit): readonly EntradaGuardadoVista[] | null {
-  if (!estado.repositorio || estado.guardados.length === 0) return null;
+/** La pila, siempre, aunque este vacia o no haya repositorio (SPEC 029, 2.1). */
+export function guardadosDelTaller(estado: EstadoGit): readonly EntradaGuardadoVista[] {
+  if (!estado.repositorio) return [];
   return estado.guardados.map((g) => ({
     clave: `stash-${g.indice}`,
     texto: `stash@{${g.indice}}: ${g.mensaje}`,

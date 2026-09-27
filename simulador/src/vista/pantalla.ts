@@ -225,14 +225,13 @@ export function panelesVisibles(
 ): Paneles {
   if (modoRelator) return { guardado: null, diferencias: null, objetos: null };
 
-  const guardado =
-    estado.guardados.length === 0
-      ? null
-      : estado.guardados.map((entrada, posicion) => ({
-          clave: `stash-${posicion}`,
-          texto: `stash@{${posicion}}: ${entrada.mensaje}`,
-          archivos: entrada.archivos.map((archivo) => archivo.nombre),
-        }));
+  // Siempre, aunque este vacia: el participante tiene que saber que existe
+  // antes de usarla (SPEC 029, 2.1).
+  const guardado = estado.guardados.map((entrada, posicion) => ({
+    clave: `stash-${posicion}`,
+    texto: `stash@{${posicion}}: ${entrada.mensaje}`,
+    archivos: entrada.archivos.map((archivo) => archivo.nombre),
+  }));
 
   const fueComparacion = ultimaOrden !== null && /^git\s+diff\b/.test(ultimaOrden);
   const cuerpo = renglones.filter((renglon) => renglon.color !== 'orden');

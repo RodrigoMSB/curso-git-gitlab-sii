@@ -9,7 +9,10 @@
  *
  * El estado se pide cada medio segundo y el programa responde de memoria; si
  * nada cambio responde sin cuerpo y aqui no se redibuja. Si el programa deja
- * de responder se dice en una franja y se reintenta cada cinco segundos.
+ * de responder se dice en una franja. Se sigue intentando cada cinco segundos,
+ * por si solo tardo, pero un taller cerrado vuelve con otro puerto y otra
+ * clave, y esta pestaña ya no lo alcanza: la franja manda a cerrarla y seguir
+ * en la que abre el arranque nuevo (SPEC 029).
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -254,7 +257,7 @@ export function ModoTaller({ clave }: { readonly clave: string }): React.ReactEl
         >
           {conexion === 'otra-clave'
             ? 'El taller se volvió a abrir y esta pestaña quedó vieja. Cierra esta pestaña y usa la que se abrió nueva.'
-            : 'El taller se cerró o no responde. Vuelve a abrirlo con el mismo doble clic; esta página lo intenta de nuevo cada cinco segundos.'}
+            : 'El taller se cerró. Esta pestaña ya no puede volver a conectarse: ciérrala, abre el taller con el mismo doble clic y sigue en la pestaña nueva que se abre.'}
         </p>
       )}
 

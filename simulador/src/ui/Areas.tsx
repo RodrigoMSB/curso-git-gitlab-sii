@@ -91,8 +91,13 @@ export function PanelesSecundarios({
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {paneles.guardado !== null && (
-        <section className="panel px-5 py-4">
+        <section className="panel px-5 py-4" data-prueba="pila">
           <h2 className="rotulo mb-3">Pila de guardado temporal</h2>
+          {paneles.guardado.length === 0 && (
+            <p className="t-min text-[var(--texto-apagado)]" data-prueba="pila-vacia">
+              vacía
+            </p>
+          )}
           <ol className="t-min space-y-1 font-mono">
             {paneles.guardado.map((entrada) => (
               <li key={entrada.clave} data-guardado={entrada.texto}>

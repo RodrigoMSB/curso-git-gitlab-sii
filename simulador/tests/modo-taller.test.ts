@@ -118,7 +118,9 @@ describe('el estado de Git en la forma del dibujo', () => {
     expect(guardadosDelTaller(estado)).toEqual([
       { clave: 'stash-0', texto: 'stash@{0}: WIP on main: ccccccc tres', archivos: [] },
     ]);
-    expect(guardadosDelTaller(repositorio())).toBeNull();
+    // SPEC 029, 2.1: la pila va siempre, vacia si no tiene nada, y tambien fuera de un repositorio.
+    expect(guardadosDelTaller(repositorio())).toEqual([]);
+    expect(guardadosDelTaller({ repositorio: false, motivo: 'fuera' })).toEqual([]);
   });
 });
 

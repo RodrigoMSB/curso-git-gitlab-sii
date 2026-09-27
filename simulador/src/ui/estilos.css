@@ -287,6 +287,31 @@ body {
 }
 
 /*
+  Los botones de tamaño del grafo (SPEC 029, 1.3), en la esquina del panel.
+  Opacos, para que el dibujo que pasa por detras no los atraviese.
+*/
+.boton-zoom {
+  min-width: calc(var(--escala) * 30px);
+  height: calc(var(--escala) * 28px);
+  padding: 0 calc(var(--escala) * 8px);
+  border: 1px solid var(--borde);
+  border-radius: 7px;
+  background: var(--fondo-panel);
+  color: var(--texto-apagado);
+  font-size: calc(var(--escala) * 13px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.boton-zoom:hover:not(:disabled) {
+  color: var(--texto);
+  border-color: var(--texto-tenue);
+}
+.boton-zoom:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/*
   Listas de la zona D.
 
   El tope es un numero entero de filas y cada fila mide exactamente lo mismo,

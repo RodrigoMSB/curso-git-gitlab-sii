@@ -60,3 +60,15 @@ export {
   renglonesDeOrden,
 } from './modoTaller';
 export { AYUDA, ORDENES_CONOCIDAS, esOrdenPropia, ordenesPegadas } from './ordenesConocidas';
+
+export type { Almacen } from './zoomGrafo';
+export {
+  acercar,
+  alejar,
+  almacenDelNavegador,
+  guardarZoom,
+  leerZoom,
+  puedeAcercar,
+  puedeAlejar,
+  ZOOM_NORMAL,
+} from './zoomGrafo';

@@ -20,6 +20,13 @@ export interface NodoGrafo {
   readonly previsualizada: boolean;
   /** Tiene padres que quedaron fuera del limite de dibujo. */
   readonly padresOcultos: boolean;
+  /**
+   * El mensaje en una linea, como `git log --oneline`, cortado con puntos
+   * suspensivos si no cabe (SPEC 029, 1.1). El completo es `mensaje`.
+   */
+  readonly mensajeVisible: string;
+  /** Donde empieza el mensaje: a la derecha de los carriles y de las etiquetas de su fila. */
+  readonly mensajeX: number;
 }
 
 export interface AristaGrafo {
@@ -95,6 +102,12 @@ export interface Disposicion {
   readonly origenY: number;
   readonly ancho: number;
   readonly alto: number;
+  /**
+   * El ancho sin los mensajes: lo que se hace caber en el panel apretando
+   * carriles e identificadores (SPEC 017). Los mensajes usan lo que sobra, y si
+   * no sobra, el panel se desplaza (SPEC 029).
+   */
+  readonly anchoSinMensajes: number;
   /** Confirmaciones que quedaron fuera por el limite de dibujo. */
   readonly ocultas: number;
   /** Separacion entre filas con que se dibujo: menor que la de `MEDIDAS` si hubo que apretar. */
@@ -129,6 +142,16 @@ export const MEDIDAS = {
   relleno: 12,
   /** Espacio que ocupa el identificador dibujado a la izquierda del nodo. */
   anchoIdentificador: 70,
-  /** Sobre esta cantidad se dibujan solo las mas recientes (punto 5.8). */
-  limitePorDefecto: 40,
+  /**
+   * Sobre esta cantidad se dibujan solo las mas recientes (punto 5.8). Desde el
+   * SPEC 029 el panel se desplaza y no hace falta cortar: es solo un tope de
+   * seguridad, lejos de lo que llega a tener un laboratorio.
+   */
+  limitePorDefecto: 400,
+  /** Separacion entre lo ultimo de la fila y su mensaje. */
+  separacionMensaje: 16,
+  /** Mas largo que esto, el mensaje se corta aunque haya sitio. */
+  mensajeMaximo: 72,
+  /** Aunque no quepa, el mensaje muestra al menos esto, y el panel se desplaza. */
+  mensajeMinimo: 24,
 } as const;

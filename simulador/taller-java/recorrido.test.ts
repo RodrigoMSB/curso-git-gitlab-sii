@@ -42,7 +42,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, posix, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { chromium, type Browser, type Page } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -54,7 +54,7 @@ import {
   type OrdenDelEnunciado,
 } from '../cypress/soporte/ordenes';
 import { correrEnBash, estadoSegunGit, herramientas, WINDOWS, type EstadoSegunGit } from './git';
-import { escribir, leerPantalla, salidaDeLaUltimaOrden, type EstadoEnPantalla } from './pagina';
+import { escribir, leerPantalla, quieta, salidaDeLaUltimaOrden, type EstadoEnPantalla } from './pagina';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(AQUI, '..', '..');
@@ -859,6 +859,193 @@ describe('el modo taller, laboratorio por laboratorio', () => {
     expect(eco).toBe('visible');
   }, 60_000);
 
+  // --- SPEC 029 · el grafo y la pila de guardado ---------------------------------
+
+  /** Lo que el grafo dibuja ahora, leido de la pagina. */
+  const grafoEnPantalla = () =>
+    pagina.evaluate(() => {
+      const caja = document.querySelector<HTMLElement>('[data-prueba="grafo-desplazable"]');
+      const svg = caja?.querySelector('svg');
+      const nodos = [...document.querySelectorAll('[data-confirmacion]')].map((n) => n.getAttribute('data-confirmacion'));
+      const mensajes = [...document.querySelectorAll<SVGTextElement>('[data-prueba="mensaje"]')].map((m) => ({
+        de: m.getAttribute('data-de'),
+        texto: [...m.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join(''),
+        cortado: m.getAttribute('data-cortado') === 'si',
+        titulo: m.querySelector('title')?.textContent ?? null,
+      }));
+      const head = document.querySelector('[data-forma="puntero"]')?.getBoundingClientRect();
+      const marco = caja?.getBoundingClientRect();
+      return {
+        nodos,
+        mensajes,
+        zoom: Number(svg?.getAttribute('data-zoom') ?? '0'),
+        anchoSvg: svg?.getBoundingClientRect().width ?? 0,
+        desborda: { alto: (caja?.scrollHeight ?? 0) > (caja?.clientHeight ?? 0), ancho: (caja?.scrollWidth ?? 0) > (caja?.clientWidth ?? 0) },
+        headVisible:
+          head !== undefined && marco !== undefined &&
+          head.top >= marco.top - 1 && head.bottom <= marco.bottom + 1 && head.left >= marco.left - 1 && head.right <= marco.right + 1,
+        paginaAncha: document.documentElement.scrollWidth > innerWidth + 1,
+        escalaPagina: window.visualViewport?.scale ?? 1,
+      };
+    });
+
+  const hastaQue = async (condicion: () => Promise<boolean>, que: string): Promise<void> => {
+    const limite = Date.now() + 10_000;
+    while (!(await condicion())) {
+      if (Date.now() > limite) throw new Error(`no paso: ${que}`);
+      await pagina.waitForTimeout(150);
+    }
+  };
+
+  it('SPEC 029 · 1.1 el grafo lleva el mensaje de cada confirmacion, y el cortado muestra el completo', async () => {
+    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', '.') || '.'}`);
+    A.carpeta = '';
+    // El laboratorio 02 recien preparado: el mensaje mal escrito se lee en el dibujo.
+    await escribir(pagina, 'preparar 02 --forzar');
+    A.carpeta = 'lab-02/recetario';
+    await quieta(pagina);
+    const lab02 = await grafoEnPantalla();
+    expect(lab02.mensajes.length).toBe(lab02.nodos.length);
+    const segunGit = execFileSync(herramientas().git, ['log', '--all', '--format=%s'], { cwd: absoluta(A), encoding: 'utf8' })
+      .trim()
+      .split('\n');
+    expect(lab02.mensajes.map((m) => m.texto).sort()).toEqual([...segunGit].sort());
+    await pagina.locator('section[aria-label="Grafo de confirmaciones"]').screenshot({ path: join(SALIDA, 'grafo-lab-02.jpg'), type: 'jpeg', quality: 85 });
+
+    // Un mensaje que no cabe se corta, y el completo va en el titulo, que el
+    // navegador muestra al pasar el puntero.
+    const largo = 'Este mensaje de confirmación es largo a propósito, para ver que el grafo lo corta con puntos suspensivos y lo muestra entero al pasar el puntero';
+    await escribir(pagina, `git commit --allow-empty -q -m "${largo}"`);
+    await hastaQue(async () => (await grafoEnPantalla()).mensajes.some((m) => m.cortado), 'aparece el mensaje cortado');
+    const cortado = (await grafoEnPantalla()).mensajes.find((m) => m.cortado);
+    expect(cortado?.texto.endsWith('…')).toBe(true);
+    expect(cortado?.titulo).toBe(largo);
+    await pagina.locator(`[data-prueba="mensaje"][data-cortado="si"]`).first().hover();
+    await pagina.locator('section[aria-label="Grafo de confirmaciones"]').screenshot({ path: join(SALIDA, 'grafo-mensaje-cortado.jpg'), type: 'jpeg', quality: 85 });
+  }, 120_000);
+
+  it('SPEC 029 · 1.2 con mas de treinta confirmaciones y cinco ramas, el panel se desplaza, no corta nada y queda mostrando HEAD', async () => {
+    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', '.') || '.'}`);
+    A.carpeta = '';
+    await escribir(pagina, 'rm -rf prueba-grafo && mkdir prueba-grafo && cd prueba-grafo && git init -q -b main');
+    A.carpeta = 'prueba-grafo';
+    await escribir(pagina, 'for i in $(seq 1 32); do echo $i >> a.txt; git add a.txt; git commit -q -m "confirmación número $i"; done');
+    await escribir(pagina, 'for r in andina azteca criolla tailandesa; do git switch -q -c $r HEAD~3; echo $r > $r.txt; git add $r.txt; git commit -q -m "la rama $r"; done; git switch -q main');
+    const total = Number(execFileSync(herramientas().git, ['rev-list', '--all', '--count'], { cwd: absoluta(A), encoding: 'utf8' }).trim());
+    expect(total).toBeGreaterThan(30);
+    await hastaQue(async () => (await grafoEnPantalla()).nodos.length === total, 'se dibujan todas');
+    const ramas = await pagina.locator('[data-forma="rama"]').count();
+    expect(ramas).toBe(5);
+    const antes = await grafoEnPantalla();
+    expect(antes.mensajes.length).toBe(total);
+    expect(antes.desborda.alto).toBe(true);
+    expect(antes.paginaAncha).toBe(false);
+    await pagina.locator('section[aria-label="Grafo de confirmaciones"]').screenshot({ path: join(SALIDA, 'grafo-desplazamiento.jpg'), type: 'jpeg', quality: 85 });
+    // Se baja hasta el fondo, y un cambio del repositorio vuelve a mostrar HEAD.
+    await pagina.locator('[data-prueba="grafo-desplazable"]').evaluate((caja) => {
+      caja.scrollTop = caja.scrollHeight;
+      caja.scrollLeft = caja.scrollWidth;
+    });
+    expect((await grafoEnPantalla()).headVisible).toBe(false);
+    await escribir(pagina, 'git switch -q andina');
+    await hastaQue(async () => (await grafoEnPantalla()).headVisible, 'HEAD a la vista despues del cambio');
+    await pagina.locator('section[aria-label="Grafo de confirmaciones"]').screenshot({ path: join(SALIDA, 'grafo-head-a-la-vista.jpg'), type: 'jpeg', quality: 85 });
+  }, 180_000);
+
+  it('SPEC 029 · 1.3 agrandar, achicar y volver, con los botones y con Ctrl y la rueda, recordado al recargar', async () => {
+    const boton = (cual: string) => pagina.locator(`[data-prueba="zoom-${cual}"]`);
+    await boton('normal').click({ force: true }).catch(() => undefined);
+    const normal = await grafoEnPantalla();
+    expect(normal.zoom).toBe(1);
+    await boton('mas').click();
+    await boton('mas').click();
+    const grande = await grafoEnPantalla();
+    expect(grande.zoom).toBeGreaterThan(1);
+    expect(grande.anchoSvg).toBeGreaterThan(normal.anchoSvg * 1.15);
+    // Agrandado, el dibujo tambien se desplaza a lo ancho, y la pagina no.
+    expect(grande.desborda.ancho).toBe(true);
+    expect(grande.paginaAncha).toBe(false);
+    await pagina.locator('section[aria-label="Grafo de confirmaciones"]').screenshot({ path: join(SALIDA, 'grafo-agrandado.jpg'), type: 'jpeg', quality: 85 });
+    // Se recuerda al recargar.
+    await pagina.reload();
+    await pagina.locator('[data-prueba="entrada-consola"]').waitFor({ state: 'visible' });
+    await hastaQue(async () => (await grafoEnPantalla()).nodos.length > 0, 'el grafo vuelve');
+    expect((await grafoEnPantalla()).zoom).toBe(grande.zoom);
+    await boton('normal').click();
+    expect((await grafoEnPantalla()).zoom).toBe(1);
+    await boton('menos').click();
+    const chico = await grafoEnPantalla();
+    expect(chico.zoom).toBeLessThan(1);
+    expect(chico.anchoSvg).toBeLessThan(normal.anchoSvg);
+    await pagina.locator('section[aria-label="Grafo de confirmaciones"]').screenshot({ path: join(SALIDA, 'grafo-achicado.jpg'), type: 'jpeg', quality: 85 });
+    await boton('normal').click();
+    // Ctrl y la rueda sobre el panel: el grafo, no la pagina.
+    await pagina.locator('[data-prueba="grafo-desplazable"]').hover();
+    await pagina.keyboard.down('Control');
+    await pagina.mouse.wheel(0, -120);
+    await pagina.keyboard.up('Control');
+    await hastaQue(async () => (await grafoEnPantalla()).zoom > 1, 'Ctrl y la rueda agrandan el grafo');
+    const conRueda = await grafoEnPantalla();
+    expect(conRueda.escalaPagina).toBe(1);
+    await pagina.keyboard.down('Control');
+    await pagina.mouse.wheel(0, 120);
+    await pagina.keyboard.up('Control');
+    await hastaQue(async () => (await grafoEnPantalla()).zoom === 1, 'Ctrl y la rueda achican el grafo');
+    // Al cambiar de repositorio el tamaño se mantiene.
+    await boton('mas').click();
+    const elegido = (await grafoEnPantalla()).zoom;
+    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', 'lab-02/recetario')}`);
+    A.carpeta = 'lab-02/recetario';
+    await hastaQue(async () => (await grafoEnPantalla()).nodos.length > 0 && (await grafoEnPantalla()).nodos.length < 10, 'el grafo del laboratorio 02');
+    expect((await grafoEnPantalla()).zoom).toBe(elegido);
+    await boton('normal').click();
+  }, 180_000);
+
+  it('SPEC 029 · 2.1 la pila de guardado se ve siempre, vacia y con dos entradas', async () => {
+    await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', 'prueba-grafo')}`);
+    A.carpeta = 'prueba-grafo';
+    await escribir(pagina, 'git stash clear');
+    await pagina.locator('[data-prueba="pila-vacia"]').waitFor({ state: 'visible', timeout: 10_000 });
+    expect(await pagina.locator('[data-prueba="pila"]').isVisible()).toBe(true);
+    await pagina.locator('[data-prueba="pila"]').screenshot({ path: join(SALIDA, 'pila-vacia.jpg'), type: 'jpeg', quality: 85 });
+    await escribir(pagina, 'echo uno >> a.txt && git stash push -q -m "primera a medias"');
+    await escribir(pagina, 'echo dos >> a.txt && git stash push -q -m "segunda a medias"');
+    await hastaQue(async () => (await pagina.locator('[data-guardado]').count()) === 2, 'dos entradas en la pila');
+    expect(await pagina.locator('[data-prueba="pila-vacia"]').count()).toBe(0);
+    const textos = await pagina.locator('[data-guardado]').allTextContents();
+    expect(textos.join(' ')).toContain('segunda a medias');
+    expect(textos.join(' ')).toContain('primera a medias');
+    await pagina.locator('[data-prueba="pila"]').screenshot({ path: join(SALIDA, 'pila-con-dos.jpg'), type: 'jpeg', quality: 85 });
+    // Fuera de un repositorio tambien esta, vacia.
+    await escribir(pagina, 'cd ..');
+    A.carpeta = '';
+    await pagina.locator('[data-prueba="pila-vacia"]').waitFor({ state: 'visible', timeout: 10_000 });
+  }, 120_000);
+
+  it('SPEC 029 · 1.4 y 2.1 en el modo de escenarios, lo mismo', async () => {
+    if (navegador === undefined) throw new Error("sin navegador");
+    const escenarios = await navegador.newPage({ viewport: { width: 1440, height: 900 } });
+    try {
+      await escenarios.goto(`${pathToFileURL(join(REPO, 'SIMULADOR.html')).href}?lab=02`);
+      await escenarios.locator('[data-prueba="mensaje"]').first().waitFor({ state: 'visible' });
+      const vista = await escenarios.evaluate(() => ({
+        nodos: document.querySelectorAll('[data-confirmacion]').length,
+        mensajes: [...document.querySelectorAll('[data-prueba="mensaje"]')].map((m) => m.textContent ?? ''),
+        vacia: document.querySelector('[data-prueba="pila-vacia"]') !== null,
+        botones: document.querySelectorAll('[data-prueba^="zoom-"]').length,
+      }));
+      expect(vista.mensajes.length).toBe(vista.nodos);
+      expect(vista.mensajes.join('\n')).toContain('se docuemnta la reseta del pastel de choclo');
+      expect(vista.vacia).toBe(true);
+      expect(vista.botones).toBe(3);
+      await escenarios.locator('[data-prueba="zoom-mas"]').click();
+      expect(Number(await escenarios.locator('[data-prueba="grafo-desplazable"] svg').getAttribute('data-zoom'))).toBeGreaterThan(1);
+      await escenarios.screenshot({ path: join(SALIDA, 'escenarios-lab-02.jpg'), type: 'jpeg', quality: 80 });
+    } finally {
+      await escenarios.close();
+    }
+  }, 60_000);
+
   it('sin repositorio la barra no dice rama, y si el programa se cierra lo dice una franja', async () => {
     await escribir(pagina, `cd ${posix.relative(A.carpeta || '.', '.') || '.'}`);
     A.carpeta = '';
@@ -869,6 +1056,12 @@ describe('el modo taller, laboratorio por laboratorio', () => {
     cerrarPrograma();
     // En Windows una conexion rechazada en 127.0.0.1 tarda unos dos segundos en fallar.
     await pagina.locator('[data-prueba="franja-caida"]').waitFor({ state: 'visible', timeout: 10_000 });
+    // Un taller cerrado vuelve con otra clave: esta pestaña no se reconecta, y
+    // la franja manda a cerrarla y seguir en la nueva (SPEC 029).
+    const franja = (await pagina.locator('[data-prueba="franja-caida"]').textContent()) ?? '';
+    expect(franja).toContain('ciérrala');
+    expect(franja).toContain('pestaña nueva');
+    expect(franja).not.toContain('cinco segundos');
     await pagina.screenshot({ path: join(SALIDA, 'franja.jpg'), type: 'jpeg', quality: 80 });
     expect(await pagina.locator('[data-prueba="entrada-consola"]').isVisible()).toBe(false);
   }, 60_000);

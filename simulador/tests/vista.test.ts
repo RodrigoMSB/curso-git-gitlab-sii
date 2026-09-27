@@ -206,9 +206,9 @@ describe('zona D: areas y paneles', () => {
     expect(columnas.map((columna) => columna.clave)).toEqual(['trabajo', 'preparacion', 'local']);
   });
 
-  it('los paneles que no aplican no se muestran', () => {
+  it('los paneles que no aplican no se muestran, salvo la pila, que va siempre (SPEC 029, 2.1)', () => {
     const paneles = panelesVisibles(repoConRamas(), null, [], null, false);
-    expect(paneles.guardado).toBeNull();
+    expect(paneles.guardado).toEqual([]);
     expect(paneles.diferencias).toBeNull();
     expect(paneles.objetos).toBeNull();
   });
