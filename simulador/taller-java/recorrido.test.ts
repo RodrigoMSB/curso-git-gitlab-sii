@@ -542,13 +542,19 @@ afterAll(async () => {
     if (existsSync(join(SALIDA, nombre))) indice.push(`- [${nombre}](${nombre}) ${r.igual ? 'igual' : 'DISTINTA'} \`${r.texto}\``);
   }
   writeFileSync(join(SALIDA, 'indice.md'), indice.join('\n'));
-  try {
-    const zip = join(SALIDA, `capturas-${process.platform}-${CANAL}-${MOTOR}.zip`);
-    if (WINDOWS) execFileSync('tar.exe', ['-a', '-c', '-f', zip, '-C', SALIDA, 'indice.md', ...readdirSync(SALIDA).filter((f) => f.endsWith('.jpg'))]);
-    else execFileSync('zip', ['-q', '-j', zip, join(SALIDA, 'indice.md'), ...readdirSync(SALIDA).filter((f) => f.endsWith('.jpg')).map((f) => join(SALIDA, f))]);
-  } catch (error) {
-    console.error('no se pudo armar el zip de capturas', error);
+  // En Windows, el tar del sistema, que arma zip. El de Git Bash, si esta
+  // antes en el PATH, no sabe y toma «D:» por un equipo remoto: el zip no se
+  // armaba en ninguna maquina de Windows salvo la del usuario con tilde, y el
+  // error se tragaba (SPEC 029). Ahora, si no se arma, falla.
+  const zip = join(SALIDA, `capturas-${process.platform}-${CANAL}-${MOTOR}.zip`);
+  const capturas = readdirSync(SALIDA).filter((f) => f.endsWith('.jpg'));
+  if (WINDOWS) {
+    const tar = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe');
+    execFileSync(tar, ['-a', '-c', '-f', zip, '-C', SALIDA, 'indice.md', ...capturas]);
+  } else {
+    execFileSync('zip', ['-q', '-j', zip, join(SALIDA, 'indice.md'), ...capturas.map((f) => join(SALIDA, f))]);
   }
+  if (!existsSync(zip)) throw new Error(`no se armo el zip de capturas ${zip}`);
   await navegador?.close();
   cerrarPrograma();
 }, 60_000);
