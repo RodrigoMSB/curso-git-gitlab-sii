@@ -298,3 +298,25 @@ describe('la proteccion contra el anidamiento sigue funcionando', () => {
     expect(verificado.salida).toMatch(/falta el git init/);
   });
 });
+
+describe('SPEC 029, 3.1 · preparar no nombra el simulador desde la consola del taller', () => {
+  const correr = (lab: Montado, consola: boolean): string => {
+    const env = { ...entorno(lab.configGlobal) };
+    delete env.TALLER_CD_DESPUES;
+    // La consola del taller exporta TALLER_CD_DESPUES; Git Bash no.
+    if (consola) env.TALLER_CD_DESPUES = join(lab.raiz, 'cd-despues');
+    return execFileSync('bash', ['./preparar.sh', '--forzar'], { cwd: lab.carpeta, env, encoding: 'utf8' });
+  };
+
+  it.each(['02', '03', '04', '05', '06', '07'])('laboratorio %s', { timeout: 120_000 }, (numero) => {
+    const lab = montar(numero);
+    const desdeGitBash = correr(lab, false);
+    expect(desdeGitBash).toContain(`SIMULADOR.html?lab=${numero}`);
+    expect(desdeGitBash).toContain('elige el escenario');
+    const desdeLaConsola = correr(lab, true);
+    expect(desdeLaConsola).not.toContain('SIMULADOR.html');
+    expect(desdeLaConsola).not.toContain('elige el escenario');
+    // Lo demas sale igual en los dos.
+    expect(desdeLaConsola).toContain('el escenario quedo correcto');
+  });
+});

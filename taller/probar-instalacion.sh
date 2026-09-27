@@ -88,6 +88,14 @@ for archivo in TALLER.cmd comprobar.cmd taller.sh taller.command comprobar.sh pr
   [ -f "$RAIZ/$archivo" ] || falla "la instalacion no dejo $archivo en taller-git"
 done
 echo "BIEN   la instalacion dejo los siete envoltorios en taller-git"
+# En español y con tildes, sin el «Press any key» de pause (SPEC 029, 3.2).
+cat "$BASE/instalar.log"
+grep -q 'los demás' "$BASE/instalar.log" || falla "la instalacion no dijo «los demás» con tilde"
+if [ "$WINDOWS" = 1 ]; then
+  grep -q 'Presiona una tecla para cerrar esta ventana' "$BASE/instalar.log" || falla "INSTALAR.cmd no pidio la tecla en español"
+fi
+grep -qi 'press any key' "$BASE/instalar.log" && falla "la instalacion dijo «Press any key»"
+echo "BIEN   la instalacion habla en español, con tildes"
 
 # 3. Los sabotajes.
 case $MOTOR in
@@ -187,6 +195,10 @@ if [ "$ESPERADO" = respaldo ]; then
   PID=''
   [ "$codigo" = 3 ] || falla "el arrancador salio con $codigo y no con 3"
   grep -q 'ATENCIÓN' "$LOG" || falla "no dijo ATENCIÓN"
+  if [ "$WINDOWS" = 1 ]; then
+    grep -q 'Presiona una tecla para cerrar esta ventana' "$LOG" || falla "arrancar.cmd no pidio la tecla en español"
+    grep -qi 'press any key' "$LOG" && falla "arrancar.cmd dijo «Press any key»"
+  fi
   grep -q 'SIMULADOR.html' "$LOG" || falla "no nombro el simulador de respaldo"
   [ "$(cat "$RAIZ/.taller/motor")" = respaldo ] || falla "no dejo respaldo en .taller/motor"
   cat "$LOG"

@@ -32,6 +32,9 @@ export const ORDENES_DE_BASH = [
   'sort',
   'chmod',
   'code',
+  // No esta en los enunciados, pero se escribe probando la consola: pegada a
+  // otra, «git stash pop sleep 60» no dio aviso (SPEC 029, 4.1).
+  'sleep',
 ] as const;
 
 /** Las propias de la consola del taller, que no son de bash. */

@@ -213,10 +213,15 @@ echo "      git log --oneline"
 echo "      ls recetas"
 echo "      git status"
 echo
-echo "  Y en el simulador, elige el escenario de este laboratorio:"
-echo "      Lab 03, en el selector que dice «escenario»"
-echo "      o abrelo con la direccion SIMULADOR.html?lab=03"
-echo
-echo "  Abierto con doble clic parte en el del laboratorio 01, que"
-echo "  todavia no tiene repositorio: ahi el grafo no dibuja nada."
-echo
+# En la consola del taller no se nombra el simulador: la pagina ya es el
+# taller (SPEC 029, 3.1). TALLER_CD_DESPUES lo exporta solo esa consola;
+# desde Git Bash no esta, y se imprime como siempre.
+if [ -z "${TALLER_CD_DESPUES:-}" ]; then
+  echo "  Y en el simulador, elige el escenario de este laboratorio:"
+  echo "      Lab 03, en el selector que dice «escenario»"
+  echo "      o abrelo con la direccion SIMULADOR.html?lab=03"
+  echo
+  echo "  Abierto con doble clic parte en el del laboratorio 01, que"
+  echo "  todavia no tiene repositorio: ahi el grafo no dibuja nada."
+  echo
+fi

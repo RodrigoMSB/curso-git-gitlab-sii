@@ -345,6 +345,9 @@ describe('SPEC 027 · los contadores en singular', () => {
 describe('SPEC 027 · dos ordenes en una linea', () => {
   it('avisa cuando despues de una orden aparece otra suelta', () => {
     expect(ordenesPegadas('mkdir -p lab-01/recetario cd lab-01/recetario')).toEqual(['mkdir', 'cd']);
+    // SPEC 029, 4.1: lo que escribio el product owner en la prueba en Windows.
+    // Git contesto «Too many revisions specified» y el aviso no salio.
+    expect(ordenesPegadas('git stash pop sleep 60')).toEqual(['git', 'sleep']);
     expect(ordenesPegadas('cd recetario git status')).toEqual(['cd', 'git']);
   });
 
