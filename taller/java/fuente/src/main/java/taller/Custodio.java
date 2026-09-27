@@ -15,6 +15,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * En Windows, que nada de lo que abren las ordenes sobreviva al motor.
  *
+ * Apagado por omision: se enciende con TALLER_CUSTODIO=1 (ver Principal). Sin
+ * el, lo que queda es el gancho de cierre del motor, en Java puro.
+ *
  * Java lanza cada proceso con CREATE_NO_WINDOW, en una consola propia y
  * oculta: al cerrar la ventana de TALLER.cmd el motor recibe CTRL_CLOSE y
  * termina, pero un bash, un git o un sleep a medio correr no se enteran, y

@@ -63,8 +63,21 @@ public final class Principal {
             return;
         }
 
-        // En Windows, lo que abran las ordenes muere con el motor.
-        Custodio.arrancar();
+        // Al salir, el motor termina lo que abrieron sus ordenes. Corre al
+        // cerrarse la ventana (CTRL_CLOSE_EVENT), con Ctrl+C y al terminar
+        // normalmente; no corre si el motor muere de golpe. La linea dice que
+        // corrio, y la lee la prueba del cierre.
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            List<ProcessHandle> abiertos = ProcessHandle.current().descendants().toList();
+            System.out.println("  El taller se cierra: termina " + abiertos.size() + " procesos que abrió el motor.");
+            System.out.flush();
+            abiertos.forEach(ProcessHandle::destroyForcibly);
+        }, "cierre"));
+        // El custodio de Windows, que ata las ordenes a la vida del motor con un
+        // objeto de trabajo, compila C# con Add-Type en cada arranque, y eso
+        // puede disparar alertas del EDR en los equipos del SII: queda apagado,
+        // y se enciende solo con TALLER_CUSTODIO=1.
+        if ("1".equals(System.getenv("TALLER_CUSTODIO"))) Custodio.arrancar();
         long tiempo = tiempoMaximo();
         Ejecutor ejecutor = new Ejecutor(sistema, git, limite, propia, tiempo);
         LectorEstado lector = new LectorEstado(sistema, git, propia);

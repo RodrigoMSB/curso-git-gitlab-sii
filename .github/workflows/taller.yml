@@ -117,8 +117,9 @@ jobs:
           VARIANTE: ${{ matrix.variante }}
         run: bash taller/probar-instalacion.sh
 
-  # El motor de Java con PowerShell fuera de alcance para su custodio:
-  # arranca igual, lo dice en la ventana y atiende sin esperar en cada orden.
+  # El motor de Java con el custodio encendido (TALLER_CUSTODIO=1) y
+  # PowerShell fuera de alcance: arranca igual, lo dice en la ventana y
+  # atiende sin esperar en cada orden.
   sin-powershell:
     needs: runtimes
     strategy:
@@ -136,14 +137,17 @@ jobs:
           name: jre
       - name: Pone el runtime en su lugar
         run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
-      - name: Instala y arranca sin PowerShell
+      - name: Instala y arranca sin PowerShell, con el custodio pedido
         env:
           MOTOR: java
+          TALLER_CUSTODIO: '1'
           SIN_POWERSHELL: ${{ matrix.como }}
         run: bash taller/probar-instalacion.sh
 
-  # Al cerrar la ventana de TALLER.cmd, o al morir el motor, no queda ningun
-  # proceso vivo, y un segundo arranque puede borrar y recrear lab-01.
+  # Al cerrar la consola de TALLER.cmd (CTRL_CLOSE_EVENT de verdad, con una
+  # pseudoconsola) o al morir el motor de golpe: cuanto queda vivo, si corre
+  # el gancho de cierre del motor de Java, y si un segundo arranque puede
+  # borrar y recrear lab-01. Java con el custodio apagado y encendido.
   cierre:
     needs: runtimes
     strategy:
@@ -151,6 +155,10 @@ jobs:
       matrix:
         motor: [java, python]
         cierre: [ventana, motor]
+        custodio: [apagado, encendido]
+        exclude:
+          - motor: python
+            custodio: encendido
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -162,7 +170,7 @@ jobs:
         run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
       - name: Cierra y vuelve a arrancar
         shell: pwsh
-        run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }}
+        run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }} -Custodio:$${{ matrix.custodio == 'encendido' }}
 
   interfaz:
     needs: runtimes
