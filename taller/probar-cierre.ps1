@@ -15,27 +15,22 @@
 #
 # La consola es una pseudoconsola (CreatePseudoConsole), la de Windows
 # Terminal. Cerrarla con ClosePseudoConsole manda CTRL_CLOSE_EVENT de verdad a
-# cada proceso unido a ella, como la X: nada se mata de golpe, y el gancho de
-# cierre del motor de Java puede correr. Todo lo que la consola muestra queda
-# en un archivo, y de ahi se lee si el gancho corrio. En la maquina de la
-# integracion continua una ventana clasica no atiende WM_CLOSE, y la version
-# anterior de esta prueba terminaba los procesos de la consola de golpe, que no
-# se parece a la X.
+# cada proceso unido a ella, como la X: nada se mata de golpe. Todo lo que la
+# consola muestra queda en un archivo. En la maquina de la integracion continua
+# una ventana clasica no atiende WM_CLOSE, y una version anterior de esta
+# prueba terminaba los procesos de la consola de golpe, que no se parece a la X.
 #
-# Con -Custodio, el motor de Java arranca con TALLER_CUSTODIO=1. Con el motor
-# de Java sin custodio y -Cierre motor, pueden quedar procesos: el gancho no
-# corre si el motor muere de golpe. Ese caso se informa y no falla.
+# Con -Custodio, el motor de Java arranca con TALLER_CUSTODIO=1, y no puede
+# quedar nada vivo. Sin custodio, el motor de Java puede dejar procesos vivos
+# al cerrarse; se cuentan y no fallan, pero el segundo arranque tiene que
+# cerrarlos (lo dice en su consola) antes de borrar lab-01. Python ata sus
+# ordenes a su propia vida y no deja nada.
 #
-# Con -Directo, solo para Java, la pseudoconsola lanza java -jar sin
-# TALLER.cmd ni arrancar.sh: el unico que recibe CTRL_CLOSE_EVENT es la
-# maquina virtual de Java, y se ve si su gancho de cierre corre sin nadie mas.
-#
-#     pwsh taller/probar-cierre.ps1 -Motor java -Cierre ventana [-Custodio] [-Directo]
+#     pwsh taller/probar-cierre.ps1 -Motor java -Cierre ventana [-Custodio]
 param(
   [ValidateSet('java', 'python')] [string] $Motor = 'java',
   [ValidateSet('ventana', 'motor')] [string] $Cierre = 'ventana',
-  [switch] $Custodio,
-  [switch] $Directo
+  [switch] $Custodio
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'probar-cierre.ps1 es solo para Windows' }
@@ -47,9 +42,8 @@ $raiz = Join-Path $base 'Ana Núñez\taller-git'
 New-Item -ItemType Directory -Force $raiz | Out-Null
 $fallas = [System.Collections.Generic.List[string]]::new()
 $informe = [ordered]@{}
-$puedenQuedar = $Motor -eq 'java' -and -not $Custodio -and $Cierre -eq 'motor'
+$puedenQuedar = $Motor -eq 'java' -and -not $Custodio
 $custodioDicho = if ($Motor -ne 'java') { '-' } elseif ($Custodio) { 'encendido' } else { 'apagado' }
-if ($Directo) { $custodioDicho += ', java directo' }
 
 function Falla([string] $texto) {
   Write-Host "FALLA  $texto"
@@ -181,12 +175,6 @@ function Arrancar([string] $nombre) {
   # Start-Process junta los argumentos con espacios sin comillas: la carpeta
   # del taller tiene un espacio ('Ana Núñez'), asi que van entre comillas.
   $linea = 'cmd.exe /c TALLER.cmd'
-  if ($Directo) {
-    $java = Join-Path $raiz 'curso\taller\java\jre\windows-x64\bin\java.exe'
-    $linea = "`"$java`" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -jar `"$(Join-Path $raiz 'curso\taller\java\taller.jar')`""
-    $env:TALLER_ARCHIVO_DIRECCION = Join-Path $raiz '.taller\direccion'
-    New-Item -ItemType Directory -Force (Join-Path $raiz '.taller') | Out-Null
-  }
   $linea64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($linea))
   $argumentos = "-NoProfile -File `"$lanzador`" -Carpeta `"$raiz`" -Salida `"$salida`" -Senal `"$senal`" -Numero `"$numero`" -Linea $linea64"
   $lanzado = Start-Process pwsh -PassThru -WindowStyle Hidden -ArgumentList $argumentos
@@ -199,7 +187,6 @@ function Arrancar([string] $nombre) {
   while ((Get-Date) -lt $limite) {
     $archivo = Join-Path $raiz '.taller\motor'
     if ((Test-Path $archivo) -and ((Get-Content $archivo -Raw).Trim() -eq $esperado)) { break }
-    if ($Directo -and (Test-Path (Join-Path $raiz '.taller\direccion'))) { Set-Content $archivo 'Java'; break }
     if ($null -eq (Get-Process -Id $cmdPid -ErrorAction SilentlyContinue)) { throw "TALLER.cmd termino antes de arrancar el motor de $esperado" }
     Start-Sleep -Milliseconds 300
   }
@@ -261,15 +248,11 @@ function EsperarQueMueran($procesos, [string] $cuando, [int[]] $salvo = @(), [sw
   return "$($vivos.Count) ($nombres)"
 }
 
-function GanchoCorrio($taller) {
-  # Solo el motor de Java tiene gancho de cierre.
+function Limpieza($taller) {
+  # El motor de Java dice al arrancar cuantos procesos de la vez anterior cerro.
   if ($Motor -ne 'java') { return '-' }
-  $limite = (Get-Date).AddSeconds(10)
-  do {
-    if ((Pantalla $taller) -match 'El taller se cierra: termina (\d+) procesos') { return "si, $($Matches[1]) procesos" }
-    Start-Sleep -Milliseconds 300
-  } while ((Get-Date) -lt $limite)
-  return 'no'
+  if ((Pantalla $taller) -match 'Se cerraron (\d+) procesos que hab') { return "cerro $($Matches[1])" }
+  return 'no cerro nada'
 }
 
 # --- 1. Arranque, orden que deja procesos vivos, y cierre -------------------
@@ -292,8 +275,7 @@ foreach ($n in 'bash.exe', 'git.exe', 'sleep.exe') {
 if ($Cierre -eq 'ventana') {
   Write-Host 'se cierra la consola con ClosePseudoConsole: CTRL_CLOSE_EVENT a cada proceso unido a ella, sin matar a nadie de golpe'
   CerrarConsola $primero
-  $informe['vivos'] = EsperarQueMueran $arbol 'al cerrar la consola de TALLER.cmd'
-  $informe['gancho'] = GanchoCorrio $primero
+  $informe['vivos'] = EsperarQueMueran $arbol 'al cerrar la consola de TALLER.cmd' -SoloInforme:$puedenQuedar
 } else {
   $motorProceso = $arbol | Where-Object { $_.Name -in 'java.exe', 'python.exe', 'py.exe' } | Select-Object -Last 1
   Write-Host "se termina de golpe el motor, $($motorProceso.Name) $($motorProceso.ProcessId) (TerminateProcess: ningun gancho puede correr)"
@@ -302,21 +284,27 @@ if ($Cierre -eq 'ventana') {
   # mensaje. Ella y su conhost no cuentan; todo lo demas se cuenta.
   $laVentana = @($primero.Cmd) + @($arbol | Where-Object { $_.Name -in 'conhost.exe', 'OpenConsole.exe' -and $_.ParentProcessId -eq $primero.Cmd } | ForEach-Object { [int]$_.ProcessId })
   $informe['vivos'] = EsperarQueMueran $arbol 'al terminar el motor' $laVentana -SoloInforme:$puedenQuedar
-  $informe['gancho'] = GanchoCorrio $primero
   CerrarConsola $primero
 }
-Write-Host "gancho de cierre del motor: $($informe['gancho'])"
 
 # --- 2. Un segundo arranque, enseguida --------------------------------------
 
 try {
   $segundo = Arrancar 'segundo'
+  $informe['limpieza'] = Limpieza $segundo
+  Write-Host "el segundo arranque, al arrancar: $($informe['limpieza'])"
+  # Lo que haya quedado del primero ya no puede estar vivo.
+  $restos = Vivos $arbol
+  if ($restos.Count -gt 0) {
+    Falla "el segundo arranque dejo vivos $($restos.Count) procesos del primero"
+  } else {
+    Write-Host 'BIEN   despues del segundo arranque no queda nada vivo del primero'
+  }
   $r = (Orden $segundo 'rm -rf lab-01 && mkdir -p lab-01/recetario && cd lab-01/recetario && git init -q && pwd').GetAwaiter().GetResult()
   $json = $r.Content.ReadAsStringAsync().GetAwaiter().GetResult() | ConvertFrom-Json
   if ($json.codigo -ne 0) {
     $informe['segundo'] = "no: $($json.error.Trim())"
-    $texto = "el segundo arranque no pudo borrar y recrear lab-01: $($json.error)"
-    if ($puedenQuedar) { Write-Host "INFORME  $texto" } else { Falla $texto }
+    Falla "el segundo arranque no pudo borrar y recrear lab-01: $($json.error)"
   } elseif (-not (Test-Path (Join-Path $raiz 'lab-01\recetario\.git'))) {
     $informe['segundo'] = 'no: sin repositorio'
     Falla 'el segundo arranque no dejo lab-01/recetario con su repositorio'
@@ -332,10 +320,10 @@ try {
   Falla "el segundo arranque: $_"
 }
 
-$fila = "| $Motor | $custodioDicho | $Cierre | $($informe['vivos']) | $($informe['gancho']) | $($informe['segundo']) |"
+$fila = "| $Motor | $custodioDicho | $Cierre | $($informe['vivos']) | $($informe['limpieza']) | $($informe['segundo']) |"
 Write-Host "RESULTADO  $fila"
 if ($env:GITHUB_STEP_SUMMARY) {
-  Add-Content $env:GITHUB_STEP_SUMMARY "| motor | custodio | cierre | vivos | gancho | segundo arranque |`n|---|---|---|---|---|---|`n$fila"
+  Add-Content $env:GITHUB_STEP_SUMMARY "| motor | custodio | cierre | vivos tras cerrar | al arrancar de nuevo | segundo arranque recrea lab-01 |`n|---|---|---|---|---|---|`n$fila"
 }
 
 # --- Limpieza de la prueba, aparte de lo que se comprobo --------------------

@@ -63,19 +63,14 @@ public final class Principal {
             return;
         }
 
-        // Al salir, el motor termina lo que abrieron sus ordenes. Corre al
-        // cerrarse la ventana (CTRL_CLOSE_EVENT), con Ctrl+C y al terminar
-        // normalmente; no corre si el motor muere de golpe. La linea dice que
-        // corrio, y la lee la prueba del cierre.
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            // Primero terminar y despues decirlo: con la consola cerrandose,
-            // escribir en ella puede quedar bloqueado hasta que Windows termina
-            // el proceso.
-            List<ProcessHandle> abiertos = ProcessHandle.current().descendants().toList();
-            abiertos.forEach(ProcessHandle::destroyForcibly);
-            System.out.println("  El taller se cierra: termina " + abiertos.size() + " procesos que abrió el motor.");
+        // Lo que quedo abierto de la vez anterior se cierra antes de atender
+        // (ver Rastro). Un gancho de cierre no servia: con CTRL_CLOSE_EVENT
+        // la maquina virtual muere antes de correrlo.
+        int terminados = Rastro.limpiar(propia);
+        if (terminados > 0) {
+            System.out.println("  Se cerraron " + terminados + " procesos que habían quedado abiertos de la vez anterior.");
             System.out.flush();
-        }, "cierre"));
+        }
         // El custodio de Windows, que ata las ordenes a la vida del motor con un
         // objeto de trabajo, compila C# con Add-Type en cada arranque, y eso
         // puede disparar alertas del EDR en los equipos del SII: queda apagado,
