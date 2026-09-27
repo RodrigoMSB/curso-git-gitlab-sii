@@ -5362,9 +5362,16 @@ taller-git/
 lo llama con `--login`) prueba en orden:
 
 1. El motor de Java, con el runtime del clon, o un Java 21 del sistema.
-2. Si en cinco segundos no responde a `/api/diagnostico` con su clave, lo
+2. Si en treinta segundos no responde a `/api/diagnostico` con su clave, lo
    cierra con todo lo que abrió y prueba el de Python, con un Python 3.9 o
-   superior del equipo (`py -3`, `python3`, `python`).
+   superior del equipo (`py -3`, `python3`, `python`). Treinta porque en un
+   equipo corporativo el antivirus revisa el runtime la primera vez que
+   arranca (al principio eran cinco, y en el Mac de la integración continua
+   Java no alcanzó a responder y la cascada pasó a Python). Si responde antes,
+   se sigue en ese momento. Mientras espera, la ventana dice «El taller está
+   arrancando. La primera vez puede tardar hasta medio minuto.». Python
+   conserva sus cinco segundos. `TALLER_ESPERA_JAVA` y `TALLER_ESPERA` los
+   cambian.
 3. Si tampoco, abre `SIMULADOR.html` en el modo de escenarios, con un aviso
    que empieza con ATENCIÓN y pide avisar al relator, y sale con 3.
 
@@ -5429,7 +5436,9 @@ Diferencias que encontró y se arreglaron:
 | `interfaz.test.ts` | los dos motores, 87 pasos | las tres diferencias reales de 74.4, y `mutaciones-interfaz.py`: 6 de 6 |
 | `probar-instalacion.sh`, `MOTOR=java`, `python`, `respaldo` | de cero: taller-git, el clon como curso, INSTALAR, TALLER, el lab 01, `preparar 02`, la comprobación | `mutaciones-instalacion.py`: 7 de 7 |
 | `probar-lab-08.sh` | seis preparaciones del 08 | con el arreglo quitado, en Mac: `2818cdd` contra `e0bc1cf` |
-| `probar-cierre.ps1`, Windows, `java` y `python`, `ventana` y `motor` | nada vivo al cerrar, y el segundo arranque recrea `lab-01` | las cuatro, sin el arreglo, en la integración continua: quedaban bash, git, sh y sleep, y `Device or resource busy` |
+| `probar-cierre.ps1`, Windows, `java` y `python`, `ventana` y `motor`, Java con el custodio apagado y encendido | lo que queda vivo al cerrar, y que el segundo arranque lo cierre y recree `lab-01` (sección 74.8) | antes de cada arreglo, en la integración continua: `Device or resource busy` en el segundo arranque |
+| `sin-powershell`, Windows | el motor de Java con el custodio encendido y PowerShell bloqueado, inexistente o colgado | sin el arreglo, sin aviso en la ventana, y colgado, 24 s por `preparar 02` |
+| `RastroTest` | cerrar al arrancar lo anotado, sin tocar un proceso ajeno | sin terminar, y sin comparar la hora de inicio |
 | `modo-taller.test.ts` | el modelo de la página, con la barra del motor | `mutaciones-modelo.py`: 20 de 20 |
 | pruebas de Java | incluida la nueva de `PATH` y `TALLER_CD_DESPUES` | `mutaciones.py` |
 
@@ -5462,58 +5471,129 @@ y el laboratorio 08 en Windows y en Mac, y destapó cinco cosas:
   fallan pruebas que dependen de permisos de ejecución y de finales de línea;
   en la integración continua corre en Linux.
 
-### 74.8 · Al cerrar el taller no queda nada vivo
+### 74.8 · Lo que queda vivo al cerrar el taller
 
-Pedido después del EBUSY de la limpieza de la prueba de la interfaz. La
-prueba nueva, `taller/probar-cierre.ps1`, corre en Windows con cada motor:
-arranca `TALLER.cmd` en una consola, le manda una orden que deja vivos un
-`bash.exe`, un `git.exe` y un `sleep.exe` parados en `taller-git/lab-01/recetario`,
-y cierra de dos maneras.
+Pedido después del EBUSY de la limpieza de la prueba de la interfaz, y
+revisado tres veces. Esta es la versión final y lo que se midió en el
+camino.
 
-- **La ventana.** En la máquina de la integración continua la ventana no
-  atiende mensajes (no hay escritorio). La prueba le pide a Windows la lista
-  de procesos unidos a esa consola, `GetConsoleProcessList`, intenta
-  `SC_CLOSE` y `WM_CLOSE`, y si la ventana sigue termina esos procesos, que es
-  lo que hace Windows al cerrarla. Lo dice en su salida.
-- **El motor, de golpe**, con `Stop-Process -Force`. La ventana queda, a
-  propósito, en el `pause` de `arrancar.cmd`, y no cuenta.
+**El problema.** Los dos motores lanzan cada orden en una consola propia y
+oculta (Java siempre con `CREATE_NO_WINDOW`, Python a propósito). Al cerrar la
+ventana de `TALLER.cmd`, o si el motor muere de golpe, lo que la orden tenía
+corriendo sigue vivo: el bash de la orden, `git.exe`, `sh.exe`, `sleep.exe` y
+su `conhost.exe`, parados en `taller-git/lab-01/recetario`. El siguiente
+arranque fallaba al borrar la carpeta: `rm: cannot remove
+'lab-01/recetario': Device or resource busy`.
 
-Después mira el árbol entero que colgaba de `TALLER.cmd` por
-`ParentProcessId` y exige que no quede nadie, y arranca de nuevo enseguida
-para borrar y recrear `lab-01` desde la consola.
+**La prueba, `taller/probar-cierre.ps1`**, solo Windows. Arma `taller-git`
+como el participante, arranca `TALLER.cmd`, le manda una orden que deja vivos
+un bash, un git y un sleep en `lab-01/recetario`, y cierra de dos maneras:
 
-**Lo que encontró, con los dos motores:** quedaban vivos el bash de la
-orden, `git.exe`, `sh.exe`, `sleep.exe` y su `conhost.exe`, y el segundo
-arranque fallaba con `rm: cannot remove 'lab-01/recetario': Device or
-resource busy`. Los dos motores lanzan cada proceso en una consola propia y
-oculta (Java siempre con `CREATE_NO_WINDOW`, Python a propósito), así que el
-cierre de la ventana no les llega, y ninguno ataba sus hijos a su propia
-vida.
+- **La ventana.** La consola es una pseudoconsola (`CreatePseudoConsole`, la
+  de Windows Terminal), y se cierra con `ClosePseudoConsole`, que manda
+  `CTRL_CLOSE_EVENT` de verdad a cada proceso unido a ella, como la X. Nada se
+  mata de golpe, y todo lo que la consola muestra queda en un archivo. Una
+  versión anterior de la prueba, en una ventana clásica que en la máquina de
+  la integración continua no atiende `WM_CLOSE`, terminaba de golpe los
+  procesos de la consola (`GetConsoleProcessList` y `Stop-Process -Force`):
+  eso no se parece a la X, y ahí ningún gancho puede correr. Se cambió.
+- **El motor, de golpe**, con `Stop-Process -Force` (TerminateProcess). La
+  ventana queda, a propósito, en el `pause` de `arrancar.cmd`.
 
-**El arreglo, en el motor y no en la prueba:** un objeto de trabajo de
-Windows marcado con `KILL_ON_JOB_CLOSE`, que vive lo que vive el motor. El
-motor entra en él al arrancar, antes de lanzar ninguna orden, y todo lo que
-lanza nace dentro. Cuando el motor termina, de cualquier forma, se cierra la
-última manija y Windows termina el trabajo entero.
+Después cuenta lo que quedó vivo del árbol que colgaba de `TALLER.cmd`, y
+arranca de nuevo enseguida para borrar y recrear `lab-01` desde la consola.
 
-- **Python** lo crea con `ctypes`. El trabajo de cada orden, el del límite
-  de tiempo, queda anidado dentro.
-- **Java** 21 no llega a esa API sin código nativo. El motor lanza al
-  arrancar un ayudante de PowerShell, `Custodio`, que crea el trabajo y mete
-  en él al motor. El ayudante, lanzado antes, queda fuera; sale cuando se
-  cierra su entrada, que es cuando el motor termina, y con él se cierra la
-  manija. Las órdenes esperan a que el motor esté dentro; la comprobación
-  del primer día, que no arranca el ayudante, no espera.
+**Python** ata sus órdenes a su propia vida con un objeto de trabajo de
+Windows marcado con `KILL_ON_JOB_CLOSE`, creado con `ctypes`. El motor entra
+en él al arrancar, antes de lanzar nada, y todo lo que lanza nace dentro;
+cuando el motor termina, de cualquier forma, Windows termina el trabajo
+entero. No deja nada vivo.
 
-Dos intentos que la prueba descartó antes de llegar ahí: sumar cada orden al
-trabajo después de lanzarla (el `bash.exe` de Git para Windows es un
-lanzador que abre enseguida el bash de verdad, y ese nacía fuera), y dejar
-salir del trabajo a quien lo pidiera (Git Bash lanza `git.exe` pidiendo
-salir, y salía). **Consecuencia:** un Visual Studio Code abierto con `code`
-desde la consola del taller se cierra junto con el taller.
+**Java** no llega a esa API sin código nativo. Se probaron tres caminos:
 
-De paso, cada motor escribe el archivo de su dirección al final, después de
-imprimir, porque el arrancador y las pruebas lo toman como la señal de listo.
+1. **El custodio**, `Custodio.java`: un ayudante de PowerShell que crea el
+   mismo objeto de trabajo y mete en él al motor. Funciona, pero usa
+   `Add-Type`, que **compila C# en el momento** en cada arranque, con el
+   compilador de .NET, y deja una DLL temporal en `%TEMP%`. Eso puede disparar
+   alertas del EDR en los equipos del SII. **Queda apagado** y se enciende con
+   `TALLER_CUSTODIO=1`. Encendido y sin PowerShell (bloqueado, inexistente o
+   colgado), el motor lo espera una sola vez, hasta diez segundos desde el
+   arranque, sigue sin él y la ventana dice una vez «Aviso: no se pudo
+   preparar el cierre ordenado con PowerShell. Al cerrar esta ventana pueden
+   quedar procesos abiertos.». El trabajo `sin-powershell` de la integración
+   continua lo prueba de las tres maneras; sin ese arreglo, colgado, cada orden
+   esperaba veinte segundos (`preparar 02` en 24 s).
+2. **Un gancho de cierre** en Java puro, `ProcessHandle.descendants()` en un
+   `shutdown hook`. **No corrió en ningún caso medido**: su línea no apareció y
+   no terminó nada, ni al cerrar la consola ni, como era de esperar, con el
+   motor muerto de golpe. Para descartar al arrancador, cuya trampa también
+   actúa al cerrarse la consola, el caso de diagnóstico `-Directo` lanzó
+   `java -jar` solo en la pseudoconsola, sin `TALLER.cmd` ni `arrancar.sh`: la
+   máquina virtual murió, el gancho tampoco corrió, y quedaron bash, git, sh,
+   sleep y conhost. La explicación probable es que la máquina virtual
+   convierte `CTRL_CLOSE_EVENT` en SIGTERM y devuelve el control enseguida, y
+   para ese evento Windows termina el proceso en cuanto vuelve, antes de que
+   los ganchos hagan su trabajo. **Salió.**
+3. **Cerrar al arrancar**, `Rastro.java`, lo que quedó. Cada orden que el
+   motor lanza queda anotada en `taller-git/.taller/procesos`, con su número y
+   su hora de inicio, y lo mismo sus descendientes, mirados cada medio
+   segundo mientras la orden corre, con `ProcessHandle` y sin lanzar nada. Al
+   terminar la orden se quita lo que ya no vive. Al arrancar, antes de
+   atender, el motor termina lo que siga vivo con el mismo número **y** la
+   misma hora de inicio, y lo que eso haya lanzado después, y vacía el
+   archivo; dice en la ventana cuántos cerró. La hora de inicio es la que
+   impide terminar un proceso ajeno que reusó el número. Las pruebas de unidad
+   (`RastroTest`) se vieron fallar sin terminar y sin comparar la hora.
+
+**Resultados**, ejecución 36292708455 de la integración continua:
+
+| motor | custodio | cierre | vivos tras cerrar | al arrancar de nuevo | segundo arranque recrea `lab-01` |
+|---|---|---|---|---|---|
+| Java | apagado | ventana | 7: bash, conhost, git, sh, sleep | cerró 7 | sí |
+| Java | apagado | motor de golpe | 7: bash, conhost, git, sh, sleep | cerró 7 | sí |
+| Java | encendido | ventana | 0 | nada que cerrar | sí |
+| Java | encendido | motor de golpe | 0 | nada que cerrar | sí |
+| Python | — | ventana | 0 | — | sí |
+| Python | — | motor de golpe | 0 | — | sí |
+
+**Consecuencias.**
+
+- Con el custodio apagado, que es lo que usa el participante, lo que una
+  orden tenía corriendo al cerrar el taller **sigue vivo hasta el arranque
+  siguiente**, y mientras tanto la carpeta del laboratorio no se puede borrar
+  desde fuera. El arranque siguiente lo cierra antes de atender.
+- Con el custodio encendido, y con Python, un Visual Studio Code abierto con
+  `code` desde la consola se cierra junto con el taller: el objeto de trabajo
+  no deja salir a nadie. Hacía falta, porque Git Bash lanza `git.exe`
+  pidiendo salir del trabajo, y con permiso salía y sobrevivía.
+- Dos intentos del custodio que la prueba descartó antes: sumar cada orden
+  al trabajo después de lanzarla (el `bash.exe` de Git para Windows es un
+  lanzador que abre enseguida el bash de verdad, y ese nacía fuera) y
+  permitir salir del trabajo (git salía).
+- Cada motor escribe el archivo de su dirección al final, después de
+  imprimir, porque el arrancador y las pruebas lo toman como la señal de
+  listo.
+
+**El arranque, medido** en la integración continua de Windows, desde el
+doble clic hasta «Motor del taller»:
+
+| motor | primer arranque, runtime recién llegado | arranque normal |
+|---|---|---|
+| Java | 1,6 s | 1,3 a 1,6 s |
+| Python | 4,4 s | 2,3 s |
+
+En esas máquinas la protección en tiempo real de Defender está apagada, así
+que el primer arranque no paga lo que paga en un equipo corporativo con
+antivirus; ese número queda por medir en un equipo del SII. Por eso la
+cascada espera a Java hasta treinta segundos (sección 74.3).
+
+**Los «3 skipped» de la prueba de la interfaz**, vistos dos veces en el Mac
+del desarrollo y nunca en la integración continua. vitest da las tres
+pruebas por saltadas cuando falla su `beforeAll`, y ahí solo falla si un
+motor no deja su dirección en treinta segundos o no arranca. Es compatible con
+un motor que no respondió a tiempo, pero no está probado: no se reprodujo ni
+con todos los núcleos ocupados, y el mensaje de error de esas dos veces se
+perdió. Ahora el error dice cuánto se esperó.
 
 ### 74.9 · Resultados, en este Mac con Chrome
 
@@ -5541,6 +5621,13 @@ los dos runtimes de Java.
 
 ### 74.10 · Lo que falta
 
+- **El primer arranque con un antivirus de verdad.** En la integración
+  continua Defender no revisa en tiempo real; hay que medirlo en un equipo del
+  SII.
+- **El cierre con la X en un escritorio.** La prueba usa una pseudoconsola,
+  que manda el mismo `CTRL_CLOSE_EVENT`, pero no una ventana clásica cerrada
+  con el ratón.
+- **Los «3 skipped»** de la prueba de la interfaz, sin causa probada.
 - **La suite del simulador en Windows y en Mac.** Corre en Linux. Que pase en
   Windows pide revisar las pruebas que miran permisos de ejecución y
   finales de línea, que se escribieron para el Mac del desarrollo.
