@@ -256,6 +256,20 @@ grep -q '"relativa": *"lab-02/recetario"' "$BASE/estado.json" || falla "preparar
 [ -d "$RAIZ/lab-02/recetario/.git" ] || falla "preparar 02 no dejo el repositorio en taller-git/lab-02/recetario"
 echo "BIEN   preparar 02 deja la consola en lab-02/recetario, en $demora s"
 
+# Con la consola dentro de lab-02/recetario (SPEC 029): en Windows, preparar
+# --forzar no podia borrar la carpeta, porque el bash de la orden la tenia como
+# directorio actual. Y verificar sin numero deduce el laboratorio de la consola.
+orden 'preparar 02 --forzar'
+grep -q '"codigo": *0' "$BASE/respuesta.json" || falla "preparar 02 --forzar dentro de lab-02/recetario fallo: $(head -c 800 "$BASE/respuesta.json")"
+[ -d "$RAIZ/lab-02/recetario/.git" ] || falla "preparar 02 --forzar no dejo el repositorio"
+estado
+grep -q '"relativa": *"lab-02/recetario"' "$BASE/estado.json" || falla "despues de preparar 02 --forzar la consola no quedo en lab-02/recetario"
+orden 'verificar'
+grep -q 'Verificador del laboratorio 02' "$BASE/respuesta.json" || falla "verificar sin numero, dentro de lab-02/recetario, no dedujo el laboratorio: $(head -c 800 "$BASE/respuesta.json")"
+estado
+grep -q '"relativa": *"lab-02/recetario"' "$BASE/estado.json" || falla "despues de verificar la consola no quedo en lab-02/recetario"
+echo "BIEN   con la consola dentro del laboratorio, preparar 02 --forzar lo rehace y verificar lo deduce"
+
 # El custodio del motor de Java, en Windows.
 if [ "$WINDOWS" = 1 ] && [ "$MOTOR" = java ]; then
   if [ -n "$SIN_POWERSHELL" ]; then
