@@ -68,10 +68,13 @@ public final class Principal {
         // normalmente; no corre si el motor muere de golpe. La linea dice que
         // corrio, y la lee la prueba del cierre.
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            // Primero terminar y despues decirlo: con la consola cerrandose,
+            // escribir en ella puede quedar bloqueado hasta que Windows termina
+            // el proceso.
             List<ProcessHandle> abiertos = ProcessHandle.current().descendants().toList();
+            abiertos.forEach(ProcessHandle::destroyForcibly);
             System.out.println("  El taller se cierra: termina " + abiertos.size() + " procesos que abrió el motor.");
             System.out.flush();
-            abiertos.forEach(ProcessHandle::destroyForcibly);
         }, "cierre"));
         // El custodio de Windows, que ata las ordenes a la vida del motor con un
         // objeto de trabajo, compila C# con Add-Type en cada arranque, y eso
