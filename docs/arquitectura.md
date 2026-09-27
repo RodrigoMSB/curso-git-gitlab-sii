@@ -5742,3 +5742,20 @@ de la orden, el de `laboratorio.sh` y el del script la tenían.
 | 4.1 | `modo-taller.test.ts` | `null` en vez de `['git', 'sleep']` |
 | 75.5 | `probar-instalacion.sh` en Windows, `EjecutorTest` | «Device or resource busy» con los dos motores; la de Java, sin la detección |
 | franja | el recorrido | la página anterior decía «cinco segundos» |
+
+### 75.7 · Lo que apareció de paso, y lo que queda
+
+- **El zip de capturas no se armaba en Windows** desde el SPEC 026, salvo en
+  el trabajo del usuario con tilde: con Git Bash antes en el PATH, `tar.exe`
+  era el de Git, que no arma zip y toma `D:` por un equipo remoto, y el error
+  se tragaba. Ahora se usa el `tar.exe` de `System32`, y si el zip no se arma
+  la prueba falla.
+- **La prueba de `Rastro`** falló una vez en Windows porque su hilo escribía
+  el archivo de procesos mientras JUnit borraba la carpeta temporal. Ahora lo
+  espera.
+- **Pendiente, a decidir: la espera del motor de Python.** En una ejecución de
+  Windows, Python no respondió en sus cinco segundos y la cascada abrió el
+  respaldo; al repetir, arrancó en 3,8 s. En frío mide entre 3,8 y 4,4 s en
+  esas máquinas, sin antivirus revisando. El punto 4.2 del spec pedía no
+  tocar la cascada, así que no se cambió; lo recomendable es darle a Python
+  una espera como la de Java.
