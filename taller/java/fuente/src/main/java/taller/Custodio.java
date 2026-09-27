@@ -87,6 +87,19 @@ final class Custodio {
     private static BufferedReader lector;
     private static volatile boolean activo;
     private static volatile boolean pedido;
+    private static final java.util.concurrent.atomic.AtomicBoolean AVISADO = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /**
+     * Lo que se espera al ayudante, una sola vez, desde que el motor arranca.
+     * Add-Type compila C# en el momento y en un equipo lento o con antivirus
+     * puede tardar; si PowerShell esta bloqueado, no existe o se cuelga, el
+     * taller sigue sin custodio.
+     */
+    static final long PLAZO_MS = 10_000;
+
+    /** La linea de la ventana negra cuando el taller sigue sin custodio. */
+    static final String AVISO =
+            "  Aviso: no se pudo preparar el cierre ordenado con PowerShell. Al cerrar esta ventana pueden quedar procesos abiertos.";
 
     private Custodio() {}
 
@@ -100,14 +113,27 @@ final class Custodio {
         String raiz = System.getenv().getOrDefault("SystemRoot", "C:\\Windows");
         Path powershell = Path.of(raiz, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
         String codificado = Base64.getEncoder().encodeToString(GUION.getBytes(StandardCharsets.UTF_16LE));
+        // Pasado el plazo, se sigue sin custodio: las ordenes dejan de esperar.
+        Thread plazo = new Thread(() -> {
+            try {
+                if (!LISTO.await(PLAZO_MS, TimeUnit.MILLISECONDS)) {
+                    Registro.escribir("el custodio de procesos no respondio en " + PLAZO_MS / 1000 + " s");
+                    sinCustodio();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "custodio-plazo");
+        plazo.setDaemon(true);
+        plazo.start();
         try {
             ayudante = Procesos.lanzarAyudante(List.of(powershell.toString(), "-NoLogo", "-NoProfile",
                     "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", codificado));
             escritor = new OutputStreamWriter(ayudante.getOutputStream(), StandardCharsets.US_ASCII);
             lector = new BufferedReader(new InputStreamReader(ayudante.getInputStream(), StandardCharsets.US_ASCII));
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             Registro.escribir("no arranco el custodio de procesos: " + e);
-            LISTO.countDown();
+            sinCustodio();
             return;
         }
         Thread espera = new Thread(() -> {
@@ -118,9 +144,10 @@ final class Custodio {
                     activo = "True".equals(lector.readLine());
                 }
                 if (!activo) Registro.escribir("el custodio de procesos no pudo meter al motor en su trabajo");
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
                 Registro.escribir("el custodio de procesos no respondio: " + e);
             } finally {
+                if (!activo) sinCustodio();
                 LISTO.countDown();
             }
         }, "custodio");
@@ -128,8 +155,18 @@ final class Custodio {
         espera.start();
     }
 
+    /** Sigue sin custodio: las ordenes dejan de esperar y la ventana lo dice una vez. */
+    private static void sinCustodio() {
+        LISTO.countDown();
+        if (activo || !AVISADO.compareAndSet(false, true)) return;
+        System.out.println();
+        System.out.println(AVISO);
+        System.out.println();
+        System.out.flush();
+    }
+
     /**
-     * Espera a que el motor este dentro del trabajo, hasta veinte segundos.
+     * Espera a que el motor este dentro del trabajo, hasta el plazo.
      * Las ordenes pasan por aqui antes de lanzarse. Sin custodio, porque no
      * es Windows o porque nadie lo arranco, como en la comprobacion del primer
      * dia, no espera.
@@ -137,7 +174,7 @@ final class Custodio {
     static boolean esperar() {
         if (Sistema.actual() != Sistema.WINDOWS || !pedido) return false;
         try {
-            return LISTO.await(20, TimeUnit.SECONDS) && activo;
+            return LISTO.await(PLAZO_MS, TimeUnit.MILLISECONDS) && activo;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
