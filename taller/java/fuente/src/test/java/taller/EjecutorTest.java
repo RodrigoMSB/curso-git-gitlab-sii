@@ -184,6 +184,33 @@ class EjecutorTest {
     }
 
     @Test
+    void prepararYVerificarCorrenEnLaRaizDelClon_yLaConsolaVuelveADondeEstaba(@TempDir Path tmp) throws Exception {
+        // SPEC 029: en Windows, preparar 02 --forzar escrito dentro de
+        // lab-02/recetario no podia borrar la carpeta, porque el bash de la
+        // orden la tenia como directorio actual.
+        Path limite = limite(tmp);
+        Path clon = Files.createDirectories(limite.resolve("curso"));
+        Path lab = Files.createDirectories(limite.resolve("lab-02").resolve("recetario"));
+        for (String nombre : new String[] {"preparar", "verificar"}) {
+            Path script = limite.resolve(nombre);
+            Files.writeString(script, "#!/usr/bin/env bash\npwd -P\necho \"consola: $TALLER_CARPETA_CONSOLA\"\n", StandardCharsets.UTF_8);
+            script.toFile().setExecutable(true);
+        }
+        Ejecutor e = ejecutor(tmp, limite, 20_000).conClon(clon);
+        for (String orden : new String[] {"preparar 02 --forzar", "verificar", "  verificar 02  "}) {
+            Ejecutor.Resultado r = e.ejecutar(orden, lab);
+            String[] lineas = r.salida().split("\n");
+            assertEquals(Rutas.conBarras(Rutas.real(clon)), Rutas.conBarras(Path.of(Ayuda.SISTEMA == Sistema.WINDOWS ? Rutas.aWindows(lineas[0]) : lineas[0])), orden + ": " + r.error());
+            assertEquals("consola: " + Rutas.conBarras(lab), lineas[1], orden);
+            // No la movio nadie: se queda donde estaba, no en el clon.
+            assertEquals(Rutas.real(lab), r.carpeta(), orden);
+        }
+        // Una linea con algo mas no es de laboratorio: corre donde esta la consola.
+        Ejecutor.Resultado otra = e.ejecutar("pwd -P; preparar 02", lab);
+        assertEquals(Rutas.conBarras(Rutas.real(lab)), Rutas.conBarras(Path.of(Ayuda.SISTEMA == Sistema.WINDOWS ? Rutas.aWindows(otra.salida().split("\n")[0]) : otra.salida().split("\n")[0])));
+    }
+
+    @Test
     void salidaYErrorPorSeparado(@TempDir Path tmp) throws Exception {
         Path limite = limite(tmp);
         Ejecutor e = ejecutor(tmp, limite, 20_000);

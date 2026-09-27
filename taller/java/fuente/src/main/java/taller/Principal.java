@@ -77,7 +77,7 @@ public final class Principal {
         // y se enciende solo con TALLER_CUSTODIO=1.
         if ("1".equals(System.getenv("TALLER_CUSTODIO"))) Custodio.arrancar();
         long tiempo = tiempoMaximo();
-        Ejecutor ejecutor = new Ejecutor(sistema, git, limite, propia, tiempo);
+        Ejecutor ejecutor = new Ejecutor(sistema, git, limite, propia, tiempo).conClon(clon);
         LectorEstado lector = new LectorEstado(sistema, git, propia);
         Taller taller = new Taller(
                 new Taller.Datos(sistema, limite, clon, trabajo, propia, usuario(), equipo(sistema), List.copyOf(avisos)),
@@ -121,7 +121,8 @@ public final class Principal {
         if (archivoDireccion != null && !archivoDireccion.isBlank()) {
             Files.writeString(Path.of(archivoDireccion), servidor.direccion() + "\n");
         }
-        Registro.escribir("Git en " + git.git() + ", bash en " + git.bash() + ", encontrado por " + git.origen());
+        Registro.anotar(propia.resolve("registro.txt"),
+                "Git en " + git.git() + ", bash en " + git.bash() + ", encontrado por " + git.origen());
         System.out.flush();
 
         if (!sinNavegador) Navegador.abrir(sistema, servidor.direccion());

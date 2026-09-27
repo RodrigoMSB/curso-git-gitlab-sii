@@ -120,7 +120,7 @@ final class Custodio {
         Thread plazo = new Thread(() -> {
             try {
                 if (!LISTO.await(PLAZO_MS, TimeUnit.MILLISECONDS)) {
-                    Registro.escribir("el custodio de procesos no respondio en " + PLAZO_MS / 1000 + " s");
+                    Registro.escribir("el custodio de procesos no respondió en " + PLAZO_MS / 1000 + " s");
                     sinCustodio();
                 }
             } catch (InterruptedException e) {
@@ -135,7 +135,7 @@ final class Custodio {
             escritor = new OutputStreamWriter(ayudante.getOutputStream(), StandardCharsets.US_ASCII);
             lector = new BufferedReader(new InputStreamReader(ayudante.getInputStream(), StandardCharsets.US_ASCII));
         } catch (IOException | RuntimeException e) {
-            Registro.escribir("no arranco el custodio de procesos: " + e);
+            Registro.escribir("no arrancó el custodio de procesos: " + e);
             sinCustodio();
             return;
         }
@@ -148,7 +148,7 @@ final class Custodio {
                 }
                 if (!activo) Registro.escribir("el custodio de procesos no pudo meter al motor en su trabajo");
             } catch (IOException | RuntimeException e) {
-                Registro.escribir("el custodio de procesos no respondio: " + e);
+                Registro.escribir("el custodio de procesos no respondió: " + e);
             } finally {
                 if (!activo) sinCustodio();
                 LISTO.countDown();

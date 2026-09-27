@@ -34,6 +34,15 @@ public final class Ejecutor {
     private static final Pattern REBASE_INTERACTIVO = Pattern.compile(
             "\\bgit\\b[^;&|]*\\brebase\\b[^;&|]*\\s(-i|--interactive)(\\s|$)");
 
+    /**
+     * preparar o verificar, solos en la linea, con sus argumentos. Corren con el
+     * directorio actual en la raiz del clon (SPEC 027, 4.2): en Windows nadie
+     * puede borrar una carpeta que otro proceso tiene como directorio actual, y
+     * preparar 02 --forzar escrito dentro de lab-02/recetario fallaba con
+     * «Device or resource busy» (SPEC 029).
+     */
+    static final Pattern DE_LABORATORIO = Pattern.compile("^\\s*(preparar|verificar)(\\s+[A-Za-z0-9-]+)*\\s*$");
+
     private final Sistema sistema;
     private final BuscadorGit.Instalacion git;
     private final Path limite;
@@ -57,6 +66,14 @@ public final class Ejecutor {
     /** Variables que se agregan a cada orden. Solo las pruebas lo usan, para aislar la configuracion global. */
     private Map<String, String> extra = Map.of();
 
+    /** La raiz del clon, donde corren preparar y verificar. Sin ella, corren donde esta la consola. */
+    private Path clon;
+
+    Ejecutor conClon(Path clon) {
+        this.clon = clon;
+        return this;
+    }
+
     Ejecutor conEntornoExtra(Map<String, String> variables) {
         this.extra = new HashMap<>(variables);
         return this;
@@ -70,9 +87,17 @@ public final class Ejecutor {
         } catch (IOException ignorada) {
             // Si no se pudo borrar, se sobrescribe igual al terminar.
         }
+        // preparar y verificar corren parados en la raiz del clon, y saben por
+        // TALLER_CARPETA_CONSOLA donde esta la consola, para deducir el
+        // laboratorio. Al terminar, la consola vuelve a donde estaba, salvo
+        // que preparar la haya mandado a su laboratorio.
+        boolean deLaboratorio = clon != null && Files.isDirectory(clon) && DE_LABORATORIO.matcher(orden).matches();
+        Path donde = deLaboratorio ? clon : carpeta;
+        Map<String, String> variables = entorno(orden, donde);
+        if (deLaboratorio) variables.put("TALLER_CARPETA_CONSOLA", Rutas.conBarras(carpeta));
         Procesos.Salida s;
         try {
-            s = Procesos.correr(linea(), carpeta.toFile(), entorno(orden, carpeta), tiempoMaximo, ENVOLTORIO);
+            s = Procesos.correr(linea(), donde.toFile(), variables, tiempoMaximo, ENVOLTORIO);
         } catch (IOException e) {
             avisos.add("No se pudo lanzar bash, " + e.getMessage());
             return new Resultado(-1, "", "", carpeta, false, avisos);
@@ -84,6 +109,9 @@ public final class Ejecutor {
             Path candidata = Path.of(sistema == Sistema.WINDOWS ? Rutas.aWindows(escrita.trim()) : escrita.trim());
             if (!Files.isDirectory(candidata)) {
                 // La carpeta se borro con la orden misma, como en rm -rf . desde dentro.
+            } else if (deLaboratorio && Rutas.real(candidata).equals(Rutas.real(clon))) {
+                // No se movio: vuelve a donde estaba, si sigue existiendo.
+                nueva = Files.isDirectory(carpeta) ? Rutas.real(carpeta) : Rutas.real(limite);
             } else if (Rutas.dentroDe(limite, candidata, sistema)) {
                 nueva = Rutas.real(candidata);
             } else {

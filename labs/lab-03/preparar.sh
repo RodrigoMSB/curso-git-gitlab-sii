@@ -79,6 +79,9 @@ if [ -e "$REPOSITORIO" ]; then
     echo
   fi
   echo "  BORRANDO $REPOSITORIO_DICHO"
+  # Fuera de la carpeta antes de borrarla: en Windows no se puede borrar la
+  # que es el directorio actual de un proceso, este incluido (SPEC 029).
+  cd "$CLON" || exit 1
   rm -rf "$REPOSITORIO"
 fi
 

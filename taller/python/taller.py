@@ -110,6 +110,15 @@ def relativa(limite: Path, ruta: Path) -> str:
     return "" if r == "." else r
 
 
+def anotar(archivo: Path, texto: str) -> None:
+    """Al archivo de registro, no a la ventana. Si no se puede escribir, se pierde sin mas."""
+    try:
+        with open(archivo, "a", encoding="utf-8") as registro:
+            registro.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')}  {texto}\n")
+    except OSError:
+        pass
+
+
 def registrar(texto: str) -> None:
     """Lo que el motor cuenta, en su ventana. Nunca en archivos."""
     print(f"  {time.strftime('%H:%M:%S')}  {texto}", flush=True)
@@ -534,10 +543,20 @@ class Resultado:
     avisos: list = field(default_factory=list)
 
 
+# preparar o verificar, solos en la linea, con sus argumentos. Corren con el
+# directorio actual en la raiz del clon (SPEC 027, 4.2): en Windows nadie puede
+# borrar una carpeta que otro proceso tiene como directorio actual, y
+# preparar 02 --forzar escrito dentro de lab-02/recetario fallaba con
+# «Device or resource busy» (SPEC 029).
+DE_LABORATORIO = re.compile(r"^\s*(preparar|verificar)(\s+[A-Za-z0-9-]+)*\s*$")
+
+
 class Ejecutor:
-    def __init__(self, git: Instalacion, limite: Path, propia: Path, tiempo_maximo_ms: int) -> None:
+    def __init__(self, git: Instalacion, limite: Path, propia: Path, tiempo_maximo_ms: int,
+                 clon: Optional[Path] = None) -> None:
         self.git = git
         self.limite = limite
+        self.clon = clon
         self.tiempo_maximo = tiempo_maximo_ms
         propia.mkdir(parents=True, exist_ok=True)
         self.carpeta_final = propia / "carpeta-final"
@@ -554,16 +573,24 @@ class Ejecutor:
             self.carpeta_final.unlink()
         except OSError:
             pass
+        # preparar y verificar corren parados en la raiz del clon, y saben por
+        # TALLER_CARPETA_CONSOLA donde esta la consola. Al terminar, la consola
+        # vuelve a donde estaba, salvo que preparar la haya mandado a su
+        # laboratorio.
+        de_laboratorio = self.clon is not None and self.clon.is_dir() and DE_LABORATORIO.match(orden) is not None
+        donde = self.clon if de_laboratorio and self.clon is not None else carpeta
         entorno = entorno_comun(self.git)
+        if de_laboratorio:
+            entorno["TALLER_CARPETA_CONSOLA"] = con_barras(carpeta)
         entorno.update(
             TALLER_ORDEN=orden,
-            TALLER_CARPETA=con_barras(carpeta),
+            TALLER_CARPETA=con_barras(donde),
             TALLER_LIMITE=con_barras(self.limite),
             TALLER_CARPETA_FINAL=con_barras(self.carpeta_final),
             TALLER_SO="windows" if WINDOWS else "unix",
         )
         try:
-            s = correr(self._linea(), carpeta, entorno, self.tiempo_maximo / 1000, ENVOLTORIO)
+            s = correr(self._linea(), donde, entorno, self.tiempo_maximo / 1000, ENVOLTORIO)
         except OSError as e:
             return Resultado(-1, "", "", carpeta, False, [f"No se pudo lanzar bash, {e}"])
 
@@ -576,6 +603,9 @@ class Ejecutor:
             candidata = Path(a_windows(escrita) if WINDOWS else escrita)
             if not candidata.is_dir():
                 pass  # La carpeta se borro con la orden misma.
+            elif de_laboratorio and self.clon is not None and real(candidata) == real(self.clon):
+                # No se movio: vuelve a donde estaba, si sigue existiendo.
+                nueva = real(carpeta) if carpeta.is_dir() else real(self.limite)
             elif dentro_de(self.limite, candidata):
                 nueva = real(candidata)
             else:
@@ -954,12 +984,13 @@ def huella(carpeta: Path, limite: Path) -> str:
 
 
 class Taller:
-    def __init__(self, git: Instalacion, limite: Path, propia: Path, avisos: list, tiempo_maximo_ms: int) -> None:
+    def __init__(self, git: Instalacion, limite: Path, propia: Path, avisos: list, tiempo_maximo_ms: int,
+                 clon: Optional[Path] = None) -> None:
         self.git = git
         self.limite = limite
         self.propia = propia
         self.avisos = avisos
-        self.ejecutor = Ejecutor(git, limite, propia, tiempo_maximo_ms)
+        self.ejecutor = Ejecutor(git, limite, propia, tiempo_maximo_ms, clon)
         self.lector = Lector(git)
         self.cerrojo_orden = threading.Lock()
         self.cerrojo_lectura = threading.Lock()
@@ -1277,7 +1308,7 @@ def main() -> None:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.CreateJobObjectW.restype = ctypes.c_void_p
         if Trabajo.del_motor(kernel32) is None:
-            print("  Aviso: no se pudo crear el trabajo de Windows que cierra las ordenes junto con el taller.")
+            print("  Aviso: no se pudo crear el trabajo de Windows que cierra las órdenes junto con el taller.")
     clon = ubicar_clon()
     limite = clon.parent
     propia = limite / ".taller"
@@ -1301,7 +1332,7 @@ def main() -> None:
         print()
         sys.exit(1)
 
-    taller = Taller(git, limite, propia, avisos, tiempo_maximo_ms())
+    taller = Taller(git, limite, propia, avisos, tiempo_maximo_ms(), clon)
     taller.leer()
 
     servidor = Servidor(("127.0.0.1", 0), Manejador)
@@ -1334,7 +1365,9 @@ def main() -> None:
     archivo = os.environ.get("TALLER_ARCHIVO_DIRECCION")
     if archivo:
         Path(archivo).write_text(direccion + "\n", encoding="utf-8")
-    registrar(f"Git en {git.git}, bash en {git.bash}, encontrado por {git.origen}")
+    # Al archivo de registro, no a la ventana: al participante no le dice nada
+    # (SPEC 029).
+    anotar(propia / "registro.txt", f"Git en {git.git}, bash en {git.bash}, encontrado por {git.origen}")
     if os.environ.get("TALLER_SIN_NAVEGADOR") != "1":
         abrir_navegador(direccion)
     try:

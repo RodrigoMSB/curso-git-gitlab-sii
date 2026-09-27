@@ -43,8 +43,10 @@ for argumento in "$@"; do
 done
 
 if [ -z "$NUMERO" ]; then
-  # El laboratorio de la carpeta actual, si esta dentro de taller-git/lab-NN.
-  ACTUAL=$(pwd -P)
+  # El laboratorio de la carpeta de la consola, si esta dentro de
+  # taller-git/lab-NN. El taller la pasa en TALLER_CARPETA_CONSOLA, porque la
+  # orden corre parada en el clon (SPEC 029); en Git Bash es la actual.
+  ACTUAL=$(cd "${TALLER_CARPETA_CONSOLA:-.}" 2>/dev/null && pwd -P || pwd -P)
   case "$ACTUAL/" in
     "$RAIZ"/lab-[0-9][0-9]/*)
       RESTO=${ACTUAL#"$RAIZ"/lab-}
@@ -85,6 +87,10 @@ if [ "$VERBO" = preparar ] && [ -e "$REPOSITORIO" ] && [ -z "$FORZAR" ] && [ ! -
   exit 1
 fi
 
+# Parado en la raiz del clon (SPEC 027, 4.2): en Windows una carpeta no se
+# puede borrar mientras algun proceso la tenga como directorio actual, y
+# preparar --forzar borra la del laboratorio (SPEC 029).
+cd "$CLON" || exit 1
 TALLER_RAIZ="$RAIZ" bash "$SCRIPT" $FORZAR
 ESTADO=$?
 

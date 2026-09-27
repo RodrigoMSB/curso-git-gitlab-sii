@@ -285,9 +285,12 @@ if [ "$WINDOWS" = 1 ] && [ "$MOTOR" = java ]; then
   fi
 fi
 
-grep 'encontrado por' "$LOG" || true
+# La ruta de Git y donde se encontro van al registro, no a la ventana (SPEC 029).
+REGISTRO="$RAIZ/.taller/registro.txt"
+grep -q 'encontrado por' "$LOG" && falla "la ventana dijo donde encontro Git, que va al registro"
+grep 'encontrado por' "$REGISTRO" || falla "el registro no dice donde encontro Git"
 if [ "$VARIANTE" = git-fuera-del-path ]; then
-  grep 'encontrado por PATH' "$LOG" && falla "encontro Git por el PATH, que no deberia tener Git"
+  grep 'encontrado por PATH' "$REGISTRO" && falla "encontro Git por el PATH, que no deberia tener Git"
 fi
 cerrar
 

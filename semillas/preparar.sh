@@ -76,8 +76,17 @@ fi
 [ -f "$PAQUETE" ] ||
   fallar "falta el paquete $PAQUETE; se regenera con semillas/generar.sh $LAB"
 
+# Absoluta desde ya, para poder salir de ella antes de borrarla.
+case $DESTINO in
+  /*) ;;
+  *) DESTINO="$PWD/$DESTINO" ;;
+esac
+
 if [ -e "$DESTINO" ]; then
   if [ "$REHACER" = 'si' ]; then
+    # Fuera de la carpeta antes de borrarla: en Windows no se puede borrar la
+    # que es el directorio actual de un proceso (SPEC 029).
+    cd "$(dirname "$DESTINO")" || exit 1
     rm -rf "$DESTINO"
   else
     fallar "$DESTINO ya existe; agregar --rehacer para reemplazarlo"
