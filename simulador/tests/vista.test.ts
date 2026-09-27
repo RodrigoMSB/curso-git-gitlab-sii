@@ -261,7 +261,7 @@ describe('zona D: areas y paneles', () => {
     );
   });
 
-  it('CA9 el modo relator oculta los tres paneles secundarios', () => {
+  it('CA9 el modo relator oculta las diferencias y los objetos, y deja la pila, que se proyecta en clase (SPEC 029)', () => {
     const estado = ejecutar(repoLineal(), 'git stash push -m "a medias"').estado;
     const id = estado.confirmaciones[0]?.id ?? '';
 
@@ -270,7 +270,11 @@ describe('zona D: areas y paneles', () => {
     expect(normal.objetos).not.toBeNull();
 
     const relator = panelesVisibles(estado, 'git diff', [], id, true);
-    expect(relator).toEqual({ guardado: null, diferencias: null, objetos: null });
+    expect(relator.diferencias).toBeNull();
+    expect(relator.objetos).toBeNull();
+    expect(relator.guardado).toEqual(normal.guardado);
+    // Vacia tambien se ve.
+    expect(panelesVisibles(repoLineal(), null, [], null, true).guardado).toEqual([]);
   });
 
   it('8.3 la escala del modo relator deja el texto mas pequeno sobre catorce pixeles', () => {

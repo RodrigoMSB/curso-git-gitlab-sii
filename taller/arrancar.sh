@@ -5,14 +5,16 @@
 # arrancar.cmd, con el bash de Git para Windows. El participante no elige
 # nada. Primero el motor de Java, con el runtime que viene en el clon. Si en
 # treinta segundos no responde en su puerto, se cierra y se prueba el de Python,
-# con el Python del equipo si es 3.9 o superior. Si tampoco, se abre
+# con el Python del equipo si es 3.9 o superior, que tiene otros treinta. Si
+# tampoco, se abre
 # SIMULADOR.html en el modo de escenarios, y se dice que es el respaldo.
 #
-# Treinta segundos para Java porque en un equipo corporativo el antivirus revisa
-# el runtime la primera vez que arranca; si responde antes, se sigue en ese
-# momento. TALLER_ESPERA_JAVA cambia los treinta segundos y TALLER_ESPERA los
-# cinco del motor de Python. TALLER_SIN_NAVEGADOR=1 no abre el navegador, para
-# las pruebas.
+# Treinta segundos para cada motor porque en un equipo corporativo el antivirus
+# revisa el runtime la primera vez que arranca, y Python en frio medio casi
+# cinco segundos en Windows sin antivirus (SPEC 029). Si responde antes, se
+# sigue en ese momento. TALLER_ESPERA_JAVA y TALLER_ESPERA cambian los treinta
+# segundos de Java y de Python. TALLER_SIN_NAVEGADOR=1 no abre el navegador,
+# para las pruebas.
 #
 # Escrito para Bash 3.2, el de macOS.
 
@@ -24,7 +26,7 @@ RAIZ=$(cd "$CLON/.." && pwd -P)
 PROPIA="$RAIZ/.taller"
 mkdir -p "$PROPIA"
 DIRECCION="$PROPIA/direccion"
-ESPERA=${TALLER_ESPERA:-5}
+ESPERA=${TALLER_ESPERA:-30}
 ESPERA_JAVA=${TALLER_ESPERA_JAVA:-30}
 ABRIR=yes
 [ "${TALLER_SIN_NAVEGADOR:-}" = 1 ] && ABRIR=no
@@ -189,6 +191,7 @@ if [ -z "$MOTOR" ]; then
   if [ ! -f "$AQUI/python/taller.py" ]; then
     decir "Falta el motor de Python en el clon."
   elif PYTHON=$(python_del_equipo); then
+    decir "El taller está arrancando. La primera vez puede tardar hasta medio minuto."
     # shellcheck disable=SC2086
     intentar Python "$ESPERA" $PYTHON "$AQUI/python/taller.py" "$@" ||
       decir "El motor de Python tampoco arrancó."

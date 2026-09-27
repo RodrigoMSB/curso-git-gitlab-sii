@@ -1022,6 +1022,14 @@ describe('el modo taller, laboratorio por laboratorio', () => {
     expect(textos.join(' ')).toContain('segunda a medias');
     expect(textos.join(' ')).toContain('primera a medias');
     await pagina.locator('[data-prueba="pila"]').screenshot({ path: join(SALIDA, 'pila-con-dos.jpg'), type: 'jpeg', quality: 85 });
+    // En el modo relator tambien, que es el que se proyecta en clase.
+    const relator = pagina.getByRole('button', { name: 'modo relator' });
+    await relator.click();
+    await pagina.waitForTimeout(300);
+    expect(await pagina.locator('[data-prueba="pila"]').isVisible()).toBe(true);
+    expect(await pagina.locator('[data-guardado]').count()).toBe(2);
+    await pagina.screenshot({ path: join(SALIDA, 'pila-modo-relator.jpg'), type: 'jpeg', quality: 80 });
+    await relator.click();
     // Fuera de un repositorio tambien esta, vacia.
     await escribir(pagina, 'cd ..');
     A.carpeta = '';

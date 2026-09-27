@@ -160,7 +160,8 @@ export function ModoTaller({ clave }: { readonly clave: string }): React.ReactEl
   );
   const indicador = documento === null ? INDICADOR_INICIAL : indicadorDelTaller(documento);
   const columnas = documento === null ? [] : columnasDelTaller(documento.estado);
-  const guardado = documento === null || modoRelator ? null : guardadosDelTaller(documento.estado);
+  // La pila va tambien en el modo relator, que es el que se proyecta (SPEC 029).
+  const guardado = documento === null ? null : guardadosDelTaller(documento.estado);
 
   // --- La consola ------------------------------------------------------------
 

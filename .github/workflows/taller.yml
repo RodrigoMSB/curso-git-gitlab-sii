@@ -201,6 +201,14 @@ jobs:
         working-directory: simulador
         run: npx vitest run --config vitest.taller-java.config.ts taller-java/interfaz.test.ts
 
+  # El motor de Python tiene treinta segundos, como el de Java (SPEC 029).
+  espera-python:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Un Python que tarda ocho segundos en arrancar
+        run: bash taller/probar-espera-python.sh
+
   laboratorio-08:
     strategy:
       fail-fast: false

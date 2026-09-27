@@ -223,15 +223,15 @@ export function panelesVisibles(
   seleccion: string | null,
   modoRelator: boolean,
 ): Paneles {
-  if (modoRelator) return { guardado: null, diferencias: null, objetos: null };
-
   // Siempre, aunque este vacia: el participante tiene que saber que existe
-  // antes de usarla (SPEC 029, 2.1).
+  // antes de usarla (SPEC 029, 2.1). Tambien en el modo relator, que es el
+  // que se proyecta en clase.
   const guardado = estado.guardados.map((entrada, posicion) => ({
     clave: `stash-${posicion}`,
     texto: `stash@{${posicion}}: ${entrada.mensaje}`,
     archivos: entrada.archivos.map((archivo) => archivo.nombre),
   }));
+  if (modoRelator) return { guardado, diferencias: null, objetos: null };
 
   const fueComparacion = ultimaOrden !== null && /^git\s+diff\b/.test(ultimaOrden);
   const cuerpo = renglones.filter((renglon) => renglon.color !== 'orden');

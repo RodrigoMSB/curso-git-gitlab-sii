@@ -300,6 +300,13 @@ if [ "$MOTOR" = java ]; then
   grep -q 'El taller está arrancando. La primera vez puede tardar' "$LOG" ||
     falla "mientras espera a Java, la ventana no dijo que el taller esta arrancando"
 fi
+if [ "$MOTOR" = python ]; then
+  # El mismo aviso antes de esperar a Python (SPEC 029).
+  PRUEBA=$(grep -n 'Se prueba el de Python' "$LOG" | head -1 | cut -d: -f1)
+  AVISO=$(grep -n 'El taller está arrancando. La primera vez puede tardar' "$LOG" | tail -1 | cut -d: -f1)
+  [ -n "$PRUEBA" ] && [ -n "$AVISO" ] && [ "$AVISO" -gt "$PRUEBA" ] ||
+    falla "mientras espera a Python, la ventana no dijo que el taller esta arrancando"
+fi
 LOG_NORMAL="$BASE/arrancador-2.log"
 INICIO=$(ahora_ms)
 lanzar "$LOG_NORMAL"
