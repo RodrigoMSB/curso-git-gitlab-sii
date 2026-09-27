@@ -1320,9 +1320,6 @@ def main() -> None:
 
     threading.Thread(target=vigilante, name="vigilante", daemon=True).start()
 
-    archivo = os.environ.get("TALLER_ARCHIVO_DIRECCION")
-    if archivo:
-        Path(archivo).write_text(direccion + "\n", encoding="utf-8")
     print()
     print("  El taller está listo, con el motor de Python.")
     print(f"  Dirección: {direccion}")
@@ -1331,6 +1328,12 @@ def main() -> None:
     for aviso in avisos:
         print(f"  ATENCIÓN. {aviso}")
         print()
+    sys.stdout.flush()
+    # El arrancador espera este archivo para saber que el motor responde. Va
+    # al final, cuando todo lo demas ya esta dicho.
+    archivo = os.environ.get("TALLER_ARCHIVO_DIRECCION")
+    if archivo:
+        Path(archivo).write_text(direccion + "\n", encoding="utf-8")
     registrar(f"Git en {git.git}, bash en {git.bash}, encontrado por {git.origen}")
     if os.environ.get("TALLER_SIN_NAVEGADOR") != "1":
         abrir_navegador(direccion)

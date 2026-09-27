@@ -5429,6 +5429,7 @@ Diferencias que encontró y se arreglaron:
 | `interfaz.test.ts` | los dos motores, 87 pasos | las tres diferencias reales de 74.4, y `mutaciones-interfaz.py`: 6 de 6 |
 | `probar-instalacion.sh`, `MOTOR=java`, `python`, `respaldo` | de cero: taller-git, el clon como curso, INSTALAR, TALLER, el lab 01, `preparar 02`, la comprobación | `mutaciones-instalacion.py`: 7 de 7 |
 | `probar-lab-08.sh` | seis preparaciones del 08 | con el arreglo quitado, en Mac: `2818cdd` contra `e0bc1cf` |
+| `probar-cierre.ps1`, Windows, `java` y `python`, `ventana` y `motor` | nada vivo al cerrar, y el segundo arranque recrea `lab-01` | las cuatro, sin el arreglo, en la integración continua: quedaban bash, git, sh y sleep, y `Device or resource busy` |
 | `modo-taller.test.ts` | el modelo de la página, con la barra del motor | `mutaciones-modelo.py`: 20 de 20 |
 | pruebas de Java | incluida la nueva de `PATH` y `TALLER_CD_DESPUES` | `mutaciones.py` |
 
@@ -5461,7 +5462,60 @@ y el laboratorio 08 en Windows y en Mac, y destapó cinco cosas:
   fallan pruebas que dependen de permisos de ejecución y de finales de línea;
   en la integración continua corre en Linux.
 
-### 74.8 · Resultados, en este Mac con Chrome
+### 74.8 · Al cerrar el taller no queda nada vivo
+
+Pedido después del EBUSY de la limpieza de la prueba de la interfaz. La
+prueba nueva, `taller/probar-cierre.ps1`, corre en Windows con cada motor:
+arranca `TALLER.cmd` en una consola, le manda una orden que deja vivos un
+`bash.exe`, un `git.exe` y un `sleep.exe` parados en `taller-git/lab-01/recetario`,
+y cierra de dos maneras.
+
+- **La ventana.** En la máquina de la integración continua la ventana no
+  atiende mensajes (no hay escritorio). La prueba le pide a Windows la lista
+  de procesos unidos a esa consola, `GetConsoleProcessList`, intenta
+  `SC_CLOSE` y `WM_CLOSE`, y si la ventana sigue termina esos procesos, que es
+  lo que hace Windows al cerrarla. Lo dice en su salida.
+- **El motor, de golpe**, con `Stop-Process -Force`. La ventana queda, a
+  propósito, en el `pause` de `arrancar.cmd`, y no cuenta.
+
+Después mira el árbol entero que colgaba de `TALLER.cmd` por
+`ParentProcessId` y exige que no quede nadie, y arranca de nuevo enseguida
+para borrar y recrear `lab-01` desde la consola.
+
+**Lo que encontró, con los dos motores:** quedaban vivos el bash de la
+orden, `git.exe`, `sh.exe`, `sleep.exe` y su `conhost.exe`, y el segundo
+arranque fallaba con `rm: cannot remove 'lab-01/recetario': Device or
+resource busy`. Los dos motores lanzan cada proceso en una consola propia y
+oculta (Java siempre con `CREATE_NO_WINDOW`, Python a propósito), así que el
+cierre de la ventana no les llega, y ninguno ataba sus hijos a su propia
+vida.
+
+**El arreglo, en el motor y no en la prueba:** un objeto de trabajo de
+Windows marcado con `KILL_ON_JOB_CLOSE`, que vive lo que vive el motor. El
+motor entra en él al arrancar, antes de lanzar ninguna orden, y todo lo que
+lanza nace dentro. Cuando el motor termina, de cualquier forma, se cierra la
+última manija y Windows termina el trabajo entero.
+
+- **Python** lo crea con `ctypes`. El trabajo de cada orden, el del límite
+  de tiempo, queda anidado dentro.
+- **Java** 21 no llega a esa API sin código nativo. El motor lanza al
+  arrancar un ayudante de PowerShell, `Custodio`, que crea el trabajo y mete
+  en él al motor. El ayudante, lanzado antes, queda fuera; sale cuando se
+  cierra su entrada, que es cuando el motor termina, y con él se cierra la
+  manija. Las órdenes esperan a que el motor esté dentro; la comprobación
+  del primer día, que no arranca el ayudante, no espera.
+
+Dos intentos que la prueba descartó antes de llegar ahí: sumar cada orden al
+trabajo después de lanzarla (el `bash.exe` de Git para Windows es un
+lanzador que abre enseguida el bash de verdad, y ese nacía fuera), y dejar
+salir del trabajo a quien lo pidiera (Git Bash lanza `git.exe` pidiendo
+salir, y salía). **Consecuencia:** un Visual Studio Code abierto con `code`
+desde la consola del taller se cierra junto con el taller.
+
+De paso, cada motor escribe el archivo de su dirección al final, después de
+imprimir, porque el arrancador y las pruebas lo toman como la señal de listo.
+
+### 74.9 · Resultados, en este Mac con Chrome
 
 | | motor Java | motor Python |
 |---|---|---|
@@ -5485,7 +5539,7 @@ motor, fuera del repositorio.
 El clon pesa unos 33 MB de descarga y 101 MB en disco, de los que 62 MB son
 los dos runtimes de Java.
 
-### 74.9 · Lo que falta
+### 74.10 · Lo que falta
 
 - **La suite del simulador en Windows y en Mac.** Corre en Linux. Que pase en
   Windows pide revisar las pruebas que miran permisos de ejecución y

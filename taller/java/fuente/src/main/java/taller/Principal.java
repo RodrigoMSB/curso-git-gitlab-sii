@@ -91,21 +91,24 @@ public final class Principal {
             }
         }, 500, 500, TimeUnit.MILLISECONDS);
 
-        // El arrancador espera la direccion en este archivo para saber que el
-        // motor respondio, y abrir el navegador el mismo.
-        String archivoDireccion = System.getenv("TALLER_ARCHIVO_DIRECCION");
-        if (archivoDireccion != null && !archivoDireccion.isBlank()) {
-            Files.writeString(Path.of(archivoDireccion), servidor.direccion() + "\n");
-        }
-
         System.out.println();
         System.out.println("  El taller está listo, con el motor de Java.");
         System.out.println("  Dirección: " + servidor.direccion());
         System.out.println("  No cierres esta ventana mientras trabajas.");
         System.out.println();
+        System.out.flush();
+
         for (String aviso : avisos) {
             System.out.println("  ATENCIÓN. " + aviso);
             System.out.println();
+        }
+        System.out.flush();
+        // El arrancador espera la direccion en este archivo para saber que el
+        // motor respondio, y abrir el navegador el mismo. Va al final, cuando
+        // todo lo demas ya esta dicho.
+        String archivoDireccion = System.getenv("TALLER_ARCHIVO_DIRECCION");
+        if (archivoDireccion != null && !archivoDireccion.isBlank()) {
+            Files.writeString(Path.of(archivoDireccion), servidor.direccion() + "\n");
         }
         Registro.escribir("Git en " + git.git() + ", bash en " + git.bash() + ", encontrado por " + git.origen());
         System.out.flush();
