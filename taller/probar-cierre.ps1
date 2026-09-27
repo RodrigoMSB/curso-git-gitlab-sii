@@ -172,8 +172,10 @@ function Arrancar([string] $nombre) {
   $salida = Join-Path $base "$nombre.consola.txt"
   $senal = Join-Path $base "$nombre.cerrar"
   $numero = Join-Path $base "$nombre.cmd.txt"
-  $lanzado = Start-Process pwsh -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile', '-File', $lanzador,
-    '-Carpeta', $raiz, '-Salida', $salida, '-Senal', $senal, '-Numero', $numero
+  # Start-Process junta los argumentos con espacios sin comillas: la carpeta
+  # del taller tiene un espacio ('Ana Núñez'), asi que van entre comillas.
+  $argumentos = "-NoProfile -File `"$lanzador`" -Carpeta `"$raiz`" -Salida `"$salida`" -Senal `"$senal`" -Numero `"$numero`""
+  $lanzado = Start-Process pwsh -PassThru -WindowStyle Hidden -ArgumentList $argumentos
   $limite = (Get-Date).AddSeconds(30)
   while (-not (Test-Path $numero) -and (Get-Date) -lt $limite) { Start-Sleep -Milliseconds 200 }
   if (-not (Test-Path $numero)) { throw 'el lanzador no abrio la pseudoconsola' }
@@ -187,7 +189,11 @@ function Arrancar([string] $nombre) {
     Start-Sleep -Milliseconds 300
   }
   $quedo = if (Test-Path (Join-Path $raiz '.taller\motor')) { (Get-Content (Join-Path $raiz '.taller\motor') -Raw).Trim() } else { 'nada' }
-  if ($quedo -ne $esperado) { throw "se esperaba el motor de $esperado y el arrancador dejo: $quedo" }
+  if ($quedo -ne $esperado) {
+    Write-Host '--- lo que mostro la consola'
+    Write-Host (Pantalla ([pscustomobject]@{ Salida = $salida }))
+    throw "se esperaba el motor de $esperado y el arrancador dejo: $quedo"
+  }
   $direccion = (Get-Content (Join-Path $raiz '.taller\direccion') -TotalCount 1).Trim()
   $cliente = [System.Net.Http.HttpClient]::new()
   $cliente.Timeout = [TimeSpan]::FromMinutes(15)
