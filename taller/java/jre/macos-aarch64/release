@@ -1,2 +1,2 @@
-JAVA_VERSION="21.0.12.1"
+JAVA_VERSION="25.0.4.1"
 MODULES="java.base jdk.httpserver"

@@ -5766,3 +5766,59 @@ de la orden, el de `laboratorio.sh` y el del script la tenían.
   otros paneles secundarios (sección 75.2). **Decisión del product owner:** se
   ve también en el modo relator, que es el que se proyecta en clase. Las
   diferencias y los objetos siguen ocultos en ese modo.
+
+## 76. El motor Java en Java 25, sin PowerShell
+
+SPEC 030, en la rama `taller-java25`, creada desde `taller` en `237e72c`.
+
+### 76.1 · Java 25
+
+- **Temurin 25.0.4.1+1**, la última de Java 25 LTS en Adoptium al hacer el
+  spec, con las sumas que publica su API. Desde Java 24 el JDK no trae los
+  `jmods` adentro (JEP 493): vienen en un paquete aparte por plataforma, y
+  `generar-runtimes.sh` baja el JDK de la máquina que recorta, por su `jdeps` y
+  su `jlink`, y los `jmods` de cada destino.
+- Los módulos siguen siendo `java.base` y `jdk.httpserver`: las funciones
+  nativas están en `java.base`.
+- **Maven 3.9.16**, `maven-compiler-plugin` 3.16.0, `maven-surefire-plugin`
+  3.6.0, `maven-jar-plugin` 3.5.1, wrapper 3.3.4, las últimas estables.
+  JUnit 5.14.4, la última 5: la 6 es otra versión mayor y no hacía falta.
+- El lanzador pasa `--enable-native-access=ALL-UNNAMED` al motor, que corre
+  desde el classpath, y la máquina virtual no escribe advertencias en la
+  ventana. El Java del sistema que se usa si falta el runtime del clon tiene
+  que ser 25 o superior: un Java anterior no corre el motor.
+
+### 76.2 · El objeto de trabajo, con funciones nativas
+
+`TrabajoWindows.java`. Al arrancar en Windows, antes de lanzar ninguna orden,
+el motor crea un objeto de trabajo con `CreateJobObjectW`, le pone
+`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` con `SetInformationJobObject` (sin permiso
+para salir del trabajo, por el `git.exe` de Git Bash del SPEC 028) y se mete
+adentro con `AssignProcessToJobObject` sobre `GetCurrentProcess()`. Todo con
+`java.lang.foreign`: sin lanzar ningún otro programa, sin JNI y sin compilar
+nada. La manija vive lo que vive el motor; cuando el motor termina, de
+cualquier forma, Windows la cierra y termina el trabajo entero.
+
+Si alguna llamada falla, el motor sigue sin trabajo, escribe en la ventana
+«Aviso: no se pudo preparar el cierre ordenado. Al cerrar esta ventana pueden
+quedar procesos abiertos, que se cierran al abrir el taller otra vez.», y
+`Rastro` los cierra al arrancar la vez siguiente, como antes. Para probarlo,
+`TALLER_PRUEBA_FALLA_TRABAJO=1` le da a `SetInformationJobObject` un tamaño que
+Windows rechaza de verdad.
+
+**El Custodio de PowerShell se eliminó**, con `TALLER_CUSTODIO` y todo lo que
+lanzaba `powershell.exe`. El motor no ejecuta PowerShell nunca. En Mac nada
+cambia.
+
+### 76.3 · Pruebas, y cómo se vio fallar cada una
+
+Las pruebas nuevas se subieron primero, con el motor de Java 21 de `taller`
+(ejecución 36363882497), y fallaron así:
+
+| Prueba | Con el motor anterior |
+|---|---|
+| `probar-cierre.ps1`, Java, ventana y motor de golpe: nada vivo tras cerrar | quedaban 7: bash, conhost, git, sh y sleep, y el segundo arranque los cerraba |
+| `probar-cierre.ps1 -FallaTrabajo`: avisa, sigue, y Rastro cierra al arrancar | la ventana no avisaba |
+| `probar-cierre.ps1`: ningún PowerShell en el árbol del taller | con el custodio encendido, `powershell.exe` colgaba del motor |
+| `OtrosTest`: el código del motor no nombra PowerShell | con `Custodio.java`, y con un comentario propio que lo nombraba |
+| `TrabajoWindowsTest`: en Windows el motor entra en su trabajo | no existía la clase |

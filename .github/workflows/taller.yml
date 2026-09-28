@@ -53,7 +53,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -117,37 +117,10 @@ jobs:
           VARIANTE: ${{ matrix.variante }}
         run: bash taller/probar-instalacion.sh
 
-  # El motor de Java con el custodio encendido (TALLER_CUSTODIO=1) y
-  # PowerShell fuera de alcance: arranca igual, lo dice en la ventana y
-  # atiende sin esperar en cada orden.
-  sin-powershell:
-    needs: runtimes
-    strategy:
-      fail-fast: false
-      matrix:
-        como: [bloqueado, no-existe, lento]
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: jre
-      - name: Pone el runtime en su lugar
-        run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
-      - name: Instala y arranca sin PowerShell, con el custodio pedido
-        env:
-          MOTOR: java
-          TALLER_CUSTODIO: '1'
-          SIN_POWERSHELL: ${{ matrix.como }}
-        run: bash taller/probar-instalacion.sh
-
   # Al cerrar la consola de TALLER.cmd (CTRL_CLOSE_EVENT de verdad, con una
-  # pseudoconsola) o al morir el motor de golpe: cuanto queda vivo, y si un
-  # segundo arranque inmediato cierra lo que quedo y puede borrar y recrear
-  # lab-01. Java con el custodio apagado y encendido.
+  # pseudoconsola) o al morir el motor de golpe: no queda nada vivo, el motor
+  # no lanza PowerShell, y un segundo arranque inmediato recrea lab-01. Java
+  # tambien sin su objeto de trabajo, a proposito (SPEC 030).
   cierre:
     needs: runtimes
     strategy:
@@ -161,9 +134,6 @@ jobs:
           # cierra al arrancar lo que quedo (SPEC 030, 3.2).
           - { motor: java, cierre: ventana, falla: 'si' }
           - { motor: java, cierre: motor, falla: 'si' }
-          # PROVISORIO, para ver fallar la prueba de que el motor no lanza
-          # PowerShell: el motor viejo con el custodio encendido.
-          - { motor: java, cierre: ventana, falla: custodio }
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -175,8 +145,6 @@ jobs:
         run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
       - name: Cierra y vuelve a arrancar
         shell: pwsh
-        env:
-          TALLER_CUSTODIO: ${{ matrix.falla == 'custodio' && '1' || '' }}
         run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }} -FallaTrabajo:$${{ matrix.falla == 'si' }}
 
   interfaz:

@@ -28,6 +28,33 @@
 # Properties in this file are typically parsed only once. If any of the
 # properties are modified, applications should be restarted to ensure the
 # changes are properly reflected.
+#
+# The special "include" property can be defined one or multiple times with
+# a filesystem path value. The effect of each definition is to include a
+# referred security properties file inline, adding all its properties.
+# Security properties defined before an include statement may be overridden
+# by properties in the included file, if their names match. Conversely,
+# properties defined after an include statement may override properties in
+# the included file.
+#
+# Included files, as well as files pointed to by java.security.properties,
+# can include other files recursively. Paths may be absolute or relative.
+# Each relative path is resolved against the base file containing its
+# "include" definition, if local. Paths may contain system properties for
+# expansion in the form of ${system.property}. If a system property does
+# not have a value, it expands to the empty string.
+#
+# An error will be thrown if a file cannot be included. This may happen
+# if the file cannot be resolved, does not exist, is a directory, there are
+# insufficient permissions to read it, it is recursively included more than
+# once, or for any other reason. For a secure JDK configuration, it is
+# important to review OS write permissions assigned to any file included.
+#
+# Examples:
+#   1) include ${java.home}/conf/security/extra.security
+#   2) include extra.security
+#   3) include ${java.home}/conf/security/profile${SecurityProfile}.security
+#
 
 # In this file, various security properties are set for use by
 # java.security classes. This is where users can statically register
@@ -245,40 +272,18 @@ login.configuration.provider=sun.security.provider.ConfigFile
 #
 #login.config.url.1=file:${user.home}/.java.login.config
 
-#
-# Class to instantiate as the system Policy. This is the name of the class
-# that will be used as the Policy object. The system class loader is used to
-# locate this class.
-#
-policy.provider=sun.security.provider.PolicyFile
-
-# The default is to have a single system-wide policy file,
-# and a policy file in the user's home directory.
-#
-policy.url.1=file:${java.home}/conf/security/java.policy
-policy.url.2=file:${user.home}/.java.policy
-
-# Controls whether or not properties are expanded in policy and login
-# configuration files. If set to false, properties (${...}) will not
-# be expanded in policy and login configuration files. If commented out or
-# set to an empty string, the default value is "false" for policy files and
-# "true" for login configuration files.
+# Controls whether or not properties are expanded in login configuration files.
+# If set to false, properties (${...}) will not be expanded in login
+# configuration files. If commented out or set to an empty string, the default
+# value is "true" for login configuration files.
 #
 policy.expandProperties=true
 
-# Controls whether or not an extra policy or login configuration file is
-# allowed to be passed on the command line with -Djava.security.policy=somefile
-# or -Djava.security.auth.login.config=somefile. If commented out or set to
-# an empty string, the default value is "false".
+# Controls whether or not an extra login configuration file is allowed to be
+# passed on the command line with -Djava.security.auth.login.config=somefile.
+# If commented out or set to an empty string, the default value is "false".
 #
 policy.allowSystemProperty=true
-
-# whether or not we look into the IdentityScope for trusted Identities
-# when encountering a 1.1 signed JAR file. If the identity is found
-# and is trusted, we grant it AllPermission. Note: the default policy
-# provider (sun.security.provider.PolicyFile) does not support this property.
-#
-policy.ignoreIdentityScope=false
 
 #
 # Default keystore type.
@@ -294,27 +299,6 @@ keystore.type=pkcs12
 # keystore type supports loading only PKCS12 keystore files.
 #
 keystore.type.compat=true
-
-#
-# List of comma-separated packages that start with or equal this string
-# will cause a security exception to be thrown when passed to the
-# SecurityManager::checkPackageAccess method unless the corresponding
-# RuntimePermission("accessClassInPackage."+package) has been granted.
-#
-package.access=sun.misc.,\
-               sun.reflect.
-
-#
-# List of comma-separated packages that start with or equal this string
-# will cause a security exception to be thrown when passed to the
-# SecurityManager::checkPackageDefinition method unless the corresponding
-# RuntimePermission("defineClassInPackage."+package) has been granted.
-#
-# By default, none of the class loaders supplied with the JDK call
-# checkPackageDefinition.
-#
-package.definition=sun.misc.,\
-                   sun.reflect.
 
 #
 # Determines whether this properties file can be appended to
@@ -336,10 +320,7 @@ ssl.TrustManagerFactory.algorithm=PKIX
 # any positive value: the number of seconds to cache an address for
 # zero: do not cache
 #
-# default value is forever (FOREVER). For security reasons, this
-# caching is made forever when a security manager is set. When a security
-# manager is not set, the default behavior in this implementation
-# is to cache for 30 seconds.
+# The default behavior in this implementation is to cache for 30 seconds.
 #
 # NOTE: setting this to anything other than the default value can have
 #       serious security implications. Do not set it unless
@@ -544,7 +525,10 @@ sun.security.krb5.maxReferrals=5
 #       denyAfter YYYY-MM-DD
 #
 #   UsageConstraint:
-#       usage [TLSServer] [TLSClient] [SignedJAR]
+#       usage UsageType { UsageType }
+#
+#   UsageType:
+#       TLSServer | TLSClient | SignedJAR
 #
 #   IncludeProperty:
 #       include <security property>
@@ -607,9 +591,9 @@ sun.security.krb5.maxReferrals=5
 #       use the following:  "RSA keySize == 2048 & denyAfter 2020-02-03"
 #
 #   UsageConstraint:
-#     usage [TLSServer] [TLSClient] [SignedJAR]
+#     usage UsageType { UsageType }
 #       This constraint prohibits the specified algorithm for
-#       a specified usage.  This should be used when disabling an algorithm
+#       a specified UsageType.  This should be used when disabling an algorithm
 #       for all usages is not practical. 'TLSServer' restricts the algorithm
 #       in TLS server certificate chains when server authentication is
 #       performed. 'TLSClient' restricts the algorithm in TLS client
@@ -954,7 +938,7 @@ jdk.tls.legacyAlgorithms=NULL, anon, RC4, DES, 3DES_EDE_CBC
 #   KeyLimits:
 #       " KeyLimit { , KeyLimit } "
 #
-#   WeakKeyLimit:
+#   KeyLimit:
 #       AlgorithmName Action Length
 #
 #   AlgorithmName:
@@ -1331,8 +1315,13 @@ jceks.key.serialFilter = java.base/java.lang.Enum;java.base/java.security.KeyRep
 #
 # Enhanced exception message information
 #
-# By default, exception messages should not include potentially sensitive
-# information such as file names, host names, or port numbers. This property
+# Exception messages may include potentially sensitive information such as file
+# names, host names, or port numbers. By default, socket related exceptions
+# have this information restricted (meaning the sensitive details are removed).
+# Exception messages relating to JAR files and exceptions containing user
+# identity information are also restricted by default.
+# This property can be used to relax this restriction or to place further
+# restrictions on other categories, defined below. The property
 # accepts one or more comma separated values, each of which represents a
 # category of enhanced exception message information to enable. Values are
 # case-insensitive. Leading and trailing whitespaces, surrounding each value,
@@ -1345,17 +1334,28 @@ jceks.key.serialFilter = java.base/java.lang.Enum;java.base/java.security.KeyRep
 #
 # The categories are:
 #
-#  hostInfo - IOExceptions thrown by java.net.Socket and the socket types in the
-#             java.nio.channels package will contain enhanced exception
-#             message information
+#  hostInfo - All networking related exceptions will contain enhanced
+#             exception message information.
+#
+#  hostInfoExclSocket - The hostInfo category defined above, excluding
+#             IOExceptions thrown by java.net.Socket and the NetworkChannel
+#             types in the java.nio.channels package, will contain enhanced
+#             exception message information
 #
 #  jar      - enables more detailed information in the IOExceptions thrown
 #             by classes in the java.util.jar package
 #
+#  userInfo - enables more detailed information in exceptions which may contain
+#             user identity information
+#
 # The property setting in this file can be overridden by a system property of
 # the same name, with the same syntax and possible values.
 #
-#jdk.includeInExceptions=hostInfo,jar
+# If the property is not set or set to an empty string, then this is the most
+# restricted setting with all categories disabled. The following is the default
+# (out of the box) setting, meaning these categories are not restricted.
+#
+jdk.includeInExceptions=hostInfoExclSocket
 
 #
 # Disabled mechanisms for the Simple Authentication and Security Layer (SASL)
@@ -1589,6 +1589,35 @@ jdk.tls.alpnCharset=ISO_8859_1
 #jdk.security.krb5.s4u2proxy.acceptNonForwardableServiceTicket=false
 
 #
+# Policy for name comparison in keytab and ccache entry lookup
+#
+# When looking up a keytab or credentials cache (ccache) entry for a Kerberos
+# principal, the principal name is compared with the name in the entry.
+# The comparison is by default case-insensitive. However, many Kerberos
+# implementations consider principal names to be case-sensitive. Consequently,
+# if two principals have names that differ only in case, there is a risk that
+# an incorrect keytab or ccache entry might be selected.
+#
+# If this security property is set to "true", the comparison of principal
+# names at keytab and ccache entry lookup is case-sensitive.
+#
+# The default value is "false".
+#
+# If a system property of the same name is also specified, it supersedes the
+# security property value defined here.
+#
+#jdk.security.krb5.name.case.sensitive=false
+
+#
+# Default algorithm for PEMEncoder Encrypted PKCS#8
+#
+# This property defines the default password-based encryption algorithm for
+# java.security.PEMEncoder when configured for encryption with the
+# withEncryption method.
+#
+jdk.epkcs8.defaultAlgorithm=PBEWithHmacSHA256AndAES_128
+
+#
 # X.509 AuthorityInfoAccess caIssuer URI Filtering
 #
 # This property defines a whitespace-separated list of filters that
@@ -1648,3 +1677,28 @@ com.sun.security.allowedAIALocations=
 # be used instead. The default size limit is 20MiB.
 # This property may be overridden by a System property of the same name.
 com.sun.security.crl.maxSize = 20971520
+
+#
+# PKCS #8 encoding format for newly created ML-KEM and ML-DSA private keys
+#
+# RFC 9935 and RFC 9881 define three possible formats for a private key:
+# a seed (64 bytes for ML-KEM, 32 bytes for ML-DSA), an expanded private key,
+# or a sequence containing both.
+#
+# The following security properties determine the encoding format used when a
+# new keypair is generated with a KeyPairGenerator, and the output of the
+# translateKey method on an existing key using a ML-KEM or ML-DSA KeyFactory.
+#
+# Valid values for these properties are "seed", "expandedKey", and "both"
+# (case-insensitive). The default is "seed".
+#
+# If a system property of the same name is also specified, it supersedes the
+# security property value defined here.
+#
+# Note: These properties are currently used by the SunJCE (for ML-KEM) and SUN
+# (for ML-DSA) providers in the JDK Reference implementation. They are not
+# guaranteed to be supported by other implementations or third-party security
+# providers.
+#
+#jdk.mlkem.pkcs8.encoding = seed
+#jdk.mldsa.pkcs8.encoding = seed

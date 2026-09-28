@@ -71,11 +71,11 @@ public final class Principal {
             System.out.println("  Se cerraron " + terminados + " procesos que habían quedado abiertos de la vez anterior.");
             System.out.flush();
         }
-        // El custodio de Windows, que ata las ordenes a la vida del motor con un
-        // objeto de trabajo, compila C# con Add-Type en cada arranque, y eso
-        // puede disparar alertas del EDR en los equipos del SII: queda apagado,
-        // y se enciende solo con TALLER_CUSTODIO=1.
-        if ("1".equals(System.getenv("TALLER_CUSTODIO"))) Custodio.arrancar();
+        // En Windows, antes de lanzar ninguna orden, el motor entra en un objeto
+        // de trabajo que termina todo lo que lanzo cuando el motor termina, de
+        // cualquier forma (SPEC 030). Si no se puede, avisa y sigue: Rastro
+        // cierra lo que quede al arrancar la vez siguiente.
+        TrabajoWindows.crear();
         long tiempo = tiempoMaximo();
         Ejecutor ejecutor = new Ejecutor(sistema, git, limite, propia, tiempo).conClon(clon);
         LectorEstado lector = new LectorEstado(sistema, git, propia);

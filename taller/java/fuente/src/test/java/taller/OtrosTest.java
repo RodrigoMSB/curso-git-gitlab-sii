@@ -3,6 +3,7 @@ package taller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -47,5 +48,17 @@ class OtrosTest {
         assertEquals("/a\n/a/.git\n", s.get("raiz"));
         assertEquals("refs/heads/main\n", s.get("rama"));
         assertTrue(s.containsKey("fin"));
+    }
+
+    @Test
+    void elMotorNoLanzaPowerShell() throws Exception {
+        // SPEC 030: el Custodio compilaba C# con PowerShell en cada arranque, y
+        // eso es lo que un EDR marca. El motor no nombra PowerShell en ninguna parte.
+        try (var archivos = Files.walk(Path.of("src/main/java"))) {
+            for (Path archivo : archivos.filter(Files::isRegularFile).toList()) {
+                String texto = Files.readString(archivo).toLowerCase(java.util.Locale.ROOT);
+                assertTrue(!texto.contains("powershell"), archivo + " nombra PowerShell");
+            }
+        }
     }
 }

@@ -4,10 +4,13 @@
 #     taller/java/fuente/generar-runtimes.sh
 #
 # Deja taller/java/jre/windows-x64 y taller/java/jre/macos-aarch64, recortados
-# con jlink a partir de los jmods de Eclipse Temurin 21. jlink arma un runtime
-# para otra plataforma si recibe los jmods de esa plataforma, asi que los dos
-# salen de una sola maquina: el jlink es el del JDK de esta maquina, de la
-# misma version exacta, y los jmods son los de cada destino.
+# con jlink a partir de los jmods de Eclipse Temurin 25 (SPEC 030). jlink arma
+# un runtime para otra plataforma si recibe los jmods de esa plataforma, asi que
+# los dos salen de una sola maquina: el jlink es el del JDK de esta maquina, de
+# la misma version exacta, y los jmods son los de cada destino.
+#
+# Desde Java 24 el JDK de Temurin no trae los jmods adentro (JEP 493): vienen en
+# un paquete aparte, uno por plataforma.
 #
 # Las versiones y las sumas SHA-256 van fijas aqui. Si una descarga no coincide
 # con su suma, el script se detiene. Los runtimes se confirman una sola vez;
@@ -18,15 +21,21 @@
 
 set -euo pipefail
 
-VERSION='21.0.12.1+1'
-BASE='https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1'
+# La ultima de Java 25 LTS en Adoptium al hacer el SPEC 030, con las sumas que
+# publica su API.
+VERSION='25.0.4.1+1'
+BASE='https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1'
 
-MAC_ARCHIVO='OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.12.1_1.tar.gz'
-MAC_SUMA='3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998'
-WIN_ARCHIVO='OpenJDK21U-jdk_x64_windows_hotspot_21.0.12.1_1.zip'
-WIN_SUMA='f9d6e191ab098c0d416e7d588a24420a8621cd2f4720dab2459b8b7b2d2d8b4e'
-LINUX_ARCHIVO='OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz'
-LINUX_SUMA='ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94'
+# Los jmods de cada destino.
+MAC_JMODS_ARCHIVO='OpenJDK25U-jmods_aarch64_mac_hotspot_25.0.4.1_1.tar.gz'
+MAC_JMODS_SUMA='182f3c09df135883f3800bfd5e1e5b65a2cd44172863be8e7db48bb3d8233bd9'
+WIN_JMODS_ARCHIVO='OpenJDK25U-jmods_x64_windows_hotspot_25.0.4.1_1.zip'
+WIN_JMODS_SUMA='c6b6b19ba9ab28bb4c15b936a7cef40dedcd99ab69f69109dcb0ffad805f0847'
+# El JDK de la maquina que recorta, por su jdeps y su jlink.
+MAC_ARCHIVO='OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.4.1_1.tar.gz'
+MAC_SUMA='61979887f7506a24a57439ff99adb8b3a7fc89977d9cfe3b8984f58a981b7b9d'
+LINUX_ARCHIVO='OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz'
+LINUX_SUMA='dbb698396d478e7fa2b1e50f4103324b2a99b90569ee27c33f2261f9215cf41e'
 
 # Los modulos que el programa usa de verdad. Salen de
 #     jdeps --print-module-deps --ignore-missing-deps taller/java/taller.jar
@@ -71,15 +80,19 @@ extraer() {
 TRABAJO=$(mktemp -d)
 trap 'rm -rf "$TRABAJO"' EXIT
 
-bajar "$MAC_ARCHIVO" "$MAC_SUMA"
-bajar "$WIN_ARCHIVO" "$WIN_SUMA"
-extraer "$MAC_ARCHIVO" "$TRABAJO/mac"
-extraer "$WIN_ARCHIVO" "$TRABAJO/win"
-MAC_JMODS="$TRABAJO/mac/jdk-$VERSION/Contents/Home/jmods"
-WIN_JMODS="$TRABAJO/win/jdk-$VERSION/jmods"
+bajar "$MAC_JMODS_ARCHIVO" "$MAC_JMODS_SUMA"
+bajar "$WIN_JMODS_ARCHIVO" "$WIN_JMODS_SUMA"
+extraer "$MAC_JMODS_ARCHIVO" "$TRABAJO/mac-jmods"
+extraer "$WIN_JMODS_ARCHIVO" "$TRABAJO/win-jmods"
+MAC_JMODS="$TRABAJO/mac-jmods/jdk-$VERSION-jmods"
+WIN_JMODS="$TRABAJO/win-jmods/jdk-$VERSION-jmods"
 
 case "$(uname -s)-$(uname -m)" in
-  Darwin-arm64) ANFITRION="$TRABAJO/mac/jdk-$VERSION/Contents/Home" ;;
+  Darwin-arm64)
+    bajar "$MAC_ARCHIVO" "$MAC_SUMA"
+    extraer "$MAC_ARCHIVO" "$TRABAJO/mac"
+    ANFITRION="$TRABAJO/mac/jdk-$VERSION/Contents/Home"
+    ;;
   Linux-x86_64)
     bajar "$LINUX_ARCHIVO" "$LINUX_SUMA"
     extraer "$LINUX_ARCHIVO" "$TRABAJO/linux"

@@ -18,12 +18,12 @@
   <packaging>jar</packaging>
 
   <properties>
-    <maven.compiler.release>21</maven.compiler.release>
+    <maven.compiler.release>25</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <!-- Fecha fija en las entradas del jar, para que dos construcciones del
          mismo codigo den el mismo archivo (punto 6.3). -->
     <project.build.outputTimestamp>2026-01-01T00:00:00Z</project.build.outputTimestamp>
-    <junit.version>5.11.4</junit.version>
+    <junit.version>5.14.4</junit.version>
   </properties>
 
   <dependencies>
@@ -41,20 +41,21 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
+        <version>3.16.0</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.2</version>
+        <version>3.6.0</version>
         <configuration>
-          <argLine>-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8</argLine>
+          <!-- El acceso nativo del trabajo de Windows (SPEC 030), sin la advertencia de la maquina virtual. -->
+          <argLine>-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 --enable-native-access=ALL-UNNAMED</argLine>
         </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.4.2</version>
+        <version>3.5.1</version>
         <configuration>
           <archive>
             <addMavenDescriptor>false</addMavenDescriptor>

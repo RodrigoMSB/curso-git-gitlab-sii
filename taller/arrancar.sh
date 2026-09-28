@@ -104,10 +104,11 @@ java_del_taller() {
   for candidato in "${JAVA_HOME:+$JAVA_HOME/bin/java}" "$(command -v java 2>/dev/null)"; do
     [ -n "$candidato" ] && [ -x "$candidato" ] || continue
     if [ "$candidato" = /usr/bin/java ] && [ -x /usr/libexec/java_home ]; then
-      /usr/libexec/java_home -v 21+ >/dev/null 2>&1 || continue
+      /usr/libexec/java_home -v 25+ >/dev/null 2>&1 || continue
     fi
     mayor=$(version_mayor_de_java "$candidato")
-    if [ -n "$mayor" ] && [ "$mayor" -ge 21 ] 2>/dev/null; then
+    # El motor se compila para Java 25 (SPEC 030): uno anterior no lo corre.
+    if [ -n "$mayor" ] && [ "$mayor" -ge 25 ] 2>/dev/null; then
       printf '%s' "$candidato"
       return 0
     fi
@@ -160,7 +161,7 @@ if [ "${1:-}" = --comprobar ]; then
   shift
   if JAVA=$(java_del_taller) && [ -f "$AQUI/java/taller.jar" ]; then
     exec "$JAVA" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
-      -XX:-UsePerfData -Xshare:auto -jar "$AQUI/java/taller.jar" --comprobar "$@"
+      -XX:-UsePerfData -Xshare:auto --enable-native-access=ALL-UNNAMED -jar "$AQUI/java/taller.jar" --comprobar "$@"
   fi
   echo
   decir "No hay un Java con que correr el motor de Java, así que no se puede hacer la comprobación completa."
@@ -181,7 +182,7 @@ if [ ! -f "$AQUI/java/taller.jar" ]; then
 elif JAVA=$(java_del_taller); then
   decir "El taller está arrancando. La primera vez puede tardar hasta medio minuto."
   intentar Java "$ESPERA_JAVA" "$JAVA" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
-    -XX:-UsePerfData -Xshare:auto -jar "$AQUI/java/taller.jar" "$@" ||
+    -XX:-UsePerfData -Xshare:auto --enable-native-access=ALL-UNNAMED -jar "$AQUI/java/taller.jar" "$@" ||
     decir "El motor de Java no arrancó. Se prueba el de Python."
 else
   decir "No hay un Java con que arrancar el motor de Java. Se prueba el de Python."

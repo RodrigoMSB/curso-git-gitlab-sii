@@ -59,9 +59,6 @@ public final class Procesos {
             });
         }
         if (entrada == null) pb.redirectInput(ProcessBuilder.Redirect.from(nulo()));
-        // Una orden no se lanza hasta que el motor este dentro de su trabajo,
-        // para que todo lo que abra nazca dentro (ver Custodio).
-        if (entrada != null) Custodio.esperar();
         LANZADOS.incrementAndGet();
         Process p = pb.start();
         // Una orden y lo que lance quedan anotados, para cerrarlos en el
@@ -108,17 +105,6 @@ public final class Procesos {
         pb.redirectError(ProcessBuilder.Redirect.DISCARD);
         LANZADOS.incrementAndGet();
         pb.start();
-    }
-
-    /**
-     * Lanza el custodio de Windows: con la entrada y la salida abiertas para
-     * hablar con el, y sin esperarlo. Cuenta como un proceso lanzado.
-     */
-    static Process lanzarAyudante(List<String> orden) throws IOException {
-        ProcessBuilder pb = new ProcessBuilder(orden);
-        pb.redirectError(ProcessBuilder.Redirect.DISCARD);
-        LANZADOS.incrementAndGet();
-        return pb.start();
     }
 
     static void matarArbol(Process p) {

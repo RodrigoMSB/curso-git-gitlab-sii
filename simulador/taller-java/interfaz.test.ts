@@ -50,7 +50,7 @@ function comandoDe(motor: Motor, clon: string): [string, string[]] {
   if (motor === 'java') {
     const propio = join(REPO, 'taller', 'java', 'jre', WINDOWS ? 'windows-x64' : 'macos-aarch64', 'bin', WINDOWS ? 'java.exe' : 'java');
     const java = existsSync(propio) && (WINDOWS || process.arch === 'arm64') ? propio : 'java';
-    return [java, ['-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8', '-jar', join(clon, 'taller', 'java', 'taller.jar')]];
+    return [java, ['-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8', '--enable-native-access=ALL-UNNAMED', '-jar', join(clon, 'taller', 'java', 'taller.jar')]];
   }
   return [WINDOWS ? 'python' : 'python3', [join(clon, 'taller', 'python', 'taller.py')]];
 }
