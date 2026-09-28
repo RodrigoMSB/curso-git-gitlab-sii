@@ -5671,8 +5671,8 @@ máquina virtual Windows de Netec, con Git 2.55 y Edge.
 ### 75.2 · La pila de guardado
 
 Se ve siempre, en los dos modos y también fuera de un repositorio, y vacía
-dice «vacía». En el modo relator sigue sin mostrarse, como los otros paneles
-secundarios: es una decisión anterior, de proyección, que no se tocó.
+dice «vacía». También en el modo relator, por decisión del product owner
+(sección 75.7).
 
 ### 75.3 · Textos
 
@@ -5753,9 +5753,16 @@ de la orden, el de `laboratorio.sh` y el del script la tenían.
 - **La prueba de `Rastro`** falló una vez en Windows porque su hilo escribía
   el archivo de procesos mientras JUnit borraba la carpeta temporal. Ahora lo
   espera.
-- **Pendiente, a decidir: la espera del motor de Python.** En una ejecución de
-  Windows, Python no respondió en sus cinco segundos y la cascada abrió el
-  respaldo; al repetir, arrancó en 3,8 s. En frío mide entre 3,8 y 4,4 s en
-  esas máquinas, sin antivirus revisando. El punto 4.2 del spec pedía no
-  tocar la cascada, así que no se cambió; lo recomendable es darle a Python
-  una espera como la de Java.
+- **La espera del motor de Python.** En una ejecución de Windows, Python no
+  respondió en sus cinco segundos y la cascada abrió el respaldo; al repetir,
+  arrancó en 3,8 s. En frío mide entre 3,8 y 4,4 s en esas máquinas, sin
+  antivirus revisando. El punto 4.2 del spec pedía no tocar la cascada, y
+  quedó para decidir. **Decisión del product owner:** Python tiene los mismos
+  treinta segundos que Java (`TALLER_ESPERA`), con el mismo aviso en la
+  ventana antes de esperarlo. `taller/probar-espera-python.sh`, en el Mac de
+  la integración continua, arranca un Python que tarda ocho segundos: con
+  cinco se veía caer al respaldo.
+- **La pila de guardado en el modo relator.** Quedaba oculta ahí, como los
+  otros paneles secundarios (sección 75.2). **Decisión del product owner:** se
+  ve también en el modo relator, que es el que se proyecta en clase. Las
+  diferencias y los objetos siguen ocultos en ese modo.
