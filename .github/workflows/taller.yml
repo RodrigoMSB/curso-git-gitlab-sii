@@ -21,7 +21,7 @@
 name: taller
 on:
   push:
-    branches: [taller]
+    branches: [taller, taller-java25]
   workflow_dispatch:
 jobs:
   runtimes:
@@ -155,10 +155,15 @@ jobs:
       matrix:
         motor: [java, python]
         cierre: [ventana, motor]
-        custodio: [apagado, encendido]
-        exclude:
-          - motor: python
-            custodio: encendido
+        falla: ['no']
+        include:
+          # Java sin su objeto de trabajo, a proposito: avisa, sigue, y Rastro
+          # cierra al arrancar lo que quedo (SPEC 030, 3.2).
+          - { motor: java, cierre: ventana, falla: 'si' }
+          - { motor: java, cierre: motor, falla: 'si' }
+          # PROVISORIO, para ver fallar la prueba de que el motor no lanza
+          # PowerShell: el motor viejo con el custodio encendido.
+          - { motor: java, cierre: ventana, falla: custodio }
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -170,7 +175,9 @@ jobs:
         run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
       - name: Cierra y vuelve a arrancar
         shell: pwsh
-        run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }} -Custodio:$${{ matrix.custodio == 'encendido' }}
+        env:
+          TALLER_CUSTODIO: ${{ matrix.falla == 'custodio' && '1' || '' }}
+        run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }} -FallaTrabajo:$${{ matrix.falla == 'si' }}
 
   interfaz:
     needs: runtimes

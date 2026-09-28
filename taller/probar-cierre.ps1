@@ -20,17 +20,22 @@
 # una ventana clasica no atiende WM_CLOSE, y una version anterior de esta
 # prueba terminaba los procesos de la consola de golpe, que no se parece a la X.
 #
-# Con -Custodio, el motor de Java arranca con TALLER_CUSTODIO=1, y no puede
-# quedar nada vivo. Sin custodio, el motor de Java puede dejar procesos vivos
-# al cerrarse; se cuentan y no fallan, pero el segundo arranque tiene que
-# cerrarlos (lo dice en su consola) antes de borrar lab-01. Python ata sus
-# ordenes a su propia vida y no deja nada.
+# Los dos motores atan sus ordenes a su propia vida con un objeto de trabajo
+# de Windows: al cerrar no puede quedar nada vivo, sin esperar al arranque
+# siguiente (SPEC 030). En ningun momento aparece un powershell.exe en el
+# arbol: el motor no lo lanza.
 #
-#     pwsh taller/probar-cierre.ps1 -Motor java -Cierre ventana [-Custodio]
+# Con -FallaTrabajo, solo para Java, el motor no consigue su objeto de trabajo
+# (TALLER_PRUEBA_FALLA_TRABAJO=1 le da a Windows un tamaño que rechaza de
+# verdad): tiene que decir en la ventana que al cerrar pueden quedar procesos,
+# seguir atendiendo, y el segundo arranque cerrar lo que quedo (Rastro) antes
+# de borrar lab-01. Lo que quede se cuenta y no falla.
+#
+#     pwsh taller/probar-cierre.ps1 -Motor java -Cierre ventana [-FallaTrabajo]
 param(
   [ValidateSet('java', 'python')] [string] $Motor = 'java',
   [ValidateSet('ventana', 'motor')] [string] $Cierre = 'ventana',
-  [switch] $Custodio
+  [switch] $FallaTrabajo
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'probar-cierre.ps1 es solo para Windows' }
@@ -42,8 +47,8 @@ $raiz = Join-Path $base 'Ana Núñez\taller-git'
 New-Item -ItemType Directory -Force $raiz | Out-Null
 $fallas = [System.Collections.Generic.List[string]]::new()
 $informe = [ordered]@{}
-$puedenQuedar = $Motor -eq 'java' -and -not $Custodio
-$custodioDicho = if ($Motor -ne 'java') { '-' } elseif ($Custodio) { 'encendido' } else { 'apagado' }
+$puedenQuedar = $Motor -eq 'java' -and $FallaTrabajo
+$trabajoDicho = if ($Motor -ne 'java') { 'python' } elseif ($FallaTrabajo) { 'falla provocada' } else { 'nativo' }
 
 function Falla([string] $texto) {
   Write-Host "FALLA  $texto"
@@ -67,7 +72,7 @@ if ($Motor -eq 'python') {
   if (Test-Path (Join-Path $raiz 'curso\taller\java\taller.jar')) { throw 'no se pudo sacar el jar' }
 }
 $env:TALLER_SIN_NAVEGADOR = '1'
-if ($Custodio) { $env:TALLER_CUSTODIO = '1' } else { Remove-Item Env:TALLER_CUSTODIO -ErrorAction SilentlyContinue }
+if ($FallaTrabajo) { $env:TALLER_PRUEBA_FALLA_TRABAJO = '1' } else { Remove-Item Env:TALLER_PRUEBA_FALLA_TRABAJO -ErrorAction SilentlyContinue }
 $env:GIT_CONFIG_GLOBAL = Join-Path $base 'gitconfig'
 Set-Content $env:GIT_CONFIG_GLOBAL "[user]`n`tname = Ana`n`temail = ana@sii.cl`n[init]`n`tdefaultBranch = main`n"
 
@@ -258,7 +263,7 @@ function Limpieza($taller) {
 # --- 1. Arranque, orden que deja procesos vivos, y cierre -------------------
 
 $primero = Arrancar 'primero'
-Write-Host "motor $Motor arrancado (custodio $custodioDicho), TALLER.cmd es el proceso $($primero.Cmd)"
+Write-Host "motor $Motor arrancado (trabajo $trabajoDicho), TALLER.cmd es el proceso $($primero.Cmd)"
 $tarea = Orden $primero "mkdir -p lab-01/recetario && cd lab-01/recetario && git init -q && git -c alias.espera='!sleep 600' espera"
 $limite = (Get-Date).AddSeconds(30)
 do {
@@ -270,6 +275,20 @@ Write-Host "arbol de TALLER.cmd antes de cerrar:"
 $arbol | ForEach-Object { Write-Host "  $($_.Name) $($_.ProcessId) <- $($_.ParentProcessId)" }
 foreach ($n in 'bash.exe', 'git.exe', 'sleep.exe') {
   if ($nombres -notcontains $n) { throw "la orden no dejo vivo un $n; la prueba no probaria nada" }
+}
+# El motor no lanza PowerShell (SPEC 030, 3.3).
+if ($nombres -contains 'powershell.exe' -or $nombres -contains 'pwsh.exe') {
+  Falla 'en el arbol del taller hay un PowerShell: el motor lo lanzo'
+} else {
+  Write-Host 'BIEN   en el arbol del taller no hay ningun PowerShell'
+}
+# Con la falla provocada, la ventana lo dice.
+if ($FallaTrabajo) {
+  if ((Pantalla $primero) -match 'no se pudo preparar el cierre ordenado') {
+    Write-Host 'BIEN   sin objeto de trabajo, la ventana avisa que al cerrar pueden quedar procesos'
+  } else {
+    Falla 'sin objeto de trabajo, la ventana no aviso que al cerrar pueden quedar procesos'
+  }
 }
 
 if ($Cierre -eq 'ventana') {
@@ -293,6 +312,13 @@ try {
   $segundo = Arrancar 'segundo'
   $informe['limpieza'] = Limpieza $segundo
   Write-Host "el segundo arranque, al arrancar: $($informe['limpieza'])"
+  # Con el objeto de trabajo no queda nada que cerrar; con la falla, Rastro cierra lo que quedo.
+  if ($Motor -eq 'java' -and -not $FallaTrabajo -and $informe['limpieza'] -ne 'no cerro nada') {
+    Falla "con el objeto de trabajo, el segundo arranque encontro procesos de la vez anterior: $($informe['limpieza'])"
+  }
+  if ($FallaTrabajo -and $informe['limpieza'] -notmatch '^cerro [1-9]') {
+    Falla "sin objeto de trabajo, el segundo arranque no cerro lo que quedo: $($informe['limpieza'])"
+  }
   # Lo que haya quedado del primero ya no puede estar vivo.
   $restos = Vivos $arbol
   if ($restos.Count -gt 0) {
@@ -320,10 +346,10 @@ try {
   Falla "el segundo arranque: $_"
 }
 
-$fila = "| $Motor | $custodioDicho | $Cierre | $($informe['vivos']) | $($informe['limpieza']) | $($informe['segundo']) |"
+$fila = "| $Motor | $trabajoDicho | $Cierre | $($informe['vivos']) | $($informe['limpieza']) | $($informe['segundo']) |"
 Write-Host "RESULTADO  $fila"
 if ($env:GITHUB_STEP_SUMMARY) {
-  Add-Content $env:GITHUB_STEP_SUMMARY "| motor | custodio | cierre | vivos tras cerrar | al arrancar de nuevo | segundo arranque recrea lab-01 |`n|---|---|---|---|---|---|`n$fila"
+  Add-Content $env:GITHUB_STEP_SUMMARY "| motor | trabajo | cierre | vivos tras cerrar | al arrancar de nuevo | segundo arranque recrea lab-01 |`n|---|---|---|---|---|---|`n$fila"
 }
 
 # --- Limpieza de la prueba, aparte de lo que se comprobo --------------------
@@ -333,7 +359,7 @@ Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLin
 Remove-Item -Recurse -Force $base -ErrorAction SilentlyContinue
 
 if ($fallas.Count -gt 0) {
-  Write-Host "`n$($fallas.Count) falla(s), motor $Motor, custodio $custodioDicho, cierre $Cierre"
+  Write-Host "`n$($fallas.Count) falla(s), motor $Motor, trabajo $trabajoDicho, cierre $Cierre"
   exit 1
 }
-Write-Host "`nBIEN   motor $Motor, custodio $custodioDicho, cierre ${Cierre}"
+Write-Host "`nBIEN   motor $Motor, trabajo $trabajoDicho, cierre ${Cierre}"
