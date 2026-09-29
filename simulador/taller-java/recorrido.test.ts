@@ -81,6 +81,8 @@ type Paso =
  */
 const MENSAJE_REWORD = 'se prueba la receta del curry antes de servirla';
 const PLANES: Readonly<Record<string, readonly (readonly string[])[]>> = {
+  // git commit sin -m, con el mensaje escrito en la pestaña (SPEC 031, 3.8).
+  '01 git commit': [['mensaje platos.md: se agregan los platos chilenos']],
   '07 git rebase -i main': [
     ['reword-primera', `mensaje ${MENSAJE_REWORD}`],
     ['squash-del-medio', `mensaje ${MENSAJE_REWORD}`],
@@ -90,9 +92,10 @@ const PLANES: Readonly<Record<string, readonly (readonly string[])[]>> = {
 /** Las ediciones en prosa, con la frase del enunciado que las pide. Son las mismas del arnes en disco. */
 const ANEXOS: Readonly<Record<string, readonly { readonly ancla: string; readonly lineas: Readonly<Record<string, string>> }[]>> = {
   '01': [
+    { ancla: 'Agrega esta línea al final de `platos.md` y guarda', lineas: { 'platos.md': '- sopaipillas' } },
     {
       ancla: 'Y agrega una línea al final de `cocineros.md`',
-      lineas: { 'platos.md': '- sopaipillas', 'ingredientes.md': '- zapallo', 'cocineros.md': '- Pedro' },
+      lineas: { 'platos.md': '- porotos granados', 'ingredientes.md': '- zapallo', 'cocineros.md': '- Pedro' },
     },
   ],
 };
@@ -613,7 +616,9 @@ describe('el modo taller, laboratorio por laboratorio', () => {
 
         const ms = await escribir(pagina, textoA);
         const consola = await salidaDeLaUltimaOrden(pagina);
-        const gemelo = gemeloDe(textoB);
+        // clear lo resuelve la consola sin mandarlo, y deja la pantalla vacia.
+        // En Bash, fuera de una terminal, falla: el gemelo no lo corre.
+        const gemelo = textoB === 'clear' ? { codigo: 0, salida: '', error: '' } : gemeloDe(textoB);
         // La consola sigue al cd solo si funciono: lo dice el gemelo.
         if (gemelo.codigo === 0) {
           moverse(A, textoA);
@@ -673,6 +678,25 @@ describe('el modo taller, laboratorio por laboratorio', () => {
         // (puntos 3.2 y 3.3 del SPEC 027).
         if (!pantalla.ecoVisible) dif.push('el eco de la orden quedó fuera de la vista de la consola');
         if (consola.programa.some((p) => p.includes('¿Eran'))) dif.push('la consola avisó dos órdenes en una orden del guion');
+        if (textoA === 'clear' && (consola.git !== '' || consola.programa.length > 0)) dif.push('clear no dejó la consola vacía');
+        // SPEC 031, 4.3 · un alias pegado en la consola queda igual que escrito
+        // en Git Bash, con sus comillas, y es el del enunciado.
+        const configurado = textoA.match(/^git config --global (alias\.\w+) "(.*)"$/);
+        if (configurado !== null) {
+          const clave = configurado[1] ?? '';
+          const leer = (lado: Lado): string => {
+            try {
+              return execFileSync(herramientas().git, ['config', '--global', '--get', clave], { env: lado.entorno, encoding: 'utf8' }).trim();
+            } catch {
+              return '(sin valor)';
+            }
+          };
+          const enPagina = leer(A);
+          const enBash = leer(B);
+          if (enPagina !== enBash || enPagina !== configurado[2]) {
+            dif.push(`${clave}: en la consola «${enPagina}», en Bash «${enBash}», en el enunciado «${configurado[2]}»`);
+          }
+        }
         const enConsola = normalizar(consola.git, A);
         const enGit = normalizar(salidaB, B);
         if (enConsola !== enGit) dif.push(`consola:\n--- pagina\n${enConsola}\n--- Git\n${enGit}`);

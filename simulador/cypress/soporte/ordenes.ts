@@ -264,7 +264,7 @@ function pareceOrden(linea: string): boolean {
   const primera = linea.split(/\s+/)[0] ?? '';
   // El verbo tiene que ser la palabra entera: el enunciado del laboratorio 03
   // habla de un archivo llamado `gitignore`, que no es una orden.
-  return /^(git|ls|cat|pwd|echo|cd|mkdir|wc|diff|rm|mv|grep|labs|preparar|verificar|code|chmod)$/.test(primera) ||
+  return /^(git|ls|cat|pwd|echo|cd|mkdir|wc|diff|rm|mv|grep|labs|preparar|verificar|code|chmod|clear)$/.test(primera) ||
     primera.startsWith('./');
 }
 

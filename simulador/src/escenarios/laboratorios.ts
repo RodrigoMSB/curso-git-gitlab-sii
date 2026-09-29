@@ -41,8 +41,9 @@ const SOFIA = { autor: 'Sofia Rojas', correo: 'sofia.rojas@recetario.cl' } as co
  * de punta a punta y el extractor de ordenes del enunciado.
  */
 export const ALIAS_DEL_TALLER = {
-  s: 'status -s',
-  lg: 'log --oneline --graph --all --decorate',
+  // SPEC 031, 3.8: s como status --short, y lg con autor, fecha relativa y colores.
+  s: 'status --short',
+  lg: "log --graph --all --format='%C(yellow)%h%C(reset) %C(green)(%ar)%C(reset) %s %C(bold blue)<%an>%C(reset)%C(auto)%d%C(reset)'",
 } as const satisfies Readonly<Record<string, string>>;
 
 const CONFIGURACION_PUESTA = {

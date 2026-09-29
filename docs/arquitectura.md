@@ -5822,3 +5822,59 @@ Las pruebas nuevas se subieron primero, con el motor de Java 21 de `taller`
 | `probar-cierre.ps1`: ningún PowerShell en el árbol del taller | con el custodio encendido, `powershell.exe` colgaba del motor |
 | `OtrosTest`: el código del motor no nombra PowerShell | con `Custodio.java`, y con un comentario propio que lo nombraba |
 | `TrabajoWindowsTest`: en Windows el motor entra en su trabajo | no existía la clase |
+
+## 77. Los laboratorios con el material del relator (SPEC 031)
+
+Cada laboratorio tiene un **núcleo**, obligatorio y en orden, que termina en
+`verificar NN`, y después una sección opcional, **Para ir más allá**, que el
+verificador no mide y que ningún laboratorio siguiente necesita. El recorrido
+de la página la ejecuta igual, con los dos motores.
+
+El material del relator de 2024 y la guía de 2025 no están en el repositorio.
+El núcleo se armó con el punto 3 del SPEC, que lo transcribe paso a paso.
+
+### 77.1 · Laboratorio 02
+
+Leer la historia y deshacer. Núcleo de 27 órdenes, antes 53 todas
+obligatorias; 25 van a la sección opcional (filtros de `git log`, `git show`
+de la confirmación reemplazada y abrir `.git`). `verificar 02` exige además que
+el último mensaje sea `recetas/pastel-de-choclo.md: se documenta la receta`,
+con la convención `archivo.md: descripción`. Ocho criterios.
+
+### 77.2 · Laboratorio 01
+
+El recetario nace, según el punto 3.8. Núcleo de 37 órdenes, antes 36 todas
+obligatorias; 12 van a la sección opcional (la confirmación que no lleva todo,
+`ls -a` y global frente a local). El rescate ya no usa `git reset --soft`:
+avisar al relator o empezar de nuevo.
+
+- **La consola.** `pwd`, `ls` y `clear`. La consola del taller resuelve
+  `clear` sin mandarlo; fuera de una terminal `clear` falla, así que los dos
+  arneses no lo corren en Bash.
+- **Los alias.** `s` es `status --short` y `lg` es
+  `log --graph --all --format='%C(yellow)%h%C(reset) %C(green)(%ar)%C(reset) %s %C(bold blue)<%an>%C(reset)%C(auto)%d%C(reset)'`,
+  con autor, fecha relativa y colores. El enunciado pide copiarlo y pegarlo.
+  El simulador de escenarios aprendió `%ar` (la misma cuenta que
+  `show_date_relative` de Git, en inglés), `%d`, los colores `%C(...)`, que
+  descarta, y `--graph` con `--format`. En la consola del taller `lg` sale sin
+  colores, porque Git no colorea hacia un tubo; en Git Bash sí.
+- **Visual Studio Code.** Los pasos del editor se marcan con **En Visual
+  Studio Code** y no son órdenes. `git commit` sin `-m` abre la pestaña: el
+  recorrido lo resuelve con el editor de prueba (`PLANES`) y el arnés en disco
+  con un `GIT_EDITOR` que escribe el mensaje.
+- **`verificar 01`**, nueve criterios: el repositorio, al menos seis
+  confirmaciones, un archivo por confirmación con su nombre al comienzo del
+  mensaje (README.md, platos.md, ingredientes.md, cocineros.md), la carpeta
+  recetas entera con `CARPETA recetas: se agrega carpeta`, las sopaipillas con
+  `platos.md: se agregan sopaipillas`, nada preparado, los alias (el `lg` con
+  `%an` y `%ar`), el editor `code --wait` y la rama `main`. Ya no exige
+  `cocineros.md` a medias, que pasó a la sección opcional.
+
+### 77.3 · Pruebas, y cómo se vio fallar cada una
+
+| Prueba | Cómo falló |
+|---|---|
+| 4.2, `verificar NN` aprueba con solo el núcleo | con un verificador que pedía una confirmación de la sección opcional (siete en el 01, y el criterio correspondiente en el 02) |
+| 4.3, el `lg` pegado en la consola queda igual que en Git Bash y que en el enunciado | pegando la línea sin las comillas simples, la consola guardó `--format=%C(yellow)...` sin comillas y la prueba mostró los tres valores |
+| `laboratorios.test.ts`, los nueve criterios del 01 uno por uno | los diez casos nuevos fallaron contra el verificador anterior |
+| `alias-lg.test.ts`, `%ar` contra Git y `git lg` en cada escenario | antes de enseñarle `%ar`, `%d` y los colores al simulador |

@@ -80,31 +80,54 @@ function montarClon(comoRepositorio: boolean): { raiz: string; clon: string; con
   return { raiz, clon, configGlobal };
 }
 
+/** Los mensajes del nucleo del laboratorio 01 (SPEC 031, 3.8). */
+const MENSAJES_01 = {
+  readme: 'README.md: se inicia el recetario',
+  platos: 'platos.md: se agregan los platos chilenos',
+  ingredientes: 'ingredientes.md: se agregan los ingredientes',
+  cocineros: 'cocineros.md: se agregan los cocineros',
+  recetas: 'CARPETA recetas: se agrega carpeta',
+  sopaipillas: 'platos.md: se agregan sopaipillas',
+} as const;
+
+/** Los alias del enunciado, tal como quedan en la configuracion. */
+const ALIAS_01 =
+  "[alias]\n\ts = status --short\n\tlg = log --graph --all --format='%C(yellow)%h%C(reset) %C(green)(%ar)%C(reset) %s %C(bold blue)<%an>%C(reset)%C(auto)%d%C(reset)'\n";
+
 /**
- * Hace el laboratorio 01 siguiendo el enunciado paso a paso: la configuracion,
- * las tres primeras confirmaciones, y la cuarta que deja fuera a proposito el
- * cambio de cocineros.md.
+ * Hace el nucleo del laboratorio 01 siguiendo el enunciado paso a paso: la
+ * configuracion, README.md por las tres areas, platos.md con el mensaje del
+ * editor, un archivo por confirmacion, la carpeta recetas y el atajo -am.
  *
- * `dentroDe` permite armarlo dentro de otro repositorio, que es la situacion
- * real del taller y la que descubrio el error del repositorio anidado.
+ * Las opciones rompen el ejercicio de una forma que un participante podria
+ * producir, para ver fallar cada criterio por separado.
  */
-function armarLaboratorio(opciones: { conAlias?: boolean; clonDeVerdad?: boolean } = {}): Laboratorio {
-  const { conAlias = true, clonDeVerdad = true } = opciones;
+function armarLaboratorio(
+  opciones: {
+    conAlias?: boolean;
+    clonDeVerdad?: boolean;
+    conEditor?: boolean;
+    /** ingredientes.md y cocineros.md en una sola confirmacion. */
+    juntos?: boolean;
+    mensajes?: Partial<Record<keyof typeof MENSAJES_01, string>>;
+  } = {},
+): Laboratorio {
+  const { conAlias = true, clonDeVerdad = true, conEditor = true, juntos = false } = opciones;
+  const mensajes = { ...MENSAJES_01, ...opciones.mensajes };
   const { raiz, clon, configGlobal } = montarClon(clonDeVerdad);
   const carpeta = join(clon, 'labs', 'lab-01');
 
-  // Parte 1 · la configuracion, que el enunciado pide global, con la rama
-  // inicial main como en el punto 1.1: sin ella la rama depende del Git de la
-  // maquina, y en el Mac de la integracion continua es master.
-  const alias = conAlias
-    ? '[alias]\n\ts = status -s\n\tlg = log --oneline --graph --all --decorate\n'
-    : '';
+  // Parte 2 · la configuracion, que el enunciado pide global, con la rama
+  // inicial main: sin ella la rama depende del Git de la maquina, y en el Mac
+  // de la integracion continua es master.
   writeFileSync(
     configGlobal,
-    `[user]\n\tname = Participante Taller\n\temail = participante@institucion.cl\n[init]\n\tdefaultBranch = main\n${alias}`,
+    '[user]\n\tname = Participante Taller\n\temail = participante@institucion.cl\n[init]\n\tdefaultBranch = main\n' +
+      (conEditor ? '[core]\n\teditor = code --wait\n' : '') +
+      (conAlias ? ALIAS_01 : ''),
   );
 
-  // Parte 2 · el repositorio nace en la carpeta del taller, al lado del clon y
+  // Parte 3 · el repositorio nace en la carpeta del taller, al lado del clon y
   // no dentro (SPEC 028: taller-git/lab-01, con el clon en taller-git/curso).
   const trabajo = join(raiz, 'lab-01');
   mkdirSync(trabajo, { recursive: true });
@@ -115,38 +138,40 @@ function armarLaboratorio(opciones: { conAlias?: boolean; clonDeVerdad?: boolean
   const escribir = (ruta: string, contenido: string): void => {
     writeFileSync(join(recetario, ruta), contenido);
   };
-  const confirmar = (mensaje: string): string => git(recetario, configGlobal, 'commit', '-q', '-m', mensaje);
-  const preparar = (...rutas: readonly string[]): string =>
-    git(recetario, configGlobal, 'add', ...rutas);
+  const confirmar = (mensaje: string, ...extra: readonly string[]): string =>
+    git(recetario, configGlobal, 'commit', '-q', ...extra, '-m', mensaje);
+  const preparar = (...rutas: readonly string[]): string => git(recetario, configGlobal, 'add', ...rutas);
 
-  // Parte 3 · las tres primeras confirmaciones.
+  // Parte 4 · README.md por las tres areas.
   escribir('README.md', '# Recetario COMIDA CHILENA\n\nRecopilacion de platos, ingredientes y cocineros.\n');
   preparar('README.md');
-  confirmar('se inicia el recetario');
+  git(recetario, configGlobal, 'rm', '-q', '--cached', 'README.md');
+  preparar('README.md');
+  confirmar(mensajes.readme);
 
+  // Parte 5 · platos.md, con el mensaje que se escribe en el editor.
   escribir('platos.md', '# Platos\n\n- pastel de choclo\n- empanadas de pino\n- cazuela\n- curanto\n');
-  preparar('platos.md');
-  confirmar('se agregan los platos chilenos');
+  preparar('.');
+  confirmar(mensajes.platos);
 
+  // Parte 6 · uno por uno, y la carpeta entera.
   escribir('ingredientes.md', '# Ingredientes\n\n- choclo\n- carne de vacuno\n- cebolla\n- aji de color\n');
+  if (!juntos) {
+    preparar('ingredientes.md');
+    confirmar(mensajes.ingredientes);
+  }
   escribir('cocineros.md', '# Cocineros\n\n- Juana Perez, especialidad pastel de choclo\n- Marco Diaz, especialidad empanadas\n');
+  preparar('cocineros.md', ...(juntos ? ['ingredientes.md'] : []));
+  confirmar(mensajes.cocineros);
   mkdirSync(join(recetario, 'recetas'));
   escribir('recetas/pastel-de-choclo.md', '# Pastel de choclo\n\nPreparacion del pino, molienda del choclo, horneado en greda.\n');
   escribir('recetas/empanadas.md', '# Empanadas de pino\n\nMasa, pino frio, huevo duro, aceituna, doblado y horno.\n');
-  preparar('.');
-  confirmar('se agregan ingredientes, cocineros y las primeras recetas');
+  preparar('recetas/');
+  confirmar(mensajes.recetas);
 
-  // Parte 4 · la confirmacion que no lleva todo. cocineros.md queda a medias
-  // y fuera de la confirmacion a proposito: ese es el objetivo del ejercicio.
-  const agregarLinea = (ruta: string, linea: string): void => {
-    const antes = readFileSync(join(recetario, ruta), 'utf8');
-    writeFileSync(join(recetario, ruta), `${antes}${linea}\n`);
-  };
-  agregarLinea('platos.md', '- sopaipillas');
-  agregarLinea('ingredientes.md', '- zapallo');
-  agregarLinea('cocineros.md', '- Pedro');
-  preparar('platos.md', 'ingredientes.md');
-  confirmar('se agregan sopaipillas y zapallo');
+  // Parte 7 · el atajo.
+  writeFileSync(join(recetario, 'platos.md'), `${readFileSync(join(recetario, 'platos.md'), 'utf8')}- sopaipillas\n`);
+  confirmar(mensajes.sopaipillas, '-a');
 
   return { carpeta, recetario, configGlobal, clon, raiz };
 }
@@ -182,20 +207,34 @@ describe('CA2 · el enunciado lleva el cambio de ruta autorizado y solo ese', ()
     expect(enunciado).not.toMatch(/^cd labs\/lab-01$/m);
   });
 
-  it('conserva las cuatro confirmaciones y el archivo que queda fuera', () => {
+  it('lleva los seis mensajes que el verificador busca', () => {
     // Si alguien reescribe el enunciado, el verificador deja de corresponderle.
-    expect(enunciado).toContain('se inicia el recetario');
-    expect(enunciado).toContain('se agregan sopaipillas y zapallo');
-    expect(enunciado).toContain('cocineros.md');
+    for (const mensaje of Object.values(MENSAJES_01)) expect(enunciado).toContain(mensaje);
+  });
+
+  it('el rescate ya no enseña git reset --soft (SPEC 031, 3.8)', () => {
+    const rescate = enunciado.slice(enunciado.indexOf('## Si algo salió mal'));
+    expect(rescate).not.toContain('reset');
+    expect(rescate).toContain('relator');
   });
 });
 
 describe('CA3 · el verificador aprueba el laboratorio bien hecho', () => {
-  it('los cinco criterios pasan y el codigo de salida es cero', () => {
+  it('los nueve criterios pasan y el codigo de salida es cero', () => {
     const lab = armarLaboratorio();
     const corrida = verificar(lab.carpeta, lab.configGlobal);
-    expect(corrida.salida).toContain('6 de 6 criterios aprobados');
+    expect(corrida.salida).toContain('9 de 9 criterios aprobados');
     expect(corrida.salida).not.toContain('✗');
+    expect(corrida.codigo).toBe(0);
+  });
+
+  it('tambien aprueba despues de la seccion opcional, con una confirmacion mas y cocineros.md a medias', () => {
+    const lab = armarLaboratorio();
+    writeFileSync(join(lab.recetario, 'cocineros.md'), `${readFileSync(join(lab.recetario, 'cocineros.md'), 'utf8')}- Pedro\n`);
+    writeFileSync(join(lab.recetario, 'platos.md'), `${readFileSync(join(lab.recetario, 'platos.md'), 'utf8')}- porotos granados\n`);
+    git(lab.recetario, lab.configGlobal, 'commit', '-q', '-m', 'platos.md: se agregan porotos granados', '--', 'platos.md');
+    const corrida = verificar(lab.carpeta, lab.configGlobal);
+    expect(corrida.salida).toContain('9 de 9 criterios aprobados');
     expect(corrida.codigo).toBe(0);
   });
 });
@@ -216,26 +255,48 @@ describe('CA4 · el verificador falla ante cada criterio roto por separado', () 
     expect(corrida.codigo).not.toBe(0);
   });
 
-  it('criterio 2 · el historial no tiene cuatro confirmaciones', () => {
+  it('criterio 2 · faltan confirmaciones', () => {
     const corrida = romper((lab) => {
-      git(lab.recetario, lab.configGlobal, 'commit', '-q', '--allow-empty', '-m', 'una de mas');
+      git(lab.recetario, lab.configGlobal, 'reset', '-q', '--hard', 'HEAD~1');
     });
     expect(corrida.salida).toContain('cantidad de confirmaciones');
-    expect(corrida.salida).toContain('esperaba: 4');
+    expect(corrida.salida).toContain('esperaba: 6');
     expect(corrida.salida).toContain('encontro: 5');
     expect(corrida.codigo).not.toBe(0);
   });
 
-  it('criterio 3 · cocineros.md quedo sin cambios pendientes', () => {
-    const corrida = romper((lab) => {
-      git(lab.recetario, lab.configGlobal, 'checkout', '--', 'cocineros.md');
-    });
-    expect(corrida.salida).toContain('cocineros.md modificado y sin preparar');
-    expect(corrida.salida).toContain('se confirmo o se deshizo');
+  it('criterio 3 · dos archivos en la misma confirmacion', () => {
+    const lab = armarLaboratorio({ juntos: true });
+    const corrida = verificar(lab.carpeta, lab.configGlobal);
+    expect(corrida.salida).toContain('✗ un archivo por confirmacion');
+    expect(corrida.salida).toContain('ingredientes.md');
     expect(corrida.codigo).not.toBe(0);
   });
 
-  it('criterio 4 · algo quedo en el area de preparacion', () => {
+  it('criterio 3 · el mensaje del editor no dice el archivo', () => {
+    const lab = armarLaboratorio({ mensajes: { platos: 'mensaje escrito en el editor' } });
+    const corrida = verificar(lab.carpeta, lab.configGlobal);
+    expect(corrida.salida).toContain('✗ un archivo por confirmacion');
+    expect(corrida.salida).toContain('mensaje escrito en el editor');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 4 · la carpeta recetas sin su mensaje', () => {
+    const lab = armarLaboratorio({ mensajes: { recetas: 'se agregan las recetas' } });
+    const corrida = verificar(lab.carpeta, lab.configGlobal);
+    expect(corrida.salida).toContain('✗ la carpeta recetas');
+    expect(corrida.salida).toContain('se agregan las recetas');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 5 · las sopaipillas no se confirmaron con su mensaje', () => {
+    const lab = armarLaboratorio({ mensajes: { sopaipillas: 'sopaipillas' } });
+    const corrida = verificar(lab.carpeta, lab.configGlobal);
+    expect(corrida.salida).toContain('✗ las sopaipillas');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 6 · algo quedo en el area de preparacion', () => {
     const corrida = romper((lab) => {
       writeFileSync(join(lab.recetario, 'notas.md'), 'borrador\n');
       git(lab.recetario, lab.configGlobal, 'add', 'notas.md');
@@ -245,7 +306,7 @@ describe('CA4 · el verificador falla ante cada criterio roto por separado', () 
     expect(corrida.codigo).not.toBe(0);
   });
 
-  it('criterio 5 · faltan los alias', () => {
+  it('criterio 7 · faltan los alias', () => {
     const lab = armarLaboratorio({ conAlias: false });
     const corrida = verificar(lab.carpeta, lab.configGlobal);
     expect(corrida.salida).toContain('los alias s y lg');
@@ -258,6 +319,31 @@ describe('CA4 · el verificador falla ante cada criterio roto por separado', () 
     git(lab.recetario, lab.configGlobal, 'config', '--global', '--unset', 'alias.lg');
     const corrida = verificar(lab.carpeta, lab.configGlobal);
     expect(corrida.salida).toContain('falta configurar: lg');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 7 · el lg viejo, sin autor ni fecha, no alcanza', () => {
+    const lab = armarLaboratorio();
+    git(lab.recetario, lab.configGlobal, 'config', '--global', 'alias.lg', 'log --oneline --graph --all --decorate');
+    const corrida = verificar(lab.carpeta, lab.configGlobal);
+    expect(corrida.salida).toContain('✗ los alias s y lg');
+    expect(corrida.salida).toContain('%an');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 8 · el editor no es Visual Studio Code', () => {
+    const lab = armarLaboratorio({ conEditor: false });
+    const corrida = verificar(lab.carpeta, lab.configGlobal);
+    expect(corrida.salida).toContain('✗ el editor');
+    expect(corrida.salida).toContain('code --wait');
+    expect(corrida.codigo).not.toBe(0);
+  });
+
+  it('criterio 9 · la rama no se llama main', () => {
+    const corrida = romper((lab) => {
+      git(lab.recetario, lab.configGlobal, 'branch', '-m', 'master');
+    });
+    expect(corrida.salida).toContain('✗ la rama se llama main');
     expect(corrida.codigo).not.toBe(0);
   });
 });
@@ -274,7 +360,7 @@ describe('el trabajo del participante vive fuera del clon del curso', () => {
     const lab = armarLaboratorio({ clonDeVerdad: true });
     expect(git(lab.clon, lab.configGlobal, 'rev-parse', '--is-inside-work-tree')).toBe('true');
     const corrida = verificar(lab.carpeta, lab.configGlobal);
-    expect(corrida.salida).toContain('6 de 6 criterios aprobados');
+    expect(corrida.salida).toContain('9 de 9 criterios aprobados');
     expect(corrida.codigo).toBe(0);
   });
 

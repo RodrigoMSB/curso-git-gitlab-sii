@@ -107,8 +107,14 @@ interface PasoAMano {
 const A_MANO: Readonly<Record<string, readonly PasoAMano[]>> = {
   '01': [
     {
+      // git commit sin -m: el mensaje se escribe en la pestaña de Visual Studio Code (SPEC 031, 3.8).
+      ancla: 'Se abre una pestaña para escribir el mensaje',
+      editor: { lista: ':', mensaje: 'platos.md: se agregan los platos chilenos' },
+    },
+    { ancla: 'Agrega esta línea al final de `platos.md` y guarda', bash: "printf '%s\\n' '- sopaipillas' >> platos.md" },
+    {
       ancla: 'Y agrega una línea al final de `cocineros.md`',
-      bash: "printf '%s\\n' '- sopaipillas' >> platos.md && printf '%s\\n' '- zapallo' >> ingredientes.md && printf '%s\\n' '- Pedro' >> cocineros.md",
+      bash: "printf '%s\\n' '- porotos granados' >> platos.md && printf '%s\\n' '- zapallo' >> ingredientes.md && printf '%s\\n' '- Pedro' >> cocineros.md",
     },
   ],
   '05': [
@@ -213,12 +219,13 @@ function hacerElLaboratorio(
     }
     // Las ordenes propias de la consola del taller. preparar ya se corrio al
     // montar el laboratorio, y la consola queda en su recetario; verificar se
-    // corre al final, y code solo abre el editor.
+    // corre al final, code solo abre el editor y clear solo limpia la consola,
+    // que la resuelve sin mandarla (fuera de una terminal, clear falla).
     if (/^preparar(\s|$)/.test(orden.texto)) {
       actual = lab.recetario;
       continue;
     }
-    if (/^(verificar|code)(\s|$)/.test(orden.texto)) continue;
+    if (/^(verificar|code|clear)(\s|$)/.test(orden.texto)) continue;
     if (orden.clase === 'omitida') {
       problemas.push(`linea ${orden.linea} «${orden.texto}» se saltaria: ${orden.motivo}`);
       continue;
@@ -231,7 +238,11 @@ function hacerElLaboratorio(
     salidas.set(orden.texto, salida);
     registro.push(`${orden.linea} [${corrida.status}] ${texto}${corrida.status === 0 ? '' : ` → ${salida.trim().split('\n').slice(0, 3).join(' / ')}`}`);
   }
-  for (const paso of pendientes) problemas.push(`el paso a mano «${paso.ancla}» no llego a hacerse`);
+  // Los pasos a mano que quedan despues del corte no se piden: con soloElNucleo,
+  // los de la seccion opcional.
+  for (const paso of pendientes.filter((p) => rescate < 0 || p.linea <= rescate)) {
+    problemas.push(`el paso a mano «${paso.ancla}» no llego a hacerse`);
+  }
   return { problemas, registro: registro.join('\n') };
 }
 
