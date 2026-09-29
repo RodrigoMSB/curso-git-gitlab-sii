@@ -149,12 +149,19 @@ function bloqueDespuesDe(lineas: readonly string[], desde: number): string {
  * del taller. La carpeta actual se conserva de una orden a la
  * siguiente, como en una terminal.
  */
-function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly string[]; registro: string } {
+function hacerElLaboratorio(
+  numero: string,
+  lab: Montado,
+  { soloElNucleo = false }: { soloElNucleo?: boolean } = {},
+): { problemas: readonly string[]; registro: string } {
   const alias = aliasDelTaller(enunciado('01'));
   const ordenes = resolverMarcadores(ordenesDe(enunciado(numero), alias), numero, alias);
+  // Hasta el rescate, o con soloElNucleo, hasta la seccion opcional del final
+  // (SPEC 031): el nucleo termina en la comprobacion.
+  const corte = soloElNucleo ? /^##\s+Para ir m[aá]s all[aá]/ : /^##\s+Si algo sali/;
   const rescate = enunciado(numero)
     .split('\n')
-    .findIndex((linea) => /^##\s+Si algo sali/.test(linea));
+    .findIndex((linea) => corte.test(linea));
   const donde = join(lab.raiz, 'carpeta-actual');
   // Desde el SPEC 027 el participante trabaja en la consola del taller, que
   // parte en la carpeta del taller y nunca necesita entrar al clon.
@@ -265,6 +272,27 @@ describe('cada laboratorio, preparado, hecho y verificado como lo hace el partic
     // Si reclama, se ve cada orden del recorrido con su codigo de salida.
     expect(criteriosFallidos(verificado.salida), `${dice(verificado)}\n--- el recorrido ---\n${hecho.registro}`).toEqual(conocidos);
     expect(verificado.codigo, dice(verificado)).toBe(conocidos.length === 0 ? 0 : 1);
+  });
+});
+
+describe('SPEC 031, 4.2 · verificar aprueba con solo el nucleo, sin la seccion opcional del final', () => {
+  const conNucleo = TODOS.filter((n) => /^##\s+Para ir m[aá]s all[aá]/m.test(enunciado(n)));
+
+  it('hay laboratorios con nucleo y seccion opcional', () => {
+    expect(conNucleo.length).toBeGreaterThan(0);
+  });
+
+  it.each(conNucleo)('laboratorio %s', { timeout: 300_000 }, (numero) => {
+    const lab = montar(numero);
+    if (existsSync(join(lab.carpeta, 'preparar.sh'))) {
+      const preparado = preparar({ ...lab }, '--forzar');
+      expect(preparado.codigo, dice(preparado)).toBe(0);
+    }
+    const hecho = hacerElLaboratorio(numero, lab, { soloElNucleo: true });
+    expect(hecho.problemas).toEqual([]);
+    const verificado = verificar(lab.carpeta, lab.configGlobal);
+    expect(criteriosFallidos(verificado.salida), `${dice(verificado)}\n--- el nucleo ---\n${hecho.registro}`).toEqual([]);
+    expect(verificado.codigo, dice(verificado)).toBe(0);
   });
 });
 

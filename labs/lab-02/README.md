@@ -1,4 +1,4 @@
-# Laboratorio 02 · Leer la historia y abrir la caja
+# Laboratorio 02 · Leer la historia y deshacer
 
 **Sesión 2 · 95 minutos**
 
@@ -6,11 +6,13 @@
 
 ## Qué vas a hacer
 
-Tres cosas que en el trabajo van juntas.
+Dos cosas que en el trabajo van juntas.
 
-Primero aprender a encontrar algo en un historial que no escribiste tú. Después arreglar lo que encuentres mal. Y al final abrir la carpeta oculta para ver de qué está hecho todo esto.
+Primero leer un historial que no escribiste tú y ver qué cambió. Después arreglar lo que encuentres mal, sin perder lo que sí sirve.
 
 El repositorio con el que vas a trabajar no es el tuyo. Tiene cinco confirmaciones hechas por tres personas distintas y trae problemas plantados a propósito.
+
+Todo lo que está antes de la comprobación es obligatorio y se hace en orden. Cada paso deja el repositorio listo para el siguiente. La sección del final, **Para ir más allá**, es opcional.
 
 ---
 
@@ -24,10 +26,10 @@ preparar 02
 
 La consola arma el escenario, comprueba que quedó bien y queda parada en `lab-02/recetario`, dentro de `taller-git`, que es donde vas a trabajar.
 
-Confirma dónde estás parado.
+Mira dónde estás parado.
 
 ```
-git log --oneline
+git lg
 git status
 ```
 
@@ -43,72 +45,25 @@ Si trabajas sin el programa del taller, el simulador de escenarios abre este lab
 
 ## Parte 1 · Leer la historia
 
-**Tiempo sugerido, 30 minutos.**
+**Tiempo sugerido, 20 minutos.**
 
 ### 1.1 Las tres formas de mirar
 
 ```
 git log
 git log --oneline
-git lg
+git log -p
 ```
 
-La primera trae todo, autor, fecha y mensaje completo. La segunda es una línea por confirmación. La tercera es tu alias, que además dibuja el grafo.
+La primera trae todo, autor, fecha y mensaje completo. La segunda es una línea por confirmación. La tercera agrega, debajo de cada confirmación, las líneas que cambió.
 
-Usa la primera cuando investigas y la segunda cuando solo quieres ubicarte.
-
-### 1.2 Limitar la cantidad
-
-```
-git log -3
-git log --oneline -3
-```
-
-Sirve más de lo que parece. En un repositorio real con miles de confirmaciones, `git log` sin límite te tira encima la historia completa.
-
-Cuando la salida ocupe más de una pantalla, Git te la muestra por partes. Se avanza con la barra espaciadora y se sale con la tecla `q`. Esa `q` es la que nadie te dice y la que te deja pegado la primera vez.
-
-### 1.3 Filtrar por autor
-
-Mira quiénes trabajaron acá.
-
-```
-git log --format="%an"
-```
-
-Ahora filtra por uno de ellos, reemplazando el nombre por uno de los que apareció.
-
-```
-git log --author="Juana" --oneline
-```
-
-El filtro es por coincidencia parcial, no necesitas el nombre completo.
-
-### 1.4 Filtrar por archivo
-
-Qué le pasó a un archivo en particular.
-
-```
-git log --oneline -- platos.md
-```
-
-Los dos guiones separan las opciones de los nombres de archivo. Sin ellos, si existiera una rama llamada igual que el archivo, Git no sabría a cuál te refieres.
-
-### 1.5 Formato a tu medida
-
-```
-git log --format="%h %an %ad %s" --date=short
-```
-
-Cada símbolo es un dato. El identificador corto, el autor, la fecha y el mensaje. Hay muchos más, pero con estos cuatro resuelves casi todo.
-
-Si un formato lo vas a repetir, conviértelo en alias como hiciste en el laboratorio anterior.
+Usa la primera cuando investigas, la segunda cuando solo quieres ubicarte y la tercera cuando necesitas saber qué se tocó.
 
 ---
 
 ## Parte 2 · Ver lo que cambió
 
-**Tiempo sugerido, 15 minutos.**
+**Tiempo sugerido, 20 minutos.**
 
 ### 2.1 Lo que no está preparado
 
@@ -128,9 +83,21 @@ Muestra lo que se llevaría una confirmación hecha ahora mismo.
 
 Estas dos órdenes muestran cosas distintas y ese es todo el punto. La primera te dice qué te falta preparar. La segunda te dice qué estás a punto de confirmar.
 
+### 2.3 Lo mismo en Visual Studio Code
+
+Abre la carpeta del recetario en Visual Studio Code.
+
+```
+code .
+```
+
+En la barra de la izquierda, entra a la vista de control de código fuente, el ícono con tres puntos unidos por líneas. Arriba aparecen los cambios preparados y abajo los que no lo están, los mismos dos archivos que viste con `git status`. Haz clic en cada uno y Visual Studio Code te muestra, lado a lado, lo mismo que te mostraron `git diff` y `git diff --staged`.
+
+Mira y no toques nada todavía. Los cambios se arreglan en la parte 3, desde la consola.
+
 ---
 
-## Parte 3 · Volver atrás
+## Parte 3 · Deshacer
 
 **Tiempo sugerido, 30 minutos.**
 
@@ -183,10 +150,10 @@ Mira el mensaje de la última confirmación.
 git log -1
 ```
 
-Está mal escrito. Arréglalo.
+Está mal escrito. Arréglalo con un mensaje que siga la convención del taller, el archivo, dos puntos y lo que se hizo.
 
 ```
-git commit --amend -m "se corrige la receta del pastel de choclo"
+git commit --amend -m "recetas/pastel-de-choclo.md: se documenta la receta"
 ```
 
 Ahora compara.
@@ -196,84 +163,126 @@ git log -1
 git lg
 ```
 
-El mensaje cambió. Pero fíjate en algo más, **el identificador también cambió**. No corregiste la confirmación, la reemplazaste por una nueva. La original quedó ahí, sin nadie apuntándola.
+El mensaje cambió. Pero fíjate en algo más, **el identificador también cambió**. No corregiste la confirmación, la reemplazaste por una nueva.
 
-Eso importa y lo vas a ver de nuevo en la sesión 5. Por ahora quédate con la regla. `--amend` sirve para arreglar lo último que hiciste, siempre que todavía no lo hayas compartido con nadie.
+`--amend` sirve para arreglar lo último que hiciste, siempre que todavía no lo hayas compartido con nadie.
 
-### 3.4 Retroceder una confirmación
+### 3.4 Lo mismo en dos pasos
 
-Ahora vas a deshacer una confirmación completa conservando los archivos.
+Ahora vas a deshacer la última confirmación conservando sus archivos, y a hacerla de nuevo.
 
 ```
-git log --oneline
 git reset --soft HEAD~1
 git status
-git log --oneline
 ```
 
 Lee lo que pasó. La confirmación desapareció del historial, pero sus cambios están todos en el área de preparación, listos para volver a confirmarse.
 
-Vuelve a confirmarlos con un mensaje mejor.
+Vuelve a confirmarlos con el mismo mensaje.
 
 ```
-git commit -m "se documenta la receta del pastel de choclo"
+git commit -m "recetas/pastel-de-choclo.md: se documenta la receta"
+git lg
 ```
 
-Esto es lo mismo que hizo `--amend`, pero en dos pasos y viendo el intermedio. Los tres modos de retroceso se ven completos en el laboratorio 06.
+Llegaste al mismo lugar que con `--amend`, pero en dos pasos y viendo el intermedio. Por eso, para corregir la última confirmación, es mejor `--amend`. Hace lo mismo en una sola orden y no te deja a medio camino.
 
 ---
 
-## Parte 4 · Abrir la caja
+## Comprobación
 
-**Tiempo sugerido, 20 minutos.**
+```
+git log --oneline
+git status
+```
 
-Ahora que tienes confirmaciones propias que inspeccionar, vas a mirar de qué está hecho todo esto.
+Cinco confirmaciones, la última con el mensaje corregido. Nada en el área de preparación. El archivo del punto 3.2 aparece como modificado.
 
-No es curiosidad. Cuando termines vas a saber que una rama son cuarenta y un bytes de texto en un archivo, y eso hace que el resto del taller deje de ser magia.
+Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
 
-### 4.1 Qué hay adentro
+```
+verificar 02
+```
+
+Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
+
+---
+
+## Para ir más allá
+
+Esta sección es opcional. El verificador no la revisa y ningún laboratorio siguiente la necesita.
+
+### A. Limitar y filtrar la historia
+
+```
+git log -3
+git log --oneline -3
+```
+
+Sirve más de lo que parece. En un repositorio real con miles de confirmaciones, `git log` sin límite te tira encima la historia completa.
+
+Mira quiénes trabajaron acá.
+
+```
+git log --format="%an"
+```
+
+Ahora filtra por uno de ellos. El filtro es por coincidencia parcial, no necesitas el nombre completo.
+
+```
+git log --author="Juana" --oneline
+```
+
+Qué le pasó a un archivo en particular.
+
+```
+git log --oneline -- platos.md
+```
+
+Los dos guiones separan las opciones de los nombres de archivo. Sin ellos, si existiera una rama llamada igual que el archivo, Git no sabría a cuál te refieres.
+
+Y un formato a tu medida.
+
+```
+git log --format="%h %an %ad %s" --date=short
+```
+
+Cada símbolo es un dato. El identificador corto, el autor, la fecha y el mensaje. Si un formato lo vas a repetir, conviértelo en alias como hiciste en el laboratorio anterior.
+
+### B. La confirmación reemplazada sigue ahí
+
+En el punto 3.3 el identificador cambió. La confirmación original, la del mensaje mal escrito, no se borró. Quedó sin nadie apuntándola. Su identificador corto era `de04dc1`.
+
+```
+git show de04dc1
+```
+
+Ahí está, con su mensaje mal escrito y sus cambios. Git la guarda un tiempo aunque ninguna rama la alcance, y en el laboratorio 06 vas a ver cómo se rescata algo así.
+
+### C. Abrir la caja
+
+Vas a mirar de qué está hecho todo esto. Cuando termines vas a saber que una rama son cuarenta y un bytes de texto en un archivo, y eso hace que el resto del taller deje de ser magia.
 
 ```
 ls -a
 ls .git
 ```
 
-Hay bastante. La mayoría no te interesa hoy. Estos son los tres que importan.
-
-**HEAD**, un archivo que dice dónde estás parado.
-**refs**, donde viven las ramas y las etiquetas.
-**config**, la configuración de este repositorio en particular.
-
-### 4.2 El archivo que dice dónde estás
+Hay bastante. Estos son los tres que importan. **HEAD**, un archivo que dice dónde estás parado. **refs**, donde viven las ramas y las etiquetas. **config**, la configuración de este repositorio en particular.
 
 ```
 cat .git/HEAD
 ```
 
-Una línea. Dice que apuntas a una rama, y cuál.
-
-No dice a qué confirmación. Dice a qué **rama**. Esa distinción es la que hace que cambiar de rama sea instantáneo.
-
-### 4.3 La rama por dentro
+Una línea. Dice que apuntas a una rama, y cuál. No dice a qué confirmación, dice a qué **rama**. Esa distinción es la que hace que cambiar de rama sea instantáneo.
 
 ```
 ls .git/refs/heads
 cat .git/refs/heads/main
-```
-
-Un identificador de confirmación y un salto de línea. Nada más.
-
-Mide el archivo.
-
-```
 wc -c .git/refs/heads/main
 ```
 
-Cuarenta y un bytes. Cuarenta caracteres del identificador y el salto de línea.
-
-**Eso es una rama.** No es una copia del proyecto, no es una carpeta, no es un espacio de trabajo. Es un archivo de texto con un identificador adentro.
-
-### 4.4 Compruébalo
+Un identificador de confirmación y un salto de línea. Cuarenta y un bytes, cuarenta caracteres del identificador y el salto de línea. **Eso es una rama.** No es una copia del proyecto, no es una carpeta, no es un espacio de trabajo.
 
 ```
 git log --oneline -1
@@ -281,7 +290,7 @@ git log --oneline -1
 
 El identificador corto que muestra Git son los primeros caracteres del que acabas de leer en el archivo.
 
-### 4.5 Crea una rama y mira qué pasó
+Crea una rama y mira qué pasó.
 
 ```
 ls .git/refs/heads
@@ -293,8 +302,6 @@ cat .git/refs/heads/main
 
 Apareció un archivo nuevo con el mismo identificador adentro. Eso es todo lo que hizo crear una rama. Ningún archivo de tu proyecto se tocó.
 
-### 4.6 Cambia de rama y mira qué se movió
-
 ```
 cat .git/HEAD
 git switch prueba
@@ -303,7 +310,7 @@ cat .git/HEAD
 
 Cambió una línea en un archivo. Las dos ramas siguen apuntando a lo mismo, tu proyecto no cambió, y lo único distinto es dónde dice que estás parado.
 
-### 4.7 Vuelve y limpia
+Vuelve y limpia.
 
 ```
 git switch main
@@ -313,47 +320,7 @@ ls .git/refs/heads
 
 El archivo desapareció. Eso es borrar una rama.
 
-### 4.8 La pregunta
-
-Escribe en una línea, con tus palabras, qué es una rama.
-
-Si tu respuesta usa las palabras copia, carpeta o espacio de trabajo, vuelve al punto 4.3.
-
----
-
-## Comprobación
-
-```
-git log --oneline
-```
-
-Cinco confirmaciones, ninguna con el mensaje mal escrito original.
-
-```
-git status
-```
-
-Nada en el área de preparación. El archivo del punto 3.2 aparece como modificado.
-
-```
-ls .git/refs/heads
-```
-
-Solo `main`.
-
-```
-cat .git/HEAD
-```
-
-Debe apuntar a `main`.
-
-Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
-
-```
-verificar 02
-```
-
-Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
+Escribe en una línea, con tus palabras, qué es una rama. Si tu respuesta usa las palabras copia, carpeta o espacio de trabajo, vuelve a mirar `.git/refs/heads/main`.
 
 ---
 
@@ -371,10 +338,10 @@ Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué enco
 
 ## Lo que te llevas
 
-Encontrar algo en un historial ajeno es una habilidad aparte, y se resuelve con dos filtros. Por autor y por archivo.
+`git log`, `git log --oneline` y `git log -p` son tres formas de leer la misma historia, de la más completa a la que muestra los cambios.
 
-Corregir la última confirmación no la corrige. La reemplaza por otra con identificador distinto. Mientras nadie más la haya visto, da lo mismo. Cuando ya la compartiste, deja de dar lo mismo.
+`git diff` te dice qué te falta preparar y `git diff --staged` qué estás a punto de confirmar.
 
 `git restore` con `--staged` y sin `--staged` son operaciones distintas. Una es reversible y la otra no.
 
-Y una rama es un archivo de texto con un identificador adentro. Crear una rama no mueve nada. Cambiar de rama modifica una línea. Nada de esto es magia, es texto en archivos y lo acabas de leer con tus propios ojos.
+Corregir la última confirmación no la corrige, la reemplaza por otra con identificador distinto. `--amend` lo hace en una orden y `git reset --soft` seguido de `git commit` lo hace en dos. Para eso, mejor `--amend`.

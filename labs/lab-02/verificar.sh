@@ -29,6 +29,7 @@ REPOSITORIO_DICHO='lab-02/recetario'
 # El mensaje mal escrito que la preparacion planta y que el participante tiene
 # que corregir. Si sigue en la historia, el laboratorio no esta hecho.
 MENSAJE_MALO='se docuemnta la reseta del pastel de choclo'
+MENSAJE_BUENO='recetas/pastel-de-choclo.md: se documenta la receta'
 
 MODO=final
 if [ "${1:-}" = '--escenario' ]; then
@@ -66,7 +67,7 @@ echo
 if [ "$MODO" = escenario ]; then
   echo "Comprobando el escenario inicial del laboratorio 02"
 else
-  echo "Verificador del laboratorio 02 · leer la historia y abrir la caja"
+  echo "Verificador del laboratorio 02 · leer la historia y deshacer"
 fi
 echo
 
@@ -139,6 +140,23 @@ else
       fallido 'el mensaje mal escrito ya no esta en la historia' \
         "ninguna confirmacion con «${MENSAJE_MALO}»" \
         "todavia hay $CUANTAS_MALAS, falta corregirla con --amend"
+    fi
+  fi
+fi
+
+# --- Criterio · el mensaje corregido, con la convencion del taller ------------
+
+# SPEC 031: el nucleo corrige el mensaje con --amend y despues lo rehace con
+# reset --soft y commit, siempre con el mismo mensaje, archivo: descripcion.
+if [ "$MODO" != escenario ]; then
+  if [ "$HAY_REPOSITORIO" = no ]; then
+    sin_repositorio 'la ultima confirmacion lleva el mensaje corregido' "«${MENSAJE_BUENO}»"
+  else
+    ULTIMO=$(g log -1 --format=%s) || ULTIMO=''
+    if [ "$ULTIMO" = "$MENSAJE_BUENO" ]; then
+      aprobado 'la ultima confirmacion lleva el mensaje corregido, archivo: descripcion'
+    else
+      fallido 'la ultima confirmacion lleva el mensaje corregido' "«${MENSAJE_BUENO}»" "«${ULTIMO}»"
     fi
   fi
 fi

@@ -419,10 +419,11 @@ function hacerElLaboratorio(esc: Escenario, opciones: { amendAntesDeSacar?: bool
 
   g('restore', 'ingredientes.md');
   if (!amendAntesDeSacar) g('restore', '--staged', 'cocineros.md');
-  g('commit', '--amend', '-q', '-m', 'se corrige la receta del pastel de choclo');
+  // SPEC 031: el mismo mensaje en los dos pasos, con la convencion del taller.
+  g('commit', '--amend', '-q', '-m', 'recetas/pastel-de-choclo.md: se documenta la receta');
   if (amendAntesDeSacar) g('restore', '--staged', 'cocineros.md');
   g('reset', '--soft', 'HEAD~1');
-  g('commit', '-q', '-m', 'se documenta la receta del pastel de choclo');
+  g('commit', '-q', '-m', 'recetas/pastel-de-choclo.md: se documenta la receta');
 }
 
 describe('CA1 · el laboratorio 02 esta armado', () => {
@@ -583,7 +584,7 @@ describe('CA5 · el verificador aprueba el laboratorio hecho y rechaza cada crit
     const esc = conEscenario();
     hacerElLaboratorio(esc);
     const corrida = verificar(esc.carpeta, esc.configGlobal);
-    expect(corrida.salida).toContain('7 de 7 criterios aprobados');
+    expect(corrida.salida).toContain('8 de 8 criterios aprobados');
     expect(corrida.salida).not.toContain('✗');
     expect(corrida.codigo).toBe(0);
   });
@@ -708,8 +709,9 @@ describe('CA6 · el enunciado difiere solo en los cambios autorizados', () => {
   });
 
   it('el resto del enunciado sigue intacto', () => {
-    // Las partes que el spec prohibe tocar.
-    expect(enunciado).toContain('## Parte 4 · Abrir la caja');
+    // Las partes que el spec prohibe tocar. Desde el SPEC 031 la carpeta
+    // oculta va en la seccion opcional del final.
+    expect(enunciado).toContain('### C. Abrir la caja');
     expect(enunciado).toContain('## Lo que te llevas');
     expect(enunciado).toContain('Fíjate en la diferencia con el paso anterior');
   });
@@ -778,9 +780,11 @@ function hacerLaParte4(esc: Escenario): void {
 }
 
 describe('el laboratorio 02 comprueba lo que su parte 4 hace mirar', () => {
-  it('el enunciado trae la parte de la carpeta oculta', () => {
+  it('el enunciado trae la parte de la carpeta oculta, en Para ir mas alla (SPEC 031)', () => {
     const enunciado = readFileSync(join(LAB02, 'README.md'), 'utf8');
-    expect(enunciado).toContain('## Parte 4 · Abrir la caja');
+    const masAlla = enunciado.indexOf('## Para ir más allá');
+    expect(masAlla).toBeGreaterThan(enunciado.indexOf('verificar 02'));
+    expect(enunciado.indexOf('### C. Abrir la caja')).toBeGreaterThan(masAlla);
     expect(enunciado).toContain('cat .git/HEAD');
     expect(enunciado).toContain('Cuarenta y un bytes');
   });
@@ -816,7 +820,7 @@ describe('el laboratorio 02 comprueba lo que su parte 4 hace mirar', () => {
     hacerElLaboratorio(esc);
     hacerLaParte4(esc);
     const corrida = verificar(esc.carpeta, esc.configGlobal);
-    expect(corrida.salida).toContain('7 de 7 criterios aprobados');
+    expect(corrida.salida).toContain('8 de 8 criterios aprobados');
     expect(corrida.codigo).toBe(0);
   });
 });
