@@ -19,7 +19,7 @@ import type { ArchivoDeclarado, EscenarioDeclarado } from './tipos';
 
 /** Donde vive el repositorio del participante, que es una carpeta por laboratorio. */
 const directorioDe = (laboratorio: number): string =>
-  `/taller-git-trabajo/lab-${String(laboratorio).padStart(2, '0')}/recetario`;
+  `/taller-git/lab-${String(laboratorio).padStart(2, '0')}/recetario`;
 
 /** Instante de 2024 en la zona de Chile continental, en segundos desde la epoca. */
 const cuando = (mes: number, dia: number, hora: number, minuto: number): number =>
@@ -41,8 +41,10 @@ const SOFIA = { autor: 'Sofia Rojas', correo: 'sofia.rojas@recetario.cl' } as co
  * de punta a punta y el extractor de ordenes del enunciado.
  */
 export const ALIAS_DEL_TALLER = {
-  s: 'status -s',
-  lg: 'log --oneline --graph --all --decorate',
+  // SPEC 032, 1.1: el lg del material del product owner, de la Segunda Parte
+  // de 2024 y la guia 2025, con autor, fecha relativa y colores.
+  s: 'status --short',
+  lg: "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all",
 } as const satisfies Readonly<Record<string, string>>;
 
 const CONFIGURACION_PUESTA = {
@@ -175,24 +177,12 @@ export const LAB01: EscenarioDeclarado = {
   ramas: [],
   etiquetas: [],
   posicion: 'main',
-  // Los textos son los que el enunciado le hace escribir en su Parte 3, uno
-  // por uno. Aqui estan todos desde el principio, que es la licencia anotada
-  // en `sinReflejar`, pero el contenido es el mismo que va a tener en su disco.
-  archivos: [
-    { nombre: 'README.md', estado: 'sin-seguimiento', contenido: README_RECETARIO },
-    { nombre: 'platos.md', estado: 'sin-seguimiento', contenido: PLATOS_CURANTO },
-    { nombre: 'ingredientes.md', estado: 'sin-seguimiento', contenido: INGREDIENTES_BASE },
-    { nombre: 'cocineros.md', estado: 'sin-seguimiento', contenido: COCINEROS_DOS },
-    {
-      nombre: 'recetas/pastel-de-choclo.md',
-      estado: 'sin-seguimiento',
-      contenido: PASTEL_DE_CHOCLO,
-    },
-    { nombre: 'recetas/empanadas.md', estado: 'sin-seguimiento', contenido: EMPANADAS },
-  ],
+  // SPEC 032: la carpeta parte vacia, como en el enunciado. Cada archivo lo
+  // crea el participante, en su parte, y el primero es README.md.
+  archivos: [],
   remotos: [],
   sinReflejar: [
-    'En el disco el participante crea los archivos uno a uno; aqui estan todos desde el principio.',
+    'El simulador parte dentro de lab-01/recetario: el pwd, el ls, el cd curso y el mkdir del enunciado son de tu disco, y aqui solo se explican.',
   ],
 };
 

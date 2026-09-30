@@ -16,33 +16,36 @@ Dentro de cada carpeta hay dos o tres archivos.
 
 ## Donde trabaja el participante
 
-**Fuera de este clon, en una carpeta hermana.** El participante clona el curso,
-asi que estas carpetas viven dentro de un repositorio Git, y trabajar aqui
-adentro haria que sus ordenes alcanzaran la configuracion y la historia del
-repositorio del curso.
+**Fuera de este clon, al lado, en la carpeta del taller.** Desde el SPEC 028
+el clon vive en `taller-git/curso`, y el trabajo en `taller-git/lab-NN`. Son
+carpetas hermanas por abajo, aunque el participante vea una sola: trabajar
+dentro del clon haria que sus ordenes alcanzaran la configuracion y la historia
+del repositorio del curso.
 
 ```
-GIT-GITLAB/
-├── curso-git-gitlab-sii/        este clon: enunciados y verificadores
-└── taller-git-trabajo/          el trabajo del participante
-    ├── lab-01/
-    │   └── recetario/
-    ├── lab-02/
-    │   └── recetario/
-    ├── ...
-    └── lab-08/
-        ├── recetario/
-        ├── recetario.bundle      el origin del laboratorio 08
-        └── upstream.bundle       su segundo remoto
+taller-git/                      la carpeta del taller
+├── curso/                       este clon: enunciados y verificadores
+├── lab-01/
+│   └── recetario/
+├── lab-02/
+│   └── recetario/
+├── ...
+└── lab-08/
+    ├── recetario/
+    ├── recetario.bundle          el origin del laboratorio 08
+    └── upstream.bundle           su segundo remoto
 ```
+
+Los scripts reciben la carpeta del taller en la variable `TALLER_RAIZ`, que
+definen `preparar` y `verificar`. Sin ella, usan la carpeta que contiene al
+clon, que es la misma.
 
 La razon esta en la seccion 17 de [`docs/arquitectura.md`](../docs/arquitectura.md),
 con los cinco efectos que provoca trabajar dentro del clon. Es la regla que
-heredan los catorce laboratorios: **el trabajo del participante nunca vive dentro
-del clon del curso.**
+heredan los laboratorios: **el trabajo del participante nunca vive dentro del
+clon del curso.**
 
-Al terminar el taller se borra `taller-git-trabajo` de una vez y no queda nada
-suelto.
+Al terminar el taller se borra `taller-git` de una vez y no queda nada suelto.
 
 ## El simulador no adivina en que laboratorio estas
 
@@ -62,6 +65,11 @@ tiene ramas de seguimiento remoto, ni ordenes de red, ni ejecuta ganchos. Su enu
 Preparacion y no lleva escenario.
 
 ## Correr el verificador
+
+En la consola del modo taller no hace falta ir a ninguna carpeta. `preparar 02`
+corre el `preparar.sh` del laboratorio 02 y deja la consola en su recetario, y
+`verificar 02` corre su verificador. Lo que sigue es lo que esas dos órdenes
+hacen por debajo, y sirve para correr los scripts desde Git Bash.
 
 Se corre sin argumentos desde la carpeta del laboratorio y no recibe la ruta de
 nada, la deduce de su propia ubicacion.

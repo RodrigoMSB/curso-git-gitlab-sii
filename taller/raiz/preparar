@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# preparar 02 arma el laboratorio 02 en taller-git/lab-02. Con --forzar lo rehace.
+# Envoltorio. Lo que hace vive en curso/taller/laboratorio.sh.
+exec bash "$(cd "$(dirname "$0")" && pwd -P)/curso/taller/laboratorio.sh" preparar "$@"

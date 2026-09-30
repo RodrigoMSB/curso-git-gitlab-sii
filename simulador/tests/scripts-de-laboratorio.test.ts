@@ -52,7 +52,8 @@ interface Montado {
 function montar(numero: string): Montado {
   const raiz = carpetaTemporal();
   montados.push(raiz);
-  const clon = join(raiz, 'curso-git-gitlab-sii');
+  // Como lo deja INSTALAR, el clon es `taller-git/curso` (SPEC 028).
+  const clon = join(raiz, 'curso');
   const carpeta = join(clon, 'labs', `lab-${numero}`);
   mkdirSync(carpeta, { recursive: true });
   for (const archivo of ['preparar.sh', 'verificar.sh']) {
@@ -80,7 +81,7 @@ function montar(numero: string): Montado {
   writeFileSync(join(clon, 'README.md'), 'el repositorio del curso\n');
   git('add', '-A');
   git('commit', '-q', '-m', 'el curso');
-  return { raiz, clon, carpeta, recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'), configGlobal };
+  return { raiz, clon, carpeta, recetario: join(raiz, `lab-${numero}`, 'recetario'), configGlobal };
 }
 
 /**
@@ -107,8 +108,14 @@ interface PasoAMano {
 const A_MANO: Readonly<Record<string, readonly PasoAMano[]>> = {
   '01': [
     {
+      // git commit sin -m: el mensaje se escribe en la pestaña de Visual Studio Code (SPEC 031, 3.8).
+      ancla: 'Se abre una pestaña para escribir el mensaje',
+      editor: { lista: ':', mensaje: 'platos.md: se agregan los platos chilenos' },
+    },
+    { ancla: 'Agrega esta línea al final de `platos.md` y guarda', bash: "printf '%s\\n' '- sopaipillas' >> platos.md" },
+    {
       ancla: 'Y agrega una línea al final de `cocineros.md`',
-      bash: "printf '%s\\n' '- sopaipillas' >> platos.md && printf '%s\\n' '- zapallo' >> ingredientes.md && printf '%s\\n' '- Pedro' >> cocineros.md",
+      bash: "printf '%s\\n' '- porotos granados' >> platos.md && printf '%s\\n' '- zapallo' >> ingredientes.md && printf '%s\\n' '- Pedro' >> cocineros.md",
     },
   ],
   '05': [
@@ -145,18 +152,28 @@ function bloqueDespuesDe(lineas: readonly string[], desde: number): string {
 }
 
 /**
- * Hace el laboratorio desde la raiz del clon, que es donde el enunciado deja
- * parado al participante. La carpeta actual se conserva de una orden a la
+ * Hace el laboratorio desde la carpeta del taller, que es donde parte la consola
+ * del taller. La carpeta actual se conserva de una orden a la
  * siguiente, como en una terminal.
  */
-function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly string[]; registro: string } {
+function hacerElLaboratorio(
+  numero: string,
+  lab: Montado,
+  { soloElNucleo = false }: { soloElNucleo?: boolean } = {},
+): { problemas: readonly string[]; registro: string } {
   const alias = aliasDelTaller(enunciado('01'));
   const ordenes = resolverMarcadores(ordenesDe(enunciado(numero), alias), numero, alias);
+  // Hasta el rescate, o con soloElNucleo, hasta la seccion opcional del final
+  // (SPEC 031): el nucleo termina en la comprobacion.
+  const corte = soloElNucleo ? /^##\s+Para ir m[aá]s all[aá]/ : /^##\s+Si algo sali/;
   const rescate = enunciado(numero)
     .split('\n')
-    .findIndex((linea) => /^##\s+Si algo sali/.test(linea));
+    .findIndex((linea) => corte.test(linea));
   const donde = join(lab.raiz, 'carpeta-actual');
-  let actual = lab.clon;
+  // Desde el SPEC 027 el participante trabaja en la consola del taller, que
+  // parte en la carpeta del taller y nunca necesita entrar al clon.
+  let actual = lab.raiz;
+  mkdirSync(actual, { recursive: true });
   const salidas = new Map<string, string>();
   const problemas: string[] = [];
   const registro: string[] = [];
@@ -201,6 +218,15 @@ function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly
         extra = { GIT_SEQUENCE_EDITOR: `bash "${barras(lista)}"`, GIT_EDITOR: `bash "${barras(mensaje)}"` };
       }
     }
+    // Las ordenes propias de la consola del taller. preparar ya se corrio al
+    // montar el laboratorio, y la consola queda en su recetario; verificar se
+    // corre al final, code solo abre el editor y clear solo limpia la consola,
+    // que la resuelve sin mandarla (fuera de una terminal, clear falla).
+    if (/^preparar(\s|$)/.test(orden.texto)) {
+      actual = lab.recetario;
+      continue;
+    }
+    if (/^(verificar|code|clear)(\s|$)/.test(orden.texto)) continue;
     if (orden.clase === 'omitida') {
       problemas.push(`linea ${orden.linea} «${orden.texto}» se saltaria: ${orden.motivo}`);
       continue;
@@ -213,7 +239,11 @@ function hacerElLaboratorio(numero: string, lab: Montado): { problemas: readonly
     salidas.set(orden.texto, salida);
     registro.push(`${orden.linea} [${corrida.status}] ${texto}${corrida.status === 0 ? '' : ` → ${salida.trim().split('\n').slice(0, 3).join(' / ')}`}`);
   }
-  for (const paso of pendientes) problemas.push(`el paso a mano «${paso.ancla}» no llego a hacerse`);
+  // Los pasos a mano que quedan despues del corte no se piden: con soloElNucleo,
+  // los de la seccion opcional.
+  for (const paso of pendientes.filter((p) => rescate < 0 || p.linea <= rescate)) {
+    problemas.push(`el paso a mano «${paso.ancla}» no llego a hacerse`);
+  }
   return { problemas, registro: registro.join('\n') };
 }
 
@@ -257,6 +287,27 @@ describe('cada laboratorio, preparado, hecho y verificado como lo hace el partic
   });
 });
 
+describe('SPEC 031, 4.2 · verificar aprueba con solo el nucleo, sin la seccion opcional del final', () => {
+  const conNucleo = TODOS.filter((n) => /^##\s+Para ir m[aá]s all[aá]/m.test(enunciado(n)));
+
+  it('hay laboratorios con nucleo y seccion opcional', () => {
+    expect(conNucleo.length).toBeGreaterThan(0);
+  });
+
+  it.each(conNucleo)('laboratorio %s', { timeout: 300_000 }, (numero) => {
+    const lab = montar(numero);
+    if (existsSync(join(lab.carpeta, 'preparar.sh'))) {
+      const preparado = preparar({ ...lab }, '--forzar');
+      expect(preparado.codigo, dice(preparado)).toBe(0);
+    }
+    const hecho = hacerElLaboratorio(numero, lab, { soloElNucleo: true });
+    expect(hecho.problemas).toEqual([]);
+    const verificado = verificar(lab.carpeta, lab.configGlobal);
+    expect(criteriosFallidos(verificado.salida), `${dice(verificado)}\n--- el nucleo ---\n${hecho.registro}`).toEqual([]);
+    expect(verificado.codigo, dice(verificado)).toBe(0);
+  });
+});
+
 describe('la proteccion contra el anidamiento sigue funcionando', () => {
   it.each(TODOS.filter((n) => n !== '01'))(
     'laboratorio %s: un recetario sin .git propio dentro de otro repositorio se reclama',
@@ -285,5 +336,27 @@ describe('la proteccion contra el anidamiento sigue funcionando', () => {
     expect(verificado.codigo, dice(verificado)).not.toBe(0);
     expect(verificado.salida).toMatch(/✗ existe el repositorio/);
     expect(verificado.salida).toMatch(/falta el git init/);
+  });
+});
+
+describe('SPEC 029, 3.1 · preparar no nombra el simulador desde la consola del taller', () => {
+  const correr = (lab: Montado, consola: boolean): string => {
+    const env = { ...entorno(lab.configGlobal) };
+    delete env.TALLER_CD_DESPUES;
+    // La consola del taller exporta TALLER_CD_DESPUES; Git Bash no.
+    if (consola) env.TALLER_CD_DESPUES = join(lab.raiz, 'cd-despues');
+    return execFileSync('bash', ['./preparar.sh', '--forzar'], { cwd: lab.carpeta, env, encoding: 'utf8' });
+  };
+
+  it.each(['02', '03', '04', '05', '06', '07'])('laboratorio %s', { timeout: 120_000 }, (numero) => {
+    const lab = montar(numero);
+    const desdeGitBash = correr(lab, false);
+    expect(desdeGitBash).toContain(`SIMULADOR.html?lab=${numero}`);
+    expect(desdeGitBash).toContain('elige el escenario');
+    const desdeLaConsola = correr(lab, true);
+    expect(desdeLaConsola).not.toContain('SIMULADOR.html');
+    expect(desdeLaConsola).not.toContain('elige el escenario');
+    // Lo demas sale igual en los dos.
+    expect(desdeLaConsola).toContain('el escenario quedo correcto');
   });
 });

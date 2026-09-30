@@ -4903,3 +4903,1034 @@ función que ya usaba `echo`.
 | Cobertura de unidad (líneas, ramas, funciones, sentencias) | 92,22 · 83,55 · 93,90 · 94,92 | 92,11 · 83,30 · 93,81 · 94,83 |
 | Cobertura de los recorridos (02 a 06) | 71, 97, 95, 98, 94 % | 71, 97, 95, 98, 94 % |
 | Artefacto | 335 577 bytes | 336286 bytes |
+
+---
+
+# SPEC 026 · El taller con Git real dentro de la página
+
+## 71. El modo taller
+
+SPEC 026, en la rama `taller-java`. La numeración salta la 70, que en la rama
+`poc/repositorio-real` es la del modo conectado.
+
+`SIMULADOR.html` tiene un tercer modo. Servida por un programa local, con su
+clave en la dirección, la consola de la página ejecuta cada orden con Git de
+verdad en la carpeta del participante, y el grafo y las tres áreas se dibujan
+con lo que Git dice. Abierta con doble clic sigue en el modo de escenarios, sin
+un cambio.
+
+### 71.1 · Lo que se decidió
+
+- **Una rama que convive con otra.** Otra persona trabaja en paralelo en
+  `taller-python`. Todo lo de este spec lleva nombres propios, `taller-java/`,
+  `TALLER-JAVA.cmd`, `taller-java.command`, `taller-java.sh`,
+  `comprobar-java.cmd` y `comprobar-java.sh`, y se trabajó en un worktree
+  aparte para no tocar la copia de trabajo de la otra rama.
+- **Java 21 puro.** El servidor HTTP es el de `jdk.httpserver`, el JSON es una
+  clase de doscientas líneas y no hay ninguna dependencia en tiempo de
+  ejecución. JUnit solo en las pruebas.
+- **El runtime viaja en el clon.** `taller-java/jre/windows-x64` y
+  `taller-java/jre/macos-aarch64`, recortados con jlink desde Eclipse Temurin
+  21.0.12.1+1 a `java.base` y `jdk.httpserver`, que es lo que `jdeps` dice que
+  el programa usa. 31 MB cada uno en disco, unos 17 MB comprimidos. Los genera
+  `taller-java/fuente/generar-runtimes.sh`, con las versiones y las sumas
+  SHA-256 fijas, los dos desde una sola máquina.
+- **La orden viaja en una variable de entorno, y el envoltorio por la entrada
+  de bash.** En una sola línea, porque bash lee la línea entera antes de
+  ejecutarla, y en ella se cierra la entrada antes de la orden. Así no hay
+  comillas que pelear con Windows, y los errores dicen `bash: line 1:` como
+  con `bash -c`, en vez de nombrar un archivo interno del taller.
+- **El límite de la carpeta es un `cd` que no sale.** El envoltorio define una
+  función `cd` que rechaza salir de la carpeta que contiene al clon, antes de
+  que corra lo que sigue en la misma línea: `cd ../.. && rm ...` se detiene en
+  el `cd`. Después de cada orden se revisa además la carpeta en que quedó bash,
+  para el `builtin cd` y los `pushd`.
+- **Leer no escribe.** La lectura pasa `--no-optional-locks`: si reescribiera
+  el índice, la huella cambiaría con cada lectura y se leería de nuevo sin que
+  nadie tocara nada.
+- **La lectura lanza Git directo, no un bash.** El punto 3.6 pedía todas las
+  lecturas en un solo bash, para lanzar menos procesos. En Windows resultó al
+  revés: bash, un fork emulado por cada `$(...)` y un tubo sumaban más procesos
+  que las preguntas mismas, y la lectura tardaba cerca de un segundo. Ahora son
+  entre cuatro y seis procesos de Git y ninguno más: la rama y HEAD salen de
+  `git status --branch`, y el registro y el guardado temporal solo se
+  preguntan si sus archivos existen. Se cumple la intención del punto y no su
+  letra.
+- **El idioma lo pone Git Bash.** El programa fijaba `LANG=C.UTF-8` en Windows,
+  y con eso `ls` ordenaba las mayúsculas primero, distinto de la ventana de Git
+  Bash, que toma el idioma de Windows.
+- **Las huérfanas las decide la página, como siempre.** El programa manda las
+  confirmaciones alcanzables desde las referencias y las del registro de HEAD,
+  y la página las pinta con el mismo cálculo de posiciones del modo de
+  escenarios, que atenúa lo que ninguna referencia alcanza.
+- **La consola usa el git de la Terminal del participante.** El programa
+  encuentra Git en el orden del punto 3.3 para leer el estado, pero no
+  antepone su carpeta al PATH de la consola si el PATH ya tiene un `git`. En un
+  Mac con Homebrew, anteponer `/usr/bin` dejaba en la consola un git distinto
+  del de la Terminal, y cambiaba además qué otras herramientas encontraba.
+- **Una lectura por segundo, por la huella.** El límite del punto 3.7 se aplica
+  a las lecturas que dispara la huella. La que sigue a una orden no cuenta: si
+  contara, un archivo guardado justo después de una orden tardaba segundo y
+  medio en verse.
+- **Cada orden guarda su indicador.** En el modo de escenarios la consola
+  dibuja todas las órdenes anteriores con el indicador de ahora. En el modo
+  taller un `cd` cambia la carpeta de verdad, y las órdenes viejas habrían
+  aparecido escritas en la carpeta nueva.
+- **El foco del campo no pisa el indicador.** El anillo de foco global sale
+  dos píxeles hacia arriba y tapaba la línea del indicador. En el modo taller
+  el foco es un borde a la izquierda del bloque de entrada. El modo de
+  escenarios tiene el mismo roce y no se tocó.
+
+### 71.2 · Lo que el recorrido encontró
+
+El recorrido de punta a punta compara, después de cada orden, lo que la página
+pinta con lo que Git dice preguntado aparte, y lo que la consola mostró con lo
+que imprimió un gemelo que corre la misma orden con bash directo. Encontró
+siete defectos que ninguna prueba de unidad había visto.
+
+1. Un `cd` fallido mostraba `…/taller-git-trabajo/.taller/orden.sh: line 21:`.
+2. Un error de sintaxis salía firmado `bash: eval: line 1:`.
+3. En un Mac con Homebrew la consola usaba otro git que la Terminal.
+4. Un archivo guardado justo después de una orden tardaba 1,5 s en verse.
+5. En Windows, la lectura del estado lanzaba once procesos de Git dentro de un
+   bash y tardaba cerca de un segundo.
+6. En Windows, `ls` ordenaba distinto de Git Bash, por el `LANG` fijado.
+7. Una pregunta por el estado que salió antes de terminar una orden podía
+   volver después y pisar el estado nuevo con el viejo durante medio segundo.
+   La página ahora solo acepta una versión más nueva que la que tiene.
+
+Y en el programa, antes del recorrido, las pruebas de unidad y las primeras
+corridas en Windows encontraron que la comprobación del primer día cortaba su
+propia respuesta al navegador, que el arrancador de Mac no encontraba
+`sysctl` con un PATH mínimo y tomaba un M1 por un Intel, y que `lineas()`
+recortaba los tabuladores finales y perdía todas las ramas.
+
+### 71.3 · Por qué el prototipo en Python no arrancó en Mac
+
+`HTTPServer.server_bind` llama a `socket.getfqdn()`, que resuelve el nombre de
+`127.0.0.1` al revés. En el ejecutor `macos-latest` de GitHub eso tardó 35,1
+segundos, medido en la integración continua, y la prueba del prototipo
+esperaba veinte. El programa Java no resuelve ningún nombre, y los arrancadores
+tampoco.
+
+### 71.4 · Lo que no se pudo probar
+
+El antivirus corporativo, la lista de programas permitidos, el proxy y la
+política de ejecución de los equipos del SII. La comprobación del primer día
+los cubre en sus filas 5 y 6, con qué hacer si fallan.
+
+### 71.5 · Pendiente
+
+- `git push` y `git pull` contra un servidor con clave van en Git Bash.
+- Las órdenes que piden teclado, como `git add -p`, van en Git Bash. La
+  consola lo dice.
+- Los enunciados piden pararse en la raíz del clon, y la consola parte en
+  `taller-git-trabajo` (punto 2.4). El participante escribe primero
+  `cd ../curso-git-gitlab-sii`, y al empezar cada laboratorio vuelve con otro
+  `cd`. El recorrido escribe esos `cd` como pasos del arnés.
+- El doble clic en `taller-java.command` desde Finder no se probó en la
+  integración continua, que no tiene Finder.
+
+### 71.6 · Las cifras
+
+Recorrido de los ocho laboratorios, 470 órdenes y pasos de editor por
+plataforma, con tres marcadores de posición del laboratorio 07 omitidos porque
+el participante los reemplaza a mano.
+
+| Plataforma | Página igual a Git | Procesos en 60 s de reposo | Cambio de afuera visible, mediana |
+|---|---|---|---|
+| Mac M1 del product owner, Chrome | 469 de 469 | 0 | 517 ms |
+| macOS en GitHub, Chrome | 469 de 469 | 0 | 664 ms |
+| Windows en GitHub, Chrome | 469 de 469 | 0 | 997 ms |
+| Windows en GitHub, Chrome, Git fuera del PATH | 469 de 469 | 0 | 1067 ms |
+| Windows en GitHub, Edge | 460 de 469 | 0 | 631 ms |
+
+Las nueve de Edge son el laboratorio 08 y no son del programa: son el
+`preparar.sh` del punto 71.2 que no es determinista en Windows. El recorrido
+ahora lo anota y deja al gemelo partir de la misma preparación.
+
+Las cifras de Windows son de la corrida `36224554725`, anterior a la espera de
+la lectura en curso (sección 71.1), que baja la demora en Windows y no alcanzó
+a medirse allí: desde las 07:36 del 26 de septiembre GitHub Actions no inicia
+trabajos en esta cuenta, por un problema de pago. Por lo mismo quedaron sin
+verificar en Windows el cierre de la franja con el programa muerto y la corrida
+como un usuario de Windows con espacio y tilde, cuya primera versión quedó
+colgada y se canceló.
+
+| | |
+|---|---|
+| Pruebas de unidad de Java | 61, y 24 mutaciones que las hacen fallar |
+| Pruebas del modelo del modo taller | 18, y 9 mutaciones |
+| Suite del simulador | 972 |
+| Mutaciones del recorrido de punta a punta | 4 de 4 atrapadas |
+| `taller-java/taller.jar` | 77 552 bytes |
+| Runtimes | 31 MB cada uno en disco, 17,4 y 18,7 MB comprimidos |
+
+---
+
+# SPEC 027 · Ajustes del modo taller después de la prueba en vivo
+
+## 72. Lo que se ajustó
+
+SPEC 027, en la rama `taller-java`.
+
+### 72.1 · La disposición
+
+En el modo taller la consola y el grafo van lado a lado desde 900 píxeles, y no
+desde 1280. La consola y el tirador recibieron una opción de corte, y el modo de
+escenarios conserva el suyo. El ancho de partida de la consola quedó con tope
+en 60 %: con el tope de 72 del modo de escenarios, a 900 píxeles el grafo se
+quedaba con un cuarto de la pantalla.
+
+### 72.2 · El área del repositorio
+
+Lista los archivos de HEAD, que el programa lee con `git ls-tree` en la misma
+lectura del estado, y debajo las confirmaciones y las ramas. Sobre treinta
+archivos, los primeros y una línea con cuántos más. Todos los contadores de la
+página pasan por una sola función, `contar`, que dice «1 confirmación» y
+«1 cambio sin confirmar». Se corrigieron también los del modo de escenarios.
+
+### 72.3 · La consola
+
+- **Dos órdenes en una línea.** La lista de órdenes conocidas vive en
+  `simulador/src/vista/ordenesConocidas.ts`. Si una línea empieza con una de
+  ellas y más adelante aparece otra suelta, fuera de comillas y sin `;`, `&&`,
+  `||` ni `|` entre medio, la consola lo pregunta con la voz del programa y la
+  orden corre igual. La segunda palabra de `git` no cuenta, porque `git diff` es
+  una sola orden, y en `git stash`, `git remote` y las demás que llevan una
+  suborden propia tampoco la tercera.
+- **La salida larga.** Si la salida de una orden no cabe, la consola queda
+  mostrando su principio, con el eco arriba, y una marca que dice que sigue más
+  abajo. Un clic en la marca baja hasta el final.
+- **La primera orden.** La causa de que la salida de `git init` quedara fuera de
+  la vista era otra. Al aparecer el repositorio, la barra de arriba gana una
+  línea con la carpeta, la consola se achica, y lo que estaba pegado al final
+  quedaba debajo. La consola ahora vuelve a bajar cuando cambia de alto. El
+  recorrido lo encontró en el paso 11 del laboratorio 01, al comprobar después
+  de cada orden que su eco se vea.
+
+### 72.4 · `preparar` y `verificar`
+
+Órdenes propias de la consola, que atiende el programa. Corren
+`labs/lab-NN/preparar.sh` y `labs/lab-NN/verificar.sh` desde la raíz del clon.
+`preparar` deja la consola en `taller-git-trabajo/lab-NN/recetario` si el script
+termina bien. Aceptan `2` y `02`, y sin número usan el laboratorio donde está la
+consola. Sobre un laboratorio ya preparado, `preparar` no corre nada, avisa que
+se borra el trabajo sin vuelta atrás y pide `preparar NN --forzar`. El programa
+nunca pasa `--forzar` por su cuenta. Su eco va en el color del programa, y
+`ayuda` las lista junto con `clear`. Los scripts no se tocaron.
+
+### 72.5 · Los enunciados
+
+Los ocho cambiaron en su preparación, en su sección del simulador y en su
+comprobación. El 01 cambió además en «Antes de empezar», en la parte 1 y en la
+parte 2; el 02, 06 y 07 en «Si algo salió mal»; el 03 y el 07 en el pasaje que
+mandaba a la terminal; el 08 en el suyo. Cada sección «Abre el simulador» pasó
+a ser «El taller ya está abierto», y conserva una frase con la dirección del
+simulador de escenarios, que sigue siendo el respaldo sin el programa y que el
+arnés de Cypress necesita para saber qué escenario abrir.
+
+El extractor del guion reconoce `preparar`, `verificar` y `code`. Para el
+simulador de escenarios quedan omitidas, porque allí el escenario ya viene
+preparado, y el recorrido del modo taller las ejecuta en la consola.
+
+**Una contradicción del spec.** El punto 4.6 dice que los scripts no se tocan y
+el 5.4 pide que el verificador del 01 compruebe que la rama se llame `main`.
+Se agregó ese criterio al verificador del 01, el sexto, y ningún otro script
+cambió.
+
+### 72.6 · Lo que el recorrido encontró además
+
+- **El extractor nunca sacó `chmod`.** En el laboratorio 08 el gancho quedaba
+  sin permiso de ejecución en la copia y en el gemelo por igual, y la
+  comparación decía «igual» mientras `verificar 08` daba 4 de 5. El recorrido
+  ahora anota el resultado de cada verificador.
+- **El recorrido no hacía el paso a mano del laboratorio 01**, agregar una línea
+  a tres archivos, que el arnés en disco sí hacía. Ahora lo hace por fuera, como
+  el editor, y `verificar 01` da 6 de 6.
+- **`git stash clear` se avisaba como dos órdenes**, porque `clear` también es
+  orden de la consola.
+
+### 72.7 · Las cifras
+
+En el Mac del product owner, con Chrome.
+
+| Laboratorio | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 |
+|---|---|---|---|---|---|---|---|---|
+| Iguales a Git | 44/44 | 53/53 | 65/65 | 71/71 | 57/57 | 52/52 | 75/75 | 46/46 |
+| Verificador | 6/6 | 7/7 | 7/7 | 5/5 | 5/5 | 7/7 | 8/8 | 5/5 |
+
+| | |
+|---|---|
+| Procesos en 60 s de reposo | 0 |
+| Cambio de afuera visible, mediana | 518 ms |
+| Pruebas de Java | 68, y 31 mutaciones atrapadas |
+| Pruebas del modelo del modo taller | 28, y 17 mutaciones atrapadas |
+| Suite del simulador | 982 |
+| Mutaciones del recorrido | 7 de 7 atrapadas |
+
+## 73. El taller con Git real dentro de la página
+
+SPEC 026, en la rama `taller-python`, creada desde `main`. (La sección 70 es
+la del modo conectado, en la rama `poc/repositorio-real`, que se descartó.)
+
+Se numeró 71 en esa rama, a la par con la 71 de `taller-java`, y pasó a 73 al
+juntar las dos ramas en `taller` (sección 74). Describe el taller de Python
+antes de la fusión: su página, `AplicacionTaller`, salió, y su programa se
+rehízo para hablar la interfaz de la página de Java.
+
+### 73.1 · Cómo se arma
+
+- **`TALLER.cmd` y `taller.command`**, en la raíz del clon, buscan un Python
+  3.9 o superior (`py`, `python`, `python3`) y arrancan `taller/taller.py`.
+  Si no hay, lo dicen y esperan una tecla.
+- **`taller/taller.py`**, un solo archivo, solo biblioteca estándar. Es uno
+  solo para que Python no deje `__pycache__` en el clon. Escucha en
+  `127.0.0.1`, en un puerto que elige el sistema, sirve `SIMULADOR.html` y
+  abre el navegador con `http://127.0.0.1:<puerto>/?clave=<clave>`.
+- **La página decide el modo por su dirección.** Servida por el programa, con
+  clave, es el modo taller; abierta con doble clic, el simulador de siempre.
+  El modo taller reutiliza la consola, el tirador, el grafo, las áreas, los
+  paneles, el modo relator y los temas. No usa el motor ni el lector de
+  `.git`: el estado lo trae el programa preguntándole a Git.
+- **Sin previsualización** en este modo, sin selector de escenario, sin línea
+  de tiempo y sin líneas de ayuda bajo el campo.
+
+### 73.2 · El programa
+
+- **Seguridad.** Clave aleatoria por arranque, comparada en tiempo constante;
+  403 sin ella, con otra, con un `Origin` que no sea el propio, o con un
+  `Host` que no sea `127.0.0.1:<puerto>` (el cambio de nombre de un dominio a
+  127.0.0.1). Ninguna cabecera CORS; la consulta previa recibe 403.
+- **Git Bash de verdad.** En Windows, el `bash.exe` de Git para Windows,
+  buscado desde donde está `git`, nunca el de `System32` (WSL). Se lanza como
+  shell de inicio de sesión con `CHERE_INVOKING=1`, para que no se vaya a la
+  carpeta del usuario. La carpeta se lee al final de cada orden con
+  `pwd -W` y `/c/Users/...` se convierte a `C:/Users/...`.
+- **La consola parte en `taller-git-trabajo`**, hermana del clon, que se crea
+  si no existe. Recuerda la carpeta entre órdenes.
+- **Sin paginador y sin preguntas:** `GIT_PAGER=cat`, `TERM=dumb`,
+  `GIT_TERMINAL_PROMPT=0`, y la entrada estándar vacía.
+- **El editor.** Git recibe siempre `taller/editor.sh`, que en el momento de
+  abrirlo pregunta a Git cuál es el configurado (así ve también un
+  `-c core.editor=...` dentro de la orden). Si es uno de ventana y está
+  instalado, como `code --wait`, lo abre y espera. Si es de terminal (vi,
+  nano...), si no hay ninguno o si no está instalado, termina de inmediato
+  con un mensaje que dice qué configurar.
+- **Órdenes que piden teclado** (`git add -p`, `-i`, `--patch`,
+  `checkout -p`, `clean -i`, vi, nano, less...) no se ejecutan: se dice que
+  se hagan en Git Bash.
+- **Límite de tiempo:** 20 minutos por defecto (`TALLER_LIMITE`, en
+  segundos). Al pasarlo se detiene la orden y todo lo que abrió.
+- **Una orden a la vez:** la segunda recibe 409, y la página no deja escribir
+  mientras corre una.
+- **El estado** se calcula con órdenes de porcelana (`log`, `for-each-ref`,
+  `status --porcelain -z`, `stash list`, `log -g`) con
+  `GIT_OPTIONAL_LOCKS=0`, para no reescribir el índice al mirar. Antes se
+  saca una huella con el tamaño y la fecha de lo que cambia (HEAD, índice,
+  referencias, registro y directorio de trabajo): si no cambió, la página
+  recibe «igual» y Git no se llama. La página pregunta cada medio segundo.
+- **Rastros:** solo `taller-git-trabajo` y `taller-git-trabajo/.taller-sesion.json`,
+  con el puerto y la clave. Un segundo doble clic lo lee, ve que el taller
+  sigue abierto y abre la misma dirección, sin arrancar otro.
+- **Mac:** el `bash` y el `git` de Apple son binarios universales, y en esta
+  máquina a veces arrancaban como x86_64 bajo Rosetta, y el `git` de Apple
+  fallaba («unable to load libxcrun»). El programa los lanza con
+  `/usr/bin/arch -<arquitectura de Python>`. No se encontró la causa.
+
+### 73.3 · La página
+
+- Cada orden queda con el prompt con que se escribió (en Git Bash cambia con
+  `cd`), y el programa guarda las órdenes de la sesión para dibujarlas igual
+  al volver a entrar.
+- La salida de error va en rojo solo si la orden falló; `git status` se pinta
+  como en Git Bash.
+- `clear` limpia la consola en la página.
+- **El prompt tapado.** El contorno del foco del campo se dibuja cuatro
+  píxeles por fuera y pisaba la última línea del prompt, también en el modo
+  de escenarios. La fila del campo lleva ahora aire arriba.
+
+### 73.4 · Pruebas
+
+- `tests/taller/programa.test.ts` (32): arranque como el alumno, seguridad,
+  carpeta, paginador, tildes, una orden a la vez, editor, interactivas,
+  límite de tiempo, huella, segundo doble clic y rastros. Se vieron fallar
+  con el prototipo y, para cada defensa, quitándola del programa.
+- `tests/taller/vista.test.ts` (14): la pantalla desde el estado de Git.
+- `tests/navegador/taller.navegador.ts`: el recorrido de los ocho
+  laboratorios en la consola de la página, comparando después de cada orden
+  grafo (vivas y huérfanas), ramas, remotas, etiquetas, HEAD y áreas contra
+  Git corrido aparte. Además, en cada orden, la pantalla: prompt a la vista y
+  sin tapar (contando el contorno del foco), la carpeta en el prompt y en la
+  barra, letra legible y sin líneas de ayuda. Y 2.7 (archivo editado por
+  fuera), 2.8 (recargar), 4.2 (`clear` e historial) y 2.9 (cerrar el taller).
+  Corre en GitHub Actions (`taller.yml`).
+
+### 73.5 · Lo que el enunciado da por hecho
+
+**Los enunciados del 02 al 08 empiezan con `labs/lab-NN/preparar.sh`, que
+supone la terminal parada en el clon.** La consola del taller parte en
+`taller-git-trabajo` (punto 2.4), así que el alumno tiene que escribir antes
+`cd ../curso-git-gitlab-sii`. El recorrido lo hace. El 01 funciona igual
+desde `taller-git-trabajo`: su `cd ..` lleva a la misma carpeta de arriba.
+
+### 73.6 · Resultados
+
+GitHub Actions, ejecución 36218607145
+(https://github.com/RodrigoMSB/curso-git-gitlab-sii/actions/runs/36218607145).
+El taller arrancó con `TALLER.cmd` en Windows y con `taller.command` en Mac,
+con el Python y el Git de cada máquina.
+
+| | Windows + Edge | Windows + Chrome | Mac + Chrome |
+|---|---|---|---|
+| Programa (32) y vista (14) | 46 | 46 | 46 |
+| Órdenes con la página igual a Git, labs 01 a 08 | 513 de 513 | 513 de 513 | 513 de 513 |
+| Pantalla bien en cada orden | sí | sí | sí |
+| Orden escrita hasta la página al día, mediana | 0,8 a 1,0 s | 0,8 a 1,0 s | 0,35 s |
+| Archivo editado por fuera, visto | 670 ms | 414 ms | 502 ms |
+
+Por laboratorio: 01: 68, 02: 53, 03: 67, 04: 86, 05: 56, 06: 52, 07: 76,
+08: 55. Del 07 se saltan dos órdenes de la sección de rescate con marcadores
+que el participante reemplaza a mano.
+
+En Windows cada orden tarda cerca de un segundo: Git Bash arranca como shell
+de inicio de sesión en cada una.
+
+Dos defectos que solo aparecieron en Windows: el navegador de mentira de la
+prueba (un `.cmd`) no se lanzaba, y **una orden detenida por el límite de
+tiempo seguía corriendo** hasta terminar sola, porque `taskkill /T` no alcanza
+a los procesos que abre Git Bash. Ahora cada orden corre dentro de un objeto
+de trabajo de Windows y se termina entera.
+
+## 74. Un solo taller, con dos motores
+
+SPEC 028, en la rama `taller`, creada desde `main` y con `taller-java` y
+`taller-python` fusionadas. Las cuatro ramas de antes (`main`,
+`poc/repositorio-real`, `taller-java`, `taller-python`) no se tocaron.
+
+### 74.1 · La fusión
+
+Doce archivos en conflicto: `.gitattributes`, `SIMULADOR.html`,
+`docs/arquitectura.md`, `simulador/dist/index.html`,
+`simulador/dist/manifiesto.txt`, `simulador/package.json`,
+`simulador/package-lock.json`, `src/main.tsx`, `src/ui/Consola.tsx`,
+`src/vista/consola.ts`, `src/vista/index.ts` y
+`tests/arquitectura-vista.test.ts`. En todo lo de la página manda
+`taller-java`, también en lo que Git mezcló sin conflicto; la página de
+`taller-python` (`AplicacionTaller`, su barra, sus medidas y sus pruebas) sale
+en un commit aparte. `docs/arquitectura.md` conserva las dos secciones 71: la
+de Python pasó a 73. `.gitattributes` se reescribió para la estructura nueva.
+
+### 74.2 · La estructura
+
+```
+taller-git/
+  TALLER.cmd  taller.command  taller.sh     arrancan el taller
+  comprobar.cmd  comprobar.sh                 la comprobacion del primer dia
+  preparar  verificar                         scripts de bash, sin logica
+  .taller/                                    lo que guarda el motor
+  lab-01/recetario ... lab-08/recetario       el trabajo del participante
+  curso/                                      el clon
+    INSTALAR.cmd  instalar.command
+    taller/
+      INTERFAZ.md  arrancar.sh  arrancar.cmd  laboratorio.sh  comprobar.sh
+      probar-instalacion.sh  probar-lab-08.sh  mutaciones-instalacion.py
+      raiz/            los siete envoltorios que copia INSTALAR
+      java/            taller.jar, jre/ y fuente/
+      python/          taller.py
+```
+
+- **Los envoltorios de la raíz son una línea** que llama a lo que vive en el
+  clon, así que `git pull` los actualiza sin reinstalar. INSTALAR solo copia
+  y se niega si la carpeta no es `taller-git/curso`.
+- **`preparar` y `verificar` son scripts de bash**, no órdenes de la consola.
+  La consola pone la raíz del taller en el `PATH`, y así se llaman igual en la
+  consola y en Git Bash. Corren el script del laboratorio con `TALLER_RAIZ`
+  apuntando a `taller-git`. Los scripts de los laboratorios solo cambiaron la
+  carpeta de trabajo: `${TALLER_RAIZ:-$(dirname "$CLON")}/lab-NN`.
+- **Cómo `preparar` mueve la consola.** Un script no puede cambiar la carpeta
+  de quien lo llama. El envoltorio de la consola exporta `TALLER_CD_DESPUES`,
+  un archivo; `laboratorio.sh` escribe ahí la carpeta del laboratorio y el
+  envoltorio va a ella al salir, con el mismo `cd` que no sale del taller. En
+  Git Bash la variable no existe y `preparar` dice a qué carpeta ir.
+- **Sin `--forzar` y sin terminal**, preparar un laboratorio ya preparado no
+  pregunta: avisa y pide `preparar NN --forzar`.
+
+### 74.3 · La cascada
+
+`arrancar.sh` (y `arrancar.cmd`, que solo busca el bash de Git para Windows y
+lo llama con `--login`) prueba en orden:
+
+1. El motor de Java, con el runtime del clon, o un Java 21 del sistema.
+2. Si en treinta segundos no responde a `/api/diagnostico` con su clave, lo
+   cierra con todo lo que abrió y prueba el de Python, con un Python 3.9 o
+   superior del equipo (`py -3`, `python3`, `python`). Treinta porque en un
+   equipo corporativo el antivirus revisa el runtime la primera vez que
+   arranca (al principio eran cinco, y en el Mac de la integración continua
+   Java no alcanzó a responder y la cascada pasó a Python). Si responde antes,
+   se sigue en ese momento. Mientras espera, la ventana dice «El taller está
+   arrancando. La primera vez puede tardar hasta medio minuto.». Python
+   conserva sus cinco segundos. `TALLER_ESPERA_JAVA` y `TALLER_ESPERA` los
+   cambian.
+3. Si tampoco, abre `SIMULADOR.html` en el modo de escenarios, con un aviso
+   que empieza con ATENCIÓN y pide avisar al relator, y sale con 3.
+
+El motor escribe su dirección en `taller-git/.taller/direccion`, el
+arrancador anota el motor que quedó en `.taller/motor` y abre el navegador él.
+La barra de la página dice «motor Java» o «motor Python».
+
+### 74.4 · La interfaz
+
+`taller/INTERFAZ.md` es el contrato. El motor de Python se rehízo para
+hablarla: el mismo envoltorio de bash, línea por línea; las mismas lecturas
+de Git; la misma huella sin procesos; la misma guardia. La prueba
+`simulador/taller-java/interfaz.test.ts` arranca los dos con la misma
+identidad y las mismas fechas de Git, les manda 87 peticiones (la guardia, los
+errores de la API, el 409, y órdenes que pasan por fusión con conflicto,
+rebase a medias, guardados, etiquetas, huérfanas, posición desconectada, un
+repositorio desnudo, los cuatro avisos, el límite de tiempo y `preparar`) y
+compara las respuestas paso a paso.
+
+Diferencias que encontró y se arreglaron:
+
+- **Python no leía cuerpos por partes** (`Transfer-Encoding: chunked`) y
+  respondía «falta la orden». El navegador manda `Content-Length` y no se
+  notaba; ahora los lee como Java.
+- **Java no ponía** `Cache-Control`, `X-Content-Type-Options` ni
+  `Referrer-Policy` **en el 403 y el 405**, que INTERFAZ.md pide en toda
+  respuesta. Ahora los pone la guardia antes que nada.
+- **Java mandaba `Content-Type` en el 204**, sin cuerpo. Ya no.
+
+### 74.5 · Lo que se arregló de paso
+
+- **El laboratorio 08 con `core.autocrlf` en true.** El proyecto original se
+  clonaba del paquete con la configuración global; `configurar` fijaba
+  `autocrlf` en false después, con los archivos ya escritos con CRLF. En Mac
+  el identificador quedaba siempre distinto del de un equipo con false, y en
+  Windows cambiaba de una preparación a otra según el segundo del reloj. El
+  clon lleva ahora `-c core.autocrlf=false --config core.autocrlf=false`.
+  `taller/probar-lab-08.sh` prepara una vez con false y cinco con true y
+  compara las referencias de los tres lugares.
+- **`taller/java/fuente/target/` entró al repositorio** en el commit de la
+  estructura, porque la regla que lo ignoraba no existía (en `taller-java`
+  nunca se había agregado por casualidad). Salió, y quedó la regla.
+- **La prueba del reposo dependía de la hora.** El arnés compara la página
+  con Git corriendo `git status` en la carpeta del participante, y ese
+  `git status` refrescaba `.git/index`. El motor veía el cambio, con razón, y
+  hacía una lectura: seis procesos que caían o no dentro del minuto de reposo.
+  Corriendo solo los laboratorios 01 a 03 cayeron adentro. El arnés lee ahora
+  con `GIT_OPTIONAL_LOCKS=0`, como los motores.
+- **El simulador de respaldo** decía `/taller-git-trabajo/lab-NN/recetario`
+  en su indicador. Ahora dice `/taller-git/lab-NN/recetario`, como los
+  enunciados, y `mkdir -p lab-01/recetario` recibe la explicación de que el
+  simulador no crea carpetas fuera del recetario.
+- **Las capturas del recorrido** se ignoraban solo en la copia local. Ahora
+  `.gitignore` lo dice, y cada motor deja las suyas en
+  `simulador/capturas-taller-java/<motor>/`, con su zip.
+
+### 74.6 · Pruebas, y cómo se vio fallar cada una
+
+| Prueba | Qué hace | Cómo se vio fallar |
+|---|---|---|
+| `recorrido.test.ts`, `TALLER_MOTOR=java` y `python` | los ocho laboratorios en la página, contra Git y contra un gemelo en bash; `preparar NN` y `verificar NN` escritos en la consola | `mutaciones-recorrido.py`: 12 de 12, entre ellas el motor de Python sin la raíz en el `PATH`, la barra que dice Java con Python, `preparar` que no mueve la consola y la cascada que no llega a Python |
+| `interfaz.test.ts` | los dos motores, 87 pasos | las tres diferencias reales de 74.4, y `mutaciones-interfaz.py`: 6 de 6 |
+| `probar-instalacion.sh`, `MOTOR=java`, `python`, `respaldo` | de cero: taller-git, el clon como curso, INSTALAR, TALLER, el lab 01, `preparar 02`, la comprobación | `mutaciones-instalacion.py`: 7 de 7 |
+| `probar-lab-08.sh` | seis preparaciones del 08 | con el arreglo quitado, en Mac: `2818cdd` contra `e0bc1cf` |
+| `probar-cierre.ps1`, Windows, `java` y `python`, `ventana` y `motor`, Java con el custodio apagado y encendido | lo que queda vivo al cerrar, y que el segundo arranque lo cierre y recree `lab-01` (sección 74.8) | antes de cada arreglo, en la integración continua: `Device or resource busy` en el segundo arranque |
+| `sin-powershell`, Windows | el motor de Java con el custodio encendido y PowerShell bloqueado, inexistente o colgado | sin el arreglo, sin aviso en la ventana, y colgado, 24 s por `preparar 02` |
+| `RastroTest` | cerrar al arrancar lo anotado, sin tocar un proceso ajeno | sin terminar, y sin comparar la hora de inicio |
+| `modo-taller.test.ts` | el modelo de la página, con la barra del motor | `mutaciones-modelo.py`: 20 de 20 |
+| pruebas de Java | incluida la nueva de `PATH` y `TALLER_CD_DESPUES` | `mutaciones.py` |
+
+### 74.7 · Lo que encontró GitHub Actions
+
+La facturación volvió el mismo día y el flujo corrió. La primera ejecución
+(36276663855) pasó los ocho recorridos, las siete instalaciones, la interfaz
+y el laboratorio 08 en Windows y en Mac, y destapó cinco cosas:
+
+- **La consola se despegaba del final**, una vez, con `git init` en el
+  laboratorio 01 con Python en Mac. La consola baja sola y el evento de ese
+  desplazamiento llega un cuadro después; si entretanto la barra crece y la
+  consola se achica, la distancia al final pasa de 24 píxeles y se tomaba
+  como que el participante subió. Ahora la consola recuerda dónde se dejó y no
+  toma su propio movimiento por uno ajeno. Una prueba nueva del recorrido lo
+  provoca a propósito, con dos achiques seguidos, y sin el arreglo falla.
+- **El usuario con tilde**, dos veces en el arnés: Git Bash monta la carpeta
+  temporal del usuario en `/tmp`, y la ruta que deja `preparar` y la que
+  imprimen los scripts venían como `/tmp/...`. El arnés las traduce con
+  `cygpath`.
+- **La rama inicial en la prueba del laboratorio 01.** En el Mac del
+  desarrollo la pone en main el gitconfig de las herramientas de Apple; en
+  el de GitHub nacía master. La prueba fija `init.defaultBranch`, como el
+  enunciado.
+- **Órdenes de Git que el simulador no conocía:** `format-rev` y `url-parse`
+  de Git 2.55, e `instaweb`, `archimport`, `cvsimport`, `cvsexportcommit`,
+  `cvsserver`, `credential-netrc` y `jump` del Git de Homebrew. Respondía
+  que no son órdenes de Git.
+- **La suite del simulador** no se había corrido nunca en Windows. Allí
+  fallan pruebas que dependen de permisos de ejecución y de finales de línea;
+  en la integración continua corre en Linux.
+
+### 74.8 · Lo que queda vivo al cerrar el taller
+
+Pedido después del EBUSY de la limpieza de la prueba de la interfaz, y
+revisado tres veces. Esta es la versión final y lo que se midió en el
+camino.
+
+**El problema.** Los dos motores lanzan cada orden en una consola propia y
+oculta (Java siempre con `CREATE_NO_WINDOW`, Python a propósito). Al cerrar la
+ventana de `TALLER.cmd`, o si el motor muere de golpe, lo que la orden tenía
+corriendo sigue vivo: el bash de la orden, `git.exe`, `sh.exe`, `sleep.exe` y
+su `conhost.exe`, parados en `taller-git/lab-01/recetario`. El siguiente
+arranque fallaba al borrar la carpeta: `rm: cannot remove
+'lab-01/recetario': Device or resource busy`.
+
+**La prueba, `taller/probar-cierre.ps1`**, solo Windows. Arma `taller-git`
+como el participante, arranca `TALLER.cmd`, le manda una orden que deja vivos
+un bash, un git y un sleep en `lab-01/recetario`, y cierra de dos maneras:
+
+- **La ventana.** La consola es una pseudoconsola (`CreatePseudoConsole`, la
+  de Windows Terminal), y se cierra con `ClosePseudoConsole`, que manda
+  `CTRL_CLOSE_EVENT` de verdad a cada proceso unido a ella, como la X. Nada se
+  mata de golpe, y todo lo que la consola muestra queda en un archivo. Una
+  versión anterior de la prueba, en una ventana clásica que en la máquina de
+  la integración continua no atiende `WM_CLOSE`, terminaba de golpe los
+  procesos de la consola (`GetConsoleProcessList` y `Stop-Process -Force`):
+  eso no se parece a la X, y ahí ningún gancho puede correr. Se cambió.
+- **El motor, de golpe**, con `Stop-Process -Force` (TerminateProcess). La
+  ventana queda, a propósito, en el `pause` de `arrancar.cmd`.
+
+Después cuenta lo que quedó vivo del árbol que colgaba de `TALLER.cmd`, y
+arranca de nuevo enseguida para borrar y recrear `lab-01` desde la consola.
+
+**Python** ata sus órdenes a su propia vida con un objeto de trabajo de
+Windows marcado con `KILL_ON_JOB_CLOSE`, creado con `ctypes`. El motor entra
+en él al arrancar, antes de lanzar nada, y todo lo que lanza nace dentro;
+cuando el motor termina, de cualquier forma, Windows termina el trabajo
+entero. No deja nada vivo.
+
+**Java** no llega a esa API sin código nativo. Se probaron tres caminos:
+
+1. **El custodio**, `Custodio.java`: un ayudante de PowerShell que crea el
+   mismo objeto de trabajo y mete en él al motor. Funciona, pero usa
+   `Add-Type`, que **compila C# en el momento** en cada arranque, con el
+   compilador de .NET, y deja una DLL temporal en `%TEMP%`. Eso puede disparar
+   alertas del EDR en los equipos del SII. **Queda apagado** y se enciende con
+   `TALLER_CUSTODIO=1`. Encendido y sin PowerShell (bloqueado, inexistente o
+   colgado), el motor lo espera una sola vez, hasta diez segundos desde el
+   arranque, sigue sin él y la ventana dice una vez «Aviso: no se pudo
+   preparar el cierre ordenado con PowerShell. Al cerrar esta ventana pueden
+   quedar procesos abiertos.». El trabajo `sin-powershell` de la integración
+   continua lo prueba de las tres maneras; sin ese arreglo, colgado, cada orden
+   esperaba veinte segundos (`preparar 02` en 24 s).
+2. **Un gancho de cierre** en Java puro, `ProcessHandle.descendants()` en un
+   `shutdown hook`. **No corrió en ningún caso medido**: su línea no apareció y
+   no terminó nada, ni al cerrar la consola ni, como era de esperar, con el
+   motor muerto de golpe. Para descartar al arrancador, cuya trampa también
+   actúa al cerrarse la consola, el caso de diagnóstico `-Directo` lanzó
+   `java -jar` solo en la pseudoconsola, sin `TALLER.cmd` ni `arrancar.sh`: la
+   máquina virtual murió, el gancho tampoco corrió, y quedaron bash, git, sh,
+   sleep y conhost. La explicación probable es que la máquina virtual
+   convierte `CTRL_CLOSE_EVENT` en SIGTERM y devuelve el control enseguida, y
+   para ese evento Windows termina el proceso en cuanto vuelve, antes de que
+   los ganchos hagan su trabajo. **Salió.**
+3. **Cerrar al arrancar**, `Rastro.java`, lo que quedó. Cada orden que el
+   motor lanza queda anotada en `taller-git/.taller/procesos`, con su número y
+   su hora de inicio, y lo mismo sus descendientes, mirados cada medio
+   segundo mientras la orden corre, con `ProcessHandle` y sin lanzar nada. Al
+   terminar la orden se quita lo que ya no vive. Al arrancar, antes de
+   atender, el motor termina lo que siga vivo con el mismo número **y** la
+   misma hora de inicio, y lo que eso haya lanzado después, y vacía el
+   archivo; dice en la ventana cuántos cerró. La hora de inicio es la que
+   impide terminar un proceso ajeno que reusó el número. Las pruebas de unidad
+   (`RastroTest`) se vieron fallar sin terminar y sin comparar la hora.
+
+**Resultados**, ejecución 36292708455 de la integración continua:
+
+| motor | custodio | cierre | vivos tras cerrar | al arrancar de nuevo | segundo arranque recrea `lab-01` |
+|---|---|---|---|---|---|
+| Java | apagado | ventana | 7: bash, conhost, git, sh, sleep | cerró 7 | sí |
+| Java | apagado | motor de golpe | 7: bash, conhost, git, sh, sleep | cerró 7 | sí |
+| Java | encendido | ventana | 0 | nada que cerrar | sí |
+| Java | encendido | motor de golpe | 0 | nada que cerrar | sí |
+| Python | — | ventana | 0 | — | sí |
+| Python | — | motor de golpe | 0 | — | sí |
+
+**Consecuencias.**
+
+- Con el custodio apagado, que es lo que usa el participante, lo que una
+  orden tenía corriendo al cerrar el taller **sigue vivo hasta el arranque
+  siguiente**, y mientras tanto la carpeta del laboratorio no se puede borrar
+  desde fuera. El arranque siguiente lo cierra antes de atender.
+- Con el custodio encendido, y con Python, un Visual Studio Code abierto con
+  `code` desde la consola se cierra junto con el taller: el objeto de trabajo
+  no deja salir a nadie. Hacía falta, porque Git Bash lanza `git.exe`
+  pidiendo salir del trabajo, y con permiso salía y sobrevivía.
+- Dos intentos del custodio que la prueba descartó antes: sumar cada orden
+  al trabajo después de lanzarla (el `bash.exe` de Git para Windows es un
+  lanzador que abre enseguida el bash de verdad, y ese nacía fuera) y
+  permitir salir del trabajo (git salía).
+- Cada motor escribe el archivo de su dirección al final, después de
+  imprimir, porque el arrancador y las pruebas lo toman como la señal de
+  listo.
+
+**El arranque, medido** en la integración continua de Windows, desde el
+doble clic hasta «Motor del taller»:
+
+| motor | primer arranque, runtime recién llegado | arranque normal |
+|---|---|---|
+| Java | 1,6 s | 1,3 a 1,6 s |
+| Python | 4,4 s | 2,3 s |
+
+En esas máquinas la protección en tiempo real de Defender está apagada, así
+que el primer arranque no paga lo que paga en un equipo corporativo con
+antivirus; ese número queda por medir en un equipo del SII. Por eso la
+cascada espera a Java hasta treinta segundos (sección 74.3).
+
+**Los «3 skipped» de la prueba de la interfaz**, vistos dos veces en el Mac
+del desarrollo y nunca en la integración continua. vitest da las tres
+pruebas por saltadas cuando falla su `beforeAll`, y ahí solo falla si un
+motor no deja su dirección en treinta segundos o no arranca. Es compatible con
+un motor que no respondió a tiempo, pero no está probado: no se reprodujo ni
+con todos los núcleos ocupados, y el mensaje de error de esas dos veces se
+perdió. Ahora el error dice cuánto se esperó.
+
+### 74.9 · Resultados, en este Mac con Chrome
+
+| | motor Java | motor Python |
+|---|---|---|
+| 01 | 44 de 44 | 44 de 44 |
+| 02 | 53 de 53 | 53 de 53 |
+| 03 | 65 de 65 | 65 de 65 |
+| 04 | 71 de 71 | 71 de 71 |
+| 05 | 57 de 57 | 57 de 57 |
+| 06 | 52 de 52 | 52 de 52 |
+| 07 | 75 de 75 | 75 de 75 |
+| 08 | 46 de 46 | 46 de 46 |
+| procesos en un minuto de reposo | 0 | 0 |
+| archivo editado por fuera, visto (mediana) | 517 ms | 671 ms |
+| interfaz, pasos iguales | 87 de 87 | 87 de 87 |
+
+Órdenes con la página igual a Git, con `preparar` y `verificar` escritos en
+la consola. Las capturas de los laboratorios 01 y 02 y de las pruebas de
+pantalla quedan en `simulador/capturas-taller-java/<motor>/`, con un zip por
+motor, fuera del repositorio.
+
+El clon pesa unos 33 MB de descarga y 101 MB en disco, de los que 62 MB son
+los dos runtimes de Java.
+
+### 74.10 · Lo que falta
+
+- **El primer arranque con un antivirus de verdad.** En la integración
+  continua Defender no revisa en tiempo real; hay que medirlo en un equipo del
+  SII.
+- **El cierre con la X en un escritorio.** La prueba usa una pseudoconsola,
+  que manda el mismo `CTRL_CLOSE_EVENT`, pero no una ventana clásica cerrada
+  con el ratón.
+- **Los «3 skipped»** de la prueba de la interfaz, sin causa probada.
+- **La suite del simulador en Windows y en Mac.** Corre en Linux. Que pase en
+  Windows pide revisar las pruebas que miran permisos de ejecución y
+  finales de línea, que se escribieron para el Mac del desarrollo.
+- **Mac con Intel** no tiene runtime de Java en el clon: usa un Java 21 del
+  sistema si hay, y si no, Python.
+
+## 75. El grafo y los detalles de la prueba en Windows
+
+SPEC 029, en la rama `taller`. Sale de la prueba del product owner en una
+máquina virtual Windows de Netec, con Git 2.55 y Edge.
+
+### 75.1 · El grafo
+
+- **El mensaje de cada confirmación** va en su fila, como `git log
+  --oneline`. Empieza en una columna común a la derecha de todos los
+  carriles, o después de las etiquetas de esa fila si llegan más lejos; como
+  cada fila tiene una sola confirmación, las líneas de los otros carriles
+  nunca lo cruzan. Los mensajes se ponen después de hacer caber el dibujo:
+  usan el ancho que sobra y no aprietan carriles ni identificadores (el ancho
+  sin ellos queda en `anchoSinMensajes`, que es lo que miran las pruebas del
+  SPEC 017). Si no cabe, se corta con puntos suspensivos, sin bajar de 24
+  caracteres ni pasar de 72, y el completo va en un `<title>`, que el
+  navegador muestra al pasar el puntero. El rótulo de las huérfanas va
+  después de sus mensajes. Letra monoespaciada, para que el corte calculado
+  sea el dibujado.
+- **Desplazamiento.** El panel se desplaza a lo alto y a lo ancho. El tope de
+  confirmaciones dibujadas pasa de 40 a 400: con desplazamiento ya no hace
+  falta cortar, y queda solo como seguridad. Al cambiar el repositorio (otra
+  confirmación en HEAD, otra cantidad, otro escenario), si HEAD quedó fuera de
+  lo visible el panel se desplaza hasta él, y solo el panel, no la página.
+- **Tamaño.** Tres botones en la esquina del panel (achicar, volver al normal,
+  que muestra el porcentaje, y agrandar) y Ctrl con la rueda sobre el panel,
+  con un escuchador no pasivo que impide que el navegador agrande la página.
+  Es la escala del SVG entero, así que puntos, etiquetas y mensajes cambian
+  juntos; el cálculo de posiciones sigue haciendo caber el dibujo como si el
+  tamaño fuera el normal. Diez pasos, de 50 % a 200 %. Se recuerda en el
+  almacenamiento del navegador; si no está o falla, parte en el normal
+  (`vista/zoomGrafo.ts`).
+- Todo vale en el modo taller y en el de escenarios: está en `Grafo.tsx`.
+
+### 75.2 · La pila de guardado
+
+Se ve siempre, en los dos modos y también fuera de un repositorio, y vacía
+dice «vacía». También en el modo relator, por decisión del product owner
+(sección 75.7).
+
+### 75.3 · Textos
+
+- `preparar NN` desde la consola del taller ya no imprime las líneas que
+  mandan a elegir el escenario del simulador y a abrir
+  `SIMULADOR.html?lab=NN` (laboratorios 02 a 07). Se sabe por
+  `TALLER_CD_DESPUES`, que solo exporta la consola del taller: `TALLER_RAIZ`
+  no sirve, porque el envoltorio `preparar` de Git Bash también la pone.
+  Desde Git Bash sale como siempre.
+- `INSTALAR.cmd` y `arrancar.cmd` hablan en español y con tildes, leídos en
+  UTF-8 después de `chcp 65001`. En vez de `pause`, que en un Windows en
+  inglés dice «Press any key to continue», escriben «Presiona una tecla para
+  cerrar esta ventana.» y esperan con `pause >nul`.
+- Textos del motor con tildes. La línea con la ruta de Git y la clave del
+  registro de Windows donde se encontró va a `taller-git/.taller/registro.txt`
+  y no a la ventana: es la primera excepción a la regla de la sección 3.8 del
+  SPEC 026, de no escribir registros en archivos.
+- La franja de una pestaña cuyo taller se cerró ya no dice que reintenta cada
+  cinco segundos: un taller que vuelve a abrirse trae otro puerto y otra
+  clave, y esa pestaña no se reconecta. Dice que se cierre y se siga en la
+  pestaña nueva. Por detrás sigue intentando, por si el motor solo tardó.
+
+### 75.4 · El aviso de dos órdenes
+
+El product owner escribió `git stash pop sleep 60` y Git respondió «Too many
+revisions specified». El aviso del SPEC 027, punto 3.1, **no salió**: `sleep`
+no estaba entre las órdenes conocidas, así que la línea no tenía dos. Se
+agregó `sleep`, y solo esa: sumar otras, como `find`, haría saltar el aviso con
+`git grep find`.
+
+### 75.5 · preparar y verificar dentro del laboratorio
+
+En Windows, `preparar 02 --forzar` escrito con la consola parada en
+`lab-02/recetario` borraba el `.git` y fallaba con `rm: cannot remove
+'.../lab-02/recetario': Device or resource busy`. En Windows nadie puede
+borrar una carpeta que otro proceso tiene como directorio actual, y el bash
+de la orden, el de `laboratorio.sh` y el del script la tenían.
+
+- Los dos motores corren una orden que es solo `preparar` o `verificar`, con
+  sus argumentos, con el directorio actual en la raíz del clon (SPEC 027,
+  4.2), y le pasan la carpeta de la consola en `TALLER_CARPETA_CONSOLA`. Al
+  terminar la consola vuelve a donde estaba, salvo que `preparar` la mande a
+  su laboratorio. Una línea con algo más, como `cd .. && preparar 02`, corre
+  donde está la consola. El envoltorio es el mismo, y la interfaz no cambia.
+- `laboratorio.sh` deduce el laboratorio de `TALLER_CARPETA_CONSOLA`, o de la
+  carpeta actual en Git Bash, y corre el script parado en el clon.
+- Cada `preparar.sh` de los laboratorios 02 a 08 hace `cd` al clon antes de
+  borrar, por si se corre desde Git Bash parado adentro, y
+  `semillas/preparar.sh` sale de la carpeta antes de rehacerla. Los otros
+  scripts que borran carpetas no estaban parados en ellas: la temporal de
+  `lab-05/verificar.sh` y el `.upstream` del 08, que ya hacía `cd` antes.
+- La prueba de instalación lo hace en Windows con los dos motores: con la
+  consola dentro de `lab-02/recetario`, `preparar 02 --forzar` tiene que
+  rehacerlo y `verificar`, sin número, deducir el laboratorio. Se vio fallar
+  con «Device or resource busy» en los dos motores antes del arreglo.
+
+### 75.6 · Pruebas, y cómo se vio fallar cada una
+
+| Punto | Prueba | Cómo se vio fallar |
+|---|---|---|
+| 1.1 a 1.4, 2.1 | cinco pruebas de pantalla en el recorrido, con capturas | las cinco, con la página anterior |
+| 1.1, 1.2 | `disposicion.test.ts` | el tope de 40 y los campos nuevos |
+| 1.3 | `zoom-grafo.test.ts` | sin el `try` del almacenamiento |
+| 2.1 | `vista.test.ts`, `modo-taller.test.ts` | esperaban `null` con la pila vacía |
+| 3.1 | `scripts-de-laboratorio.test.ts`, laboratorios 02 a 07 | los seis, sin el cambio |
+| 3.2 | `probar-instalacion.sh` en Windows | «los demas» y «Press any key» |
+| 4.1 | `modo-taller.test.ts` | `null` en vez de `['git', 'sleep']` |
+| 75.5 | `probar-instalacion.sh` en Windows, `EjecutorTest` | «Device or resource busy» con los dos motores; la de Java, sin la detección |
+| franja | el recorrido | la página anterior decía «cinco segundos» |
+
+### 75.7 · Lo que apareció de paso, y lo que queda
+
+- **El zip de capturas no se armaba en Windows** desde el SPEC 026, salvo en
+  el trabajo del usuario con tilde: con Git Bash antes en el PATH, `tar.exe`
+  era el de Git, que no arma zip y toma `D:` por un equipo remoto, y el error
+  se tragaba. Ahora se usa el `tar.exe` de `System32`, y si el zip no se arma
+  la prueba falla.
+- **La prueba de `Rastro`** falló una vez en Windows porque su hilo escribía
+  el archivo de procesos mientras JUnit borraba la carpeta temporal. Ahora lo
+  espera.
+- **La espera del motor de Python.** En una ejecución de Windows, Python no
+  respondió en sus cinco segundos y la cascada abrió el respaldo; al repetir,
+  arrancó en 3,8 s. En frío mide entre 3,8 y 4,4 s en esas máquinas, sin
+  antivirus revisando. El punto 4.2 del spec pedía no tocar la cascada, y
+  quedó para decidir. **Decisión del product owner:** Python tiene los mismos
+  treinta segundos que Java (`TALLER_ESPERA`), con el mismo aviso en la
+  ventana antes de esperarlo. `taller/probar-espera-python.sh`, en el Mac de
+  la integración continua, arranca un Python que tarda ocho segundos: con
+  cinco se veía caer al respaldo.
+- **La pila de guardado en el modo relator.** Quedaba oculta ahí, como los
+  otros paneles secundarios (sección 75.2). **Decisión del product owner:** se
+  ve también en el modo relator, que es el que se proyecta en clase. Las
+  diferencias y los objetos siguen ocultos en ese modo.
+
+## 76. El motor Java en Java 25, sin PowerShell
+
+SPEC 030, en la rama `taller-java25`, creada desde `taller` en `237e72c`.
+
+### 76.1 · Java 25
+
+- **Temurin 25.0.4.1+1**, la última de Java 25 LTS en Adoptium al hacer el
+  spec, con las sumas que publica su API. Desde Java 24 el JDK no trae los
+  `jmods` adentro (JEP 493): vienen en un paquete aparte por plataforma, y
+  `generar-runtimes.sh` baja el JDK de la máquina que recorta, por su `jdeps` y
+  su `jlink`, y los `jmods` de cada destino.
+- Los módulos siguen siendo `java.base` y `jdk.httpserver`: las funciones
+  nativas están en `java.base`.
+- **Maven 3.9.16**, `maven-compiler-plugin` 3.16.0, `maven-surefire-plugin`
+  3.6.0, `maven-jar-plugin` 3.5.1, wrapper 3.3.4, las últimas estables.
+  JUnit 5.14.4, la última 5: la 6 es otra versión mayor y no hacía falta.
+- El lanzador pasa `--enable-native-access=ALL-UNNAMED` al motor, que corre
+  desde el classpath, y la máquina virtual no escribe advertencias en la
+  ventana. El Java del sistema que se usa si falta el runtime del clon tiene
+  que ser 25 o superior: un Java anterior no corre el motor.
+
+### 76.2 · El objeto de trabajo, con funciones nativas
+
+`TrabajoWindows.java`. Al arrancar en Windows, antes de lanzar ninguna orden,
+el motor crea un objeto de trabajo con `CreateJobObjectW`, le pone
+`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` con `SetInformationJobObject` (sin permiso
+para salir del trabajo, por el `git.exe` de Git Bash del SPEC 028) y se mete
+adentro con `AssignProcessToJobObject` sobre `GetCurrentProcess()`. Todo con
+`java.lang.foreign`: sin lanzar ningún otro programa, sin JNI y sin compilar
+nada. La manija vive lo que vive el motor; cuando el motor termina, de
+cualquier forma, Windows la cierra y termina el trabajo entero.
+
+Si alguna llamada falla, el motor sigue sin trabajo, escribe en la ventana
+«Aviso: no se pudo preparar el cierre ordenado. Al cerrar esta ventana pueden
+quedar procesos abiertos, que se cierran al abrir el taller otra vez.», y
+`Rastro` los cierra al arrancar la vez siguiente, como antes. Para probarlo,
+`TALLER_PRUEBA_FALLA_TRABAJO=1` le da a `SetInformationJobObject` un tamaño que
+Windows rechaza de verdad.
+
+**El Custodio de PowerShell se eliminó**, con `TALLER_CUSTODIO` y todo lo que
+lanzaba `powershell.exe`. El motor no ejecuta PowerShell nunca. En Mac nada
+cambia.
+
+### 76.3 · Pruebas, y cómo se vio fallar cada una
+
+Las pruebas nuevas se subieron primero, con el motor de Java 21 de `taller`
+(ejecución 36363882497), y fallaron así:
+
+| Prueba | Con el motor anterior |
+|---|---|
+| `probar-cierre.ps1`, Java, ventana y motor de golpe: nada vivo tras cerrar | quedaban 7: bash, conhost, git, sh y sleep, y el segundo arranque los cerraba |
+| `probar-cierre.ps1 -FallaTrabajo`: avisa, sigue, y Rastro cierra al arrancar | la ventana no avisaba |
+| `probar-cierre.ps1`: ningún PowerShell en el árbol del taller | con el custodio encendido, `powershell.exe` colgaba del motor |
+| `OtrosTest`: el código del motor no nombra PowerShell | con `Custodio.java`, y con un comentario propio que lo nombraba |
+| `TrabajoWindowsTest`: en Windows el motor entra en su trabajo | no existía la clase |
+
+## 77. Los laboratorios con el material del relator (SPEC 031)
+
+Cada laboratorio tiene un **núcleo**, obligatorio y en orden, que termina en
+`verificar NN`, y después una sección opcional, **Para ir más allá**, que el
+verificador no mide y que ningún laboratorio siguiente necesita. El recorrido
+de la página la ejecuta igual, con los dos motores.
+
+El material del relator de 2024 y la guía de 2025 no están en el repositorio.
+El núcleo se armó con el punto 3 del SPEC, que lo transcribe paso a paso.
+
+### 77.1 · Laboratorio 02
+
+Leer la historia y deshacer. Núcleo de 27 órdenes, antes 53 todas
+obligatorias; 25 van a la sección opcional (filtros de `git log`, `git show`
+de la confirmación reemplazada y abrir `.git`). `verificar 02` exige además que
+el último mensaje sea `recetas/pastel-de-choclo.md: se documenta la receta`,
+con la convención `archivo.md: descripción`. Ocho criterios.
+
+### 77.2 · Laboratorio 01
+
+El recetario nace, según el punto 3.8. Núcleo de 37 órdenes, antes 36 todas
+obligatorias; 12 van a la sección opcional (la confirmación que no lleva todo,
+`ls -a` y global frente a local). El rescate ya no usa `git reset --soft`:
+avisar al relator o empezar de nuevo.
+
+- **La consola.** `pwd`, `ls` y `clear`. La consola del taller resuelve
+  `clear` sin mandarlo; fuera de una terminal `clear` falla, así que los dos
+  arneses no lo corren en Bash.
+- **Los alias.** `s` es `status --short` y `lg` es
+  `log --graph --all --format='%C(yellow)%h%C(reset) %C(green)(%ar)%C(reset) %s %C(bold blue)<%an>%C(reset)%C(auto)%d%C(reset)'`,
+  con autor, fecha relativa y colores. El enunciado pide copiarlo y pegarlo.
+  El simulador de escenarios aprendió `%ar` (la misma cuenta que
+  `show_date_relative` de Git, en inglés), `%d`, los colores `%C(...)`, que
+  descarta, y `--graph` con `--format`. En la consola del taller `lg` sale sin
+  colores, porque Git no colorea hacia un tubo; en Git Bash sí.
+- **Visual Studio Code.** Los pasos del editor se marcan con **En Visual
+  Studio Code** y no son órdenes. `git commit` sin `-m` abre la pestaña: el
+  recorrido lo resuelve con el editor de prueba (`PLANES`) y el arnés en disco
+  con un `GIT_EDITOR` que escribe el mensaje.
+- **`verificar 01`**, nueve criterios: el repositorio, al menos seis
+  confirmaciones, un archivo por confirmación con su nombre al comienzo del
+  mensaje (README.md, platos.md, ingredientes.md, cocineros.md), la carpeta
+  recetas entera con `CARPETA recetas: se agrega carpeta`, las sopaipillas con
+  `platos.md: se agregan sopaipillas`, nada preparado, los alias (el `lg` con
+  `%an` y `%ar`), el editor `code --wait` y la rama `main`. Ya no exige
+  `cocineros.md` a medias, que pasó a la sección opcional.
+
+### 77.3 · Pruebas, y cómo se vio fallar cada una
+
+| Prueba | Cómo falló |
+|---|---|
+| 4.2, `verificar NN` aprueba con solo el núcleo | con un verificador que pedía una confirmación de la sección opcional (siete en el 01, y el criterio correspondiente en el 02) |
+| 4.3, el `lg` pegado en la consola queda igual que en Git Bash y que en el enunciado | pegando la línea sin las comillas simples, la consola guardó `--format=%C(yellow)...` sin comillas y la prueba mostró los tres valores |
+| `laboratorios.test.ts`, los nueve criterios del 01 uno por uno | los diez casos nuevos fallaron contra el verificador anterior |
+| `alias-lg.test.ts`, `%ar` contra Git y `git lg` en cada escenario | antes de enseñarle `%ar`, `%d` y los colores al simulador |
+
+## 78. El laboratorio 01 final (SPEC 032)
+
+- **El alias `lg` es el del material** (Segunda Parte de 2024 y guía 2025),
+  y reemplaza al reconstruido en el SPEC 031:
+  `log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all`.
+  El simulador de escenarios acepta `--abbrev-commit`, declarado equivalente
+  porque sus identificadores ya son cortos; `--decorate`, `--format=format:`
+  y `--all` después del formato ya los entendía. `verificar 01` no cambia:
+  pide que `lg` lleve `%an` y `%ar`, y el del material los lleva.
+- **Parte 1:** después de `ls`, `cd curso` y `cd ..`, mirando el prompt, con
+  la línea que dice que `..` es la carpeta de arriba.
+- **Parte 3:** una línea sobre `mkdir` y `-p`.
+- **Visual Studio Code:** en la parte 4, cómo se crea un archivo (el botón de
+  archivo nuevo del explorador, el nombre, pegar y Ctrl+S o Cmd+S); en la
+  parte 6, las dos recetas con la carpeta `recetas` seleccionada. La frase
+  sigue empezando con «Crea `archivo`», que es lo que el extractor lee.
+- **Pruebas:** el arnés de los scripts montaba el clon como
+  `curso-git-gitlab-sii`; desde el SPEC 028 es `taller-git/curso`, y con el
+  `cd curso` nuevo el laboratorio 01 fallaba. La prueba 4.3 del recorrido de
+  la página (el alias pegado queda igual en la consola, en Bash y en el
+  enunciado) cubre el `lg` nuevo sin cambios.
+
+### 78.1 · El modo de escenarios del 01 y el 02
+
+`SIMULADOR.html` con doble clic es el respaldo si el taller no arranca.
+
+- **Laboratorio 02:** el escenario corresponde al enunciado nuevo, porque
+  `preparar 02` no cambió. No se tocó.
+- **Laboratorio 01:** el escenario era el del enunciado anterior, con
+  `README.md`, `platos.md`, `ingredientes.md`, `cocineros.md` y las recetas ya
+  creados. `ls` los mostraba antes de crearlos, `mkdir recetas` decía «File
+  exists» y la confirmación de `ingredientes.md` se llevaba cinco archivos.
+  Ahora parte vacío.
+- **Un defecto del motor:** `git rm --cached README.md` antes de la primera
+  confirmación respondía «did not match any files». El motor solo contaba
+  como seguido lo que está en HEAD; lo recién preparado también está en el
+  índice. Ahora vuelve a sin seguimiento, sin anotarse como borrado, y sin
+  `--cached` responde como Git que tiene cambios preparados.
+- **Lo que el simulador no ejecuta del núcleo:** `git commit` sin `-m`. No
+  hay editor en el modo de escenarios, y responde como Git sin editor,
+  «Aborting commit due to empty commit message», con la sugerencia de `-m`.
+  El enunciado no cambia. `cd curso`, `cd ..`, `mkdir -p lab-01/recetario`
+  y `cd lab-01/recetario` están declaradas: el simulador dice que no
+  modela tus carpetas. `preparar`, `verificar` y `code .` no son del
+  simulador.
+- **La prueba** (`tests/nucleo-en-escenarios.test.ts`, en el CI): el núcleo
+  del 01 y del 02, orden por orden, en el motor y en Git, comparando
+  historia, rama, áreas y si la orden falló, y `verificar` aprobado del lado
+  de Git. Falló antes con el escenario viejo del 01 y con el defecto de
+  `git rm --cached`; el 02 pasó desde el principio.
+- **El recorrido de Cypress** del modo de escenarios no corre en el CI, y en
+  esta rama está detenido desde el SPEC 028: toma `preparar NN`,
+  `verificar NN` y `code .` como órdenes saltadas y se niega a seguir, en
+  los cinco laboratorios que recorre (02 a 06). No se arregló aquí; la prueba
+  de arriba cubre el 01 y el 02.

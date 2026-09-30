@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { previsualizar } from '../src/core/motor';
 import { idActual, ramaPorNombre } from '../src/core/estado';
-import { CARRIL_MINIMO, disponer, FILA_MINIMA, FILA_PUNTERO_DEBAJO, TEXTO_HUERFANAS } from '../src/grafico/disposicion';
+import { CARRIL_MINIMO, cortarMensaje, disponer, FILA_MINIMA, FILA_PUNTERO_DEBAJO, TEXTO_HUERFANAS } from '../src/grafico/disposicion';
 import { MEDIDAS } from '../src/grafico/tipos';
 import type { EstadoRepositorio } from '../src/core/tipos';
 import { correr, repoConRamaDeTrabajo, repoConRamas, repoLineal, repoVacio } from './ayudas';
@@ -512,8 +512,8 @@ describe('SPEC 017 · el grafo cabe en el ancho que hay', () => {
 
   it('con poco ancho, aprieta los carriles y conserva los identificadores si alcanza', () => {
     const holgada = disponer(repoConRamas());
-    const apretada = disponer(repoConRamas(), { anchoMaximo: holgada.ancho - 40 });
-    expect(apretada.ancho).toBeLessThanOrEqual(holgada.ancho - 40);
+    const apretada = disponer(repoConRamas(), { anchoMaximo: holgada.anchoSinMensajes - 40 });
+    expect(apretada.anchoSinMensajes).toBeLessThanOrEqual(holgada.anchoSinMensajes - 40);
     expect(apretada.espacioCarril).toBeLessThan(MEDIDAS.espacioCarril);
     expect(apretada.espacioCarril).toBeGreaterThanOrEqual(CARRIL_MINIMO);
     expect(apretada.identificadores).toBe(true);
@@ -528,7 +528,7 @@ describe('SPEC 017 · el grafo cabe en el ancho que hay', () => {
     // relator: unas trescientas unidades de ancho.
     const apretada = disponer(repoConRamas(), { anchoMaximo: 300 });
     expect(apretada.identificadores).toBe(false);
-    expect(apretada.ancho).toBeLessThanOrEqual(300);
+    expect(apretada.anchoSinMensajes).toBeLessThanOrEqual(300);
     expect(apretada.fueraDeVista).toEqual([]);
     expect(apretada.etiquetas.filter((etiqueta) => etiqueta.forma !== 'version')).toHaveLength(
       disponer(repoConRamas()).etiquetas.filter((etiqueta) => etiqueta.forma !== 'version').length,
@@ -544,5 +544,89 @@ describe('SPEC 017 · el grafo cabe en el ancho que hay', () => {
   it('si cabe a lo ancho, no toca nada', () => {
     const holgada = disponer(repoConRamas());
     expect(disponer(repoConRamas(), { anchoMaximo: holgada.ancho + 200 })).toEqual(holgada);
+  });
+});
+
+describe('SPEC 029 · el mensaje de cada confirmacion va en el grafo', () => {
+  it('1.1 cada confirmacion lleva su mensaje en su fila, a la derecha de los carriles', () => {
+    const estado = repoConRamas();
+    const { nodos } = disponer(estado);
+    const derechaCarriles = Math.max(...nodos.map((nodo) => nodo.x)) + MEDIDAS.radio;
+    for (const nodo of nodos) {
+      const confirmacion = estado.confirmaciones.find((c) => c.id === nodo.id);
+      expect(nodo.mensajeVisible).toBe(confirmacion?.mensaje.split('\n')[0]);
+      expect(nodo.mensajeX).toBeGreaterThan(derechaCarriles);
+    }
+  });
+
+  it('1.1 en una fila con etiquetas, el mensaje empieza despues de ellas', () => {
+    const estado = repoConRamas();
+    const { nodos, etiquetas } = disponer(estado);
+    for (const nodo of nodos) {
+      const suyas = etiquetas.filter((e) => e.forma === 'rama' && e.idConfirmacion === nodo.id);
+      for (const etiqueta of suyas) expect(nodo.mensajeX).toBeGreaterThan(etiqueta.x + etiqueta.ancho);
+    }
+  });
+
+  it('1.1 el marco alcanza para los mensajes', () => {
+    const disposicion = disponer(repoConRamas());
+    for (const nodo of disposicion.nodos) {
+      const fin = nodo.mensajeX + nodo.mensajeVisible.length * MEDIDAS.anchoCaracter;
+      expect(fin).toBeLessThanOrEqual(disposicion.origenX + disposicion.ancho);
+    }
+  });
+
+  it('1.1 si no cabe, se corta con puntos suspensivos, sin bajar del minimo, y el completo queda en mensaje', () => {
+    const largo = 'Corrige el mensaje mal escrito de la quinta confirmacion del recetario, que decia otra cosa';
+    const estado = correr(repoLineal(), 'echo "otra linea" >> platos.md', 'git add platos.md', `git commit -m "${largo}"`);
+    const holgado = disponer(estado);
+    const primera = holgado.nodos[0];
+    expect(primera?.mensaje).toBe(largo);
+    // Sin tope, solo el maximo corta.
+    expect(primera?.mensajeVisible).toBe(cortarMensaje(largo, MEDIDAS.mensajeMaximo));
+    expect(primera?.mensajeVisible.endsWith('…')).toBe(true);
+    // Con poco ancho, se corta mas, pero no baja del minimo.
+    const apretado = disponer(estado, { anchoMaximo: 260 });
+    const corto = apretado.nodos[0]?.mensajeVisible ?? '';
+    expect(corto.endsWith('…')).toBe(true);
+    // El minimo, o uno menos si el corte cae despues de un espacio, que se quita.
+    expect(corto.length).toBeLessThanOrEqual(MEDIDAS.mensajeMinimo);
+    expect(corto.length).toBeGreaterThanOrEqual(MEDIDAS.mensajeMinimo - 1);
+    expect(apretado.nodos[0]?.mensaje).toBe(largo);
+  });
+
+  it('1.1 los mensajes no aprietan ni carriles ni identificadores', () => {
+    const estado = repoConRamas();
+    const sinTope = disponer(estado);
+    const conTope = disponer(estado, { anchoMaximo: sinTope.anchoSinMensajes + 60 });
+    // Solo los mensajes se cortan: el ancho del dibujo sin ellos cabia.
+    expect(conTope.espacioCarril).toBe(sinTope.espacioCarril);
+    expect(conTope.identificadores).toBe(true);
+  });
+
+  it('1.1 el rotulo de las huerfanas va despues de sus mensajes', () => {
+    const estado = correr(repoLineal(), 'git reset --hard HEAD~2');
+    const { nodos, rotuloHuerfanas } = disponer(estado);
+    const huerfanas = nodos.filter((nodo) => nodo.huerfana);
+    expect(huerfanas.length).toBeGreaterThan(0);
+    for (const nodo of huerfanas) {
+      expect(rotuloHuerfanas?.x ?? 0).toBeGreaterThan(nodo.mensajeX + nodo.mensajeVisible.length * MEDIDAS.anchoCaracter);
+    }
+  });
+
+  it('1.2 treinta y cinco confirmaciones se dibujan todas', () => {
+    let estado = repoLineal();
+    for (let i = 0; i < 30; i += 1) {
+      estado = correr(estado, `echo "vuelta ${i}" >> platos.md`, 'git add platos.md', `git commit -m "vuelta ${i}"`);
+    }
+    const disposicion = disponer(estado);
+    expect(disposicion.nodos).toHaveLength(estado.confirmaciones.length);
+    expect(disposicion.ocultas).toBe(0);
+  });
+
+  it('cortarMensaje deja el texto igual si cabe', () => {
+    expect(cortarMensaje('corto', 10)).toBe('corto');
+    expect(cortarMensaje('exactamente', 11)).toBe('exactamente');
+    expect(cortarMensaje('uno dos tres', 8)).toBe('uno dos…');
   });
 });

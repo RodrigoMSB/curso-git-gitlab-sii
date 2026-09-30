@@ -285,7 +285,78 @@ export function disponer(
     }
   }
 
-  return { ...actual, fueraDeVista: fueraDeVista(actual, altoMaximo, anchoMaximo) };
+  // Los mensajes van despues de caber: usan el ancho que sobra y no aprietan
+  // ni carriles ni identificadores (SPEC 029, 1.1).
+  const conMensajes = ponerMensajes(actual, anchoMaximo);
+  return { ...conMensajes, fueraDeVista: fueraDeVista(actual, altoMaximo, anchoMaximo) };
+}
+
+function primeraLinea(mensaje: string): string {
+  return mensaje.split('\n')[0]?.trim() ?? '';
+}
+
+/** Corta el texto a `caracteres`, con puntos suspensivos si sobra. */
+export function cortarMensaje(texto: string, caracteres: number): string {
+  if (texto.length <= caracteres) return texto;
+  return `${texto.slice(0, Math.max(1, caracteres - 1)).trimEnd()}…`;
+}
+
+/**
+ * Pone el mensaje de cada confirmacion en su fila, como `git log --oneline`.
+ *
+ * Empieza en una columna comun a la derecha de todos los carriles, o despues
+ * de las etiquetas de esa fila si llegan mas lejos. Las lineas de los demas
+ * carriles nunca lo cruzan: cada fila tiene una sola confirmacion. Se corta
+ * para caber en el ancho disponible, sin bajar de `mensajeMinimo`; si ni asi
+ * cabe, el panel se desplaza.
+ */
+function ponerMensajes(disposicion: Disposicion, anchoMaximo: number | null): Disposicion {
+  const { nodos, etiquetas } = disposicion;
+  if (nodos.length === 0) return disposicion;
+  const columna = Math.max(...nodos.map((nodo) => nodo.x)) + MEDIDAS.radio + MEDIDAS.separacionMensaje;
+  const bordeDerecho = anchoMaximo === null ? null : disposicion.origenX + anchoMaximo - MEDIDAS.margenInferior;
+
+  const conMensaje = nodos.map((nodo) => {
+    const enLaFila = etiquetas.filter(
+      (etiqueta) =>
+        etiqueta.forma !== 'version' &&
+        etiqueta.x >= nodo.x &&
+        etiqueta.y < nodo.y + MEDIDAS.altoEtiqueta / 2 &&
+        etiqueta.y + etiqueta.alto > nodo.y - MEDIDAS.altoEtiqueta / 2,
+    );
+    const x = Math.max(columna, ...enLaFila.map((etiqueta) => etiqueta.x + etiqueta.ancho + MEDIDAS.separacionMensaje));
+    const caben =
+      bordeDerecho === null
+        ? MEDIDAS.mensajeMaximo
+        : Math.floor((bordeDerecho - x) / MEDIDAS.anchoCaracter);
+    const caracteres = Math.min(MEDIDAS.mensajeMaximo, Math.max(MEDIDAS.mensajeMinimo, caben));
+    return { ...nodo, mensajeX: x, mensajeVisible: cortarMensaje(primeraLinea(nodo.mensaje), caracteres) };
+  });
+
+  const derechaMensajes = conMensaje.map((nodo) => nodo.mensajeX + nodo.mensajeVisible.length * MEDIDAS.anchoCaracter);
+
+  // El rotulo de las huerfanas va despues de sus mensajes, no encima.
+  let rotuloHuerfanas = disposicion.rotuloHuerfanas;
+  const huerfanas = conMensaje.filter((nodo) => nodo.huerfana);
+  if (rotuloHuerfanas !== null && huerfanas.length > 0) {
+    const fin = Math.max(
+      ...huerfanas.map((nodo) => nodo.mensajeX + nodo.mensajeVisible.length * MEDIDAS.anchoCaracter),
+    );
+    rotuloHuerfanas = { ...rotuloHuerfanas, x: Math.max(rotuloHuerfanas.x, fin + MEDIDAS.separacionMensaje) };
+  }
+  const extremos = [
+    disposicion.origenX + disposicion.ancho,
+    ...derechaMensajes.map((x) => x + MEDIDAS.margenInferior),
+    ...(rotuloHuerfanas === null
+      ? []
+      : [rotuloHuerfanas.x + anchoDeTexto(rotuloHuerfanas.texto) + MEDIDAS.margenInferior]),
+  ];
+  return {
+    ...disposicion,
+    nodos: conMensaje,
+    rotuloHuerfanas,
+    ancho: Math.max(...extremos) - disposicion.origenX,
+  };
 }
 
 /**
@@ -350,6 +421,8 @@ function disponerCon(
     return {
       id: confirmacion.id,
       mensaje: confirmacion.mensaje,
+      mensajeVisible: primeraLinea(confirmacion.mensaje),
+      mensajeX: x,
       x,
       y,
       carril,
@@ -438,6 +511,7 @@ function disponerCon(
     origenX,
     origenY: 0,
     ancho: extremoX - origenX,
+    anchoSinMensajes: extremoX - origenX,
     alto: extremoY,
     ocultas: Math.max(todas.length - visibles.length, 0),
     espacioFila,

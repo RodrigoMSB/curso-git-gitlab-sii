@@ -163,7 +163,7 @@ export interface OpcionesHistorial {
   readonly limite: number | null;
 }
 
-function decoracion(estado: EstadoRepositorio, id: string): string {
+export function decoracion(estado: EstadoRepositorio, id: string): string {
   const nombres = decoracionesDe(estado, id);
   return nombres.length === 0 ? '' : ` (${nombres.join(', ')})`;
 }
@@ -175,7 +175,7 @@ function decoracion(estado: EstadoRepositorio, id: string): string {
  * abre `|\` bajo las de union. Dibujar los carriles cruzados es tarea de la
  * capa visual del SPEC 002, que dispone del carril de cada confirmacion.
  */
-function prefijos(confirmacion: Confirmacion, grafo: boolean): {
+export function prefijos(confirmacion: Confirmacion, grafo: boolean): {
   primero: string;
   resto: string;
   cierre: string | null;

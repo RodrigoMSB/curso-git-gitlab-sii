@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Verificador del laboratorio 01 (seccion 3 del SPEC 004).
 #
-# Comprueba el resultado del ejercicio, no un estado inicial: los cinco
-# criterios son los mismos que el enunciado lista en su seccion
-# «Comprobacion». Se corre sin argumentos, desde la carpeta del laboratorio,
+# Comprueba el resultado del ejercicio, no un estado inicial: los nueve
+# criterios miden el nucleo del enunciado (SPEC 031, 3.8), la configuracion,
+# un archivo por confirmacion con su mensaje, la carpeta recetas y el atajo
+# -am. La seccion opcional del final no se mide. Se corre sin argumentos, desde la carpeta del laboratorio,
 # y no recibe ninguna ruta: la deduce de su propia ubicacion.
 #
 # El repositorio del participante NO vive dentro del clon del curso, vive en
@@ -25,11 +26,11 @@ RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 # Este script vive en <clon>/labs/lab-01, asi que el clon esta dos niveles mas
 # arriba y el trabajo del participante es hermano del clon, no parte de el.
 CLON=$(cd "$RAIZ/../.." && pwd -P)
-TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-01"
+TRABAJO="${TALLER_RAIZ:-$(dirname "$CLON")}/lab-01"
 REPOSITORIO="$TRABAJO/recetario"
 # Como se nombra el repositorio en los mensajes: la ruta larga de la maquina
 # de cada participante no le dice nada a nadie.
-REPOSITORIO_DICHO='taller-git-trabajo/lab-01/recetario'
+REPOSITORIO_DICHO='lab-01/recetario'
 
 APROBADOS=0
 FALLIDOS=0
@@ -81,59 +82,122 @@ else
   fi
 fi
 
-# Los tres criterios que siguen leen el repositorio. Sin el no se pueden
-# evaluar, pero igual se imprime una linea por cada uno: el participante tiene
-# que ver los cinco criterios y no una lista que se corta a la primera falla.
+# Los criterios que siguen leen el repositorio. Sin el no se pueden evaluar,
+# pero igual se imprime una linea por cada uno: el participante tiene que ver
+# todos los criterios y no una lista que se corta a la primera falla.
 sin_repositorio() {
   fallido "$1" "$2" 'no se pudo comprobar, no hay repositorio'
 }
 
-# --- Criterio 2 · cuatro confirmaciones ------------------------------------
+# Desde el SPEC 031 el verificador mide el nucleo del enunciado y nada de la
+# seccion «Para ir mas alla», que es opcional. Quien la hizo tiene una
+# confirmacion mas y cocineros.md a medias, y el verificador igual aprueba.
+
+# El asunto de una confirmacion, o nada si no existe.
+asunto() {
+  git -C "$REPOSITORIO" log -1 --format=%s "$1" 2>/dev/null
+}
+
+# La confirmacion que agrego un archivo, la mas antigua si hay varias.
+la_que_agrego() {
+  git -C "$REPOSITORIO" log --diff-filter=A --format=%H -- "$1" 2>/dev/null | tail -1
+}
+
+# --- Criterio 2 · seis confirmaciones --------------------------------------
 
 if [ "$HAY_REPOSITORIO" = no ]; then
-  sin_repositorio 'cantidad de confirmaciones' '4'
+  sin_repositorio 'cantidad de confirmaciones' '6'
 else
   CONFIRMACIONES=$(git -C "$REPOSITORIO" rev-list --count HEAD 2>/dev/null) ||
     CONFIRMACIONES=0
-  if [ "$CONFIRMACIONES" = '4' ]; then
-    aprobado 'hay cuatro confirmaciones en el historial'
+  if [ "$CONFIRMACIONES" -ge 6 ] 2>/dev/null; then
+    aprobado "hay $CONFIRMACIONES confirmaciones en el historial"
   elif [ "$CONFIRMACIONES" = '0' ]; then
-    fallido 'cantidad de confirmaciones' '4' \
+    fallido 'cantidad de confirmaciones' '6' \
       'ninguna, el repositorio no tiene historial todavia'
   else
-    fallido 'cantidad de confirmaciones' '4' "$CONFIRMACIONES"
+    fallido 'cantidad de confirmaciones' '6' "$CONFIRMACIONES"
   fi
 fi
 
-# --- Criterio 3 · cocineros.md modificado y sin preparar -------------------
+# --- Criterio 3 · un archivo por confirmacion ------------------------------
 
-# La comparacion es contra el arbol de trabajo, no contra el indice: lo que se
-# exige es que el cambio siga pendiente, que es el objetivo del laboratorio.
+# README.md, platos.md, ingredientes.md y cocineros.md entran cada uno en su
+# propia confirmacion, y el mensaje empieza con el nombre del archivo. El de
+# platos.md se escribe en el editor: si Git no lo abrio o el participante no
+# escribio nada, aqui se nota.
 if [ "$HAY_REPOSITORIO" = no ]; then
-  sin_repositorio 'cocineros.md modificado y sin preparar' \
-    'cocineros.md con cambios sin preparar'
+  sin_repositorio 'un archivo por confirmacion' 'cada archivo en su confirmacion, con su nombre en el mensaje'
 else
-  SIN_PREPARAR=$(git -C "$REPOSITORIO" diff --name-only 2>/dev/null) || SIN_PREPARAR=''
-  if echo "$SIN_PREPARAR" | grep -q '^cocineros\.md$'; then
-    aprobado 'cocineros.md aparece modificado y sin preparar'
-  elif [ -z "$SIN_PREPARAR" ]; then
-    if git -C "$REPOSITORIO" ls-files --error-unmatch cocineros.md > /dev/null 2>&1; then
-      fallido 'cocineros.md modificado y sin preparar' \
-        'cocineros.md con cambios sin preparar' \
-        'no hay ningun cambio sin preparar, el de cocineros.md se confirmo o se deshizo'
-    else
-      fallido 'cocineros.md modificado y sin preparar' \
-        'cocineros.md con cambios sin preparar' \
-        'cocineros.md no esta bajo seguimiento, falta crearlo y confirmarlo'
+  PROBLEMA=''
+  for ARCHIVO in README.md platos.md ingredientes.md cocineros.md; do
+    CUAL=$(la_que_agrego "$ARCHIVO")
+    if [ -z "$CUAL" ]; then
+      PROBLEMA="$ARCHIVO no esta en ninguna confirmacion"
+      break
     fi
+    OTROS=$(git -C "$REPOSITORIO" show --name-only --format= "$CUAL" 2>/dev/null | grep -v "^$ARCHIVO\$" | paste -sd ' ' -)
+    if [ -n "$OTROS" ]; then
+      PROBLEMA="$ARCHIVO se confirmo junto con $OTROS"
+      break
+    fi
+    MENSAJE=$(asunto "$CUAL")
+    case "$MENSAJE" in
+      "$ARCHIVO: "*) ;;
+      *)
+        PROBLEMA="la confirmacion de $ARCHIVO dice «${MENSAJE}»"
+        break
+        ;;
+    esac
+  done
+  if [ -z "$PROBLEMA" ]; then
+    aprobado 'un archivo por confirmacion, cada una con su nombre en el mensaje'
   else
-    fallido 'cocineros.md modificado y sin preparar' \
-      'cocineros.md con cambios sin preparar' \
-      "sin preparar hay: $(echo "$SIN_PREPARAR" | paste -sd ' ' -)"
+    fallido 'un archivo por confirmacion' \
+      'cada archivo en su confirmacion, con un mensaje que empiece con su nombre' \
+      "$PROBLEMA"
   fi
 fi
 
-# --- Criterio 4 · area de preparacion vacia --------------------------------
+# --- Criterio 4 · la carpeta recetas ---------------------------------------
+
+MENSAJE_CARPETA='CARPETA recetas: se agrega carpeta'
+if [ "$HAY_REPOSITORIO" = no ]; then
+  sin_repositorio 'la carpeta recetas' "las dos recetas en una confirmacion «${MENSAJE_CARPETA}»"
+else
+  CUAL=$(la_que_agrego recetas/pastel-de-choclo.md)
+  OTRA=$(la_que_agrego recetas/empanadas.md)
+  if [ -z "$CUAL" ] || [ -z "$OTRA" ]; then
+    fallido 'la carpeta recetas' "las dos recetas en una confirmacion «${MENSAJE_CARPETA}»" \
+      'falta confirmar alguna de las dos recetas'
+  elif [ "$CUAL" != "$OTRA" ]; then
+    fallido 'la carpeta recetas' "las dos recetas en una confirmacion «${MENSAJE_CARPETA}»" \
+      'las recetas se confirmaron por separado'
+  elif [ "$(asunto "$CUAL")" != "$MENSAJE_CARPETA" ]; then
+    fallido 'la carpeta recetas' "el mensaje «${MENSAJE_CARPETA}»" "«$(asunto "$CUAL")»"
+  else
+    aprobado "la carpeta recetas entro entera, con «${MENSAJE_CARPETA}»"
+  fi
+fi
+
+# --- Criterio 5 · las sopaipillas, con el atajo -----------------------------
+
+MENSAJE_ATAJO='platos.md: se agregan sopaipillas'
+if [ "$HAY_REPOSITORIO" = no ]; then
+  sin_repositorio 'las sopaipillas' "una confirmacion «${MENSAJE_ATAJO}»"
+else
+  CUAL=$(git -C "$REPOSITORIO" log --format='%H %s' 2>/dev/null | grep -F " $MENSAJE_ATAJO" | tail -1 | cut -d' ' -f1)
+  if [ -z "$CUAL" ]; then
+    fallido 'las sopaipillas' "una confirmacion «${MENSAJE_ATAJO}»" 'ninguna confirmacion con ese mensaje'
+  elif ! git -C "$REPOSITORIO" show "$CUAL:platos.md" 2>/dev/null | grep -q -- '- sopaipillas'; then
+    fallido 'las sopaipillas' 'platos.md con la linea - sopaipillas en esa confirmacion' \
+      'la confirmacion existe pero platos.md no trae sopaipillas'
+  else
+    aprobado "las sopaipillas se confirmaron con «${MENSAJE_ATAJO}»"
+  fi
+fi
+
+# --- Criterio 6 · area de preparacion vacia --------------------------------
 
 if [ "$HAY_REPOSITORIO" = no ]; then
   sin_repositorio 'area de preparacion vacia' 'nada preparado'
@@ -149,7 +213,7 @@ else
   fi
 fi
 
-# --- Criterio 5 · los alias s y lg -----------------------------------------
+# --- Criterio 7 · los alias s y lg -----------------------------------------
 
 # Con repositorio se pregunta desde dentro, para que valgan tanto los alias
 # globales como los locales: el enunciado los pide globales, pero quien los
@@ -159,23 +223,67 @@ fi
 # donde pueden estar legitimamente. Preguntar parado en una carpeta cualquiera
 # hacia que Git subiera buscando un repositorio y respondiera con los alias de
 # otro: el criterio salia aprobado leyendo una configuracion ajena.
-if [ "$HAY_REPOSITORIO" = si ]; then
-  ALIAS_S=$(git -C "$REPOSITORIO" config --get alias.s 2>/dev/null) || ALIAS_S=''
-  ALIAS_LG=$(git -C "$REPOSITORIO" config --get alias.lg 2>/dev/null) || ALIAS_LG=''
-else
-  ALIAS_S=$(git config --global --get alias.s 2>/dev/null) || ALIAS_S=''
-  ALIAS_LG=$(git config --global --get alias.lg 2>/dev/null) || ALIAS_LG=''
-fi
+leer_config() {
+  if [ "$HAY_REPOSITORIO" = si ]; then
+    git -C "$REPOSITORIO" config --get "$1" 2>/dev/null
+  else
+    git config --global --get "$1" 2>/dev/null
+  fi
+}
+ALIAS_S=$(leer_config alias.s) || ALIAS_S=''
+ALIAS_LG=$(leer_config alias.lg) || ALIAS_LG=''
 
-if [ -n "$ALIAS_S" ] && [ -n "$ALIAS_LG" ]; then
-  aprobado 'los alias s y lg estan configurados'
-else
+if [ -z "$ALIAS_S" ] || [ -z "$ALIAS_LG" ]; then
   FALTANTES=''
   [ -z "$ALIAS_S" ] && FALTANTES='s'
   [ -z "$ALIAS_LG" ] && FALTANTES="${FALTANTES:+$FALTANTES y }lg"
   fallido 'los alias s y lg' \
     'alias.s y alias.lg configurados' \
     "falta configurar: $FALTANTES"
+else
+  # El lg del SPEC 031 muestra el autor y la fecha relativa. El de antes, sin
+  # ellos, no es el que el enunciado pide copiar y pegar.
+  case "$ALIAS_S" in
+    'status --short' | 'status -s') S_BIEN=si ;;
+    *) S_BIEN=no ;;
+  esac
+  case "$ALIAS_LG" in
+    *%an*%ar* | *%ar*%an*) LG_BIEN=si ;;
+    *) LG_BIEN=no ;;
+  esac
+  if [ "$S_BIEN" = no ]; then
+    fallido 'los alias s y lg' 'alias.s con status --short' "alias.s es «${ALIAS_S}»"
+  elif [ "$LG_BIEN" = no ]; then
+    fallido 'los alias s y lg' 'el alias lg del enunciado, con el autor %an y la fecha %ar, copiado y pegado' \
+      "alias.lg es «${ALIAS_LG}»"
+  else
+    aprobado 'los alias s y lg estan configurados'
+  fi
+fi
+
+# --- Criterio 8 · el editor ------------------------------------------------
+
+EDITOR_GIT=$(leer_config core.editor) || EDITOR_GIT=''
+case "$EDITOR_GIT" in
+  code*--wait*) aprobado 'el editor de Git es Visual Studio Code' ;;
+  '') fallido 'el editor' 'core.editor en code --wait' 'no hay editor configurado' ;;
+  *) fallido 'el editor' 'core.editor en code --wait' "«${EDITOR_GIT}»" ;;
+esac
+
+# --- Criterio 9 · la rama se llama main ------------------------------------
+
+# El enunciado configura init.defaultBranch en main (SPEC 027, punto 5.4): asi
+# la rama principal se llama igual en todos los equipos, y los laboratorios
+# que vienen la nombran asi.
+if [ "$HAY_REPOSITORIO" = no ]; then
+  sin_repositorio 'la rama se llama main' 'main'
+else
+  RAMA=$(git -C "$REPOSITORIO" symbolic-ref --short -q HEAD 2>/dev/null) || RAMA=''
+  if [ "$RAMA" = main ]; then
+    aprobado 'la rama se llama main'
+  else
+    fallido 'la rama se llama main' 'main' "${RAMA:-una posicion desconectada}"
+  fi
 fi
 
 # --- Resumen ---------------------------------------------------------------

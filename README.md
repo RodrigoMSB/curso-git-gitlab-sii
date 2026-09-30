@@ -17,52 +17,125 @@ compromete a ejecutar son las ordenes de los enunciados.
 
 ---
 
-## Si vas a participar en el taller, empieza aca
+## Si vas a participar en el taller, empieza acá
 
-**No hay que instalar nada.** Clonas este repositorio y ya tienes todo.
+El taller se hace en una página del navegador. Escribes en su consola, eso corre con Git de verdad en tu equipo, y la página dibuja al lado la historia del repositorio y sus tres áreas. Para eso hace falta un programa que corre en tu equipo mientras trabajas. Viene dentro del curso y no se instala. Al borrar la carpeta del taller no queda nada.
 
-### Abrir el simulador
+Necesitas Git para Windows, con su Git Bash, que en los equipos del SII ya viene instalado. En Mac, las herramientas de línea de comandos de Apple.
 
-En la carpeta que acabas de clonar hay un archivo llamado **`SIMULADOR.html`**.
+### Instalar, en dos pasos
 
-**Haz doble clic sobre el.** Se abre en tu navegador y funciona sin conexion a
-internet y sin levantar ningun servidor.
+**Primero, crea la carpeta del taller y clona el curso adentro con el nombre `curso`.** Tiene que ser con `git clone`, no bajando un zip. Un zip bajado por el navegador queda marcado como venido de internet, y Windows y macOS no dejan ejecutar lo que viene marcado así.
 
-Eso es todo. No hay que instalar, ni construir, ni descargar nada mas. El
-archivo lleva el simulador completo adentro, asi que tambien puedes copiarlo a
-un pendrive o mandarlo por correo y sigue funcionando igual.
+No la crees dentro de una carpeta sincronizada con OneDrive, iCloud Drive, Dropbox o Google Drive. Esas carpetas suben y bajan los archivos de Git por su cuenta, corrompen el repositorio y hacen que el dibujo se mueva solo. En Windows sirve `C:\taller-git`. En Mac, una carpeta dentro de tu carpeta personal que no esté en Documentos ni en el Escritorio si los sincronizas con iCloud.
 
-**Elige el escenario del laboratorio que estas haciendo.** Abierto con doble
-clic, el simulador parte siempre en el del laboratorio 01, donde todavia no hay
-repositorio: ahi las ordenes de cualquier otro laboratorio responden
-`fatal: not a git repository` y el grafo no dibuja nada. En la barra de arriba
-hay un selector que dice **escenario**; eligelo ahi. Cada enunciado te lo
-recuerda en su Preparacion.
+En Windows, abre Git Bash y escribe esto.
 
-### Hacer los laboratorios
+```
+mkdir -p /c/taller-git
+cd /c/taller-git
+git clone https://github.com/RodrigoMSB/curso-git-gitlab-sii.git curso
+```
 
-Los enunciados estan en [`labs/`](labs/README.md), una carpeta por laboratorio.
-Cada uno trae el enunciado que vas a leer y un verificador que te dice si te
-quedo bien. Algunos traen ademas un script que arma el punto de partida.
+En Mac, abre Terminal y escribe esto.
 
-Tu trabajo **no va dentro de esta carpeta**, va en una carpeta hermana que se
-llama `taller-git-trabajo`. Cada enunciado te dice como llegar ahi.
+```
+mkdir -p ~/taller-git
+cd ~/taller-git
+git clone https://github.com/RodrigoMSB/curso-git-gitlab-sii.git curso
+```
 
-### Que necesitas tener instalado
+**Segundo, haz doble clic en `curso/INSTALAR.cmd` en Windows, o en `curso/instalar.command` en Mac.** Deja en `taller-git` los archivos con que se arranca el taller. Se puede correr las veces que quieras. Si el clon no quedó en `taller-git/curso`, lo dice y no hace nada. Si el doble clic no abre nada, en Git Bash o en Terminal escribe `bash curso/instalar.command` desde `taller-git`.
 
-Solo **Git**, que es lo que el taller enseña. En Windows viene con Git Bash, que
-es la consola que vas a usar.
+Queda así.
 
-Nada mas: ni Node, ni servidor, ni permisos de administrador, ni acceso a la red
-despues de clonar.
+```
+taller-git/             la única carpeta que usas
+  TALLER.cmd            doble clic en Windows
+  taller.command        doble clic en Mac
+  taller.sh             desde Git Bash, ./taller.sh
+  preparar              preparar 02 arma el laboratorio 02
+  verificar             verificar 02 lo comprueba
+  comprobar.cmd         la comprobación del primer día, en Windows
+  comprobar.sh          la comprobación del primer día, en Git Bash y Mac
+  lab-01/recetario/     tu trabajo, un laboratorio por carpeta
+  curso/                el clon del curso, que no necesitas abrir
+```
+
+### La comprobación del primer día
+
+Antes de la primera sesión, haz doble clic en `comprobar.cmd`, o en Git Bash o Terminal escribe `./comprobar.sh` desde `taller-git`. Tarda menos de un minuto. Abre una página que dice que el navegador llegó, y en la ventana deja una tabla de ocho filas. Si todas dicen bien, el taller va a funcionar en tu equipo. Si alguna dice FALLA, la tabla dice qué hacer y queda guardada en `taller-git/.taller/comprobacion.txt` para mostrársela al relator.
+
+### Arrancar el taller
+
+Hay tres caminos, y los tres hacen lo mismo.
+
+- En Windows, doble clic en `TALLER.cmd`.
+- En Mac, doble clic en `taller.command`.
+- Desde Git Bash o Terminal, parado en `taller-git`, escribe `./taller.sh`.
+
+Se abre una ventana que dice que el taller está listo, con qué motor y en qué dirección, y se abre solo el navegador con la página. **No cierres esa ventana mientras trabajas.** Si la cierras, el taller termina y la página lo dice en una franja roja. Vuelve a abrirlo con el mismo doble clic. Si cierras la pestaña del navegador, vuelve con la dirección que muestra la ventana, y la consola sigue en la carpeta donde estaba.
+
+**El motor.** El programa del taller tiene dos versiones que hacen lo mismo, una en Java y otra en Python. El arrancador prueba primero la de Java, que trae su propio Java dentro del curso, y si no arranca prueba la de Python, con el Python de tu equipo. La barra de la página dice cuál quedó, junto a MODO TALLER. Para ti no cambia nada.
+
+**El aviso de respaldo.** Si ninguno de los dos motores arranca, la ventana lo dice y se abre `curso/SIMULADOR.html` en el modo de escenarios, que es el mismo simulador sin Git de verdad. Sirve para seguir la clase, pero avísale al relator y muéstrale la comprobación del primer día.
+
+### Trabajar
+
+La consola parte en `taller-git` y no sale de ahí hacia arriba. Cada laboratorio empieza con `preparar` y el número, desde cualquier carpeta, y la consola queda en la carpeta del laboratorio.
+
+```
+preparar 02
+```
+
+Y termina con `verificar`, que dice si quedó hecho.
+
+```
+verificar 02
+```
+
+Aceptan `2` y `02`, y sin número usan el laboratorio donde está la consola. Si el laboratorio ya estaba preparado, `preparar` avisa que prepararlo de nuevo borra tu trabajo, y solo lo hace si escribes `preparar 02 --forzar`. En Git Bash se escriben igual desde `taller-git`, con `./preparar 02`, y como allí un script no puede cambiar tu carpeta, te dice a cuál entrar.
+
+Los archivos los editas en Visual Studio Code. Escribe `code .` en la consola, parado en el recetario, y se abre una ventana aparte solo con tu trabajo. Al guardar, el dibujo se actualiza solo en menos de un segundo.
+
+Las órdenes que hacen preguntas por teclado, como `git add -p`, no se pueden contestar desde la página. La consola lo dice, y se hacen en Git Bash. `git push` y `git pull` contra un servidor que pide clave también van en Git Bash, por ahora.
+
+### Si algo no funciona
+
+**El doble clic no abre nada.** La política del equipo puede bloquear los archivos `.cmd`. Abre Git Bash en `taller-git` y escribe `./taller.sh`.
+
+**La ventana se abre y se cierra.** Ábrelo desde Git Bash con `./taller.sh` para ver el mensaje. Si dice que no encontró Git, instala Git para Windows. Si usas un Git portable, define la variable `TALLER_GIT` con su carpeta.
+
+**El navegador no carga la página.** Copia la dirección de la ventana en el navegador. Si tampoco carga, el proxy del equipo probablemente captura `127.0.0.1`. Pídele al soporte que lo excluya del proxy. La comprobación del primer día lo detecta en su fila 5.
+
+**La consola tarda varios segundos en cada orden.** Suele ser el antivirus revisando cada proceso. La comprobación lo mide en su fila 6.
+
+**Aparece el aviso de respaldo.** Mira en la ventana qué motor no arrancó y por qué, y muéstraselo al relator.
+
+Al terminar el curso borras `taller-git` entero y no queda nada más en tu equipo.
+
+### Para el relator
+
+Los dos motores escuchan solo en `127.0.0.1`, con una clave nueva en cada arranque, y rechazan toda petición que no la traiga. No escriben nada fuera de `taller-git`, donde dejan la carpeta `.taller` con la carpeta en que quedó la consola y el resultado de la comprobación. No tocan la configuración global de Git. Lo que hacen lo cuentan en su ventana, no en archivos. Los dos responden la misma interfaz, descrita en `taller/INTERFAZ.md`, y el detalle de las decisiones está en las secciones 71 a 74 de `docs/arquitectura.md`.
+
+### El simulador sin el taller
+
+`SIMULADOR.html`, abierto con doble clic, es el simulador de escenarios de siempre, sin ningún programa. Cada enunciado dice con qué dirección abre su laboratorio, por ejemplo `SIMULADOR.html?lab=02`.
 
 ---
 
 ## Que hay en este repositorio
 
 ```
-curso-git-gitlab-sii/
+curso/
 ├── SIMULADOR.html      el simulador, listo para doble clic
+├── INSTALAR.cmd        deja los arrancadores en taller-git, en Windows
+├── instalar.command    lo mismo, en Mac y Git Bash
+├── taller/             el programa local del modo taller
+│   ├── java/           el motor de Java, con su runtime
+│   ├── python/         el motor de Python
+│   ├── raiz/           los envoltorios que INSTALAR copia a taller-git
+│   └── INTERFAZ.md     lo que los dos motores le responden a la pagina
 ├── docs/
 │   ├── specs/          los encargos, un archivo por etapa del proyecto
 │   └── arquitectura.md versiones, empaquetado y decisiones de diseno

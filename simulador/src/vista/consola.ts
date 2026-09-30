@@ -16,12 +16,22 @@ export type ColorConsola =
   | 'aviso'
   | 'limite'
   | 'orden'
-  | 'apagado';
+  | 'apagado'
+  /** Lo que dice el programa del modo taller, que no es salida de Git (SPEC 026). */
+  | 'programa';
 
 export interface Renglon {
   readonly clave: string;
   readonly texto: string;
   readonly color: ColorConsola;
+  /**
+   * El indicador que habia cuando se escribio la orden. Solo lo lleva el eco
+   * de una orden del modo taller, donde `cd` cambia la carpeta de verdad y
+   * cada orden tiene que seguir mostrando donde se escribio (SPEC 026).
+   */
+  readonly indicador?: Indicador;
+  /** El eco de una orden propia de la consola del taller, que no es de bash (SPEC 027). */
+  readonly propia?: boolean;
 }
 
 export interface Indicador {
@@ -36,7 +46,7 @@ export interface Indicador {
  */
 export function indicadorDe(estado: EstadoRepositorio): Indicador {
   // La ruta completa del laboratorio y no solo la ultima carpeta: en el disco
-  // el participante esta parado en taller-git-trabajo/lab-NN/recetario, y el
+  // el participante esta parado en taller-git/lab-NN/recetario, y el
   // indicador tiene que decir lo mismo que su terminal (SPEC 007).
   const ruta = estado.directorio.replace(/^\/+/, '');
   return {

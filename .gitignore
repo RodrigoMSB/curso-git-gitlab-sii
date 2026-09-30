@@ -58,3 +58,11 @@ Thumbs.db
 docs/capturas-recorrido/*
 !docs/capturas-recorrido/defecto/
 !docs/capturas-recorrido/*.md
+
+# Lo que construye Maven para el motor de Java. El jar que se usa se copia a
+# taller/java/taller.jar, que si va versionado.
+taller/java/fuente/target/
+
+# Las capturas del recorrido del modo taller, una carpeta por motor, con su
+# zip. Se revisan a mano o se suben como artefacto; no van al repositorio.
+simulador/capturas-taller-java/

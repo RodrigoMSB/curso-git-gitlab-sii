@@ -21,6 +21,7 @@ import { escenarioPorId } from '../src/escenarios';
 import {
   correr,
   correrHasta,
+  repoConArchivosSueltos,
   repoConRamaDesdeMain,
   repoConRamas,
   repoLineal,
@@ -101,7 +102,7 @@ describe('git config', () => {
 
   it('el autor configurado queda registrado en la confirmacion', () => {
     const estado = correr(
-      repoVacio(),
+      repoConArchivosSueltos(),
       'git config user.name "Rodrigo Silva"',
       'git config user.email rodrigo@sii.cl',
       'git add README.md',
@@ -301,7 +302,7 @@ describe('git status', () => {
   });
 
   it('anuncia que no hay confirmaciones en un repositorio recien creado', () => {
-    const salida = texto(ejecutar(repoVacio(), 'git status'));
+    const salida = texto(ejecutar(repoConArchivosSueltos(), 'git status'));
     expect(salida).toContain('No commits yet');
     expect(salida).toContain('nothing added to commit but untracked files present');
   });
@@ -358,7 +359,7 @@ describe('git add y git restore', () => {
   });
 
   it('prepara el contenido de una carpeta', () => {
-    const estado = correr(repoVacio(), 'git add recetas');
+    const estado = correr(repoConArchivosSueltos(), 'git add recetas');
     expect(archivoPorNombre(estado, 'recetas/empanadas.md')?.estado).toBe('preparado');
     expect(archivoPorNombre(estado, 'platos.md')?.estado).toBe('sin-seguimiento');
   });
@@ -392,7 +393,7 @@ describe('git add y git restore', () => {
 describe('git commit', () => {
   it('crea la primera confirmacion sin padres', () => {
     const resultado = correrHasta(
-      repoVacio(),
+      repoConArchivosSueltos(),
       'git add README.md',
       'git commit -m "Agrega el README"',
     );

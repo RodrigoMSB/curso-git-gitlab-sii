@@ -116,7 +116,7 @@ export function montarLab(numero: string): Escenario {
 
   return {
     carpeta,
-    recetario: join(raiz, 'taller-git-trabajo', `lab-${numero}`, 'recetario'),
+    recetario: join(raiz, `lab-${numero}`, 'recetario'),
     configGlobal,
     clon,
     raiz,

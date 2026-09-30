@@ -14,6 +14,7 @@ import { disponer } from '../grafico/disposicion';
 import type { Disposicion } from '../grafico/tipos';
 import { ESCENARIOS } from '../escenarios';
 import { indicadorDe, type Indicador, type Renglon } from './consola';
+import { contar } from './contar';
 import { estadoDe, previsualizarOrden, renglonesDe, type Sesion } from './sesion';
 
 /**
@@ -38,6 +39,8 @@ export type TonoElemento =
   | 'preparado'
   | 'conflicto'
   | 'neutro'
+  /** Un archivo confirmado, en el area del repositorio del modo taller (SPEC 027). */
+  | 'repositorio'
   /** Archivo retirado del seguimiento, con la baja ya preparada. */
   | 'borrado-preparado'
   /** Archivo versionado que desaparecio del directorio y nadie preparo. */
@@ -190,7 +193,7 @@ export function columnasDeAreas(estado: EstadoRepositorio): readonly ColumnaArea
       orden: 'git commit',
       elementos: [
         {
-          texto: `${estado.confirmaciones.length} confirmaciones`,
+          texto: contar(estado.confirmaciones.length, 'confirmación', 'confirmaciones'),
           tono: 'neutro' as const,
         },
         ...estado.ramas.map((candidata) => ({
@@ -220,16 +223,15 @@ export function panelesVisibles(
   seleccion: string | null,
   modoRelator: boolean,
 ): Paneles {
-  if (modoRelator) return { guardado: null, diferencias: null, objetos: null };
-
-  const guardado =
-    estado.guardados.length === 0
-      ? null
-      : estado.guardados.map((entrada, posicion) => ({
-          clave: `stash-${posicion}`,
-          texto: `stash@{${posicion}}: ${entrada.mensaje}`,
-          archivos: entrada.archivos.map((archivo) => archivo.nombre),
-        }));
+  // Siempre, aunque este vacia: el participante tiene que saber que existe
+  // antes de usarla (SPEC 029, 2.1). Tambien en el modo relator, que es el
+  // que se proyecta en clase.
+  const guardado = estado.guardados.map((entrada, posicion) => ({
+    clave: `stash-${posicion}`,
+    texto: `stash@{${posicion}}: ${entrada.mensaje}`,
+    archivos: entrada.archivos.map((archivo) => archivo.nombre),
+  }));
+  if (modoRelator) return { guardado, diferencias: null, objetos: null };
 
   const fueComparacion = ultimaOrden !== null && /^git\s+diff\b/.test(ultimaOrden);
   const cuerpo = renglones.filter((renglon) => renglon.color !== 'orden');

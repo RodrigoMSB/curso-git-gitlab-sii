@@ -16,12 +16,13 @@ De todo el taller, este es el laboratorio donde más importa leer antes de escri
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+Tu trabajo va en la carpeta del taller, `taller-git`, fuera del clon del curso. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
-labs/lab-06/preparar.sh
-cd ../taller-git-trabajo/lab-06/recetario
+preparar 06
 ```
+
+La consola arma el escenario, comprueba que quedó bien y queda parada en `lab-06/recetario`, dentro de `taller-git`, que es donde vas a trabajar.
 
 Mira el punto de partida.
 
@@ -41,16 +42,11 @@ cat ~/historial-original.txt
 
 Lo vas a necesitar para comparar.
 
-### Abre el simulador en el escenario de este laboratorio
+### El taller ya está abierto
 
-El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER.cmd` o con `taller.command`, en la carpeta `taller-git`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
 
-Llévalo al escenario de este laboratorio, que es **Lab 06 · Retroceder, revertir y etiquetar**, de cualquiera de estas dos formas.
-
-- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 06`.
-- O abre el archivo con la dirección `SIMULADOR.html?lab=06`, pegándola en la barra de direcciones del navegador.
-
-Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 06`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+Si trabajas sin el programa del taller, el simulador de escenarios abre este laboratorio con la dirección `SIMULADOR.html?lab=06`, sin Git de verdad.
 
 ---
 
@@ -333,6 +329,14 @@ git status
 
 Directorio limpio.
 
+Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
+
+```
+verificar 06
+```
+
+Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
+
 ---
 
 ## Si algo salió mal
@@ -349,7 +353,7 @@ Directorio limpio.
 git revert HEAD
 ```
 
-**Quedaste perdido del todo.** Vuelve a ejecutar `preparar.sh` y repite desde la parte que te falló.
+**Quedaste perdido del todo.** Escribe `preparar 06 --forzar` en la consola. Borra todo tu trabajo en este laboratorio, sin vuelta atrás, y deja el escenario como al principio. Después repite desde la parte que te falló.
 
 ---
 

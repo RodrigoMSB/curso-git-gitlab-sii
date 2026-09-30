@@ -5,8 +5,18 @@
  * calcula nada: recibe la disposicion ya resuelta y la recorre.
  */
 
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MEDIDAS, type AristaGrafo, type Disposicion, type EtiquetaGrafo, type NodoGrafo } from '../grafico/tipos';
+import {
+  acercar,
+  alejar,
+  almacenDelNavegador,
+  guardarZoom,
+  leerZoom,
+  puedeAcercar,
+  puedeAlejar,
+  ZOOM_NORMAL,
+} from '../vista';
 
 interface Props {
   readonly disposicion: Disposicion;
@@ -77,6 +87,48 @@ function trazadoDeVersion(etiqueta: EtiquetaGrafo): string {
   ].join(' ');
 }
 
+/**
+ * El tamaño elegido del dibujo (SPEC 029, 1.3), recordado en el navegador.
+ * Con Ctrl y la rueda sobre el panel cambia el del grafo y no el de la pagina.
+ */
+function useZoom(panel: React.RefObject<HTMLDivElement | null>): {
+  zoom: number;
+  cambiar: (nuevo: number) => void;
+} {
+  const [zoom, setZoom] = useState(() => leerZoom(almacenDelNavegador));
+  const cambiar = (nuevo: number): void => {
+    setZoom(nuevo);
+    guardarZoom(almacenDelNavegador, nuevo);
+  };
+  const actual = useRef(zoom);
+  actual.current = zoom;
+
+  useEffect(() => {
+    const elemento = panel.current;
+    if (elemento === null) return;
+    // Un paso por cada tanto de rueda: la rueda del raton manda unos cien por
+    // muesca, y el panel tactil muchos pasos chicos.
+    let acumulado = 0;
+    const alGirar = (evento: WheelEvent): void => {
+      if (!evento.ctrlKey) return;
+      evento.preventDefault();
+      acumulado += evento.deltaY;
+      if (Math.abs(acumulado) < 40) return;
+      const nuevo = acumulado < 0 ? acercar(actual.current) : alejar(actual.current);
+      acumulado = 0;
+      if (nuevo !== actual.current) {
+        setZoom(nuevo);
+        guardarZoom(almacenDelNavegador, nuevo);
+      }
+    };
+    // No pasivo: sin preventDefault el navegador agranda la pagina entera.
+    elemento.addEventListener('wheel', alGirar, { passive: false });
+    return () => elemento.removeEventListener('wheel', alGirar);
+  }, [panel]);
+
+  return { zoom, cambiar };
+}
+
 export function Grafo({
   disposicion,
   escala,
@@ -88,6 +140,35 @@ export function Grafo({
   const { nodos, aristas, etiquetas, enlacePuntero, rotuloHuerfanas, origenX, origenY, ancho, alto } =
     disposicion;
   const nuevas = useNuevas(nodos, escenario);
+  const panel = useRef<HTMLDivElement>(null);
+  const desplazable = useRef<HTMLDivElement>(null);
+  const dibujo = useRef<SVGSVGElement>(null);
+  const { zoom, cambiar } = useZoom(panel);
+  const tamano = escala * zoom;
+
+  // Al cambiar el repositorio la vista queda mostrando HEAD (SPEC 029, 1.2):
+  // si quedo fuera de lo visible, se desplaza el panel, y solo el panel.
+  const puntero = etiquetas.find((etiqueta) => etiqueta.forma === 'puntero') ?? null;
+  const firma = `${escenario}|${puntero?.idConfirmacion ?? ''}|${nodos.length}|${nodos[0]?.id ?? ''}`;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: se mira al cambiar el repositorio, no en cada dibujo
+  useLayoutEffect(() => {
+    const caja = desplazable.current;
+    const svg = dibujo.current;
+    if (caja === null || svg === null || puntero === null) return;
+    // Donde esta el dibujo dentro de lo desplazable, contando lo ya desplazado.
+    const marco = caja.getBoundingClientRect();
+    const lienzo = svg.getBoundingClientRect();
+    const izquierda = lienzo.left - marco.left + caja.scrollLeft + (puntero.x - origenX) * tamano;
+    const arriba = lienzo.top - marco.top + caja.scrollTop + (puntero.y - origenY) * tamano;
+    const derecha = izquierda + puntero.ancho * tamano;
+    const abajo = arriba + puntero.alto * tamano;
+    if (arriba < caja.scrollTop || abajo > caja.scrollTop + caja.clientHeight) {
+      caja.scrollTop = Math.max(0, (arriba + abajo) / 2 - caja.clientHeight / 2);
+    }
+    if (izquierda < caja.scrollLeft || derecha > caja.scrollLeft + caja.clientWidth) {
+      caja.scrollLeft = Math.max(0, (izquierda + derecha) / 2 - caja.clientWidth / 2);
+    }
+  }, [firma]);
 
   if (nodos.length === 0) {
     return (
@@ -99,7 +180,51 @@ export function Grafo({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto p-4">
+    <div ref={panel} className="relative flex min-h-0 flex-1 flex-col">
+    {/*
+      Agrandar, achicar y volver al tamaño normal (SPEC 029, 1.3). Cambian los
+      puntos, las etiquetas y los mensajes juntos: es la escala del dibujo.
+    */}
+    <div className="absolute right-3 top-3 z-10 flex gap-1" role="group" aria-label="Tamaño del grafo">
+      <button
+        type="button"
+        className="boton-zoom"
+        data-prueba="zoom-menos"
+        aria-label="Achicar el grafo"
+        title="Achicar el grafo"
+        disabled={!puedeAlejar(zoom)}
+        onClick={() => cambiar(alejar(zoom))}
+      >
+        −
+      </button>
+      <button
+        type="button"
+        className="boton-zoom"
+        data-prueba="zoom-normal"
+        aria-label="Tamaño normal del grafo"
+        title="Tamaño normal"
+        disabled={zoom === ZOOM_NORMAL}
+        onClick={() => cambiar(ZOOM_NORMAL)}
+      >
+        {Math.round(zoom * 100)} %
+      </button>
+      <button
+        type="button"
+        className="boton-zoom"
+        data-prueba="zoom-mas"
+        aria-label="Agrandar el grafo"
+        title="Agrandar el grafo"
+        disabled={!puedeAcercar(zoom)}
+        onClick={() => cambiar(acercar(zoom))}
+      >
+        +
+      </button>
+    </div>
+    {/*
+      El dibujo se desplaza a lo alto y a lo ancho cuando no cabe: nunca se
+      cortan confirmaciones ni ramas (SPEC 029, 1.2).
+    */}
+    <div ref={desplazable} data-prueba="grafo-desplazable" className="relative min-h-0 flex-1 overflow-auto p-4">
       {/*
         Si ni apretando las filas caben todas las etiquetas, se dice cuales
         quedaron abajo. Nunca una rama fuera de la vista sin aviso (SPEC 016).
@@ -112,13 +237,15 @@ export function Grafo({
       {disposicion.ocultas > 0 && (
         <p className="t-min mb-2 text-[var(--texto-apagado)]">
           Se dibujan las {nodos.length} confirmaciones más recientes.{' '}
-          {disposicion.ocultas} quedaron fuera.
+          {disposicion.ocultas === 1 ? '1 quedó fuera.' : `${disposicion.ocultas} quedaron fuera.`}
         </p>
       )}
       <svg
+        ref={dibujo}
         viewBox={`${origenX} ${origenY} ${ancho} ${alto}`}
-        width={ancho * escala}
-        height={alto * escala}
+        width={ancho * tamano}
+        height={alto * tamano}
+        data-zoom={zoom}
         role="img"
         aria-label="Grafo de confirmaciones"
       >
@@ -275,6 +402,39 @@ export function Grafo({
           })}
         </g>
 
+        {/*
+          El mensaje de cada confirmacion en su fila, como git log --oneline
+          (SPEC 029, 1.1). Cortado, el completo aparece al pasar el puntero.
+        */}
+        <g data-prueba="mensajes">
+          {nodos.map((nodo) => {
+            const cortado = nodo.mensajeVisible !== nodo.mensaje.split('\n')[0]?.trim();
+            return (
+              <text
+                key={`mensaje:${nodo.id}`}
+                data-prueba="mensaje"
+                data-de={nodo.id}
+                data-cortado={cortado ? 'si' : 'no'}
+                x={nodo.mensajeX}
+                y={nodo.y + 4}
+                fontSize={LETRA}
+                fontFamily="var(--font-mono)"
+                fontStyle={nodo.previsualizada ? 'italic' : undefined}
+                style={{
+                  fill: nodo.huerfana
+                    ? 'var(--huerfano)'
+                    : nodo.previsualizada
+                      ? 'var(--texto-apagado)'
+                      : 'var(--texto)',
+                }}
+              >
+                {cortado && <title>{nodo.mensaje}</title>}
+                {nodo.mensajeVisible}
+              </text>
+            );
+          })}
+        </g>
+
         <g>
           {etiquetas.map((etiqueta) => {
             const color = colorDeEtiqueta(etiqueta);
@@ -345,6 +505,7 @@ export function Grafo({
           })}
         </g>
       </svg>
+    </div>
     </div>
   );
 }

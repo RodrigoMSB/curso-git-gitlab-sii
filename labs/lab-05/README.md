@@ -18,12 +18,13 @@ Siempre vas a escribir la misma orden. Lo que decide qué ocurre es la forma que
 
 ## Preparación
 
-Tu trabajo no va dentro del clon del curso, va al lado. Párate en la raíz del clon, la carpeta `curso-git-gitlab-sii`, y desde ahí:
+Tu trabajo va en la carpeta del taller, `taller-git`, fuera del clon del curso. Escribe esto en la consola del taller, desde cualquier carpeta.
 
 ```
-labs/lab-05/preparar.sh
-cd ../taller-git-trabajo/lab-05/recetario
+preparar 05
 ```
+
+La consola arma el escenario, comprueba que quedó bien y queda parada en `lab-05/recetario`, dentro de `taller-git`, que es donde vas a trabajar.
 
 Mira con qué te encontraste.
 
@@ -34,16 +35,11 @@ git lg
 
 Cuatro ramas de trabajo separadas de `main` en puntos distintos. Estúdialas un minuto antes de seguir.
 
-### Abre el simulador en el escenario de este laboratorio
+### El taller ya está abierto
 
-El simulador **no adivina en qué laboratorio estás**. Abierto con doble clic parte siempre en el escenario del laboratorio 01, donde todavía no hay repositorio: ahí las órdenes de este laboratorio responden `fatal: not a git repository` y el grafo no dibuja nada, por mucho que escribas.
+Todo este laboratorio se escribe en la consola del taller, la página que se abrió con `TALLER.cmd` o con `taller.command`, en la carpeta `taller-git`. El grafo y las tres áreas muestran tu repositorio de verdad mientras trabajas.
 
-Llévalo al escenario de este laboratorio, que es **Lab 05 · Fusionar y resolver**, de cualquiera de estas dos formas.
-
-- En la barra de arriba del simulador, abre el selector que dice **escenario** y elige `Lab 05`.
-- O abre el archivo con la dirección `SIMULADOR.html?lab=05`, pegándola en la barra de direcciones del navegador.
-
-Comprueba que quedaste donde corresponde antes de seguir: la barra de arriba tiene que decir `Lab 05`, y el grafo tiene que mostrar las mismas confirmaciones que acabas de ver en tu terminal.
+Si trabajas sin el programa del taller, el simulador de escenarios abre este laboratorio con la dirección `SIMULADOR.html?lab=05`, sin Git de verdad.
 
 ---
 
@@ -353,6 +349,14 @@ git status
 ```
 
 Directorio limpio.
+
+Y que el verificador lo confirme. Escríbelo en la consola, desde cualquier carpeta.
+
+```
+verificar 05
+```
+
+Imprime una línea por criterio. Si alguno falla, dice qué esperaba y qué encontró.
 
 ---
 

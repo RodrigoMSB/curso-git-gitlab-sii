@@ -24,9 +24,9 @@ set -eu
 
 RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 CLON=$(cd "$RAIZ/../.." && pwd -P)
-TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-02"
+TRABAJO="${TALLER_RAIZ:-$(dirname "$CLON")}/lab-02"
 REPOSITORIO="$TRABAJO/recetario"
-REPOSITORIO_DICHO='taller-git-trabajo/lab-02/recetario'
+REPOSITORIO_DICHO='lab-02/recetario'
 
 FORZAR=no
 for argumento in "$@"; do
@@ -95,6 +95,9 @@ if [ -e "$REPOSITORIO" ]; then
     echo
   fi
   echo "  BORRANDO $REPOSITORIO_DICHO"
+  # Fuera de la carpeta antes de borrarla: en Windows no se puede borrar la
+  # que es el directorio actual de un proceso, este incluido (SPEC 029).
+  cd "$CLON" || exit 1
   rm -rf "$REPOSITORIO"
 fi
 
@@ -235,10 +238,15 @@ echo "  Y desde ahi, para ubicarte:"
 echo "      git log --oneline"
 echo "      git status"
 echo
-echo "  Y en el simulador, elige el escenario de este laboratorio:"
-echo "      Lab 02, en el selector que dice «escenario»"
-echo "      o abrelo con la direccion SIMULADOR.html?lab=02"
-echo
-echo "  Abierto con doble clic parte en el del laboratorio 01, que"
-echo "  todavia no tiene repositorio: ahi el grafo no dibuja nada."
-echo
+# En la consola del taller no se nombra el simulador: la pagina ya es el
+# taller (SPEC 029, 3.1). TALLER_CD_DESPUES lo exporta solo esa consola;
+# desde Git Bash no esta, y se imprime como siempre.
+if [ -z "${TALLER_CD_DESPUES:-}" ]; then
+  echo "  Y en el simulador, elige el escenario de este laboratorio:"
+  echo "      Lab 02, en el selector que dice «escenario»"
+  echo "      o abrelo con la direccion SIMULADOR.html?lab=02"
+  echo
+  echo "  Abierto con doble clic parte en el del laboratorio 01, que"
+  echo "  todavia no tiene repositorio: ahi el grafo no dibuja nada."
+  echo
+fi

@@ -149,13 +149,49 @@ export function instanteDe(texto: string, ahora: number): number | null {
  * no implementado, con el especificador nombrado, en vez de escribirlo tal cual
  * y dejar al participante creyendo que Git le devolvio eso.
  */
-export const ESPECIFICADORES = ['%h', '%H', '%an', '%ad', '%s'] as const;
+export const ESPECIFICADORES = ['%h', '%H', '%an', '%ad', '%s', '%ar', '%d'] as const;
+
+/**
+ * El formato sin sus colores: `%C(...)`, `%Creset` y compañia (SPEC 031, el
+ * alias lg del laboratorio 01). Git no los pinta cuando la salida no va a una
+ * terminal, que es el caso de la consola, y el simulador tampoco.
+ */
+export function sinColores(formato: string): string {
+  return formato.replace(/%C\([^)]*\)/g, '').replace(/%C(reset|red|green|blue)/g, '');
+}
 
 /** Los `%algo` que aparecen en el formato y que no estan en la lista de arriba. */
 export function especificadoresFuera(formato: string): readonly string[] {
   const conocidos = new Set<string>(ESPECIFICADORES);
-  const encontrados = formato.match(/%[a-zA-Z]{1,2}/g) ?? [];
-  return [...new Set(encontrados.filter((uno) => !conocidos.has(uno)))];
+  const encontrados = sinColores(formato).match(/%[a-zA-Z]{1,2}/g) ?? [];
+  // `%d` va seguido de lo que sea; el patron de dos letras lo junta con la siguiente.
+  return [...new Set(encontrados.filter((uno) => !conocidos.has(uno) && !conocidos.has(uno.slice(0, 2))))];
+}
+
+/**
+ * La fecha relativa de `%ar`, con el algoritmo de Git (`show_date_relative` en
+ * date.c), en ingles, que es como la escribe Git.
+ */
+export function fechaRelativa(epoca: number, ahora: number): string {
+  const plural = (n: number, uno: string): string => `${n} ${uno}${n === 1 ? '' : 's'}`;
+  let diferencia = ahora - epoca;
+  if (diferencia < 0) return 'in the future';
+  if (diferencia < 90) return `${plural(diferencia, 'second')} ago`;
+  diferencia = Math.floor((diferencia + 30) / 60);
+  if (diferencia < 90) return `${plural(diferencia, 'minute')} ago`;
+  diferencia = Math.floor((diferencia + 30) / 60);
+  if (diferencia < 36) return `${plural(diferencia, 'hour')} ago`;
+  diferencia = Math.floor((diferencia + 12) / 24);
+  if (diferencia < 14) return `${plural(diferencia, 'day')} ago`;
+  if (diferencia < 70) return `${plural(Math.floor((diferencia + 3) / 7), 'week')} ago`;
+  if (diferencia < 365) return `${plural(Math.floor((diferencia + 15) / 30), 'month')} ago`;
+  if (diferencia < 1825) {
+    const meses = Math.floor((diferencia * 12 * 2 + 365) / (365 * 2));
+    const anos = Math.floor(meses / 12);
+    const resto = meses % 12;
+    return resto === 0 ? `${plural(anos, 'year')} ago` : `${plural(anos, 'year')}, ${plural(resto, 'month')} ago`;
+  }
+  return `${plural(Math.floor((diferencia + 183) / 365), 'year')} ago`;
 }
 
 /** Escribe una confirmacion con el formato pedido. `--date=short` acorta la fecha. */
@@ -163,12 +199,16 @@ export function aplicarFormato(
   confirmacion: Confirmacion,
   formato: string,
   fechaCortaPedida: boolean,
+  decoracion = '',
+  ahora: number = Math.floor(Date.now() / 1000),
 ): string {
   const fecha = fechaCortaPedida ? fechaCorta(confirmacion.epoca) : confirmacion.fecha;
-  return formato
+  return sinColores(formato)
     .replaceAll('%H', confirmacion.id)
     .replaceAll('%h', confirmacion.id)
     .replaceAll('%an', confirmacion.autor)
     .replaceAll('%ad', fecha)
+    .replaceAll('%ar', fechaRelativa(confirmacion.epoca, ahora))
+    .replaceAll('%d', decoracion)
     .replaceAll('%s', confirmacion.mensaje);
 }

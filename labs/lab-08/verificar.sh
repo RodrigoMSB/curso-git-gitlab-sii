@@ -17,9 +17,9 @@ set -u
 
 RAIZ=$(cd "$(dirname "$0")" && pwd -P)
 CLON=$(cd "$RAIZ/../.." && pwd -P)
-TRABAJO="$(dirname "$CLON")/taller-git-trabajo/lab-08"
+TRABAJO="${TALLER_RAIZ:-$(dirname "$CLON")}/lab-08"
 REPOSITORIO="$TRABAJO/recetario"
-REPOSITORIO_DICHO='taller-git-trabajo/lab-08/recetario'
+REPOSITORIO_DICHO='lab-08/recetario'
 
 MODO=final
 if [ "${1:-}" = '--escenario' ]; then
@@ -115,12 +115,12 @@ if [ "$MODO" = escenario ] && [ "$HAY_REPOSITORIO" = si ]; then
     aprobado 'el paquete del recetario esta al lado, y hace de origin'
   else
     fallido 'el paquete que hace de origin' \
-      'taller-git-trabajo/lab-08/recetario.bundle' 'no existe'
+      'lab-08/recetario.bundle' 'no existe'
   fi
 
   if [ ! -f "$TRABAJO/upstream.bundle" ]; then
     fallido 'el paquete del proyecto original' \
-      'taller-git-trabajo/lab-08/upstream.bundle' 'no existe'
+      'lab-08/upstream.bundle' 'no existe'
   else
     # **Tiene que ir por delante.** Si trajera lo mismo que origin, los puntos
     # 1.4 a 1.6 del enunciado no traerian nada y se quedarian sin ejercicio.

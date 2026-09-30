@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { AvisoPrevisualizacion, ColorConsola, Indicador, Renglon } from '../vista';
+import { contar, type AvisoPrevisualizacion, type ColorConsola, type Indicador, type Renglon } from '../vista';
 
 /**
  * Ancho de partida de la consola, cuando el relator todavia no movio el
@@ -21,6 +21,23 @@ import type { AvisoPrevisualizacion, ColorConsola, Indicador, Renglon } from '..
  * navegador la partia igual.
  */
 export const REPARTO_DE_PARTIDA = 'clamp(24%, calc(91ch + 42px), 72%)';
+
+/**
+ * El del modo taller, que va lado a lado desde novecientos pixeles (SPEC 027,
+ * punto 1.2). Con el tope de setenta y dos, a ese ancho el grafo se quedaba
+ * con un cuarto de la pantalla.
+ */
+export const REPARTO_DE_PARTIDA_TALLER = 'clamp(24%, calc(91ch + 42px), 60%)';
+
+/**
+ * Desde que ancho la consola y el grafo van lado a lado. Las clases van
+ * escritas enteras para que Tailwind las encuentre.
+ */
+export type Corte = 1280 | 900;
+const COLUMNA_POR_CORTE: Readonly<Record<Corte, string>> = {
+  1280: 'min-[1280px]:h-auto min-[1280px]:basis-[var(--reparto)]',
+  900: 'min-[900px]:h-auto min-[900px]:basis-[var(--reparto)]',
+};
 
 interface Props {
   readonly ref?: React.Ref<HTMLElement>;
@@ -37,6 +54,22 @@ interface Props {
   readonly onCompletar: (texto: string) => void;
   readonly onHistorial: (direccion: 'anterior' | 'siguiente') => void;
   readonly onDescartar: () => void;
+  /**
+   * La consola no acepta ordenes en el modo taller: una esta corriendo, o no
+   * hay conexion. La entrada se deshabilita y en su lugar se muestra este
+   * texto (punto 4.3 del SPEC 026).
+   */
+  readonly ocupado?: string | null;
+  /** Las lineas de ayuda bajo la entrada. El modo taller no las lleva (punto 4.7). */
+  readonly ayuda?: boolean;
+  /** Desde que ancho va lado a lado con el grafo. */
+  readonly corte?: Corte;
+  /**
+   * Una salida mas larga que la consola se muestra desde su principio, no
+   * desde su final (SPEC 027, punto 3.2). En clase, quedar mirando el final
+   * de la salida de preparar.sh confundia.
+   */
+  readonly salidasDesdeElPrincipio?: boolean;
 }
 
 const CLASE_POR_COLOR: Readonly<Record<ColorConsola, string>> = {
@@ -47,6 +80,7 @@ const CLASE_POR_COLOR: Readonly<Record<ColorConsola, string>> = {
   limite: 'text-[var(--consola-azul)] italic',
   orden: 'text-[var(--texto)]',
   apagado: 'text-[var(--texto-apagado)]',
+  programa: 'text-[var(--consola-azul)] font-sans',
 };
 
 export function Consola({
@@ -63,16 +97,37 @@ export function Consola({
   onCompletar,
   onHistorial,
   onDescartar,
+  ocupado = null,
+  ayuda = true,
+  corte = 1280,
+  salidasDesdeElPrincipio = false,
 }: Props): React.ReactElement {
   const campo = useRef<HTMLInputElement>(null);
   const desplazable = useRef<HTMLDivElement>(null);
   const pegadoAlFinal = useRef(true);
+  // Donde la dejo la propia consola la ultima vez que la movio. El evento de
+  // desplazamiento de ese movimiento llega un cuadro despues, y si entretanto
+  // la consola se achico (aparece el repositorio y la barra crece), medir la
+  // distancia al final la daba por subida a mano y la despegaba. Un evento
+  // que la encuentra donde la dejo la consola no es del participante.
+  const puesta = useRef<number | null>(null);
+  const mover = (caja: HTMLDivElement, arriba: number): void => {
+    caja.scrollTop = arriba;
+    puesta.current = caja.scrollTop;
+  };
   const [enfocado, setEnfocado] = useState(true);
+  const [hayMasAbajo, setHayMasAbajo] = useState(false);
 
   // Las dos lineas de ayuda solo tienen sentido en el momento en que sirven:
   // con el cursor puesto y todavia sin escribir nada. Permanentes se vuelven
   // ruido, sobre todo en proyeccion.
-  const mostrarAyuda = enfocado && entrada === '';
+  const mostrarAyuda = enfocado && entrada === '' && ayuda;
+
+  // Al terminar una orden larga el cursor vuelve solo a la entrada.
+  const corriendo = ocupado !== null;
+  useEffect(() => {
+    if (!corriendo) campo.current?.focus();
+  }, [corriendo]);
 
   // El cursor recibe el foco al cargar la pagina (punto 4.3).
   useEffect(() => {
@@ -88,14 +143,53 @@ export function Consola({
   useLayoutEffect(() => {
     const caja = desplazable.current;
     if (caja === null || !pegadoAlFinal.current) return;
-    caja.scrollTop = caja.scrollHeight;
+    mover(caja, caja.scrollHeight);
+    if (!salidasDesdeElPrincipio) return;
+    setHayMasAbajo(false);
+    // Si lo que imprimio la ultima orden, con su eco, no cabe, se muestra
+    // desde el eco hacia abajo y se avisa que sigue.
+    const ecos = caja.querySelectorAll<HTMLElement>('[data-color="orden"]');
+    const eco = ecos[ecos.length - 1];
+    if (eco === undefined) return;
+    const desdeElEco =
+      eco.getBoundingClientRect().top - caja.getBoundingClientRect().top + caja.scrollTop;
+    if (caja.scrollHeight - desdeElEco > caja.clientHeight) {
+      mover(caja, Math.max(0, desdeElEco - 8));
+      pegadoAlFinal.current = false;
+      setHayMasAbajo(true);
+    }
   }, [renglones]);
+
+  // Si la consola cambia de alto con el contenido pegado al final, vuelve a
+  // bajar. Al aparecer el repositorio, con git init, la barra de arriba gana
+  // una linea y la consola se achica: sin esto la salida de la orden quedaba
+  // debajo de lo que se ve (SPEC 027, punto 3.3).
+  useEffect(() => {
+    const caja = desplazable.current;
+    if (caja === null || typeof ResizeObserver === 'undefined') return;
+    const observador = new ResizeObserver(() => {
+      if (pegadoAlFinal.current) mover(caja, caja.scrollHeight);
+    });
+    observador.observe(caja);
+    return () => observador.disconnect();
+  }, []);
 
   const alDesplazar = (): void => {
     const caja = desplazable.current;
     if (caja === null) return;
+    if (puesta.current !== null && Math.abs(caja.scrollTop - puesta.current) < 1) return;
+    puesta.current = null;
     const distancia = caja.scrollHeight - caja.scrollTop - caja.clientHeight;
     pegadoAlFinal.current = distancia < 24;
+    if (pegadoAlFinal.current) setHayMasAbajo(false);
+  };
+
+  const irAlFinal = (): void => {
+    const caja = desplazable.current;
+    if (caja === null) return;
+    mover(caja, caja.scrollHeight);
+    pegadoAlFinal.current = true;
+    setHayMasAbajo(false);
   };
 
   const alTeclear = (evento: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -145,11 +239,11 @@ export function Consola({
       // La columna entera, de arriba abajo (SPEC 017, punto 2.1). El ancho sale
       // del reparto; la letra de la seccion es la de la consola, para que el
       // `ch` del ancho de partida mida sus caracteres.
-      className="panel terminal t-normal flex h-[26rem] min-h-0 flex-none flex-col font-mono min-[1280px]:h-auto min-[1280px]:basis-[var(--reparto)]"
+      className={`panel terminal t-normal flex h-[26rem] min-h-0 flex-none flex-col font-mono ${COLUMNA_POR_CORTE[corte]}`}
       style={
         {
           background: 'var(--fondo-consola)',
-          '--reparto': reparto === null ? REPARTO_DE_PARTIDA : `${reparto}%`,
+          '--reparto': reparto === null ? (corte === 900 ? REPARTO_DE_PARTIDA_TALLER : REPARTO_DE_PARTIDA) : `${reparto}%`,
         } as React.CSSProperties
       }
       aria-label="Consola"
@@ -170,10 +264,18 @@ export function Consola({
         {renglones.map((renglon) =>
           renglon.color === 'orden' ? (
             <div key={renglon.clave} className="mt-4 first:mt-0" data-color="orden">
-              <LineaIndicador indicador={indicador} />
+              <LineaIndicador indicador={renglon.indicador ?? indicador} />
               <div className="text-[var(--texto)]">
                 <span className="text-[var(--consola-verde)]">$ </span>
-                {renglon.texto}
+                {renglon.propia === true ? (
+                  // Las ordenes propias de la consola del taller, en el color del
+                  // programa: no son de bash (SPEC 027, punto 4.5).
+                  <span className="text-[var(--consola-azul)]" data-propia="si">
+                    {renglon.texto}
+                  </span>
+                ) : (
+                  renglon.texto
+                )}
               </div>
             </div>
           ) : (
@@ -203,18 +305,37 @@ export function Consola({
         >
           Previsualización:{' '}
           {aviso.confirmacionesNuevas > 0
-            ? `${aviso.confirmacionesNuevas} confirmación(es) en trazo discontinuo`
+            ? `${contar(aviso.confirmacionesNuevas, 'confirmación', 'confirmaciones')} en trazo discontinuo`
             : 'sin confirmaciones nuevas'}
           {aviso.punteroMovido ? ', el puntero se moverá' : ', el puntero no se mueve'}. Entrar
           ejecuta, Escape descarta.
         </p>
       )}
 
-      <div className="shrink-0 border-t border-[var(--borde-suave)] px-5 py-4">
+      <div className="shrink-0 border-t border-[var(--borde-suave)] px-5 py-4" aria-busy={corriendo}>
+        {hayMasAbajo && (
+          // Discreta, sobre el indicador y fuera de la salida, para no tapar
+          // ninguna linea. Un clic baja hasta el final.
+          <button
+            type="button"
+            onClick={irAlFinal}
+            data-prueba="mas-abajo"
+            className="t-min mb-2 block font-sans text-[var(--texto-apagado)] hover:text-[var(--texto)]"
+          >
+            la salida sigue más abajo ↓
+          </button>
+        )}
         <LineaIndicador indicador={indicador} />
         <div className="t-normal flex items-baseline gap-2 font-mono">
           <span className="text-[var(--consola-verde)]">$</span>
+          {corriendo && (
+            <span className="t-normal min-w-0 flex-1 truncate font-mono text-[var(--texto-apagado)]" role="status" data-prueba="orden-corriendo">
+              {ocupado}
+            </span>
+          )}
           <input
+            hidden={corriendo}
+            disabled={corriendo}
             ref={campo}
             value={entrada}
             onChange={(evento) => onEntrada(evento.target.value)}
@@ -251,7 +372,7 @@ export function Consola({
 
 function LineaIndicador({ indicador }: { readonly indicador: Indicador }): React.ReactElement {
   return (
-    <div className="t-min font-mono">
+    <div className="t-min font-mono" data-prueba="indicador">
       <span className="text-[var(--consola-verde)]">{indicador.usuario}</span>{' '}
       <span className="text-[var(--consola-amarillo)]">{indicador.ruta}</span>
       {indicador.rama !== null && (

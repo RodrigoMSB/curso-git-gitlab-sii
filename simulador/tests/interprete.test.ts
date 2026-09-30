@@ -117,7 +117,7 @@ describe('identificadores', () => {
 
 describe('ordenes del interprete de mandatos', () => {
   it('pwd muestra el directorio de trabajo', () => {
-    expect(texto(ejecutar(repoLimpio(), 'pwd'))).toBe('/taller-git-trabajo/lab-03/recetario');
+    expect(texto(ejecutar(repoLimpio(), 'pwd'))).toBe('/taller-git/lab-03/recetario');
   });
 
   it('ls muestra las entradas de primer nivel y las carpetas con barra', () => {

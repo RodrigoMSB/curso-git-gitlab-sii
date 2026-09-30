@@ -6,6 +6,7 @@
  * (restriccion R6 y criterio CA7 del SPEC 002).
  */
 
+export { contar } from './contar';
 export type { ColorConsola, Completado, Indicador, Renglon } from './consola';
 export { completar, navegarHistorial } from './consola';
 
@@ -37,3 +38,37 @@ export type {
   TonoElemento,
 } from './pantalla';
 export { construirPantalla, ESCALA_RELATOR, FILAS_VISIBLES, TEXTO_MINIMO } from './pantalla';
+
+export type {
+  BarraTaller,
+  DocumentoTaller,
+  EstadoGit,
+  RespuestaOrden,
+  SesionGit,
+} from './modoTaller';
+export {
+  barraDelTaller,
+  claveDelTaller,
+  columnasDelTaller,
+  completarEnTaller,
+  grafoDelTaller,
+  guardadosDelTaller,
+  indicadorDelTaller,
+  presentacion,
+  renglonDelPrograma,
+  renglonesDeAyuda,
+  renglonesDeOrden,
+} from './modoTaller';
+export { AYUDA, ORDENES_CONOCIDAS, esOrdenPropia, ordenesPegadas } from './ordenesConocidas';
+
+export type { Almacen } from './zoomGrafo';
+export {
+  acercar,
+  alejar,
+  almacenDelNavegador,
+  guardarZoom,
+  leerZoom,
+  puedeAcercar,
+  puedeAlejar,
+  ZOOM_NORMAL,
+} from './zoomGrafo';

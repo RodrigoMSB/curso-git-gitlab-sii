@@ -24,7 +24,7 @@ import {
 } from '../estado';
 import { arbolDe, comparacionesEntre, textoDeTrabajo, textoEnCabeza } from '../contenido';
 import { formatearEstadisticasDe, formatearParches, resumenDeConfirmacion } from '../diferencias';
-import { formatearEstadoLargo, formatearHistorial } from '../formato';
+import { decoracion, formatearEstadoLargo, formatearHistorial, prefijos } from '../formato';
 import { historia } from '../grafo';
 import {
   aplicarFiltros,
@@ -448,10 +448,15 @@ export const ordenLog: Manejador = (estado, argumentos) => {
     }
     const corta = valorDeOpcionPegado(argumentos, '--date') === 'short';
     const limitadas = recortar(confirmaciones, limitePedido(argumentos));
-    return ok(
-      estado,
-      lineas(...limitadas.map((confirmacion) => aplicarFormato(confirmacion, formato, corta))),
-    );
+    // Con --graph, las marcas del grafo delante de cada linea, como con --oneline.
+    const grafo = tieneOpcion(argumentos, '--graph');
+    const filas: string[] = [];
+    for (const confirmacion of limitadas) {
+      const marcas = prefijos(confirmacion, grafo);
+      filas.push(`${marcas.primero}${aplicarFormato(confirmacion, formato, corta, decoracion(estado, confirmacion.id))}`);
+      if (marcas.cierre !== null) filas.push(marcas.cierre);
+    }
+    return ok(estado, lineas(...filas));
   }
 
   const cuerpo = formatearHistorial(estado, confirmaciones, {

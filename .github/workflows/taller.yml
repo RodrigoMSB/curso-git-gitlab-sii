@@ -1,0 +1,318 @@
+# SPEC 028 · El taller con los dos motores, en Windows y en Mac.
+#
+# 1. runtimes: los dos runtimes de Java, generados con el script del
+#    repositorio desde los jmods de Temurin con sus sumas fijas, como
+#    artefacto para los demas trabajos.
+# 2. unidad: las pruebas de Java y el jar confirmado contra el codigo, en
+#    Windows y en Mac; simulador: la suite y SIMULADOR.html contra su
+#    manifiesto, en Linux.
+# 3. instalacion: de cero, como el participante: taller-git, el clon como
+#    curso, INSTALAR y TALLER, con cada paso de la cascada (Java, Python con
+#    el jar saboteado, respaldo con los dos saboteados), y en Windows ademas
+#    con Git fuera del PATH.
+# 4. interfaz: los dos motores responden lo mismo a lo mismo. cierre: en
+#    Windows, al cerrar la ventana o al morir el motor no queda nada vivo.
+# 5. laboratorio 08: los mismos identificadores con autocrlf en true.
+# 6. recorrido: los ocho laboratorios escritos en la consola de la pagina, con
+#    cada motor, en Edge y Chrome sobre Windows y Chrome sobre Mac, y con Git
+#    solo para Git Bash.
+# 7. usuario-con-tilde: el recorrido como un usuario de Windows con espacio y
+#    tilde en su carpeta personal, con cada motor.
+name: taller
+on:
+  push:
+    branches: [main, taller, taller-java25]
+  workflow_dispatch:
+jobs:
+  runtimes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Genera los runtimes con jlink
+        run: taller/java/fuente/generar-runtimes.sh
+      - name: Empaqueta conservando permisos
+        run: tar czf jre.tar.gz -C taller/java jre
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jre
+          path: jre.tar.gz
+
+  unidad:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Sin convertir finales de linea al bajar el codigo
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Versiones
+        run: git --version && bash --version | head -1 && java -version && (python3 --version || python --version)
+      - name: Pruebas de Java
+        working-directory: taller/java/fuente
+        run: ./mvnw -B -ntp verify
+      - name: El jar confirmado corresponde al codigo
+        run: |
+          mkdir -p "$RUNNER_TEMP/a" "$RUNNER_TEMP/b"
+          (cd "$RUNNER_TEMP/a" && unzip -q -o "$GITHUB_WORKSPACE/taller/java/taller.jar")
+          (cd "$RUNNER_TEMP/b" && unzip -q -o "$GITHUB_WORKSPACE/taller/java/fuente/target/taller.jar")
+          diff -r "$RUNNER_TEMP/a" "$RUNNER_TEMP/b" && echo "el jar confirmado es el del codigo"
+
+  # La suite del simulador se escribio para correr en el Mac del desarrollo:
+  # varias pruebas dependen del Git de la maquina (la lista de ordenes, la rama
+  # inicial) y de permisos de ejecucion que Windows no tiene. Aqui corre en
+  # Linux, con el Git del sistema.
+  simulador:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sin convertir finales de linea al bajar el codigo
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Suite del simulador
+        working-directory: simulador
+        run: git --version && npm ci && npm run comprobar && npx vitest run
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+  instalacion:
+    needs: runtimes
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+        motor: [java, python, respaldo]
+        variante: [normal]
+        include:
+          - os: windows-latest
+            motor: java
+            variante: git-fuera-del-path
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: jre
+      - name: Pone el runtime en su lugar
+        run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java && ls taller/java/jre
+      - name: Instala y arranca
+        env:
+          MOTOR: ${{ matrix.motor }}
+          VARIANTE: ${{ matrix.variante }}
+        run: bash taller/probar-instalacion.sh
+
+  # Al cerrar la consola de TALLER.cmd (CTRL_CLOSE_EVENT de verdad, con una
+  # pseudoconsola) o al morir el motor de golpe: no queda nada vivo, el motor
+  # no lanza PowerShell, y un segundo arranque inmediato recrea lab-01. Java
+  # tambien sin su objeto de trabajo, a proposito (SPEC 030).
+  cierre:
+    needs: runtimes
+    strategy:
+      fail-fast: false
+      matrix:
+        motor: [java, python]
+        cierre: [ventana, motor]
+        falla: ['no']
+        include:
+          # Java sin su objeto de trabajo, a proposito: avisa, sigue, y Rastro
+          # cierra al arrancar lo que quedo (SPEC 030, 3.2).
+          - { motor: java, cierre: ventana, falla: 'si' }
+          - { motor: java, cierre: motor, falla: 'si' }
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: jre
+      - name: Pone el runtime en su lugar
+        shell: bash
+        run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
+      - name: Cierra y vuelve a arrancar
+        shell: pwsh
+        run: taller/probar-cierre.ps1 -Motor ${{ matrix.motor }} -Cierre ${{ matrix.cierre }} -FallaTrabajo:$${{ matrix.falla == 'si' }}
+
+  interfaz:
+    needs: runtimes
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: jre
+      - name: Pone el runtime en su lugar
+        run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
+      - name: Dependencias, sin bajar navegadores
+        working-directory: simulador
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Java y Python responden lo mismo
+        working-directory: simulador
+        run: npx vitest run --config vitest.taller-java.config.ts taller-java/interfaz.test.ts
+
+  # El motor de Python tiene treinta segundos, como el de Java (SPEC 029).
+  espera-python:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Un Python que tarda ocho segundos en arrancar
+        run: bash taller/probar-espera-python.sh
+
+  laboratorio-08:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cinco preparaciones con autocrlf en true
+        run: bash taller/probar-lab-08.sh
+
+  recorrido:
+    needs: runtimes
+    strategy:
+      fail-fast: false
+      matrix:
+        motor: [java, python]
+        entorno:
+          - { os: windows-latest, navegador: msedge, variante: normal }
+          - { os: windows-latest, navegador: chrome, variante: normal }
+          - { os: macos-latest, navegador: chrome, variante: normal }
+          - { os: windows-latest, navegador: chrome, variante: git-fuera-del-path }
+    runs-on: ${{ matrix.entorno.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: jre
+      - name: Pone el runtime en su lugar
+        run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
+      - name: Dependencias, sin bajar navegadores
+        working-directory: simulador
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Versiones
+        run: git --version && node --version && bash --version | head -1 && (python3 --version || python --version)
+      - name: Los ocho laboratorios en la pagina
+        working-directory: simulador
+        run: npx vitest run --config vitest.taller-java.config.ts taller-java/recorrido.test.ts
+        env:
+          TALLER_MOTOR: ${{ matrix.motor }}
+          TALLER_NAVEGADOR: ${{ matrix.entorno.navegador }}
+          TALLER_SIN_GIT_EN_PATH: ${{ matrix.entorno.variante == 'git-fuera-del-path' && '1' || '0' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recorrido-${{ matrix.motor }}-${{ matrix.entorno.os }}-${{ matrix.entorno.navegador }}-${{ matrix.entorno.variante }}
+          path: simulador/capturas-taller-java
+
+  # SPEC 032, 3.4: en main, una instalacion desde cero como la del
+  # participante en Windows con Edge. El curso se clona de GitHub sin -b, con
+  # el Java que trae el repositorio, INSTALAR.cmd y TALLER.cmd con doble clic,
+  # el laboratorio 01 en la consola de la pagina y verificar 01 aprobado.
+  # A mano (workflow_dispatch) en otra rama, clona el arbol de esa rama: sirve
+  # para probar el doble clic antes de llegar a main.
+  desde-cero:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dependencias de la prueba, sin bajar navegadores
+        working-directory: simulador
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: El laboratorio 01, desde un clon de main
+        working-directory: simulador
+        run: npx vitest run --config vitest.taller-java.config.ts taller-java/recorrido.test.ts -t "laboratorio 01"
+        env:
+          TALLER_CLONAR_DESDE: ${{ github.ref == 'refs/heads/main' && format('https://github.com/{0}.git', github.repository) || github.workspace }}
+          TALLER_CONFIRMACION_ESPERADA: ${{ github.sha }}
+          TALLER_RAMA_ESPERADA: ${{ github.ref_name }}
+          TALLER_ARRANQUE: doble-clic
+          TALLER_LABS: '01'
+          TALLER_MOTOR: java
+          TALLER_NAVEGADOR: msedge
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desde-cero-windows-msedge
+          path: simulador/capturas-taller-java
+
+  usuario-con-tilde:
+    needs: runtimes
+    strategy:
+      fail-fast: false
+      matrix:
+        motor: [java, python]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: jre
+      - name: Pone el runtime en su lugar
+        shell: bash
+        run: rm -rf taller/java/jre && tar xzf jre.tar.gz -C taller/java
+      - name: Dependencias, sin bajar navegadores
+        shell: bash
+        working-directory: simulador
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: El recorrido como José Pérez
+        shell: pwsh
+        env:
+          TALLER_MOTOR: ${{ matrix.motor }}
+        run: taller/java/fuente/como-usuario-con-tilde.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recorrido-usuario-con-tilde-${{ matrix.motor }}
+          path: C:\taller-usuario\salida
