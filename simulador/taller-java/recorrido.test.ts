@@ -65,6 +65,14 @@ const MOTOR = process.env.TALLER_MOTOR === 'python' ? 'python' : 'java';
 const SALIDA = process.env.TALLER_CAPTURAS ?? join(REPO, 'simulador', 'capturas-taller-java', MOTOR);
 const CON_CAPTURAS = new Set(['01', '02']);
 const CLON = 'curso';
+/**
+ * La instalacion desde cero del SPEC 032, 3.4: el curso se clona de esta
+ * direccion, sin `-b`, que es la rama principal, y no del arbol local. Con
+ * `TALLER_ARRANQUE=doble-clic` se instala con INSTALAR.cmd y se arranca con
+ * TALLER.cmd, como el participante en Windows.
+ */
+const CLONAR_DESDE = process.env.TALLER_CLONAR_DESDE ?? '';
+const DOBLE_CLIC = process.env.TALLER_ARRANQUE === 'doble-clic' && WINDOWS;
 
 // --- Los pasos del guion ------------------------------------------------------
 
@@ -246,11 +254,27 @@ function copiar(origen: string, destino: string): void {
 /** Instala el taller como el participante: clona en taller-git/curso y corre instalar.command. */
 function instalar(limite: string): void {
   const destino = join(limite, CLON);
-  execFileSync(herramientas().git, ['clone', '-q', REPO, destino], { stdio: 'ignore' });
+  if (CLONAR_DESDE !== '') {
+    execFileSync(herramientas().git, ['clone', '-q', CLONAR_DESDE, destino], { stdio: 'ignore' });
+    const esperado = process.env.TALLER_CONFIRMACION_ESPERADA ?? '';
+    const cabeza = execFileSync(herramientas().git, ['-C', destino, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const rama = execFileSync(herramientas().git, ['-C', destino, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8' }).trim();
+    const ramaEsperada = process.env.TALLER_RAMA_ESPERADA ?? 'main';
+    if (rama !== ramaEsperada || (esperado !== '' && cabeza !== esperado)) {
+      throw new Error(`el clon sin -b quedo en ${rama} ${cabeza}, y se esperaba ${ramaEsperada} ${esperado}`);
+    }
+    if (DOBLE_CLIC) {
+      const instalado = execFileSync('cmd.exe', ['/d', '/c', 'INSTALAR.cmd'], { cwd: destino, encoding: 'utf8', input: '\r\n' });
+      if (!existsSync(join(limite, 'TALLER.cmd'))) throw new Error(`INSTALAR.cmd no dejo TALLER.cmd:\n${instalado}`);
+      return;
+    }
+  } else {
+    execFileSync(herramientas().git, ['clone', '-q', REPO, destino], { stdio: 'ignore' });
+  }
   // Lo que todavia no esta confirmado en la rama viaja igual: el recorrido
   // prueba el arbol de trabajo, no el ultimo commit. En la integracion
   // continua el arbol es el commit y no hace falta.
-  if (process.env.CI !== 'true') {
+  if (process.env.CI !== 'true' && CLONAR_DESDE === '') {
     for (const ruta of ['SIMULADOR.html', 'taller', 'labs', 'INSTALAR.cmd', 'instalar.command']) {
       copiar(join(REPO, ruta), join(destino, ruta));
     }
@@ -496,18 +520,28 @@ beforeAll(async () => {
   // En Windows, como TALLER.cmd: bash --login, que arma su propio PATH aunque
   // el del sistema no tenga Git, y se queda en la carpeta de la que parte.
   const taller = join(A.limite, 'taller.sh').replaceAll('\\', '/');
-  programa = spawn(herramientas().bash, WINDOWS ? ['--login', taller] : [taller], {
-    cwd: A.limite,
-    env: WINDOWS ? { ...A.entorno, CHERE_INVOKING: '1' } : A.entorno,
-  });
+  programa = DOBLE_CLIC
+    ? // El doble clic en TALLER.cmd. El navegador lo abre la prueba, y la direccion queda en .taller/direccion.
+      spawn('cmd.exe', ['/d', '/c', 'TALLER.cmd'], { cwd: A.limite, env: { ...A.entorno, TALLER_SIN_NAVEGADOR: '1' } })
+    : spawn(herramientas().bash, WINDOWS ? ['--login', taller] : [taller], {
+        cwd: A.limite,
+        env: WINDOWS ? { ...A.entorno, CHERE_INVOKING: '1' } : A.entorno,
+      });
   programa.stdout?.on('data', (d) => (registroPrograma += d));
   programa.stderr?.on('data', (d) => (registroPrograma += d));
   const inicio = Date.now();
-  while (!/Dirección: (http\S+)/.test(registroPrograma)) {
-    if (Date.now() - inicio > 60_000) throw new Error(`el programa no arranco:\n${registroPrograma}`);
+  const anotada = join(A.limite, '.taller', 'direccion');
+  const leida = (): string =>
+    DOBLE_CLIC
+      ? existsSync(anotada)
+        ? (readFileSync(anotada, 'utf8').split(/\r?\n/)[0] ?? '').trim()
+        : ''
+      : (registroPrograma.match(/Dirección: (http\S+)/)?.[1] ?? '');
+  while (!/^http\S+clave=/.test(leida())) {
+    if (Date.now() - inicio > 90_000) throw new Error(`el programa no arranco:\n${registroPrograma}`);
     await new Promise((r) => setTimeout(r, 100));
   }
-  direccion = registroPrograma.match(/Dirección: (http\S+)/)?.[1] ?? '';
+  direccion = leida();
 
   navegador = await chromium.launch({ channel: CANAL });
   pagina = await navegador.newPage({ viewport: { width: 1440, height: 900 } });
@@ -702,6 +736,10 @@ describe('el modo taller, laboratorio por laboratorio', () => {
         if (enConsola !== enGit) dif.push(`consola:\n--- pagina\n${enConsola}\n--- Git\n${enGit}`);
         // El resultado de cada verificador queda en el informe.
         const criterios = consola.git.match(/(\d+) de (\d+) criterios aprobados/);
+        // En la instalacion desde cero (SPEC 032, 3.4) el verificador tiene que aprobar entero.
+        if (CLONAR_DESDE !== '' && /^verificar \d+$/.test(textoA) && (criterios === null || criterios[1] !== criterios[2])) {
+          dif.push(`el verificador no aprobo: ${criterios === null ? 'sin resultado' : `${criterios[1]} de ${criterios[2]}`}`);
+        }
         const texto =
           (p.arnes === undefined ? textoA : `${textoA}   (arnés: ${p.arnes})`) +
           (criterios === null ? '' : `   → verificador ${criterios[1]} de ${criterios[2]}`);

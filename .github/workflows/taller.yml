@@ -21,7 +21,7 @@
 name: taller
 on:
   push:
-    branches: [taller, taller-java25]
+    branches: [main, taller, taller-java25]
   workflow_dispatch:
 jobs:
   runtimes:
@@ -241,6 +241,45 @@ jobs:
         if: always()
         with:
           name: recorrido-${{ matrix.motor }}-${{ matrix.entorno.os }}-${{ matrix.entorno.navegador }}-${{ matrix.entorno.variante }}
+          path: simulador/capturas-taller-java
+
+  # SPEC 032, 3.4: en main, una instalacion desde cero como la del
+  # participante en Windows con Edge. El curso se clona de GitHub sin -b, con
+  # el Java que trae el repositorio, INSTALAR.cmd y TALLER.cmd con doble clic,
+  # el laboratorio 01 en la consola de la pagina y verificar 01 aprobado.
+  # A mano (workflow_dispatch) en otra rama, clona el arbol de esa rama: sirve
+  # para probar el doble clic antes de llegar a main.
+  desde-cero:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dependencias de la prueba, sin bajar navegadores
+        working-directory: simulador
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: El laboratorio 01, desde un clon de main
+        working-directory: simulador
+        run: npx vitest run --config vitest.taller-java.config.ts taller-java/recorrido.test.ts -t "laboratorio 01"
+        env:
+          TALLER_CLONAR_DESDE: ${{ github.ref == 'refs/heads/main' && format('https://github.com/{0}.git', github.repository) || github.workspace }}
+          TALLER_CONFIRMACION_ESPERADA: ${{ github.sha }}
+          TALLER_RAMA_ESPERADA: ${{ github.ref_name }}
+          TALLER_ARRANQUE: doble-clic
+          TALLER_LABS: '01'
+          TALLER_MOTOR: java
+          TALLER_NAVEGADOR: msedge
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desde-cero-windows-msedge
           path: simulador/capturas-taller-java
 
   usuario-con-tilde:
