@@ -92,7 +92,7 @@ const MENSAJES_01 = {
 
 /** Los alias del enunciado, tal como quedan en la configuracion. */
 const ALIAS_01 =
-  "[alias]\n\ts = status --short\n\tlg = log --graph --all --format='%C(yellow)%h%C(reset) %C(green)(%ar)%C(reset) %s %C(bold blue)<%an>%C(reset)%C(auto)%d%C(reset)'\n";
+  "[alias]\n\ts = status --short\n\tlg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all\n";
 
 /**
  * Hace el nucleo del laboratorio 01 siguiendo el enunciado paso a paso: la

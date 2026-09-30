@@ -169,7 +169,9 @@ export const OPCIONES: Readonly<Record<string, readonly string[]>> = {
   // oido. `-q` no: ver `CALLAR`.
   commit: ['-m', '--message', '-a', '--all', '--amend', '--no-edit', '-c', '-C'],
   log: [
-    '--oneline', '--graph', '--all', '--decorate', '--no-decorate', '--date-order',
+    // `--abbrev-commit` entro con el SPEC 032: la lleva el `lg` del material. Los
+    // identificadores del simulador ya son cortos, asi que no cambia nada.
+    '--oneline', '--graph', '--all', '--abbrev-commit', '--decorate', '--no-decorate', '--date-order',
     '-n', '--max-count', '--author', '--since', '--after', '--until', '--before',
     '--format', '--pretty', '--date', '--', '-S', '--stat', '-p', '--patch',
   ],
@@ -367,6 +369,7 @@ export const EQUIVALENTES: Readonly<Record<string, string>> = {
   'git status --long': 'es la forma larga de git status, que es la de por omision',
   'git restore --worktree': 'es el ambito por omision de git restore',
   'git commit --no-edit': 'el simulador no abre editor: acepta el mensaje propuesto',
+  'git log --abbrev-commit': 'los identificadores del simulador ya son cortos: no hay forma larga que acortar',
   'git log --decorate': 'el simulador decora siempre, igual que Git contra un terminal',
   'git log --no-decorate': 'no se puede apagar la decoracion: el grafo la necesita para explicarse',
   'git log --date-order': 'la historia ya se recorre por fecha, de la mas reciente a la mas antigua',

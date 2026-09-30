@@ -52,7 +52,8 @@ interface Montado {
 function montar(numero: string): Montado {
   const raiz = carpetaTemporal();
   montados.push(raiz);
-  const clon = join(raiz, 'curso-git-gitlab-sii');
+  // Como lo deja INSTALAR, el clon es `taller-git/curso` (SPEC 028).
+  const clon = join(raiz, 'curso');
   const carpeta = join(clon, 'labs', `lab-${numero}`);
   mkdirSync(carpeta, { recursive: true });
   for (const archivo of ['preparar.sh', 'verificar.sh']) {

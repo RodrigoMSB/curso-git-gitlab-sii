@@ -5878,3 +5878,25 @@ avisar al relator o empezar de nuevo.
 | 4.3, el `lg` pegado en la consola queda igual que en Git Bash y que en el enunciado | pegando la línea sin las comillas simples, la consola guardó `--format=%C(yellow)...` sin comillas y la prueba mostró los tres valores |
 | `laboratorios.test.ts`, los nueve criterios del 01 uno por uno | los diez casos nuevos fallaron contra el verificador anterior |
 | `alias-lg.test.ts`, `%ar` contra Git y `git lg` en cada escenario | antes de enseñarle `%ar`, `%d` y los colores al simulador |
+
+## 78. El laboratorio 01 final (SPEC 032)
+
+- **El alias `lg` es el del material** (Segunda Parte de 2024 y guía 2025),
+  y reemplaza al reconstruido en el SPEC 031:
+  `log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all`.
+  El simulador de escenarios acepta `--abbrev-commit`, declarado equivalente
+  porque sus identificadores ya son cortos; `--decorate`, `--format=format:`
+  y `--all` después del formato ya los entendía. `verificar 01` no cambia:
+  pide que `lg` lleve `%an` y `%ar`, y el del material los lleva.
+- **Parte 1:** después de `ls`, `cd curso` y `cd ..`, mirando el prompt, con
+  la línea que dice que `..` es la carpeta de arriba.
+- **Parte 3:** una línea sobre `mkdir` y `-p`.
+- **Visual Studio Code:** en la parte 4, cómo se crea un archivo (el botón de
+  archivo nuevo del explorador, el nombre, pegar y Ctrl+S o Cmd+S); en la
+  parte 6, las dos recetas con la carpeta `recetas` seleccionada. La frase
+  sigue empezando con «Crea `archivo`», que es lo que el extractor lee.
+- **Pruebas:** el arnés de los scripts montaba el clon como
+  `curso-git-gitlab-sii`; desde el SPEC 028 es `taller-git/curso`, y con el
+  `cd curso` nuevo el laboratorio 01 fallaba. La prueba 4.3 del recorrido de
+  la página (el alias pegado queda igual en la consola, en Bash y en el
+  enunciado) cubre el `lg` nuevo sin cambios.

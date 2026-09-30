@@ -43,6 +43,12 @@ describe('la fecha relativa de %ar es la de Git', () => {
 });
 
 describe('el alias lg del taller en el simulador', () => {
+  it('es el del material, tal cual (SPEC 032, 1.1)', () => {
+    expect(ALIAS_DEL_TALLER.lg).toBe(
+      "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all",
+    );
+  });
+
   it('trae autor, fecha relativa y colores', () => {
     expect(ALIAS_DEL_TALLER.lg).toContain('%an');
     expect(ALIAS_DEL_TALLER.lg).toContain('%ar');
@@ -62,6 +68,7 @@ describe('el alias lg del taller en el simulador', () => {
   it('una linea por confirmacion, con el grafo, el autor, la fecha y las ramas', () => {
     const r = texto(ejecutar(escenarioPorId('lab-02'), 'git lg'));
     const primera = r.split('\n')[0] ?? '';
-    expect(primera).toMatch(/^\* [0-9a-f]{7} \(\d+ \w+.* ago\) .+ <[^>]+> \(HEAD -> main\)$/);
+    // El lg del material (SPEC 032): «* id - (hace cuanto) mensaje - autor (ramas)».
+    expect(primera).toMatch(/^\* [0-9a-f]{7} - \(\d+ \w+.* ago\) .+ - [^(]+ \(HEAD -> main\)$/);
   });
 });

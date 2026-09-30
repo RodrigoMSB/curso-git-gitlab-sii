@@ -47,6 +47,18 @@ ls
 Lista lo que hay dentro. Deberías ver la carpeta `curso`, que es el clon del curso, y los programas del taller.
 
 ```
+cd curso
+```
+
+Entraste al clon del curso. Mira la línea donde escribes, la carpeta cambió.
+
+```
+cd ..
+```
+
+Los dos puntos quieren decir la carpeta de arriba. Volviste a `taller-git`, donde estabas, y la línea donde escribes lo dice.
+
+```
 clear
 ```
 
@@ -106,7 +118,7 @@ git config --global alias.s "status --short"
 El segundo es largo. **No lo escribas a mano, cópialo y pégalo en la consola.** Un solo carácter distinto y el alias no funciona.
 
 ```
-git config --global alias.lg "log --graph --all --format='%C(yellow)%h%C(reset) %C(green)(%ar)%C(reset) %s %C(bold blue)<%an>%C(reset)%C(auto)%d%C(reset)'"
+git config --global alias.lg "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all"
 ```
 
 Muestra la historia como un árbol, con el autor de cada confirmación y hace cuánto se hizo. Todavía no los pruebes, no tienes repositorio.
@@ -124,6 +136,8 @@ mkdir -p lab-01/recetario
 cd lab-01/recetario
 git init
 ```
+
+`mkdir` crea una carpeta. Con `-p` crea también las carpetas intermedias que falten, en este caso `lab-01` y dentro de ella `recetario`.
 
 Fíjate en lo que respondió Git. Te dice que creó un repositorio vacío.
 
@@ -147,7 +161,7 @@ El punto quiere decir esta carpeta. Se abre una ventana de Visual Studio Code so
 
 **Tiempo sugerido, 20 minutos.**
 
-**En Visual Studio Code.** Crea `README.md` con este contenido y guárdalo.
+**En Visual Studio Code.** Crea `README.md`. En el explorador de la izquierda aprieta el botón de archivo nuevo, escribe el nombre y aprieta Enter. Pega este contenido y guarda con Ctrl+S, o con Cmd+S en Mac.
 
 ```
 # Recetario COMIDA CHILENA
@@ -276,7 +290,7 @@ Ahora una carpeta con dos recetas.
 mkdir recetas
 ```
 
-**En Visual Studio Code.** Crea `recetas/pastel-de-choclo.md`.
+**En Visual Studio Code.** Crea `recetas/pastel-de-choclo.md`. Selecciona primero la carpeta `recetas` en el explorador y después aprieta el botón de archivo nuevo, para que el archivo quede adentro. El nombre es `pastel-de-choclo.md`.
 
 ```
 # Pastel de choclo
@@ -284,7 +298,7 @@ mkdir recetas
 Preparacion del pino, molienda del choclo, horneado en greda.
 ```
 
-**En Visual Studio Code.** Crea `recetas/empanadas.md`.
+**En Visual Studio Code.** Crea `recetas/empanadas.md`, también con la carpeta `recetas` seleccionada. El nombre es `empanadas.md`.
 
 ```
 # Empanadas de pino
