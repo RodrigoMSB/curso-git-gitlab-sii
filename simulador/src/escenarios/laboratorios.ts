@@ -177,24 +177,12 @@ export const LAB01: EscenarioDeclarado = {
   ramas: [],
   etiquetas: [],
   posicion: 'main',
-  // Los textos son los que el enunciado le hace escribir en su Parte 3, uno
-  // por uno. Aqui estan todos desde el principio, que es la licencia anotada
-  // en `sinReflejar`, pero el contenido es el mismo que va a tener en su disco.
-  archivos: [
-    { nombre: 'README.md', estado: 'sin-seguimiento', contenido: README_RECETARIO },
-    { nombre: 'platos.md', estado: 'sin-seguimiento', contenido: PLATOS_CURANTO },
-    { nombre: 'ingredientes.md', estado: 'sin-seguimiento', contenido: INGREDIENTES_BASE },
-    { nombre: 'cocineros.md', estado: 'sin-seguimiento', contenido: COCINEROS_DOS },
-    {
-      nombre: 'recetas/pastel-de-choclo.md',
-      estado: 'sin-seguimiento',
-      contenido: PASTEL_DE_CHOCLO,
-    },
-    { nombre: 'recetas/empanadas.md', estado: 'sin-seguimiento', contenido: EMPANADAS },
-  ],
+  // SPEC 032: la carpeta parte vacia, como en el enunciado. Cada archivo lo
+  // crea el participante, en su parte, y el primero es README.md.
+  archivos: [],
   remotos: [],
   sinReflejar: [
-    'En el disco el participante crea los archivos uno a uno; aqui estan todos desde el principio.',
+    'El simulador parte dentro de lab-01/recetario: el pwd, el ls, el cd curso y el mkdir del enunciado son de tu disco, y aqui solo se explican.',
   ],
 };
 

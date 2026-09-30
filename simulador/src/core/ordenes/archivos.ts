@@ -51,19 +51,46 @@ export const ordenRm: Manejador = (estado, argumentos) => {
   const forzado = tieneOpcion(argumentos, '-f', '--force');
 
   let siguiente = estado;
+  const quitados: string[] = [];
   for (const ruta of rutas) {
     if (esCarpeta(siguiente, ruta) && !recursivo) {
       return fallo(estado, `fatal: not removing '${ruta}' recursively without -r`);
     }
 
-    const alcanzados = abarcados(siguiente, ruta).filter((archivo) =>
-      estaSeguido(siguiente, archivo.nombre),
+    // Esta en el indice lo que esta en HEAD y tambien lo recien preparado,
+    // aunque todavia no haya confirmaciones (SPEC 032: el laboratorio 01 hace
+    // `git rm --cached README.md` antes de la primera confirmacion).
+    const alcanzados = abarcados(siguiente, ruta).filter(
+      (archivo) => estaSeguido(siguiente, archivo.nombre) || archivo.estado === 'preparado',
     );
     if (alcanzados.length === 0) {
       return fallo(estado, `fatal: pathspec '${ruta}' did not match any files`);
     }
 
     for (const archivo of alcanzados) {
+      quitados.push(archivo.nombre);
+      if (!estaSeguido(siguiente, archivo.nombre)) {
+        // Nuevo en el indice: sacarlo no es un borrado que confirmar, vuelve a
+        // no estar seguido. Sin --cached, Git pide confirmar la intencion.
+        if (!soloDelIndice && !forzado) {
+          return fallo(
+            estado,
+            `error: the following file has changes staged in the index:\n    ${archivo.nombre}`,
+            '(use --cached to keep the file, or -f to force removal)',
+          );
+        }
+        siguiente = {
+          ...siguiente,
+          archivos: soloDelIndice
+            ? siguiente.archivos.map((candidato) =>
+                candidato.nombre === archivo.nombre
+                  ? { nombre: candidato.nombre, estado: 'sin-seguimiento' as const, contenido: textoDeTrabajo(siguiente, candidato.nombre) ?? '' }
+                  : candidato,
+              )
+            : siguiente.archivos.filter((candidato) => candidato.nombre !== archivo.nombre),
+        };
+        continue;
+      }
       if (!forzado && !soloDelIndice && archivo.estado !== 'limpio') {
         return fallo(
           estado,
@@ -93,9 +120,7 @@ export const ordenRm: Manejador = (estado, argumentos) => {
     }
   }
 
-  const salida = siguiente.borrados
-    .filter((nombre) => !estado.borrados.includes(nombre))
-    .map((nombre) => `rm '${nombre}'`);
+  const salida = quitados.map((nombre) => `rm '${nombre}'`);
   // Si ya habia preparado un archivo con el mismo contenido, es un renombrado.
   return ok(emparejarRenombrados(siguiente), lineas(...salida));
 };

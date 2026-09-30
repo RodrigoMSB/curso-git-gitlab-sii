@@ -50,6 +50,26 @@ export function repoVacio(): EstadoRepositorio {
   return ejecutar(escenarioPorId('lab-01'), 'git init').estado;
 }
 
+/**
+ * El repositorio recien creado con los primeros archivos del recetario sin
+ * seguimiento. Hasta el SPEC 031 el escenario del laboratorio 01 los traia
+ * puestos; desde el SPEC 032 parte vacio, como el enunciado, y aqui se crean
+ * con ordenes, como los crea el participante.
+ */
+export function repoConArchivosSueltos(): EstadoRepositorio {
+  let estado = repoVacio();
+  for (const orden of [
+    'echo "# Recetario COMIDA CHILENA" > README.md',
+    'echo "# Platos" > platos.md',
+    'mkdir -p recetas',
+    'echo "# Pastel de choclo" > recetas/pastel-de-choclo.md',
+    'echo "# Empanadas de pino" > recetas/empanadas.md',
+  ]) {
+    estado = ejecutar(estado, orden).estado;
+  }
+  return estado;
+}
+
 /** Historia lineal de cinco confirmaciones, con un cambio suelto y otro preparado (lab 02). */
 export function repoLineal(): EstadoRepositorio {
   return escenarioPorId('lab-02');

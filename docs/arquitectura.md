@@ -5900,3 +5900,37 @@ avisar al relator o empezar de nuevo.
   `cd curso` nuevo el laboratorio 01 fallaba. La prueba 4.3 del recorrido de
   la página (el alias pegado queda igual en la consola, en Bash y en el
   enunciado) cubre el `lg` nuevo sin cambios.
+
+### 78.1 · El modo de escenarios del 01 y el 02
+
+`SIMULADOR.html` con doble clic es el respaldo si el taller no arranca.
+
+- **Laboratorio 02:** el escenario corresponde al enunciado nuevo, porque
+  `preparar 02` no cambió. No se tocó.
+- **Laboratorio 01:** el escenario era el del enunciado anterior, con
+  `README.md`, `platos.md`, `ingredientes.md`, `cocineros.md` y las recetas ya
+  creados. `ls` los mostraba antes de crearlos, `mkdir recetas` decía «File
+  exists» y la confirmación de `ingredientes.md` se llevaba cinco archivos.
+  Ahora parte vacío.
+- **Un defecto del motor:** `git rm --cached README.md` antes de la primera
+  confirmación respondía «did not match any files». El motor solo contaba
+  como seguido lo que está en HEAD; lo recién preparado también está en el
+  índice. Ahora vuelve a sin seguimiento, sin anotarse como borrado, y sin
+  `--cached` responde como Git que tiene cambios preparados.
+- **Lo que el simulador no ejecuta del núcleo:** `git commit` sin `-m`. No
+  hay editor en el modo de escenarios, y responde como Git sin editor,
+  «Aborting commit due to empty commit message», con la sugerencia de `-m`.
+  El enunciado no cambia. `cd curso`, `cd ..`, `mkdir -p lab-01/recetario`
+  y `cd lab-01/recetario` están declaradas: el simulador dice que no
+  modela tus carpetas. `preparar`, `verificar` y `code .` no son del
+  simulador.
+- **La prueba** (`tests/nucleo-en-escenarios.test.ts`, en el CI): el núcleo
+  del 01 y del 02, orden por orden, en el motor y en Git, comparando
+  historia, rama, áreas y si la orden falló, y `verificar` aprobado del lado
+  de Git. Falló antes con el escenario viejo del 01 y con el defecto de
+  `git rm --cached`; el 02 pasó desde el principio.
+- **El recorrido de Cypress** del modo de escenarios no corre en el CI, y en
+  esta rama está detenido desde el SPEC 028: toma `preparar NN`,
+  `verificar NN` y `code .` como órdenes saltadas y se niega a seguir, en
+  los cinco laboratorios que recorre (02 a 06). No se arregló aquí; la prueba
+  de arriba cubre el 01 y el 02.
